@@ -3,27 +3,29 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { NgSelectModule } from '@ng-select/ng-select';
+import { OnlyNumbersDirective } from 'src/app/core/directives/only-numbers.directive';
 import { MenuService } from 'src/app/modules/layout/services/menu.service';
 import { CustomersService } from 'src/app/services/customers.service';
 import { ProductsService } from 'src/app/services/products.service';
 
 @Component({
   selector: 'app-pos',
-  imports: [CommonModule, FormsModule, FontAwesomeModule,NgSelectModule],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, NgSelectModule,OnlyNumbersDirective],
   templateUrl: './pos.component.html',
   styleUrl: './pos.component.css'
 })
 
 export class PosComponent implements OnInit {
-  products = [
-    { id: 1, name: 'Coca-Cola', price: 1.25, tax: 0.12 },
-    { id: 2, name: 'Hamburguesa', price: 4.00, tax: 0.00 },
-    { id: 3, name: 'Papas Fritas', price: 2.00, tax: 0.12 },
-  ];
-  customers:any = [];
+  products: any = [];
+
+  identificationCustomer: string = '';
+  customer: any = null;
   cart: any[] = [];
   searchTerm: string = '';
-  selectedCustomerId: string = ''; 
+  selectedCategory = '';
+  categories = ['Entrada', 'Sopas', 'Adicionales', 'Bebidas', 'Postres', 'Platos_Fuertes', 'Burguers'];
+
+
   paymentMethod: string = 'efectivo';
 
   showCustomerModal = false;
@@ -45,34 +47,47 @@ export class PosComponent implements OnInit {
     this.toggleSidebar();
 
     this.loadProducts();
-    this.loadCustomers();
   }
   public toggleSidebar() {
     this.menuService.toggleSidebar();
   }
 
-  cargarClientes() {
-    this.customersService.getAll().subscribe((res) => {
-      this.customers = res;
-    });
-  }
-
-
   loadProducts() {
     this.productsService.getAll().subscribe((res) => {
       this.products = res;
+      console.log(' this.products', this.products);
     });
   }
 
-  loadCustomers() {
-    this.customersService.getAll().subscribe((res) => {
-      this.customers = res;
+  findByIdentificationCustomer(): void {
+    const identification = this.identificationCustomer?.trim();
+
+    if (!identification || (identification.length !== 10 && identification.length !== 13)) {
+      alert('La identificación debe tener 10 o 13 dígitos válidos');
+      return;
+    }
+
+    this.customersService.findByIdentification(identification).subscribe({
+      next: (res) => {
+        this.customer = res;
+        console.log('Cliente encontrado:', res);
+      },
+      error: (err) => {
+        console.error('Error al buscar cliente:', err);
+        this.customer = null;
+        alert('Cliente no encontrado con esa identificación');
+      }
     });
+  }
+
+
+  selectFinalConsumer() {
+
   }
   crearCliente() {
     // this.http.post('/api/customers', this.nuevoCliente).subscribe((res: any) => {
     //   this.customers.push(res);
-    //   this.selectedCustomerId = res.id;
+    //   this.identificationCustomer = res.id;
     //   this.showCustomerModal = false;
     //   this.nuevoCliente = {
     //     fullName: '',
@@ -85,8 +100,9 @@ export class PosComponent implements OnInit {
   }
 
   filteredProducts() {
-    return this.products.filter(p =>
-      p.name.toLowerCase().includes(this.searchTerm.toLowerCase())
+    return this.products.filter((product: any) =>
+      (!this.selectedCategory || product.category === this.selectedCategory) &&
+      (!this.searchTerm || product.name.toLowerCase().includes(this.searchTerm.toLowerCase()))
     );
   }
 
@@ -94,7 +110,7 @@ export class PosComponent implements OnInit {
     const item = this.cart.find(i => i.id === product.id);
     const price = parseFloat(product.price);
     const tax = parseFloat(product.tax);
-  
+
     if (item) {
       item.quantity++;
       item.total = item.quantity * price;
@@ -108,13 +124,13 @@ export class PosComponent implements OnInit {
       });
     }
   }
-  
-  
+
+
   increase(item: any) {
     item.quantity++;
     item.total = item.quantity * parseFloat(item.price);
   }
-  
+
   decrease(item: any) {
     if (item.quantity > 1) {
       item.quantity--;
@@ -123,12 +139,12 @@ export class PosComponent implements OnInit {
       this.cart = this.cart.filter(i => i.id !== item.id);
     }
   }
-  
+
   get subtotal(): number {
     return this.cart.reduce((acc, item) => {
       const total = Number(item.total);
       const tax = Number(item.tax);
-  
+
       if (tax > 0) {
         return acc + total / (1 + tax); // divide para quitar IVA incluido
       } else {
@@ -136,12 +152,12 @@ export class PosComponent implements OnInit {
       }
     }, 0);
   }
-  
+
   get iva(): number {
     return this.cart.reduce((acc, item) => {
       const total = Number(item.total);
       const tax = Number(item.tax);
-  
+
       if (tax > 0) {
         return acc + (total - total / (1 + tax)); // parte correspondiente al IVA
       } else {
@@ -149,21 +165,21 @@ export class PosComponent implements OnInit {
       }
     }, 0);
   }
-  
+
   get total(): number {
     return this.cart.reduce((acc, item) => acc + Number(item.total), 0);
   }
-  
-  
+
+
 
   finalizarVenta() {
-    if (!this.selectedCustomerId || this.cart.length === 0) {
+    if (!this.identificationCustomer || this.cart.length === 0) {
       alert('Selecciona un cliente y agrega productos al carrito.');
       return;
     }
 
     const order = {
-      customerId: this.selectedCustomerId,
+      customerId: this.identificationCustomer,
       items: this.cart.map(item => ({
         productName: item.name,
         quantity: item.quantity,

@@ -1,85 +1,111 @@
 <!-- CONTENEDOR PRINCIPAL -->
-<div class=" bg-gray-50 flex flex-col">
+<div class=" bg-background flex flex-col">
     <div class="container mx-auto px-4 py-4 flex-grow flex flex-col">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-grow">
 
 
             <!-- PRODUCTOS -->
-            <div class="col-span-2 flex flex-col space-y-3 overflow-auto">
+            <div class="col-span-2 flex flex-col  overflow-auto">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Columna 1: Cliente -->
                     <div>
-                        <h2 class="text-lg font-semibold text-primary">Cliente</h2>
-                        <input type="text" placeholder="Ingrese el numero de Cedula o RUC"
-                            [(ngModel)]="selectedCustomerId" class="w-full rounded border px-3 py-1 text-xs" />
-                        <!-- <select [(ngModel)]="selectedCustomerId" class="w-full border rounded px-2 py-1 text-xs">
-                            <option *ngFor="let customer of customers" [value]="customer.id">
-                                {{ customer.fullName + ' - ' + customer.identification }}
-                            </option>
-                        </select> -->
-                        <!-- <ng-select [items]="customers" bindLabel="fullName" bindValue="id"
-                            [(ngModel)]="selectedCustomerId" [searchable]="true" placeholder="Selecciona un cliente"
-                            class="custom-ng-select text-xs w-full">
+                        <h2 class="text-lg font-semibold text-primary mb-2">Cliente</h2>
 
-                        </ng-select> -->
+                        <div class="flex items-center gap-2 mb-2">
+                            <input type="text" maxlength="10" appOnlyNumbers [(ngModel)]="identificationCustomer"
+                                placeholder="Ingrese el número de cédula" class="rounded border px-3 py-1 text-xs" />
 
 
-
-                    </div>
-
-                    <!-- Columna 2: Otro contenido -->
-                    <div>
-                        <div class="flex gap-2 mt-6">
-
-                            <button (click)="showCustomerModal = true"
-                                class="bg-primary text-white rounded-md px-2 py-1 font-semibold">
-                                <fa-icon icon="search"></fa-icon> Buscar
+                            <button (click)="findByIdentificationCustomer()"
+                                class="bg-primary text-white text-xs px-2 py-1 rounded hover:bg-primary/90 transition"
+                                title="Buscar cliente">
+                                <fa-icon icon="search"></fa-icon>
                             </button>
-                            <button class="bg-primary text-white rounded-md px-2 py-1 font-semibold">
-                                Consumidor Final
+
+                            <button (click)="identificationCustomer = '' ; customer = null"
+                                class="bg-red-500 text-white text-xs px-2 py-1 rounded hover:bg-red-600 transition"
+                                title="Limpiar">
+                                <fa-icon icon="times"></fa-icon>
                             </button>
                         </div>
+
+                        <div class="text-xs text-muted-foreground space-y-0.5">
+                            <p>{{ customer?.fullName }}</p>
+                            <p>{{ customer?.email }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Columna 2: Acciones rápidas -->
+                    <div class="flex gap-2 items-start md:justify-end">
+                        <button (click)="showCustomerModal = true"
+                            class="bg-primary text-white text-xs px-3 py-1 rounded hover:bg-primary/90 transition"
+                            title="Nuevo cliente">
+                            <fa-icon icon="user-plus"></fa-icon>
+                        </button>
+
+                        <button class="bg-primary text-white text-xs px-3 py-1 rounded hover:bg-primary/90 transition"
+                            (click)="selectFinalConsumer()">
+                            Consumidor Final
+                        </button>
                     </div>
                 </div>
 
-                <h2 class="text-lg font-semibold text-primary">Productos</h2>
-                <input type="text" placeholder="Buscar productos..." [(ngModel)]="searchTerm"
-                    class="w-1/2 rounded border px-3 py-1 text-xs" />
 
 
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                <!-- <input type="text" placeholder="Buscar productos..." [(ngModel)]="searchTerm"
+                    class="w-1/2 rounded border px-3 py-1 text-xs" /> -->
+                <div class="overflow-x-auto whitespace-nowrap py-2">
+                    <h2 class="text-lg font-semibold text-primary">Productos</h2>
+                    <div class="inline-flex gap-2">
+                        <button (click)="selectedCategory = ''" [class.bg-primary]="selectedCategory === ''"
+                            class="text-xs px-3 py-1 border rounded hover:bg-primary hover:text-white transition shrink-0">
+                            Todos
+                        </button>
+                        <button *ngFor="let category of categories" (click)="selectedCategory = category"
+                            [class.bg-primary]="selectedCategory === category"
+                            class="text-xs px-3 py-1 border rounded hover:bg-primary hover:text-white transition shrink-0">
+                            {{ category.replace('_', ' ') }}
+                        </button>
+
+                    </div>
+                </div>
+
+
+
+
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3">
                     <div *ngFor="let product of filteredProducts()" (click)="addProduct(product)"
                         class="cursor-pointer rounded border p-2 shadow-sm hover:bg-muted transition text-xs">
-                        <h3 class="font-medium">{{ product.name }}</h3>
+                        <h3 class="font-medium text-foreground">{{ product.name }}</h3>
                         <p class="text-muted-foreground">${{ product.price | number: '1.2-2' }}</p>
                     </div>
                 </div>
             </div>
 
             <!-- RESUMEN DEL PEDIDO -->
-            <div class="flex flex-col space-y-3 h-full overflow-auto text-xs">
+            <div class="flex flex-col  h-full overflow-auto text-xs">
                 <h2 class="text-lg font-semibold text-primary">Resumen</h2>
 
                 <ng-container *ngIf="cart.length > 0; else emptyCart">
                     <div class="flex-grow overflow-auto space-y-1">
-                        <div *ngFor="let item of cart" class="flex justify-between items-center border-b py-2">
-                            <span class="font-medium">
-                                {{ item.name }} <span class="text-gray-500 font-normal">x{{ item.quantity }}</span>
+                        <div *ngFor="let item of cart" class="flex justify-between items-center border-b py-1">
+                            <span class="font-medium text-foreground">
+                                {{ item.name }} <span class="text-foreground font-normal">x{{ item.quantity }}</span>
                             </span>
                             <div class="flex items-center gap-2">
                                 <button (click)="decrease(item)"
-                                    class="w-6 h-6 rounded-full border text-gray-600 hover:bg-gray-100 flex items-center justify-center"
+                                    class="w-6 h-6 rounded-full border text-foreground hover:bg-gray-100 flex items-center justify-center"
                                     title="Disminuir cantidad">
                                     <fa-icon icon="minus"></fa-icon>
                                 </button>
                                 <span class="w-5 text-center font-semibold">{{ item.quantity }}</span>
                                 <button (click)="increase(item)"
-                                    class="w-6 h-6 rounded-full border text-gray-600 hover:bg-gray-100 flex items-center justify-center"
+                                    class="w-6 h-6 rounded-full border text-foreground hover:bg-gray-100 flex items-center justify-center"
                                     title="Aumentar cantidad">
                                     <fa-icon icon="plus"></fa-icon>
                                 </button>
-                                {{item.total}}
-                                <strong class="ml-2 text-gray-900">${{ item.total | number: '1.2-2' }}</strong>
+
+                                <strong class="ml-2 text-foreground">${{ item.total | number: '1.2-2' }}</strong>
                             </div>
                         </div>
                     </div>
@@ -87,17 +113,18 @@
 
 
                     <!-- MÉTODO DE PAGO -->
-                    <div>
+                    <div class=" pt-4">
 
                         <h2 class="text-lg font-semibold text-primary">Método de Pago</h2>
-                        <select [(ngModel)]="paymentMethod" class="w-full border rounded px-2 py-1 text-xs">
+                        <select [(ngModel)]="paymentMethod"
+                            class="w-full border rounded px-2 py-1 text-xs text-foreground">
                             <option value="efectivo">Efectivo</option>
                             <option value="transferencia">Transferencia</option>
                         </select>
                     </div>
 
                     <!-- TOTALES -->
-                    <div class="border-t pt-2 space-y-1 text-xs">
+                    <div class="border-t pt-4 space-y-1 text-xs text-foreground">
                         <p>Subtotal: ${{ subtotal | number: '1.2-2' }}</p>
                         <p>IVA (12%): ${{ iva | number: '1.2-2' }}</p>
                         <p class="text-base font-bold">Total: ${{ total | number: '1.2-2' }}</p>
@@ -106,11 +133,11 @@
 
                     <!-- BOTONES -->
                     <div class="space-y-2">
-                        <button (click)="finalizarVenta()" [disabled]="cart.length === 0 || !selectedCustomerId"
+                        <button (click)="finalizarVenta()" [disabled]="cart.length === 0 || !identificationCustomer"
                             class="w-full rounded bg-primary px-4 py-2 text-white font-semibold hover:bg-primary/90 text-sm">
                             Facturar
                         </button>
-                        <button (click)="finalizarVenta()" [disabled]="cart.length === 0 || !selectedCustomerId"
+                        <button (click)="finalizarVenta()" [disabled]="cart.length === 0 || !identificationCustomer"
                             class="w-full rounded bg-primary px-4 py-2 text-white font-semibold hover:bg-primary/90 text-sm">
                             Nota de Venta
                         </button>

@@ -24,7 +24,7 @@ export class CustomersComponent implements OnInit {
   }
 
   cargarClientes() {
-    this.customersService.getAll().subscribe((res) => {
+    this.customersService.findAll().subscribe((res) => {
       this.customers = res;
     });
   }

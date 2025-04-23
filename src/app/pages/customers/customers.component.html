@@ -1,27 +1,23 @@
 
+
+<div class="container mx-auto my-8 px-4">
+    
 <div class="mb-4 flex justify-between">
     <div class="inline-block">
-      <h3 class="text-foreground font-semibold">Team Members</h3>
+        <h2 class="text-2xl font-semibold text-primary">Clientes</h2>
       <div class="text-muted-foreground space-x-1 text-xs font-medium">
-        <a href="" class="hover:text-primary">All Members:</a>
-        <span class="text-foreground">49,053</span>
+        <a href="" class="hover:text-primary"># Registrados:</a>
+        <span class="text-foreground">{{ customers.length }}</span>
       </div>
     </div>
     <div class="inline-block space-x-4">
-      <button class="bg-primary text-primary-foreground flex-none rounded-md px-4 py-2.5 text-xs font-semibold">
+      <button class="bg-primary text-primary-foreground flex-none rounded-md px-4 py-2.5 text-xs font-semibold"
+      (click)="abrirModal()">
         + Nuevo Cliente
       </button>
     </div>
   </div>
-
-<div class="container mx-auto my-8 px-4">
-    <div class="flex items-center justify-between mb-6">
-        <h2 class="text-2xl font-semibold text-primary">Clientes</h2>
-        <button class="bg-primary text-white px-4 py-2 rounded" (click)="abrirModal()">
-            + Nuevo Cliente
-        </button>
-    </div>
-
+  
     <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar por nombre o cédula..."
         class="mb-4 w-full rounded border px-4 py-2 text-sm" />
 

@@ -12,7 +12,8 @@ import { ProductsService } from 'src/app/services/products.service';
 export class ProductsComponent implements OnInit {
   productos: any[] = [];
   searchTerm = '';
-
+  categories = ['Entrada', 'Sopas','Adicionales','Bebidas','Postres','Platos_Fuertes','Burguers']; 
+  
   mostrarModal = false;
   productoEditando: any = null;
   productoForm!: FormGroup;
@@ -96,9 +97,10 @@ export class ProductsComponent implements OnInit {
     console.log('resetForm');
     return this.productoForm = this.fb.group({
       name: ['', Validators.required],
-      description:  ['', Validators.required],
+      description:  [''],
       price: [null, [Validators.required, Validators.min(0)]],
       tax: ['0.12', Validators.required],
+      category: ['', Validators.required],
       code: [''],
       barcode: [''],
       isActive: [true]
