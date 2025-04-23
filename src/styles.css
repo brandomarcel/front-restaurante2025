@@ -291,3 +291,32 @@ select {
 [type='radio'] {
   @apply h-4 w-4 rounded-sm border-border bg-background checked:border-primary checked:bg-primary indeterminate:border-primary indeterminate:bg-primary focus:ring-2 focus:ring-primary;
 }
+
+.ng-select-tailwind .ng-select-container {
+  @apply border rounded px-3 py-1 h-auto min-h-0 shadow-none;
+  font-size: 0.75rem; /* text-xs */
+  line-height: 1.25rem;
+  background-color: white;
+}
+
+.ng-select-tailwind .ng-value,
+.ng-select-tailwind .ng-placeholder {
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
+
+.ng-select-tailwind .ng-input input {
+  padding: 0 !important;
+  margin: 0 !important;
+  font-size: 0.75rem;
+}
+
+.ng-select-tailwind .ng-arrow-wrapper {
+  padding-right: 0.5rem;
+}
+
+.ng-select-tailwind .ng-dropdown-panel .ng-dropdown-panel-items .ng-option {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}

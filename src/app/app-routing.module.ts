@@ -1,5 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+import { PosComponent } from './pages/pos/pos.component';
+import { CustomersComponent } from './pages/customers/customers.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'auth/sign-in', pathMatch: 'full' },
@@ -15,6 +17,8 @@ const routes: Routes = [
     path: 'errors',
     loadChildren: () => import('./modules/error/error.module').then((m) => m.ErrorModule),
   },
+  {
+    path: 'customer',component: CustomersComponent },
   { path: '**', redirectTo: 'errors/404' },
 ];
 

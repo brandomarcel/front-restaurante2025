@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } 
 import { Router, RouterLink } from '@angular/router';
 import { AngularSvgIconModule } from 'angular-svg-icon';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
+import { AuthService } from 'src/app/services/auth.service';
 
 @Component({
   selector: 'app-sign-in',
@@ -16,7 +17,7 @@ export class SignInComponent implements OnInit {
   submitted = false;
   passwordTextType!: boolean;
 
-  constructor(private readonly _formBuilder: FormBuilder, private readonly _router: Router) {}
+  constructor(private readonly _formBuilder: FormBuilder, private authService: AuthService, private readonly _router: Router) {}
 
   onClick() {
     console.log('Button clicked');
@@ -37,14 +38,37 @@ export class SignInComponent implements OnInit {
     this.passwordTextType = !this.passwordTextType;
   }
 
+  // onSubmit() {
+  //   this.submitted = true;
+  //   const { email, password } = this.form.value;
+
+  //   if (this.form.invalid) {
+  //     return;
+  //   }
+
+  //   this._router.navigate(['/dashboard']);
+  // }
+
   onSubmit() {
     this.submitted = true;
-    const { email, password } = this.form.value;
 
-    if (this.form.invalid) {
-      return;
-    }
+    if (this.form.invalid) return;
 
-    this._router.navigate(['/dashboard']);
+    this.authService.login(this.form.value).subscribe({
+      next: (res) => {
+        console.log(res);
+
+        // Guarda el token y el usuario
+        localStorage.setItem('access_token', res.access_token);
+        localStorage.setItem('user', JSON.stringify(res.user));
+
+        // Redirige al dashboard u otra página
+        this._router.navigate(['/dashboard']);
+      },
+      error: (err) => {
+        console.error('Error de login:', err);
+        // Aquí podrías mostrar una alerta o toast
+      }
+    });
   }
 }
