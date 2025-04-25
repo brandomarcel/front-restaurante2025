@@ -3,28 +3,28 @@ import { HttpClient } from '@angular/common/http';
 
 @Injectable({ providedIn: 'root' })
 export class OrdersService {
-  private baseUrl = '/api/orders';
+  private readonly apiUrl = 'http://localhost:3000/orders'; // Cambia si usás otro backend
 
   constructor(private http: HttpClient) {}
 
   getAll() {
-    return this.http.get<any[]>(this.baseUrl);
+    return this.http.get<any[]>(this.apiUrl);
   }
 
   getById(id: number) {
-    return this.http.get<any>(`${this.baseUrl}/${id}`);
+    return this.http.get<any>(`${this.apiUrl}/${id}`);
   }
 
   create(order: any) {
-    return this.http.post(this.baseUrl, order);
+    return this.http.post(this.apiUrl, order);
   }
 
   delete(id: number) {
-    return this.http.delete(`${this.baseUrl}/${id}`);
+    return this.http.delete(`${this.apiUrl}/${id}`);
   }
 
   // Futuro: enviar orden para facturación
   invoice(id: number) {
-    return this.http.post(`${this.baseUrl}/${id}/invoice`, {});
+    return this.http.post(`${this.apiUrl}/${id}/invoice`, {});
   }
 }

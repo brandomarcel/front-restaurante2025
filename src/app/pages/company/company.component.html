@@ -1,0 +1,104 @@
+<div class="max-w-6xl mx-auto bg-white shadow rounded p-6 mt-6 text-xs">
+    <h2 class="text-lg font-semibold text-primary mb-6">Configuración de la Empresa y Secuencias</h2>
+
+    <form [formGroup]="form" (ngSubmit)="save()" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Columna 1: Empresa -->
+        <div class="space-y-3">
+            <h3 class="text-sm font-semibold text-gray-700">Datos de la Empresa</h3>
+
+            <div>
+                <label class="block font-medium mb-1">Razón Social</label>
+                <input type="text" formControlName="businessName" class="w-full border rounded px-2 py-1"
+                    [class.border-red-500]="f['businessName'].invalid && submitted" />
+                <small *ngIf="f['businessName'].invalid && submitted" class="text-red-500">Campo
+                    requerido</small>
+            </div>
+
+            <div>
+                <label class="block font-medium mb-1">RUC</label>
+                <input appOnlyNumbers type="text" formControlName="ruc" class="w-full border rounded px-2 py-1"
+                    [class.border-red-500]="f['ruc'].invalid && submitted" />
+                <small *ngIf="f['ruc'].errors?.['required'] && submitted" class="text-red-500">Campo
+                    requerido</small>
+                <small *ngIf="f['ruc'].errors?.['pattern'] && submitted" class="text-red-500">Debe tener 13
+                    dígitos</small>
+            </div>
+
+            <div>
+                <label class="block font-medium mb-1">Dirección</label>
+                <input type="text" formControlName="address" class="w-full border rounded px-2 py-1"
+                    [class.border-red-500]="f['address'].invalid && submitted" />
+                <small *ngIf="f['address'].invalid && submitted" class="text-red-500">Campo requerido</small>
+            </div>
+
+            <div>
+                <label class="block font-medium mb-1">Teléfono</label>
+                <input type="text" formControlName="phone" class="w-full border rounded px-2 py-1"
+                    [class.border-red-500]="f['phone'].invalid && submitted" />
+                <small *ngIf="f['phone'].invalid && submitted" class="text-red-500">Campo requerido</small>
+            </div>
+
+            <div>
+                <label class="block font-medium mb-1">Email</label>
+                <input type="email" formControlName="email" class="w-full border rounded px-2 py-1"
+                    [class.border-red-500]="f['email'].invalid && submitted" />
+                <small *ngIf="f['email'].errors?.['required'] && submitted" class="text-red-500">Campo
+                    requerido</small>
+                <small *ngIf="f['email'].errors?.['email'] && submitted" class="text-red-500">Correo
+                    inválido</small>
+            </div>
+
+         
+        </div>
+
+        <!-- Columna 2: Secuencias -->
+        <div class="space-y-3">
+            <h3 class="text-sm font-semibold text-gray-700">SRI</h3>
+            <div>
+                <label class="block font-medium mb-1">Código Establecimiento</label>
+                <input type="text" formControlName="establishmentCode" class="w-full border rounded px-2 py-1"
+                    [class.border-red-500]="f['establishmentCode'].invalid && submitted" />
+                <small *ngIf="f['establishmentCode'].errors?.['required'] && submitted"
+                    class="text-red-500">Campo requerido</small>
+                <small *ngIf="f['establishmentCode'].errors?.['pattern'] && submitted"
+                    class="text-red-500">3 dígitos</small>
+            </div>
+
+            <div>
+                <label class="block font-medium mb-1">Punto Emisión</label>
+                <input type="text" formControlName="emissionPoint" class="w-full border rounded px-2 py-1"
+                    [class.border-red-500]="f['emissionPoint'].invalid && submitted" />
+                <small *ngIf="f['emissionPoint'].errors?.['required'] && submitted"
+                    class="text-red-500">Campo requerido</small>
+                <small *ngIf="f['emissionPoint'].errors?.['pattern'] && submitted"
+                    class="text-red-500">3 dígitos</small>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Secuencia Factura</label>
+                <input type="number" formControlName="invoiceSeq" class="w-full border rounded px-2 py-1"
+                    [class.border-red-500]="f['invoiceSeq'].invalid && submitted" />
+                <small *ngIf="f['invoiceSeq'].invalid && submitted" class="text-red-500">Campo
+                    requerido</small>
+            </div>
+
+            <div>
+                <label class="block font-medium mb-1">Secuencia Nota de Venta</label>
+                <input type="number" formControlName="saleNoteSeq" class="w-full border rounded px-2 py-1"
+                    [class.border-red-500]="f['saleNoteSeq'].invalid && submitted" />
+                <small *ngIf="f['saleNoteSeq'].invalid && submitted" class="text-red-500">Campo
+                    requerido</small>
+            </div>
+
+            <!-- Puedes agregar más secuencias aquí si lo deseas -->
+        </div>
+
+        <!-- Botón único -->
+        <div class="md:col-span-2 pt-4">
+            <button type="submit"
+                class="w-full bg-primary text-white px-4 py-2 rounded font-semibold text-sm hover:bg-primary/90">
+                Guardar Configuración
+            </button>
+        </div>
+    </form>
+</div>

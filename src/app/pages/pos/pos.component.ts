@@ -1,16 +1,17 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { OnlyNumbersDirective } from 'src/app/core/directives/only-numbers.directive';
 import { MenuService } from 'src/app/modules/layout/services/menu.service';
 import { CustomersService } from 'src/app/services/customers.service';
+import { OrdersService } from 'src/app/services/orders.service';
 import { ProductsService } from 'src/app/services/products.service';
 
 @Component({
   selector: 'app-pos',
-  imports: [CommonModule, FormsModule, FontAwesomeModule, NgSelectModule,OnlyNumbersDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, OnlyNumbersDirective],
   templateUrl: './pos.component.html',
   styleUrl: './pos.component.css'
 })
@@ -29,20 +30,27 @@ export class PosComponent implements OnInit {
   paymentMethod: string = 'efectivo';
 
   showCustomerModal = false;
-  nuevoCliente = {
-    fullName: '',
-    identification: '',
-    type: 'final',
-    email: '',
-    phone: '',
-  };
+
+  submitted = false;
+  clienteForm!: FormGroup;
   constructor(public menuService: MenuService,
     private customersService: CustomersService,
-    private productsService: ProductsService
+    private productsService: ProductsService,
+    private fb: FormBuilder,
+    private ordersService: OrdersService
   ) { }
 
   ngOnInit(): void {
     console.log('entro');
+
+    this.clienteForm = this.fb.group({
+      fullName: ['', [Validators.required]],
+      identification: ['', [Validators.required]],
+      identificationType: ['04', [Validators.required]],
+      email: ['', [Validators.required, Validators.email]],
+      phone: ['', [Validators.required]],
+      address: ['', [Validators.required]],
+    });
 
     this.toggleSidebar();
 
@@ -51,7 +59,9 @@ export class PosComponent implements OnInit {
   public toggleSidebar() {
     this.menuService.toggleSidebar();
   }
-
+  get f() {
+    return this.clienteForm.controls;
+  }
   loadProducts() {
     this.productsService.getAll().subscribe((res) => {
       this.products = res;
@@ -61,9 +71,10 @@ export class PosComponent implements OnInit {
 
   findByIdentificationCustomer(): void {
     const identification = this.identificationCustomer?.trim();
+    console.log('identification', this.identificationCustomer);
 
     if (!identification || (identification.length !== 10 && identification.length !== 13)) {
-      alert('La identificación debe tener 10 o 13 dígitos válidos');
+      alert('La identificación debe tener 10');
       return;
     }
 
@@ -75,6 +86,7 @@ export class PosComponent implements OnInit {
       error: (err) => {
         console.error('Error al buscar cliente:', err);
         this.customer = null;
+        this.clienteForm.patchValue({ identification: this.identificationCustomer });
         alert('Cliente no encontrado con esa identificación');
       }
     });
@@ -82,21 +94,22 @@ export class PosComponent implements OnInit {
 
 
   selectFinalConsumer() {
+    this.identificationCustomer = '9999999999';
+
+    console.log('this.identificationCustomer', this.identificationCustomer);
+    this.findByIdentificationCustomer();
 
   }
-  crearCliente() {
-    // this.http.post('/api/customers', this.nuevoCliente).subscribe((res: any) => {
-    //   this.customers.push(res);
-    //   this.identificationCustomer = res.id;
-    //   this.showCustomerModal = false;
-    //   this.nuevoCliente = {
-    //     fullName: '',
-    //     identification: '',
-    //     type: 'final',
-    //     email: '',
-    //     phone: '',
-    //   };
-    // });
+  guardarCliente() {
+    this.submitted = true
+    console.log('this.clienteForm', this.clienteForm);
+    if (this.clienteForm.invalid) {
+      return;
+    }
+
+    this.customersService.create(this.clienteForm.getRawValue()).subscribe(() => {
+      this.cerrarModal();
+    })
   }
 
   filteredProducts() {
@@ -179,14 +192,22 @@ export class PosComponent implements OnInit {
     }
 
     const order = {
-      customerId: this.identificationCustomer,
+      customerId: this.customer.id,
       items: this.cart.map(item => ({
-        productName: item.name,
-        quantity: item.quantity,
-        price: item.price
+        productId: item.id,
+        quantity: item.quantity
       })),
       type: 'nota' // Solo guardamos como "nota"
     };
+
+    console.log('order', order);
+
+    this.ordersService.create(order).subscribe(() => {
+      alert('Pedido guardado exitosamente. Puedes facturarlo más tarde.');
+      this.cart = [];
+      this.customer = null;
+      this.identificationCustomer = ''; 
+    });
 
     // this.http.post('/api/orders', order).subscribe({
     //   next: (res) => {
@@ -198,6 +219,13 @@ export class PosComponent implements OnInit {
     //     alert('Ocurrió un error al guardar el pedido.');
     //   }
     // });
+  }
+
+
+  cerrarModal() {
+    this.showCustomerModal = false;
+    this.submitted = false;
+    this.clienteForm.reset();
   }
 
 }

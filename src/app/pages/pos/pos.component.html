@@ -13,7 +13,10 @@
 
                         <div class="flex items-center gap-2 mb-2">
                             <input type="text" maxlength="10" appOnlyNumbers [(ngModel)]="identificationCustomer"
-                                placeholder="Ingrese el número de cédula" class="rounded border px-3 py-1 text-xs" />
+                                placeholder="Ingrese el número de cédula"
+                                class="rounded  px-3 py-1 text-xs disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                                [disabled]="customer" />
+
 
 
                             <button (click)="findByIdentificationCustomer()"
@@ -56,6 +59,7 @@
                     class="w-1/2 rounded border px-3 py-1 text-xs" /> -->
                 <div class="overflow-x-auto whitespace-nowrap py-2">
                     <h2 class="text-lg font-semibold text-primary">Productos</h2>
+                    
                     <div class="inline-flex gap-2">
                         <button (click)="selectedCategory = ''" [class.bg-primary]="selectedCategory === ''"
                             class="text-xs px-3 py-1 border rounded hover:bg-primary hover:text-white transition shrink-0">
@@ -133,11 +137,11 @@
 
                     <!-- BOTONES -->
                     <div class="space-y-2">
-                        <button (click)="finalizarVenta()" [disabled]="cart.length === 0 || !identificationCustomer"
+                        <!-- <button (click)="finalizarVenta()" 
                             class="w-full rounded bg-primary px-4 py-2 text-white font-semibold hover:bg-primary/90 text-sm">
                             Facturar
-                        </button>
-                        <button (click)="finalizarVenta()" [disabled]="cart.length === 0 || !identificationCustomer"
+                        </button> -->
+                        <button (click)="finalizarVenta()" 
                             class="w-full rounded bg-primary px-4 py-2 text-white font-semibold hover:bg-primary/90 text-sm">
                             Nota de Venta
                         </button>
@@ -160,40 +164,75 @@
         <button class="absolute top-2 right-3 text-lg" (click)="showCustomerModal = false">×</button>
         <h3 class="text-base font-semibold mb-2">Nuevo Cliente</h3>
 
-        <form (ngSubmit)="crearCliente()" class="space-y-2">
+        <form [formGroup]="clienteForm" (ngSubmit)="guardarCliente()" class="space-y-4">
+            <!-- Nombre / Razón Social -->
             <div>
-                <label class="block font-medium">Nombre / Razón Social</label>
-                <input type="text" [(ngModel)]="nuevoCliente.fullName" name="fullName"
-                    class="w-full border rounded px-2 py-1" required />
+                <label class="block text-sm font-medium">Nombre / Razón Social</label>
+                <input type="text" formControlName="fullName" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['fullName'].invalid && submitted" class="text-red-500 text-sm">
+                    Campo requerido.
+                </div>
             </div>
+
+            <!-- Tipo -->
             <div>
-                <label class="block font-medium">Identificación</label>
-                <input type="text" [(ngModel)]="nuevoCliente.identification" name="identification"
-                    class="w-full border rounded px-2 py-1" required />
-            </div>
-            <div>
-                <label class="block font-medium">Tipo</label>
-                <select [(ngModel)]="nuevoCliente.type" name="type" class="w-full border rounded px-2 py-1" required>
-                    <option value="final">Consumidor Final</option>
-                    <option value="cedula">Cédula</option>
-                    <option value="ruc">RUC</option>
+                <label class="block text-sm font-medium">Tipo</label>
+                <select formControlName="identificationType" class="w-full border rounded px-3 py-2 text-sm">
+                    <option value="06">Consumidor Final</option>
+                    <option value="04">Cédula</option>
+                    <option value="05">RUC</option>
                 </select>
+                <div *ngIf="f['identificationType'].invalid && submitted" class="text-red-500 text-sm">
+                    Seleccione un tipo válido.
+                </div>
             </div>
+
+            <!-- Identificación -->
             <div>
-                <label class="block font-medium">Email</label>
-                <input type="email" [(ngModel)]="nuevoCliente.email" name="email"
-                    class="w-full border rounded px-2 py-1" />
+                <label class="block text-sm font-medium">Identificación</label>
+                <input type="text" formControlName="identification" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['identification'].invalid && submitted" class="text-red-500 text-sm">
+                    Campo requerido.
+                </div>
             </div>
+
+
+            <!-- Email -->
             <div>
-                <label class="block font-medium">Teléfono</label>
-                <input type="text" [(ngModel)]="nuevoCliente.phone" name="phone"
-                    class="w-full border rounded px-2 py-1" />
+                <label class="block text-sm font-medium">Email</label>
+                <input type="email" formControlName="email" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['email'].invalid && submitted" class="text-red-500 text-sm">
+                    Email inválido.
+                </div>
             </div>
+
+            <!-- Teléfono -->
+            <div>
+                <label class="block text-sm font-medium">Teléfono</label>
+                <input type="text" formControlName="phone" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['phone'].invalid && submitted" class="text-red-500 text-sm">
+                    Dirección inválido.
+                </div>
+            </div>
+
+             <!-- Dirección -->
+             <div>
+                <label class="block text-sm font-medium">Dirección</label>
+                <input type="text" formControlName="address" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['address'].invalid && submitted" class="text-red-500 text-sm">
+                    Dirección inválido.
+                </div>
+            </div>
+
+            <!-- Botón -->
             <div class="pt-2">
-                <button type="submit" class="bg-primary text-white px-4 py-2 rounded w-full font-semibold text-sm">
-                    Guardar Cliente
+                <button type="submit" class="bg-primary text-white px-4 py-2 rounded w-full disabled:opacity-50"
+                    >
+                    Guardar
                 </button>
             </div>
         </form>
+
+
     </div>
 </div>

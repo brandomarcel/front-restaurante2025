@@ -1,3 +1,4 @@
+import { NgxPaginationModule } from 'ngx-pagination';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -5,7 +6,7 @@ import { ProductsService } from 'src/app/services/products.service';
 
 @Component({
   selector: 'app-products',
-  imports: [CommonModule, FormsModule,ReactiveFormsModule],
+  imports: [CommonModule, FormsModule,ReactiveFormsModule,NgxPaginationModule],
   templateUrl: './products.component.html',
   styleUrl: './products.component.css'
 })
@@ -17,6 +18,8 @@ export class ProductsComponent implements OnInit {
   mostrarModal = false;
   productoEditando: any = null;
   productoForm!: FormGroup;
+  page = 1;
+pageSize = 10;
 
   constructor(private productsService: ProductsService,
     private fb: FormBuilder

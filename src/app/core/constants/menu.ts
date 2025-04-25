@@ -43,6 +43,18 @@ export class Menu {
     //   ],
     // },
 
+      {
+        group: 'Inicio',
+        separator: true,
+        items: [
+          {
+            icon: 'assets/icons/heroicons/outline/chart-pie.svg',
+            label: 'Dashboard',
+            route: '/dashboard',
+          }
+        ],
+      },
+      
     {
       group: 'Punto de Venta',
       separator: true,
@@ -88,6 +100,11 @@ export class Menu {
         {
           icon: 'assets/icons/heroicons/outline/bell.svg',
           label: 'Productos',
+          route: '/dashboard/products',
+        },
+        {
+          icon: 'assets/icons/heroicons/outline/bell.svg',
+          label: 'Ordenes',
           route: '/dashboard/products',
         },
         // {
