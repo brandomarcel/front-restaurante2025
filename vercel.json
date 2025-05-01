@@ -2,7 +2,7 @@
     "version": 2,
     "builds": [
       {
-        "src": "dist/angular-tailwind",
+        "src": "dist/angular-tailwind/browser",
         "use": "@vercel/static"
       }
     ],
