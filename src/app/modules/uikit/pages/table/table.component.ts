@@ -46,6 +46,7 @@ export class TableComponent implements OnInit {
   }
 
   private handleRequestError(error: any) {
+     console.log('error', error.message);
     const msg = 'An error occurred while fetching users. Loading dummy data as fallback.';
     toast.error(msg, {
       position: 'bottom-right',

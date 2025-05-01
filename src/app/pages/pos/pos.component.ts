@@ -3,6 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { NgSelectModule } from '@ng-select/ng-select';
+import { toast } from 'ngx-sonner';
 import { OnlyNumbersDirective } from 'src/app/core/directives/only-numbers.directive';
 import { MenuService } from 'src/app/modules/layout/services/menu.service';
 import { CustomersService } from 'src/app/services/customers.service';
@@ -42,7 +43,6 @@ export class PosComponent implements OnInit {
 
   ngOnInit(): void {
     console.log('entro');
-
     this.clienteForm = this.fb.group({
       fullName: ['', [Validators.required]],
       identification: ['', [Validators.required]],
@@ -107,9 +107,18 @@ export class PosComponent implements OnInit {
       return;
     }
 
-    this.customersService.create(this.clienteForm.getRawValue()).subscribe(() => {
-      this.cerrarModal();
-    })
+    this.customersService.create(this.clienteForm.getRawValue()).subscribe({
+      next: (res) => {
+        console.log('Cliente creado:', res);
+        toast.success('Cliente creado exitosamente');
+        this.cerrarModal();
+        this.customer = res;
+      },
+      error: (err) => {
+        toast.error('Error:'+err.error.message);
+        console.error('Error al crear cliente:', err);
+      }
+    });
   }
 
   filteredProducts() {
@@ -206,7 +215,7 @@ export class PosComponent implements OnInit {
       alert('Pedido guardado exitosamente. Puedes facturarlo más tarde.');
       this.cart = [];
       this.customer = null;
-      this.identificationCustomer = ''; 
+      this.identificationCustomer = '';
     });
 
     // this.http.post('/api/orders', order).subscribe({

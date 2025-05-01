@@ -1,4 +1,5 @@
 <!-- login form -->
+
 <form class="my-10 space-y-6" [formGroup]="form" (ngSubmit)="onSubmit()">
   <div class="text-center">
     <h2 class="text-foreground mb-1 text-3xl font-semibold">Bienvenido<span class="text-primary">!</span></h2>
@@ -27,7 +28,7 @@
       </div>
       <div *ngIf="submitted && f['email'].errors" class="is__invalid-error">
         <div *ngIf="f['email'].errors['required']">Campo obligatorio</div>
-        <div *ngIf="f['email'].errors['email']">Email must be an email address valid</div>
+        <div *ngIf="f['email'].errors['email']">Debe ser un correo electrónico válido</div>
       </div>
     </div>
 

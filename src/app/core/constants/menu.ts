@@ -105,7 +105,7 @@ export class Menu {
         {
           icon: 'assets/icons/heroicons/outline/bell.svg',
           label: 'Ordenes',
-          route: '/dashboard/products',
+          route: '/dashboard/orders',
         },
         // {
         //   icon: 'assets/icons/heroicons/outline/folder.svg',

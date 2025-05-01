@@ -6,6 +6,7 @@ import { PosComponent } from 'src/app/pages/pos/pos.component';
 import { CustomersComponent } from 'src/app/pages/customers/customers.component';
 import { ProductsComponent } from 'src/app/pages/products/products.component';
 import { CompanyComponent } from 'src/app/pages/company/company.component';
+import { OrdersComponent } from 'src/app/pages/orders/orders.component';
 
 const routes: Routes = [
   {
@@ -18,6 +19,7 @@ const routes: Routes = [
       { path: 'customers', component: CustomersComponent },
       { path: 'products', component: ProductsComponent },
       { path: 'company', component: CompanyComponent },
+      { path: 'orders', component: OrdersComponent },
       { path: '**', redirectTo: 'errors/404' },
     ],
   },

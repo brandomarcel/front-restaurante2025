@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { environment } from 'src/environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class ProductsService {
-  private baseUrl = 'http://localhost:3000/products';
+  private baseUrl = environment.apiUrl + 'products';
 
   constructor(private http: HttpClient) {}
 
@@ -20,7 +21,7 @@ export class ProductsService {
   }
 
   update(id: number, data: any) {
-    return this.http.put(`${this.baseUrl}/${id}`, data);
+    return this.http.patch(`${this.baseUrl}/${id}`, data);
   }
 
   delete(id: number) {

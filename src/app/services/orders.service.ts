@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { environment } from 'src/environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class OrdersService {
-  private readonly apiUrl = 'http://localhost:3000/orders'; // Cambia si usás otro backend
+  private readonly apiUrl = environment.apiUrl + 'orders'; // Cambia si usás otro backend
 
   constructor(private http: HttpClient) {}
 

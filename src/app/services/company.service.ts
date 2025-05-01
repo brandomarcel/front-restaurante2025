@@ -2,6 +2,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { environment } from 'src/environments/environment';
 
 export interface CompanyInfo {
   id: number;
@@ -16,7 +17,7 @@ export interface CompanyInfo {
 
 @Injectable({ providedIn: 'root' })
 export class CompanyService {
-  private readonly apiUrl = 'http://localhost:3000/company-info'; // Cambia si usás otro backend
+  private readonly apiUrl = environment.apiUrl + 'company-info'; // Cambia si usás otro backend
 
   constructor(private http: HttpClient) {}
 
