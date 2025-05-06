@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
+import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class OrdersService {
@@ -27,5 +28,10 @@ export class OrdersService {
   // Futuro: enviar orden para facturación
   invoice(id: number) {
     return this.http.post(`${this.apiUrl}/${id}/invoice`, {});
+  }
+
+  getFilteredOrders(filters: any): Observable<any> {
+    const params = new HttpParams({ fromObject: filters });
+    return this.http.get(`${this.apiUrl}/filter`, { params });
   }
 }

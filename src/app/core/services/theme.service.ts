@@ -6,7 +6,7 @@ import { effect } from '@angular/core';
   providedIn: 'root',
 })
 export class ThemeService {
-  public theme = signal<Theme>({ mode: 'dark', color: 'blue', direction: 'ltr' });
+  public theme = signal<Theme>({ mode: 'light', color: 'violet', direction: 'ltr' });
 
   constructor() {
     this.loadTheme();
