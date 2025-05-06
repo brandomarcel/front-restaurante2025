@@ -2,12 +2,14 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { OrdersService } from 'src/app/services/orders.service';
+import * as XLSX from 'xlsx';
+import * as FileSaver from 'file-saver';
 
 @Component({
   selector: 'app-report-ordernes',
   imports: [CommonModule, FormsModule],
   templateUrl: './report-ordernes.component.html',
-  styleUrl: './report-ordernes.component.css'
+  styleUrl: './report-ordernes.component.scss'
 })
 export class ReportOrdernesComponent implements OnInit {
   orders: any[] = [];
@@ -20,18 +22,21 @@ export class ReportOrdernesComponent implements OnInit {
     status: '',
     type: '',
     customerId: null,
-    startDate: '',
-    endDate: '',
+    startDate: this.getTodayISODate(),
+    endDate: this.getTodayISODate(),
     limit: 10,
     offset: 0,
   };
+  
 
   constructor(private orderService: OrdersService) { }
 
   ngOnInit() {
     this.fetchOrders();
   }
-
+  getTodayISODate(): string {
+    return new Date().toISOString().split('T')[0];
+  }
   fetchOrders() {
     const cleanedFilters = this.cleanFilters(this.filters);
     this.orderService.getFilteredOrders(cleanedFilters).subscribe((res) => {
@@ -98,5 +103,75 @@ export class ReportOrdernesComponent implements OnInit {
       this.totalGlobal += parseFloat(order.total);
     }
   }
+
+
+  exportToExcel() {
+    const worksheetData: any[] = [];
+  
+    // Encabezados manuales
+    worksheetData.push([
+      'ID', 'Cliente', 'Fecha', 'Estado', 'Tipo', 'Items', 'Subtotal', 'IVA', 'Total'
+    ]);
+  
+    for (const order of this.orders) {
+      const itemSummary = order.items.map((i: any) => `${i.productName} (x${i.quantity})`).join(', ');
+  
+      worksheetData.push([
+        order.id,
+        order.customer.fullName,
+        new Date(order.createdAt).toLocaleString(),
+        order.status,
+        order.type,
+        itemSummary,
+        parseFloat(order.subtotal),
+        parseFloat(order.iva),
+        parseFloat(order.total),
+      ]);
+    }
+  
+    // Fila vacía
+    worksheetData.push([]);
+  
+    // Resumen global
+    worksheetData.push(['Resumen']);
+    worksheetData.push([
+      'Total productos vendidos',
+      this.totalItems,
+      '',
+      '',
+      '',
+      '',
+      'Subtotal',
+      'IVA',
+      'Total'
+    ]);
+    worksheetData.push([
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      this.subtotalGlobal,
+      this.ivaGlobal,
+      this.totalGlobal
+    ]);
+  
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Órdenes');
+  
+    const excelBuffer: any = XLSX.write(workbook, {
+      bookType: 'xlsx',
+      type: 'array',
+    });
+  
+    const data: Blob = new Blob([excelBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+  
+    FileSaver.saveAs(data, 'ordenes.xlsx');
+  }
+  
 
 }

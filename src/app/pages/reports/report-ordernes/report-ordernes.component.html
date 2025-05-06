@@ -17,6 +17,7 @@
         <input type="number" placeholder="ID Cliente" [(ngModel)]="filters.customerId" class="input" />
         <input type="date" [(ngModel)]="filters.startDate" class="input" />
         <input type="date" [(ngModel)]="filters.endDate" class="input" />
+        
     </div>
 
     <div>
@@ -25,6 +26,10 @@
         </button>
     </div>
 
+    <button (click)="exportToExcel()" class="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+        Exportar a Excel
+      </button>
+      
     <!-- Tabla -->
     <div class="overflow-auto rounded-lg shadow">
         <table class="min-w-full bg-white">
@@ -85,5 +90,5 @@
   </div>
 
   
-  
+
 </div>
