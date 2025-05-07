@@ -106,6 +106,12 @@ export class ReportOrdernesComponent implements OnInit {
 
 
   exportToExcel() {
+
+    if (this.orders.length === 0) {
+      alert('No hay datos para exportar a Excel.');
+      return;
+      
+    }
     const worksheetData: any[] = [];
   
     // Encabezados manuales

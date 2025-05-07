@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } 
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { toast } from 'ngx-sonner';
+import { NgxSpinnerService } from 'ngx-spinner';
 import { OnlyNumbersDirective } from 'src/app/core/directives/only-numbers.directive';
 import { MenuService } from 'src/app/modules/layout/services/menu.service';
 import { CustomersService } from 'src/app/services/customers.service';
@@ -34,14 +35,25 @@ export class PosComponent implements OnInit {
 
   submitted = false;
   clienteForm!: FormGroup;
+
+  today: any;
   constructor(public menuService: MenuService,
     private customersService: CustomersService,
     private productsService: ProductsService,
     private fb: FormBuilder,
-    private ordersService: OrdersService
+    private ordersService: OrdersService,
+    private spinner: NgxSpinnerService
   ) { }
 
   ngOnInit(): void {
+    const fechaEcuador = new Date(
+      new Date().toLocaleString('en-US', { timeZone: 'America/Guayaquil' })
+    );
+    
+    this.today = fechaEcuador.toISOString();
+    console.log('📦this.today', this.today);
+
+    
     console.log('entro');
     this.clienteForm = this.fb.group({
       fullName: ['', [Validators.required]],
@@ -63,8 +75,10 @@ export class PosComponent implements OnInit {
     return this.clienteForm.controls;
   }
   loadProducts() {
+    this.spinner.show();
     this.productsService.getAll().subscribe((res) => {
-      this.products = res;
+      this.spinner.hide();
+      this.products = res || [];
       console.log(' this.products', this.products);
     });
   }
@@ -206,7 +220,8 @@ export class PosComponent implements OnInit {
         productId: item.id,
         quantity: item.quantity
       })),
-      type: 'nota' // Solo guardamos como "nota"
+      type: 'nota', // Solo guardamos como "nota"
+      createdAt: this.today
     };
 
     console.log('order', order);

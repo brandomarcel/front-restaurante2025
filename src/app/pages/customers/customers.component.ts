@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgxPaginationModule } from 'ngx-pagination';
+import { NgxSpinnerService } from 'ngx-spinner';
 import { CustomersService } from 'src/app/services/customers.service';
 
 @Component({
@@ -23,10 +24,12 @@ export class CustomersComponent implements OnInit {
 
   constructor(
     private customersService: CustomersService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private spinner: NgxSpinnerService
   ) { }
 
   ngOnInit() {
+
     this.cargarClientes();
     this.initForm();
   }
@@ -47,10 +50,24 @@ export class CustomersComponent implements OnInit {
   }
 
   cargarClientes() {
-    this.customersService.findAll().subscribe((res) => {
-      this.customers = res;
+
+    this.spinner.show();
+    this.customersService.findAll().subscribe({
+      next: (res) => {
+        this.spinner.hide();
+
+        this.customers = res || [];
+      },
+      error: (err) => {
+        this.spinner.hide();
+        console.error('Error al cargar clientes', err);
+      },
+      complete: () => {
+        this.spinner.hide();
+      }
     });
   }
+
 
   filteredCustomers() {
     return this.customers.filter(c =>
@@ -87,12 +104,18 @@ export class CustomersComponent implements OnInit {
     const data = this.clienteForm.value;
 
     if (this.clienteEditando) {
+      this.spinner.show();
+      // Actualizar
       this.customersService.update(this.clienteEditando.id, data).subscribe(() => {
         this.cargarClientes();
         this.cerrarModal();
+        this.spinner.hide();
       });
     } else {
+      // Crear
+      this.spinner.show();
       this.customersService.create(data).subscribe(() => {
+        this.spinner.hide();
         this.cargarClientes();
         this.cerrarModal();
       });

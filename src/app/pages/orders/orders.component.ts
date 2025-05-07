@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { OrdersService } from 'src/app/services/orders.service';
+import { EcuadorTimePipe } from '../../core/pipes/ecuador-time-pipe.pipe';
 
 @Component({
   selector: 'app-orders',
-  imports: [CommonModule],
+  imports: [CommonModule,EcuadorTimePipe],
   templateUrl: './orders.component.html',
   styleUrl: './orders.component.css'
 })
@@ -16,6 +17,8 @@ export class OrdersComponent implements OnInit {
   mostrarModal: boolean = false;
   constructor(private ordersService: OrdersService) { }
   ngOnInit() {
+    const createdAt = new Date();
+    console.log('createdAt', createdAt.toISOString());
     // Simula la carga de datos desde el backend
     this.loadOrders();
   }
@@ -23,11 +26,16 @@ export class OrdersComponent implements OnInit {
   //cargar order
   // Cargar pedidos desde el servicio
   loadOrders(): void {
+    console.log(Intl.DateTimeFormat().resolvedOptions().timeZone);
+
     this.ordersService.getAll().subscribe({
-      next: (orders) => {
+      next: (orders: any) => {
         console.log('Pedidos cargados:', orders);
+        
         this.orders = orders;
+
       },
+
       error: (err) => {
         console.error('Error al cargar los pedidos:', err);
         // Aquí podrías mostrar un mensaje al usuario si deseas
@@ -36,7 +44,7 @@ export class OrdersComponent implements OnInit {
   }
 
   toggleOrderDetail(order: any) {
-    this.orderSelected = order  ? order : null;
+    this.orderSelected = order ? order : null;
     this.mostrarModal = true;
 
   }

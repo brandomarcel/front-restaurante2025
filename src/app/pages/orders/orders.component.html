@@ -1,4 +1,11 @@
-<div class="overflow-x-auto rounded-lg shadow-md">
+<div class="bg-primary-foreground overflow-x-auto rounded-lg shadow-md p-3">
+  <div class="inline-block">
+    <h2 class="text-2xl font-semibold text-primary">Ordenes</h2>
+    <div class="text-muted-foreground space-x-1 text-xs font-medium">
+        <a href="" class="hover:text-primary"># Registros:</a>
+        <span class="text-foreground">{{ orders.length }}</span>
+    </div>
+</div>
     <table class="min-w-full divide-y divide-gray-200 bg-white text-sm">
       <thead class="bg-gray-100 sticky top-0 ">
         <tr>
@@ -63,7 +70,7 @@
               <li><strong>ID:</strong> {{ orderSelected.id }}</li>
               <li><strong>Tipo:</strong> {{ orderSelected.type | titlecase }}</li>
               <li><strong>Estado:</strong> {{ orderSelected.status | titlecase }}</li>
-              <li><strong>Fecha:</strong> {{ orderSelected.createdAt | date:'short' }}</li>
+              <li><strong>Fecha:</strong> {{ orderSelected.createdAt | ecuadorTime  }}</li>
               <li><strong>Subtotal:</strong> ${{ orderSelected.subtotal }}</li>
               <li><strong>IVA:</strong> ${{ orderSelected.iva }}</li>
               <li><strong>Total:</strong> <span class="text-green-700 font-semibold">${{ orderSelected.total }}</span></li>

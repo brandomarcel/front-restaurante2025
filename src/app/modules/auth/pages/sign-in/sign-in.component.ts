@@ -6,21 +6,25 @@ import { AngularSvgIconModule } from 'angular-svg-icon';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { AuthService } from 'src/app/services/auth.service';
 import { toast } from 'ngx-sonner';
+import { NgxSpinnerComponent, NgxSpinnerService } from 'ngx-spinner';
 
 
 @Component({
   selector: 'app-sign-in',
   templateUrl: './sign-in.component.html',
   styleUrls: ['./sign-in.component.css'],
-  imports: [FormsModule, ReactiveFormsModule, AngularSvgIconModule, NgIf, ButtonComponent, NgClass],
+  imports: [FormsModule, ReactiveFormsModule, AngularSvgIconModule, NgIf, ButtonComponent, NgClass,NgxSpinnerComponent],
 })
 export class SignInComponent implements OnInit {
   form!: FormGroup;
   submitted = false;
   passwordTextType!: boolean;
 
-  constructor(private readonly _formBuilder: FormBuilder, private authService: AuthService, private readonly _router: Router) {}
+  constructor(private readonly _formBuilder: FormBuilder, private authService: AuthService, private readonly _router: Router,
+    private spinner: NgxSpinnerService
+  ) {}
   ngOnInit(): void {
+    
 
     this.form = this._formBuilder.group({
       email: ['', [Validators.required, Validators.email]],
@@ -52,9 +56,10 @@ export class SignInComponent implements OnInit {
     this.submitted = true;
 
     if (this.form.invalid) return;
-
+    this.spinner.show();
     this.authService.login(this.form.value).subscribe({
       next: (res) => {
+        this.spinner.hide();
         console.log(res);
 
         // Guarda el token y el usuario
@@ -65,9 +70,13 @@ export class SignInComponent implements OnInit {
         this._router.navigate(['/dashboard']);
       },
       error: (err) => {
+        this.spinner.hide();
         toast.error('Credenciales incorrectas');
         console.error('Error de login:', err.message);
         // Aquí podrías mostrar una alerta o toast
+      },
+      complete: () => {
+        this.spinner.hide();
       }
     });
   }

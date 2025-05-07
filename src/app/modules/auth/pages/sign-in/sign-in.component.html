@@ -1,5 +1,8 @@
 <!-- login form -->
 
+<ngx-spinner bdColor="rgba(0, 0, 0, 0.8)" size="large" color="#001c71" type="ball-scale-multiple" [fullScreen]="true">
+  <p style="color: #f5ae1c"> Cargando... </p>
+</ngx-spinner>
 <form class="my-10 space-y-6" [formGroup]="form" (ngSubmit)="onSubmit()">
   <div class="text-center">
     <h2 class="text-foreground mb-1 text-3xl font-semibold">Bienvenido<span class="text-primary">!</span></h2>
