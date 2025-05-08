@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { OrdersService } from 'src/app/services/orders.service';
 import * as XLSX from 'xlsx';
 import * as FileSaver from 'file-saver';
+import { UtilsService } from '../../../core/services/utils.service';
+import { NgxSpinnerService } from 'ngx-spinner';
 
 @Component({
   selector: 'app-report-ordernes',
@@ -22,31 +24,40 @@ export class ReportOrdernesComponent implements OnInit {
     status: '',
     type: '',
     customerId: null,
-    startDate: this.getTodayISODate(),
-    endDate: this.getTodayISODate(),
+    startDate: this.utilsService.getFechaEcuador(),
+    endDate: this.utilsService.getFechaEcuador(),
     limit: 10,
     offset: 0,
   };
   
 
-  constructor(private orderService: OrdersService) { }
+  constructor(private orderService: OrdersService,
+    public utilsService:UtilsService,
+    public spinner: NgxSpinnerService
+  ) { }
 
   ngOnInit() {
+    console.log('ngOnInit',this.utilsService.getFechaEcuador());
     this.fetchOrders();
-  }
-  getTodayISODate(): string {
-    return new Date().toISOString().split('T')[0];
   }
   fetchOrders() {
     const cleanedFilters = this.cleanFilters(this.filters);
-    this.orderService.getFilteredOrders(cleanedFilters).subscribe((res) => {
-      this.orders = res.data;
-      this.calculateSummary(this.orders);
-
-      this.total = res.total;
-      this.totalPages = Math.ceil(res.total / this.filters.limit);
+    this.spinner.show();
+    this.orderService.getFilteredOrders(cleanedFilters).subscribe( {
+      next: (res) => {
+        this.orders = res.data;
+        this.calculateSummary(this.orders);
+        this.total = res.total;
+        this.totalPages = Math.ceil(res.total / this.filters.limit);
+        this.spinner.hide();
+      },
+      error: (err) => {
+        this.spinner.hide();
+        console.log(err);
+      },
     });
   }
+     
 
   applyFilters() {
     this.filters.offset = 0;

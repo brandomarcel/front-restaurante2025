@@ -49,6 +49,7 @@ export class PosComponent implements OnInit {
     const fechaEcuador = new Date(
       new Date().toLocaleString('en-US', { timeZone: 'America/Guayaquil' })
     );
+    console.log('📦fechaEcuador', fechaEcuador);
     
     this.today = fechaEcuador.toISOString();
     console.log('📦this.today', this.today);

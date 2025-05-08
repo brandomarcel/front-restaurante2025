@@ -2,10 +2,11 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { OrdersService } from 'src/app/services/orders.service';
 import { EcuadorTimePipe } from '../../core/pipes/ecuador-time-pipe.pipe';
+import { NgxSpinnerService } from 'ngx-spinner';
 
 @Component({
   selector: 'app-orders',
-  imports: [CommonModule,EcuadorTimePipe],
+  imports: [CommonModule, EcuadorTimePipe],
   templateUrl: './orders.component.html',
   styleUrl: './orders.component.css'
 })
@@ -15,11 +16,10 @@ export class OrdersComponent implements OnInit {
   orderSelected: any | null = null;
   expandedOrderId: number | null = null;
   mostrarModal: boolean = false;
-  constructor(private ordersService: OrdersService) { }
+  constructor(private ordersService: OrdersService,
+    public spinner: NgxSpinnerService
+  ) { }
   ngOnInit() {
-    const createdAt = new Date();
-    console.log('createdAt', createdAt.toISOString());
-    // Simula la carga de datos desde el backend
     this.loadOrders();
   }
 
@@ -28,15 +28,17 @@ export class OrdersComponent implements OnInit {
   loadOrders(): void {
     console.log(Intl.DateTimeFormat().resolvedOptions().timeZone);
 
+    this.spinner.show();
     this.ordersService.getAll().subscribe({
       next: (orders: any) => {
         console.log('Pedidos cargados:', orders);
-        
-        this.orders = orders;
 
+        this.orders = orders;
+        this.spinner.hide();
       },
 
       error: (err) => {
+        this.spinner.hide();
         console.error('Error al cargar los pedidos:', err);
         // Aquí podrías mostrar un mensaje al usuario si deseas
       }
