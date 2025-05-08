@@ -1,5 +1,5 @@
 import { animate, state, style, transition, trigger } from '@angular/animations';
-import { NgClass } from '@angular/common';
+import { CommonModule, NgClass } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AngularSvgIconModule } from 'angular-svg-icon';
@@ -10,7 +10,7 @@ import { ClickOutsideDirective } from '../../../../../shared/directives/click-ou
   selector: 'app-profile-menu',
   templateUrl: './profile-menu.component.html',
   styleUrls: ['./profile-menu.component.css'],
-  imports: [ClickOutsideDirective, NgClass, RouterLink, AngularSvgIconModule],
+  imports: [ClickOutsideDirective,CommonModule, RouterLink, AngularSvgIconModule],
   animations: [
     trigger('openClose', [
       state(
@@ -37,18 +37,18 @@ import { ClickOutsideDirective } from '../../../../../shared/directives/click-ou
 export class ProfileMenuComponent implements OnInit {
   public isOpen = false;
   public profileMenu = [
+    // {
+    //   title: 'Your Profile',
+    //   icon: './assets/icons/heroicons/outline/user-circle.svg',
+    //   link: '/profile',
+    // },
     {
-      title: 'Your Profile',
-      icon: './assets/icons/heroicons/outline/user-circle.svg',
-      link: '/profile',
-    },
-    {
-      title: 'Configuración',
+      title: 'Mi empresa',
       icon: './assets/icons/heroicons/outline/cog-6-tooth.svg',
       link: '/dashboard/company',
     },
     {
-      title: 'Log out',
+      title: 'Cerrar Sesión',
       icon: './assets/icons/heroicons/outline/logout.svg',
       link: '/auth',
     },

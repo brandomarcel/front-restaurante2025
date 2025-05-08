@@ -18,7 +18,8 @@
   </div>
 
 
-  <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar productos..."
+  <ng-container *ngIf="productosFiltrados().length > 0; else emptyProducts">
+    <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar productos..."
     class="mb-4 w-full border rounded px-4 py-2 text-sm" />
 
     <div class="overflow-x-auto rounded-lg shadow-md">
@@ -79,6 +80,13 @@
         class="mt-4 flex justify-center"
       ></pagination-controls>
     </div>
+  </ng-container>
+  <ng-template #emptyProducts>
+    <p class="text-center text-gray-500">No hay datos para mostrar</p>
+    
+  </ng-template>
+  
+
     
 
   <!-- MODAL CREAR / EDITAR -->

@@ -13,7 +13,7 @@ import { NgxSpinnerComponent, NgxSpinnerService } from 'ngx-spinner';
   selector: 'app-sign-in',
   templateUrl: './sign-in.component.html',
   styleUrls: ['./sign-in.component.css'],
-  imports: [FormsModule, ReactiveFormsModule, AngularSvgIconModule, NgIf, ButtonComponent, NgClass,NgxSpinnerComponent],
+  imports: [FormsModule, ReactiveFormsModule, AngularSvgIconModule, NgIf, ButtonComponent, NgClass, NgxSpinnerComponent],
 })
 export class SignInComponent implements OnInit {
   form!: FormGroup;
@@ -22,16 +22,16 @@ export class SignInComponent implements OnInit {
 
   constructor(private readonly _formBuilder: FormBuilder, private authService: AuthService, private readonly _router: Router,
     private spinner: NgxSpinnerService
-  ) {}
+  ) { }
   ngOnInit(): void {
-    
+
 
     this.form = this._formBuilder.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', Validators.required],
     });
   }
- 
+
 
   get f() {
     return this.form.controls;
@@ -59,13 +59,13 @@ export class SignInComponent implements OnInit {
     this.spinner.show();
     this.authService.login(this.form.value).subscribe({
       next: (res) => {
-        this.spinner.hide();
+
         console.log(res);
 
         // Guarda el token y el usuario
         localStorage.setItem('access_token', res.access_token);
         localStorage.setItem('user', JSON.stringify(res.user));
-
+        this.spinner.hide();
         // Redirige al dashboard u otra página
         this._router.navigate(['/dashboard']);
       },
