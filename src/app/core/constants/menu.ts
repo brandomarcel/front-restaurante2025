@@ -112,6 +112,11 @@ export class Menu {
           label: 'Reportes',
           route: '/dashboard/reports',
         },
+        {
+          icon: 'assets/icons/heroicons/outline/bell.svg',
+          label: 'Categorias',
+          route: '/dashboard/categories',
+        },
         // {
         //   icon: 'assets/icons/heroicons/outline/folder.svg',
         //   label: 'Folders',

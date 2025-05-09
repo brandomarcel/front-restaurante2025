@@ -93,6 +93,7 @@ export class PosComponent implements OnInit {
       return;
     }
 
+    this.spinner.show();
     this.customersService.findByIdentification(identification).subscribe({
       next: (res) => {
         this.customer = res;
@@ -102,7 +103,11 @@ export class PosComponent implements OnInit {
         console.error('Error al buscar cliente:', err);
         this.customer = null;
         this.clienteForm.patchValue({ identification: this.identificationCustomer });
-        alert('Cliente no encontrado con esa identificación');
+        toast.error('Cliente no encontrado con esa identificación');
+        this.spinner.hide();
+      },
+      complete: () => {
+        this.spinner.hide();
       }
     });
   }

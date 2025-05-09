@@ -1,9 +1,13 @@
-import { NgxPaginationModule } from 'ngx-pagination';
-import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { NgxSpinnerService } from 'ngx-spinner';
 import { ProductsService } from 'src/app/services/products.service';
+
 import { toast } from 'ngx-sonner';
+import { CommonModule } from '@angular/common';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { NgxPaginationModule } from 'ngx-pagination';
+import { CategoryService } from 'src/app/services/category.service';
 
 @Component({
   selector: 'app-products',
@@ -13,26 +17,39 @@ import { toast } from 'ngx-sonner';
 })
 export class ProductsComponent implements OnInit {
   productos: any[] = [];
+  categories: any[] = [];
   searchTerm = '';
-  categories = ['Entrada', 'Sopas', 'Adicionales', 'Bebidas', 'Postres', 'Platos_Fuertes', 'Burguers'];
-
   mostrarModal = false;
   productoEditando: any = null;
   productoForm!: FormGroup;
   page = 1;
   pageSize = 10;
 
-  constructor(private productsService: ProductsService,
+  constructor(
+    private productsService: ProductsService,
+    private categoriesService: CategoryService,
+    public spinner: NgxSpinnerService,
     private fb: FormBuilder
   ) { }
 
   ngOnInit() {
     this.cargarProductos();
+    this.cargarCategorias();
   }
 
   cargarProductos() {
-    this.productsService.getAll().subscribe((res) => {
-      this.productos = res;
+    this.spinner.show();
+    this.productsService.getAll().subscribe({
+      next: (res) => this.productos = res,
+      error: (err) => console.error('Error al cargar productos', err),
+      complete: () => this.spinner.hide()
+    });
+  }
+
+  cargarCategorias() {
+    this.categoriesService.getAll().subscribe({
+      next: (res) => this.categories = res,
+      error: (err) => console.error('Error al cargar categorías', err)
     });
   }
 
@@ -46,36 +63,39 @@ export class ProductsComponent implements OnInit {
   abrirModal(producto: any = null) {
     this.mostrarModal = true;
     this.productoEditando = producto;
-    console.log('productoEditando', this.productoEditando);
     this.resetForm();
-    this.productoForm.patchValue(producto);
+    if (producto) {
+      this.productoForm.patchValue({
+        ...producto,
+        categoryId: producto.category?.id
+      });
+    }
   }
 
   cerrarModal() {
     this.mostrarModal = false;
     this.productoEditando = null;
-    this.productoForm = this.resetForm();
+    this.resetForm();
   }
 
   guardarProducto() {
-
     if (this.productoForm.invalid) {
       this.productoForm.markAllAsTouched();
       return;
     }
 
     if (this.productoEditando) {
-      // Actualizar
       this.updateProduct();
     } else {
-
       this.createProduct();
     }
   }
 
   createProduct() {
-    // Crear
-    this.productsService.create(this.productoForm.value).subscribe({
+    this.spinner.show();
+    const data = this.productoForm.value;
+    console.log('data', data);
+    this.productsService.create(data).subscribe({
       next: () => {
         toast.success('Producto creado con éxito');
         this.cargarProductos();
@@ -83,15 +103,17 @@ export class ProductsComponent implements OnInit {
       },
       error: (err) => {
         toast.error('Error al crear el producto');
-        console.error('Error al crear el producto', err);
-        alert('Error al crear el producto');
-      }
+        console.error(err);
+      },
+      complete: () => this.spinner.hide()
     });
   }
 
   updateProduct() {
-
-    this.productsService.update(this.productoEditando.id, this.productoForm.value).subscribe({
+    this.spinner.show();
+    const data = this.productoForm.value;
+    console.log('data', data);
+    this.productsService.update(this.productoEditando.id, data).subscribe({
       next: () => {
         toast.success('Producto actualizado con éxito');
         this.cerrarModal();
@@ -99,39 +121,43 @@ export class ProductsComponent implements OnInit {
       },
       error: (err) => {
         toast.error('Error al actualizar el producto');
-        console.error('Error al actualizar el producto', err);
-        alert('Error al actualizar el producto');
-      }
+        console.error(err);
+      },
+      complete: () => this.spinner.hide()
     });
   }
 
-
   eliminar(id: number) {
     if (confirm('¿Eliminar este producto?')) {
-      this.productsService.delete(id).subscribe(() => {
-        this.cargarProductos();
-
-      })
-
+      this.spinner.show();
+      this.productsService.delete(id).subscribe({
+        next: () => {
+          toast.success('Producto eliminado con éxito');
+          this.cargarProductos();
+        },
+        error: (err) => {
+          toast.error('Error al eliminar el producto');
+          console.error(err);
+        },
+        complete: () => this.spinner.hide()
+      });
     }
   }
 
-  // helper para saber si mostrar errores
-  get f() {
-    return this.productoForm.controls;
-  }
-
   resetForm() {
-    console.log('resetForm');
     return this.productoForm = this.fb.group({
       name: ['', Validators.required],
       description: [''],
       price: [null, [Validators.required, Validators.min(0)]],
       tax: ['0.00', Validators.required],
-      category: ['', Validators.required],
+      categoryId: ['', Validators.required], // ahora es categoryId
       code: [''],
       barcode: [''],
       isActive: [true]
     });
+  }
+
+  get f() {
+    return this.productoForm.controls;
   }
 }

@@ -39,7 +39,10 @@
             <td class="p-3 text-gray-800">{{ product.name }}</td>
             <td class="p-3 text-gray-800">${{ product.price | number: '1.2-2' }}</td>
             <td class="p-3 text-gray-800">{{ product.tax * 100 }}%</td>
-            <td class="p-3 capitalize text-gray-800">{{ product.category.replace('_', ' ') }}</td>
+            <td class="p-3 capitalize text-gray-800">
+              {{ product.category?.name || '—' }}
+            </td>
+            
             <td class="p-3">
               <span
                 class="text-xs font-medium px-2 py-1 rounded"
@@ -132,14 +135,13 @@
 
         <div>
           <label class="block text-sm font-medium">Categoría</label>
-          <select formControlName="category" class="w-full border rounded px-3 py-2 text-sm">
-            <option *ngFor="let item of categories" [ngValue]="item">{{item}}</option>
-
-
+          <select formControlName="categoryId" class="w-full border rounded px-3 py-2 text-sm">
+            <option value="" disabled selected>Selecciona una categoría</option>
+            <option *ngFor="let cat of categories" [value]="cat.id">{{ cat.name }}</option>
           </select>
-          <p *ngIf="f['category'].touched && f['category'].invalid" class="text-red-500 text-xs">Categoría requerido.
-          </p>
+          <p *ngIf="f['categoryId'].touched && f['categoryId'].invalid" class="text-red-500 text-xs">Categoría requerida.</p>
         </div>
+        
 
         <!-- <div>
             <label class="block text-sm font-medium">Código</label>
