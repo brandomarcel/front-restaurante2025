@@ -19,6 +19,10 @@ import { ProductsService } from 'src/app/services/products.service';
 })
 
 export class PosComponent implements OnInit {
+  showPaymentModal: boolean = false;
+  amountReceived: number | null = null;
+  change: number = 0;
+
   products: any = [];
 
   identificationCustomer: string = '';
@@ -50,11 +54,11 @@ export class PosComponent implements OnInit {
       new Date().toLocaleString('en-US', { timeZone: 'America/Guayaquil' })
     );
     console.log('📦fechaEcuador', fechaEcuador);
-    
+
     this.today = fechaEcuador.toISOString();
     console.log('📦this.today', this.today);
 
-    
+
     console.log('entro');
     this.clienteForm = this.fb.group({
       fullName: ['', [Validators.required]],
@@ -135,7 +139,7 @@ export class PosComponent implements OnInit {
         this.customer = res;
       },
       error: (err) => {
-        toast.error('Error:'+err.error.message);
+        toast.error('Error:' + err.error.message);
         console.error('Error al crear cliente:', err);
       }
     });
@@ -214,9 +218,71 @@ export class PosComponent implements OnInit {
 
 
 
-  finalizarVenta() {
+  // finalizarVenta() {
+  //   if (!this.identificationCustomer || this.cart.length === 0) {
+  //     alert('Selecciona un cliente y agrega productos al carrito.');
+  //     return;
+  //   }
+
+  //   const order = {
+  //     customerId: this.customer.id,
+  //     items: this.cart.map(item => ({
+  //       productId: item.id,
+  //       quantity: item.quantity
+  //     })),
+  //     type: 'nota', // Solo guardamos como "nota"
+  //     createdAt: this.today
+  //   };
+
+  //   console.log('order', order);
+
+  //   this.ordersService.create(order).subscribe(() => {
+
+  //   });
+
+  //   this.ordersService.create(order).subscribe({
+  //     next: (res) => {
+  //       alert('Pedido guardado exitosamente. Puedes facturarlo más tarde.');
+  //       this.customer = null;
+  //       this.identificationCustomer = '';
+  //       this.cart = [];
+  //     },
+  //     error: (err) => {
+  //       console.error(err);
+  //       alert('Ocurrió un error al guardar el pedido.');
+  //     }
+  //   });
+  // }
+
+
+  // Método para abrir el modal
+  abrirModalPago() {
     if (!this.identificationCustomer || this.cart.length === 0) {
       alert('Selecciona un cliente y agrega productos al carrito.');
+      return;
+    }
+
+    this.amountReceived = null;
+    this.change = 0;
+    this.showPaymentModal = true;
+  }
+
+  calcularCambio() {
+    if (this.paymentMethod === 'efectivo') {
+      const recibido = Number(this.amountReceived);
+      if (!isNaN(recibido)) {
+        this.change = recibido - this.total;
+      }
+    }
+  }
+
+  confirmarPago() {
+    console.log('this.paymentMethod', this.paymentMethod);
+    console.log('this.amountReceived', this.amountReceived);
+    console.log('this.change', this.change);
+
+    if (this.paymentMethod === 'efectivo' && (this.amountReceived === null || this.change < 0)) {
+      toast.warning('Monto recibido insuficiente.');
       return;
     }
 
@@ -226,31 +292,213 @@ export class PosComponent implements OnInit {
         productId: item.id,
         quantity: item.quantity
       })),
-      type: 'nota', // Solo guardamos como "nota"
-      createdAt: this.today
+      type: 'nota',
+      createdAt: this.today,
+      paymentMethod: this.paymentMethod,
+      amountReceived: this.amountReceived,
+      change: this.change
     };
 
-    console.log('order', order);
+    this.spinner.show();
 
-    this.ordersService.create(order).subscribe(() => {
-      alert('Pedido guardado exitosamente. Puedes facturarlo más tarde.');
-      this.cart = [];
-      this.customer = null;
-      this.identificationCustomer = '';
+    this.ordersService.create(order).subscribe({
+      next: () => {
+        this.spinner.hide();
+        toast.success(`Pedido guardado. ${this.paymentMethod === 'efectivo' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
+        this.showReceipt = true;
+        this.showPaymentModal = false;
+
+        // Imprimir nota + comanda juntas
+        //setTimeout(() => this.printCombinedTicket(), 500);
+        setTimeout(() => this.printCombinedTicketWithPageBreak(), 500);
+
+      },
+      error: () => {
+        this.spinner.hide();
+        toast.error('Error al guardar el pedido.');
+      }
     });
 
-    // this.http.post('/api/orders', order).subscribe({
-    //   next: (res) => {
-    //     alert('Pedido guardado exitosamente. Puedes facturarlo más tarde.');
-    //     this.cart = [];
-    //   },
-    //   error: (err) => {
-    //     console.error(err);
-    //     alert('Ocurrió un error al guardar el pedido.');
-    //   }
-    // });
   }
 
+
+  showKitchenTicket = false;
+  showReceipt = false;
+
+  printCombinedTicket() {
+    const nota = document.getElementById('print-area');
+    const cocina = document.getElementById('kitchen-area');
+
+    if (!nota || !cocina) {
+      toast.error('No se encontraron los contenidos de impresión');
+      return;
+    }
+
+    // Clonar y limpiar ambos bloques
+    const notaClone = nota.cloneNode(true) as HTMLElement;
+    const cocinaClone = cocina.cloneNode(true) as HTMLElement;
+
+    notaClone.querySelectorAll('.no-print').forEach(el => el.remove());
+    cocinaClone.querySelectorAll('.no-print').forEach(el => el.remove());
+
+    const combinedHTML = `
+    <div>
+      ${notaClone.innerHTML}
+      <hr style="margin: 20px 0; border-top: 1px dashed #000;" />
+      <div class="text-center" style="margin-bottom: 10px;">
+        <strong>--- COMANDA DE COCINA ---</strong>
+      </div>
+      ${cocinaClone.innerHTML}
+    </div>
+  `;
+
+    const printWindow = window.open('', '_blank', 'width=400,height=800');
+    if (!printWindow) {
+      toast.error('No se pudo abrir la ventana de impresión');
+      return;
+    }
+
+    const html = `
+    <html>
+      <head>
+        <title>Nota de Venta + Comanda</title>
+        <style>
+          body { font-family: monospace; font-size: 12px; padding: 10px; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { text-align: left; padding: 4px; }
+          .text-right { text-align: right; }
+          .text-center { text-align: center; }
+          hr { margin: 10px 0; }
+          .no-print { display: none !important; }
+          @media print {
+            .no-print { display: none !important; }
+          }
+        </style>
+      </head>
+      <body>
+        ${combinedHTML}
+        <script>
+          window.onload = function() {
+            window.print();
+            window.close();
+          };
+        </script>
+      </body>
+    </html>
+  `;
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+
+    // Limpieza final del estado del POS
+    this.cart = [];
+    this.customer = null;
+    this.identificationCustomer = '';
+    this.amountReceived = null;
+    this.change = 0;
+    this.showReceipt = false;
+    this.showKitchenTicket = false;
+  }
+
+
+
+
+  printCombinedTicketWithPageBreak() {
+  const nota = document.getElementById('print-area');
+  const cocina = document.getElementById('kitchen-area');
+
+  if (!nota || !cocina) {
+    toast.error('No se encontraron los contenidos de impresión');
+    return;
+  }
+
+  // Clonar y limpiar
+  const notaClone = nota.cloneNode(true) as HTMLElement;
+  const cocinaClone = cocina.cloneNode(true) as HTMLElement;
+
+  notaClone.querySelectorAll('.no-print').forEach(el => el.remove());
+  cocinaClone.querySelectorAll('.no-print').forEach(el => el.remove());
+
+  // Envolver cada sección en contenedores separados
+  const combinedHTML = `
+    <div class="nota-section">
+      ${notaClone.innerHTML}
+    </div>
+    <div class="page-break"></div>
+    <div class="cocina-section">
+      <div class="text-center" style="margin-bottom: 10px;">
+        <strong>--- COMANDA DE COCINA ---</strong>
+      </div>
+      ${cocinaClone.innerHTML}
+    </div>
+  `;
+
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    toast.error('No se pudo abrir la ventana de impresión');
+    return;
+  }
+
+  const html = `
+    <html>
+      <head>
+        <title>Nota + Comanda</title>
+        <style>
+          body { font-family: monospace; font-size: 12px; padding: 10px; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { text-align: left; padding: 4px; }
+          .text-right { text-align: right; }
+          .text-center { text-align: center; }
+          hr { margin: 10px 0; }
+          .no-print { display: none !important; }
+
+          /* 🔥 Esto fuerza una hoja nueva entre secciones */
+          .page-break {
+            page-break-after: always;
+            break-after: page;
+          }
+
+          @media print {
+            .no-print { display: none !important; }
+            .page-break {
+              page-break-after: always;
+              break-after: page;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        ${combinedHTML}
+        <script>
+          window.onload = function() {
+            window.print();
+            window.close();
+          };
+        </script>
+      </body>
+    </html>
+  `;
+
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
+
+  // Limpieza del estado del POS
+  this.cart = [];
+  this.customer = null;
+  this.identificationCustomer = '';
+  this.amountReceived = null;
+  this.change = 0;
+  this.showReceipt = false;
+  this.showKitchenTicket = false;
+}
+
+
+
+  cerrarComprobante() {
+    this.showReceipt = false;
+  }
 
   cerrarModal() {
     this.showCustomerModal = false;
