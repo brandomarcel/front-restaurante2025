@@ -33,8 +33,8 @@
                         </div>
 
                         <div class="text-xs text-muted-foreground space-y-0.5">
-                            <p>{{ customer?.fullName }}</p>
-                            <p>{{ customer?.email }}</p>
+                            <p>{{ customer?.nombre }}</p>
+                            <p>{{ customer?.correo }}</p>
                         </div>
                     </div>
 
@@ -61,14 +61,14 @@
                     <h2 class="text-lg font-semibold text-primary">Productos</h2>
 
                     <div class="inline-flex gap-2">
-                        <button (click)="selectedCategory = ''" [class.bg-primary]="selectedCategory === ''"
+                        <button (click)="onCategorySelected('')" [class.bg-primary]="selectedCategory === ''"
                             class="text-xs px-3 py-1 border rounded hover:bg-primary hover:text-white transition shrink-0">
                             Todos
                         </button>
-                        <button *ngFor="let category of categories" (click)="selectedCategory = category"
-                            [class.bg-primary]="selectedCategory === category"
+                        <button *ngFor="let category of categories" (click)="onCategorySelected(category.name)"
+                            [class.bg-primary]="selectedCategory === category.name"
                             class="text-xs px-3 py-1 border rounded hover:bg-primary hover:text-white transition shrink-0">
-                            {{ category.replace('_', ' ') }}
+                            {{ category.nombre }}
                         </button>
 
                     </div>
@@ -78,10 +78,10 @@
 
 
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3">
-                    <div *ngFor="let product of filteredProducts()" (click)="addProduct(product)"
+                    <div *ngFor="let product of filteredProductList" (click)="addProduct(product)"
                         class="cursor-pointer rounded border p-2 shadow-sm hover:bg-muted transition text-xs">
-                        <h3 class="font-medium text-foreground">{{ product.name }}</h3>
-                        <p class="text-muted-foreground">${{ product.price | number: '1.2-2' }}</p>
+                        <h3 class="font-medium text-foreground">{{ product.nombre }}</h3>
+                        <p class="text-muted-foreground">${{ product.precio | number: '1.2-2' }}</p>
                     </div>
                 </div>
             </div>
@@ -94,7 +94,7 @@
                     <div class="flex-grow overflow-auto space-y-1">
                         <div *ngFor="let item of cart" class="flex justify-between items-center border-b py-1">
                             <span class="font-medium text-foreground">
-                                {{ item.name }} <span class="text-foreground font-normal">x{{ item.quantity }}</span>
+                                {{ item.nombre }} <span class="text-foreground font-normal">x{{ item.quantity }}</span>
                             </span>
                             <div class="flex items-center gap-2">
                                 <button (click)="decrease(item)"
@@ -118,7 +118,7 @@
                     <!-- TOTALES -->
                     <div class="border-t pt-4 space-y-1 text-xs text-foreground">
                         <p>Subtotal: ${{ subtotal | number: '1.2-2' }}</p>
-                        <p>IVA (12%): ${{ iva | number: '1.2-2' }}</p>
+                        <p>IVA (15%): ${{ iva | number: '1.2-2' }}</p>
                         <p class="text-base font-bold">Total: ${{ total | number: '1.2-2' }}</p>
                     </div>
 
@@ -154,8 +154,8 @@
             <!-- Nombre / Razón Social -->
             <div>
                 <label class="block text-sm font-medium">Nombre / Razón Social</label>
-                <input type="text" formControlName="fullName" class="w-full border rounded px-3 py-2 text-sm" />
-                <div *ngIf="f['fullName'].invalid && submitted" class="text-red-500 text-sm">
+                <input type="text" formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['nombre'].invalid && submitted" class="text-red-500 text-sm">
                     Campo requerido.
                 </div>
             </div>
@@ -163,12 +163,12 @@
             <!-- Tipo -->
             <div>
                 <label class="block text-sm font-medium">Tipo</label>
-                <select formControlName="identificationType" class="w-full border rounded px-3 py-2 text-sm">
-                    <option value="06">Consumidor Final</option>
-                    <option value="04">Cédula</option>
-                    <option value="05">RUC</option>
+                <select formControlName="tipo_identificacion" class="w-full border rounded px-3 py-2 text-sm">
+                    <option value="06 - Consumidor Final">Consumidor Final</option>
+                    <option value="04 - Cédula">Cédula</option>
+                    <option value="05 - RUC">RUC</option>
                 </select>
-                <div *ngIf="f['identificationType'].invalid && submitted" class="text-red-500 text-sm">
+                <div *ngIf="f['tipo_identificacion'].invalid && submitted" class="text-red-500 text-sm">
                     Seleccione un tipo válido.
                 </div>
             </div>
@@ -176,8 +176,8 @@
             <!-- Identificación -->
             <div>
                 <label class="block text-sm font-medium">Identificación</label>
-                <input type="text" formControlName="identification" class="w-full border rounded px-3 py-2 text-sm" />
-                <div *ngIf="f['identification'].invalid && submitted" class="text-red-500 text-sm">
+                <input maxlength="13" type="text" formControlName="num_identificacion" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['num_identificacion'].invalid && submitted" class="text-red-500 text-sm">
                     Campo requerido.
                 </div>
             </div>
@@ -186,8 +186,8 @@
             <!-- Email -->
             <div>
                 <label class="block text-sm font-medium">Email</label>
-                <input type="email" formControlName="email" class="w-full border rounded px-3 py-2 text-sm" />
-                <div *ngIf="f['email'].invalid && submitted" class="text-red-500 text-sm">
+                <input type="email" formControlName="correo" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['correo'].invalid && submitted" class="text-red-500 text-sm">
                     Email inválido.
                 </div>
             </div>
@@ -195,8 +195,8 @@
             <!-- Teléfono -->
             <div>
                 <label class="block text-sm font-medium">Teléfono</label>
-                <input type="text" formControlName="phone" class="w-full border rounded px-3 py-2 text-sm" />
-                <div *ngIf="f['phone'].invalid && submitted" class="text-red-500 text-sm">
+                <input maxlength="10" type="text" formControlName="telefono" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['telefono'].invalid && submitted" class="text-red-500 text-sm">
                     Dirección inválido.
                 </div>
             </div>
@@ -204,8 +204,8 @@
             <!-- Dirección -->
             <div>
                 <label class="block text-sm font-medium">Dirección</label>
-                <input type="text" formControlName="address" class="w-full border rounded px-3 py-2 text-sm" />
-                <div *ngIf="f['address'].invalid && submitted" class="text-red-500 text-sm">
+                <input type="text" formControlName="direccion" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['direccion'].invalid && submitted" class="text-red-500 text-sm">
                     Dirección inválido.
                 </div>
             </div>
@@ -239,8 +239,7 @@
                 <label class="block text-sm font-medium mb-1 text-gray-700">Método de Pago</label>
                 <select [(ngModel)]="paymentMethod" (change)="calcularCambio()"
                     class="w-full border border-gray-300 rounded px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary">
-                    <option value="efectivo">Efectivo</option>
-                    <option value="transferencia">Transferencia</option>
+                    <option [value]="item.codigo" *ngFor="let item of payments" >{{ item.nombre }}</option>
                 </select>
             </div>
 
@@ -251,7 +250,7 @@
             </div>
 
             <!-- Solo si es efectivo -->
-            <div *ngIf="paymentMethod === 'efectivo'" class="space-y-4">
+            <div *ngIf="paymentMethod === '01'" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium mb-1 text-gray-700">Monto recibido</label>
                     <input type="number" [(ngModel)]="amountReceived" (input)="calcularCambio()"
@@ -282,80 +281,80 @@
 
 <!-- NOTA DE VENTA -->
 <div id="print-area" class="hidden print:block">
-  <div class="text-center mb-2">
-    <h2 class="text-xl font-bold">Nota de Venta</h2>
-    <p>Mi Negocio</p>
-    <p>RUC: 1234567890001</p>
-    <p>Dirección: Av. Siempre Viva 742</p>
-    <p>Tel: 0999999999</p>
-  </div>
-  <hr class="my-2" />
-  <div>
-    <p><strong>Cliente:</strong> {{ customer?.fullName || 'Consumidor Final' }}</p>
-    <p><strong>Fecha:</strong> {{ today | date:'short' }}</p>
-    <p><strong>Método:</strong> {{ paymentMethod | titlecase }}</p>
-  </div>
-  <hr class="my-2" />
-  <table class="w-full text-left mb-2">
-    <thead>
-      <tr>
-        <th>Item</th>
-        <th class="text-right">Cant</th>
-        <th class="text-right">Total</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let item of cart">
-        <td>{{ item.name }}</td>
-        <td class="text-right">{{ item.quantity }}</td>
-        <td class="text-right">${{ item.total | number:'1.2-2' }}</td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="text-right space-y-1">
-    <p><strong>Subtotal:</strong> ${{ subtotal | number:'1.2-2' }}</p>
-    <p><strong>IVA:</strong> ${{ iva | number:'1.2-2' }}</p>
-    <p class="text-lg font-bold">Total: ${{ total | number:'1.2-2' }}</p>
-    <ng-container *ngIf="paymentMethod === 'efectivo'">
-      <p><strong>Recibido:</strong> ${{ amountReceived | number:'1.2-2' }}</p>
-      <p><strong>Cambio:</strong> ${{ change | number:'1.2-2' }}</p>
-    </ng-container>
-  </div>
-  <div class="text-center mt-4">
-    <p>¡Gracias por su compra!</p>
-  </div>
-  <div class="text-center mt-2 no-print">
-    <button (click)="printCombinedTicket()" class="px-4 py-2 bg-primary text-white rounded text-xs">
-      Imprimir
-    </button>
-  </div>
+    <div class="text-center mb-2">
+        <h2 class="text-xl font-bold">Nota de Venta</h2>
+        <p>Mi Negocio</p>
+        <p>RUC: 1234567890001</p>
+        <p>Dirección: Av. Siempre Viva 742</p>
+        <p>Tel: 0999999999</p>
+    </div>
+    <hr class="my-2" />
+    <div>
+        <p><strong>Cliente:</strong> {{ customer?.fullName || 'Consumidor Final' }}</p>
+        <p><strong>Fecha:</strong> {{ today | date:'short' }}</p>
+        <p><strong>Método:</strong> {{ paymentMethod | titlecase }}</p>
+    </div>
+    <hr class="my-2" />
+    <table class="w-full text-left mb-2">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th class="text-right">Cant</th>
+                <th class="text-right">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let item of cart">
+                <td>{{ item.name }}</td>
+                <td class="text-right">{{ item.quantity }}</td>
+                <td class="text-right">${{ item.total | number:'1.2-2' }}</td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="text-right space-y-1">
+        <p><strong>Subtotal:</strong> ${{ subtotal | number:'1.2-2' }}</p>
+        <p><strong>IVA:</strong> ${{ iva | number:'1.2-2' }}</p>
+        <p class="text-lg font-bold">Total: ${{ total | number:'1.2-2' }}</p>
+        <ng-container *ngIf="paymentMethod === 'efectivo'">
+            <p><strong>Recibido:</strong> ${{ amountReceived | number:'1.2-2' }}</p>
+            <p><strong>Cambio:</strong> ${{ change | number:'1.2-2' }}</p>
+        </ng-container>
+    </div>
+    <div class="text-center mt-4">
+        <p>¡Gracias por su compra!</p>
+    </div>
+    <div class="text-center mt-2 no-print">
+        <button (click)="printCombinedTicket()" class="px-4 py-2 bg-primary text-white rounded text-xs">
+            Imprimir
+        </button>
+    </div>
 </div>
 
 
 
 <!-- COMANDA DE COCINA -->
 <div id="kitchen-area" class="hidden print:block">
-  <div class="text-center mb-3">
-    <h2 class="text-xl font-bold uppercase">Comanda</h2>
-    <p>Mesa / Cliente: {{ customer?.fullName || 'Mostrador' }}</p>
-    <p>{{ today | date:'short' }}</p>
-  </div>
-  <hr class="my-2" />
-  <table class="w-full text-left">
-    <thead>
-      <tr>
-        <th>Producto</th>
-        <th class="text-right">Cant</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let item of cart">
-        <td>{{ item.name }}</td>
-        <td class="text-right">{{ item.quantity }}</td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="text-center mt-4">
-    <p class="italic">Enviar a cocina</p>
-  </div>
+    <div class="text-center mb-3">
+        <h2 class="text-xl font-bold uppercase">Comanda</h2>
+        <p>Mesa / Cliente: {{ customer?.fullName || 'Mostrador' }}</p>
+        <p>{{ today | date:'short' }}</p>
+    </div>
+    <hr class="my-2" />
+    <table class="w-full text-left">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th class="text-right">Cant</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let item of cart">
+                <td>{{ item.name }}</td>
+                <td class="text-right">{{ item.quantity }}</td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="text-center mt-4">
+        <p class="italic">Enviar a cocina</p>
+    </div>
 </div>

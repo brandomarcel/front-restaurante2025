@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class OrdersService {
-  private readonly apiUrl = environment.apiUrl + 'orders'; // Cambia si usás otro backend
+  private readonly apiUrl = environment.apiUrl; // Cambia si usás otro backend
 
   constructor(private http: HttpClient) {}
 
@@ -17,8 +17,11 @@ export class OrdersService {
     return this.http.get<any>(`${this.apiUrl}/${id}`);
   }
 
-  create(order: any) {
-    return this.http.post(this.apiUrl, order);
+  // create(order: any) {
+  //   return this.http.post(this.apiUrl, order);
+  // }
+    create(order: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/resource/orders`, order);
   }
 
   delete(id: number) {

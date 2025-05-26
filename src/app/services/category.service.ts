@@ -4,12 +4,16 @@ import { environment } from 'src/environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class CategoryService {
-   private readonly apiUrl = environment.apiUrl + 'categories';
+  private readonly apiUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   getAll() {
-    return this.http.get<any[]>(this.apiUrl);
+    const campos = ['name', 'nombre', 'description', 'isactive'];
+
+    return this.http.get(`${environment.apiUrl}/resource/categorias?fields=${JSON.stringify(campos)}`, {
+      withCredentials: true
+    });
   }
 
   create(data: any) {

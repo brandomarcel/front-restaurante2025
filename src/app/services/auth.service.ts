@@ -1,8 +1,9 @@
 // src/app/services/auth.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, switchMap, tap } from 'rxjs';
 import { environment } from 'src/environments/environment';
+import { UserService } from './user.service';
 
 interface LoginResponse {
   access_token: string;
@@ -18,20 +19,22 @@ interface LoginResponse {
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = environment.apiUrl + 'auth'; // Cambia si es tu entorno de producción
+  private apiUrl = environment.apiUrl; // Cambia si es tu entorno de producción
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient,
+    private userService: UserService
+  ) {}
 
 
-  login(credentials: { email: string; password: string }): Observable<LoginResponse> {
-    console.log('this.apiUrl', this.apiUrl);
-    return this.http.post<LoginResponse>(`${this.apiUrl}/login`, credentials);
-  }
+  // login(credentials: { email: string; password: string }): Observable<LoginResponse> {
+  //   console.log('this.apiUrl', this.apiUrl);
+  //   return this.http.post<LoginResponse>(`${this.apiUrl}/login`, credentials);
+  // }
 
-  logout() {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user');
-  }
+  // logout() {
+  //   localStorage.removeItem('access_token');
+  //   localStorage.removeItem('user');
+  // }
 
   isLoggedIn(): boolean {
     return !!localStorage.getItem('access_token');
@@ -40,4 +43,42 @@ export class AuthService {
   getCurrentUser() {
     return JSON.parse(localStorage.getItem('user') || '{}');
   }
+
+  /////////////////////////////////////////////////////////////
+
+login(username: string, password: string) {
+  const body = { usr: username, pwd: password };
+
+  return this.http.post(`${this.apiUrl}/method/login`, body, {
+    withCredentials: true
+  }).pipe(
+    switchMap(() => this.getUserInfo())
+  );
+}
+
+getUserInfo() {
+  return this.http.get<any>(`${this.apiUrl}/method/restaurante_app.restaurante_bmarc.api.user.get_user_info`, {
+    withCredentials: true
+  }).pipe(
+    tap(res => {
+      console.log('res', res);
+      const user = {
+        email: res.message.email,
+        fullName: res.message.full_name,
+        roles: res.message.roles // <--- CORRECTO
+      };
+      this.userService.setUser(user);
+    })
+  );
+}
+
+logout() {
+  return this.http.get(`${this.apiUrl}/api/method/logout`, {
+    withCredentials: true
+  }).pipe(
+    tap(() => this.userService.clearUser())
+  );
+}
+
+
 }

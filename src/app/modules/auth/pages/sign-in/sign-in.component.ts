@@ -27,7 +27,7 @@ export class SignInComponent implements OnInit {
 
 
     this.form = this._formBuilder.group({
-      email: ['', [Validators.required, Validators.email]],
+      email: ['', [Validators.required]],
       password: ['', Validators.required],
     });
   }
@@ -57,27 +57,40 @@ export class SignInComponent implements OnInit {
 
     if (this.form.invalid) return;
     this.spinner.show();
-    this.authService.login(this.form.value).subscribe({
-      next: (res) => {
-
-        console.log(res);
-
-        // Guarda el token y el usuario
-        localStorage.setItem('access_token', res.access_token);
-        localStorage.setItem('user', JSON.stringify(res.user));
+    this.authService.login(this.form.value.email, this.form.value.password).subscribe({
+      next: () => {
         this.spinner.hide();
-        // Redirige al dashboard u otra página
-        this._router.navigate(['/dashboard']);
+        this._router.navigate(['/dashboard']); // Ruta protegida del POS
       },
       error: (err) => {
-        this.spinner.hide();
         toast.error('Credenciales incorrectas');
-        console.error('Error de login:', err.message);
-        // Aquí podrías mostrar una alerta o toast
-      },
-      complete: () => {
+        console.error(err);
         this.spinner.hide();
       }
     });
+
+
+    // this.authService.login(this.form.value).subscribe({
+    //   next: (res) => {
+
+    //     console.log(res);
+
+    //     // Guarda el token y el usuario
+    //     localStorage.setItem('access_token', res.access_token);
+    //     localStorage.setItem('user', JSON.stringify(res.user));
+    //     this.spinner.hide();
+    //     // Redirige al dashboard u otra página
+    //     this._router.navigate(['/dashboard']);
+    //   },
+    //   error: (err) => {
+    //     this.spinner.hide();
+    //     toast.error('Credenciales incorrectas');
+    //     console.error('Error de login:', err.message);
+    //     // Aquí podrías mostrar una alerta o toast
+    //   },
+    //   complete: () => {
+    //     this.spinner.hide();
+    //   }
+    // });
   }
 }

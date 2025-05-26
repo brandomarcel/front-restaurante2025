@@ -52,8 +52,8 @@ export class CustomersComponent implements OnInit {
   cargarClientes() {
 
     this.spinner.show();
-    this.customersService.findAll().subscribe({
-      next: (res) => {
+    this.customersService.getAll().subscribe({
+      next: (res: any) => {
         this.spinner.hide();
 
         this.customers = res || [];

@@ -12,14 +12,14 @@ export interface Customer {
 }
 @Injectable({ providedIn: 'root' })
 export class CustomersService {
-  private readonly apiUrl = environment.apiUrl + 'customers'; // Cambia si usás otro backend
+  private readonly apiUrl = environment.apiUrl; // Cambia si usás otro backend
 
   constructor(private http: HttpClient) {}
 
   // Obtener todos
-  findAll(): Observable<any[]> {
-    return this.http.get<any[]>(this.apiUrl);
-  }
+  // findAll(): Observable<any[]> {
+  //   return this.http.get<any[]>(this.apiUrl);
+  // }
 
   // Buscar por ID
   findOne(id: number): Observable<any> {
@@ -27,14 +27,14 @@ export class CustomersService {
   }
 
   // Buscar por identificación
-  findByIdentification(identification: string): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/identification/${identification}`);
-  }
+  // findByIdentification(identification: string): Observable<any> {
+  //   return this.http.get<any>(`${this.apiUrl}/identification/${identification}`);
+  // }
 
   // Crear
-  create(data: Omit<any, 'id'>): Observable<any> {
-    return this.http.post<any>(this.apiUrl, data);
-  }
+  // create(data: Omit<any, 'id'>): Observable<any> {
+  //   return this.http.post<any>(this.apiUrl, data);
+  // }
 
   // Actualizar
   update(id: number, data: Partial<any>): Observable<any> {
@@ -45,4 +45,25 @@ export class CustomersService {
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
+
+
+  ////////////////////////////////////////////////////
+  // Obtener todos  
+  getAll() {
+    const campos = ["name","nombre","num_identificacion","telefono","correo","direccion","tipo_identificacion","isactive"];
+
+    return this.http.get(`${environment.apiUrl}/resource/Cliente?fields=${JSON.stringify(campos)}`, {
+      withCredentials: true
+    });
+  }
+
+    findByIdentification(identification: string): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/resource/Cliente/${identification}`);
+  }
+
+    // Crear
+  create(data: Omit<any, 'id'>): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/resource/Cliente`, data);
+  }
+
 }

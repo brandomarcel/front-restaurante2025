@@ -3,15 +3,15 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 
 @Injectable({ providedIn: 'root' })
-export class ProductsService {
+export class PaymentsService {
   private baseUrl = environment.apiUrl;
 
   constructor(private http: HttpClient) { }
 
   getAll() {
-    const campos = ['name', 'nombre', 'precio', 'descripcion', 'categoria','tax'];
+    const campos = ['name', 'nombre', 'codigo'];
 
-    return this.http.get(`${environment.apiUrl}/resource/Producto?fields=${JSON.stringify(campos)}`, {
+    return this.http.get(`${environment.apiUrl}/resource/payments?fields=${JSON.stringify(campos)}`, {
       withCredentials: true
     });
   }

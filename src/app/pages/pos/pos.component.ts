@@ -7,8 +7,10 @@ import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { OnlyNumbersDirective } from 'src/app/core/directives/only-numbers.directive';
 import { MenuService } from 'src/app/modules/layout/services/menu.service';
+import { CategoryService } from 'src/app/services/category.service';
 import { CustomersService } from 'src/app/services/customers.service';
 import { OrdersService } from 'src/app/services/orders.service';
+import { PaymentsService } from 'src/app/services/payments.service';
 import { ProductsService } from 'src/app/services/products.service';
 
 @Component({
@@ -24,16 +26,20 @@ export class PosComponent implements OnInit {
   change: number = 0;
 
   products: any = [];
+  filteredProductList: any[] = [];
+
+  categories: any = [];
+  payments: any = [];
 
   identificationCustomer: string = '';
   customer: any = null;
   cart: any[] = [];
   searchTerm: string = '';
   selectedCategory = '';
-  categories = ['Entrada', 'Sopas', 'Adicionales', 'Bebidas', 'Postres', 'Platos_Fuertes', 'Burguers'];
+  //categories = ['Entrada', 'Sopas', 'Adicionales', 'Bebidas', 'Postres', 'Platos_Fuertes', 'Burguers'];
 
 
-  paymentMethod: string = 'efectivo';
+  paymentMethod: string = '01';
 
   showCustomerModal = false;
 
@@ -44,6 +50,8 @@ export class PosComponent implements OnInit {
   constructor(public menuService: MenuService,
     private customersService: CustomersService,
     private productsService: ProductsService,
+    private categoryService: CategoryService,
+    private paymentsService: PaymentsService,
     private fb: FormBuilder,
     private ordersService: OrdersService,
     private spinner: NgxSpinnerService
@@ -61,17 +69,19 @@ export class PosComponent implements OnInit {
 
     console.log('entro');
     this.clienteForm = this.fb.group({
-      fullName: ['', [Validators.required]],
-      identification: ['', [Validators.required]],
-      identificationType: ['04', [Validators.required]],
-      email: ['', [Validators.required, Validators.email]],
-      phone: ['', [Validators.required]],
-      address: ['', [Validators.required]],
+      nombre: ['', [Validators.required]],
+      num_identificacion: ['', [Validators.required]],
+      tipo_identificacion: ['04 - Cédula', [Validators.required]],
+      correo: ['', [Validators.required, Validators.email]],
+      telefono: ['', [Validators.required]],
+      direccion: ['', [Validators.required]],
     });
 
     this.toggleSidebar();
 
     this.loadProducts();
+    this.loadCategory();
+    this.loadMethodPayment();
   }
   public toggleSidebar() {
     this.menuService.toggleSidebar();
@@ -81,10 +91,28 @@ export class PosComponent implements OnInit {
   }
   loadProducts() {
     this.spinner.show();
-    this.productsService.getAll().subscribe((res) => {
+    this.productsService.getAll().subscribe((res: any) => {
       this.spinner.hide();
-      this.products = res || [];
-      console.log(' this.products', this.products);
+      this.products = res.data || [];
+      this.applyFilters(); // 🔥 Actualiza lista filtrada
+    });
+  }
+
+  loadCategory() {
+    this.spinner.show();
+    this.categoryService.getAll().subscribe((res: any) => {
+      this.spinner.hide();
+      this.categories = res.data || [];
+      console.log(' this.categories', this.categories);
+    });
+  }
+
+  loadMethodPayment() {
+    this.spinner.show();
+    this.paymentsService.getAll().subscribe((res: any) => {
+      this.spinner.hide();
+      this.payments = res.data || [];
+      console.log(' this.payments', this.payments);
     });
   }
 
@@ -100,13 +128,14 @@ export class PosComponent implements OnInit {
     this.spinner.show();
     this.customersService.findByIdentification(identification).subscribe({
       next: (res) => {
-        this.customer = res;
+        this.customer = res.data;
         console.log('Cliente encontrado:', res);
       },
       error: (err) => {
         console.error('Error al buscar cliente:', err);
         this.customer = null;
         this.clienteForm.patchValue({ identification: this.identificationCustomer });
+        this.identificationCustomer = '';
         toast.error('Cliente no encontrado con esa identificación');
         this.spinner.hide();
       },
@@ -145,17 +174,19 @@ export class PosComponent implements OnInit {
     });
   }
 
-  filteredProducts() {
-    return this.products.filter((product: any) =>
-      (!this.selectedCategory || product.category === this.selectedCategory) &&
+  applyFilters() {
+    this.filteredProductList = this.products.filter((product: any) =>
+      (!this.selectedCategory || product.categoria === this.selectedCategory) &&
       (!this.searchTerm || product.name.toLowerCase().includes(this.searchTerm.toLowerCase()))
     );
   }
 
+
   addProduct(product: any) {
-    const item = this.cart.find(i => i.id === product.id);
-    const price = parseFloat(product.price);
-    const tax = parseFloat(product.tax);
+    console.log('Producto agregado:', product);
+    const item = this.cart.find(i => i.name === product.name);
+    const price = parseFloat(product.precio);
+    const tax = product.tax;
 
     if (item) {
       item.quantity++;
@@ -186,31 +217,28 @@ export class PosComponent implements OnInit {
     }
   }
 
-  get subtotal(): number {
-    return this.cart.reduce((acc, item) => {
-      const total = Number(item.total);
-      const tax = Number(item.tax);
+get subtotal(): number {
+  return this.cart.reduce((acc, item) => {
+    const price = Number(item.price);
+    const quantity = Number(item.quantity);
+    return acc + (price * quantity); // precio sin IVA
+  }, 0);
+}
 
-      if (tax > 0) {
-        return acc + total / (1 + tax); // divide para quitar IVA incluido
-      } else {
-        return acc + total; // no tiene IVA
-      }
-    }, 0);
-  }
+get iva(): number {
+  return this.cart.reduce((acc, item) => {
+    const price = Number(item.price);
+    const quantity = Number(item.quantity);
+    let taxRate = 0;
 
-  get iva(): number {
-    return this.cart.reduce((acc, item) => {
-      const total = Number(item.total);
-      const tax = Number(item.tax);
+    if (item.tax === 'IVA-15') {
+      taxRate = 0.15;
+    }
 
-      if (tax > 0) {
-        return acc + (total - total / (1 + tax)); // parte correspondiente al IVA
-      } else {
-        return acc; // sin IVA
-      }
-    }, 0);
-  }
+    return acc + (price * quantity * taxRate);
+  }, 0);
+}
+
 
   get total(): number {
     return this.cart.reduce((acc, item) => acc + Number(item.total), 0);
@@ -268,7 +296,7 @@ export class PosComponent implements OnInit {
   }
 
   calcularCambio() {
-    if (this.paymentMethod === 'efectivo') {
+    if (this.paymentMethod === '01') {
       const recibido = Number(this.amountReceived);
       if (!isNaN(recibido)) {
         this.change = recibido - this.total;
@@ -280,23 +308,27 @@ export class PosComponent implements OnInit {
     console.log('this.paymentMethod', this.paymentMethod);
     console.log('this.amountReceived', this.amountReceived);
     console.log('this.change', this.change);
+    console.log('this.cart', this.cart);
+    const payment = this.payments.find((p: any) => p.codigo === this.paymentMethod);
+    console.log('paymentCode', payment);
 
-    if (this.paymentMethod === 'efectivo' && (this.amountReceived === null || this.change < 0)) {
+    if (this.paymentMethod === '01' && (this.amountReceived === null || this.change < 0)) {
       toast.warning('Monto recibido insuficiente.');
       return;
     }
 
     const order = {
-      customerId: this.customer.id,
+      customer: this.customer?.num_identificacion, // o this.customer?.id si estás usando el ID
       items: this.cart.map(item => ({
-        productId: item.id,
-        quantity: item.quantity
+        product: item.name, // Asegúrate que sea el código tipo "PROD-0012"
+        qty: item.quantity,
+        rate: item.price // o item.precio si ese es el campo
       })),
-      type: 'nota',
-      createdAt: this.today,
-      paymentMethod: this.paymentMethod,
-      amountReceived: this.amountReceived,
-      change: this.change
+      payments: [
+        {
+          formas_de_pago: payment?.name, // Esto es importante
+        }
+      ]
     };
 
     this.spinner.show();
@@ -304,13 +336,12 @@ export class PosComponent implements OnInit {
     this.ordersService.create(order).subscribe({
       next: () => {
         this.spinner.hide();
-        toast.success(`Pedido guardado. ${this.paymentMethod === 'efectivo' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
-        this.showReceipt = true;
-        this.showPaymentModal = false;
-
+        toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
+        // this.showReceipt = true;
+        // this.showPaymentModal = false;
         // Imprimir nota + comanda juntas
         //setTimeout(() => this.printCombinedTicket(), 500);
-        setTimeout(() => this.printCombinedTicketWithPageBreak(), 500);
+        //setTimeout(() => this.printCombinedTicketWithPageBreak(), 500);
 
       },
       error: () => {
@@ -405,23 +436,23 @@ export class PosComponent implements OnInit {
 
 
   printCombinedTicketWithPageBreak() {
-  const nota = document.getElementById('print-area');
-  const cocina = document.getElementById('kitchen-area');
+    const nota = document.getElementById('print-area');
+    const cocina = document.getElementById('kitchen-area');
 
-  if (!nota || !cocina) {
-    toast.error('No se encontraron los contenidos de impresión');
-    return;
-  }
+    if (!nota || !cocina) {
+      toast.error('No se encontraron los contenidos de impresión');
+      return;
+    }
 
-  // Clonar y limpiar
-  const notaClone = nota.cloneNode(true) as HTMLElement;
-  const cocinaClone = cocina.cloneNode(true) as HTMLElement;
+    // Clonar y limpiar
+    const notaClone = nota.cloneNode(true) as HTMLElement;
+    const cocinaClone = cocina.cloneNode(true) as HTMLElement;
 
-  notaClone.querySelectorAll('.no-print').forEach(el => el.remove());
-  cocinaClone.querySelectorAll('.no-print').forEach(el => el.remove());
+    notaClone.querySelectorAll('.no-print').forEach(el => el.remove());
+    cocinaClone.querySelectorAll('.no-print').forEach(el => el.remove());
 
-  // Envolver cada sección en contenedores separados
-  const combinedHTML = `
+    // Envolver cada sección en contenedores separados
+    const combinedHTML = `
     <div class="nota-section">
       ${notaClone.innerHTML}
     </div>
@@ -434,13 +465,13 @@ export class PosComponent implements OnInit {
     </div>
   `;
 
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    toast.error('No se pudo abrir la ventana de impresión');
-    return;
-  }
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('No se pudo abrir la ventana de impresión');
+      return;
+    }
 
-  const html = `
+    const html = `
     <html>
       <head>
         <title>Nota + Comanda</title>
@@ -480,21 +511,30 @@ export class PosComponent implements OnInit {
     </html>
   `;
 
-  printWindow.document.open();
-  printWindow.document.write(html);
-  printWindow.document.close();
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
 
-  // Limpieza del estado del POS
-  this.cart = [];
-  this.customer = null;
-  this.identificationCustomer = '';
-  this.amountReceived = null;
-  this.change = 0;
-  this.showReceipt = false;
-  this.showKitchenTicket = false;
-}
+    // Limpieza del estado del POS
+    this.cart = [];
+    this.customer = null;
+    this.identificationCustomer = '';
+    this.amountReceived = null;
+    this.change = 0;
+    this.showReceipt = false;
+    this.showKitchenTicket = false;
+  }
 
 
+  onCategorySelected(category: string) {
+    this.selectedCategory = category;
+    this.applyFilters();
+  }
+
+  onSearchTermChanged(term: string) {
+    this.searchTerm = term;
+    this.applyFilters();
+  }
 
   cerrarComprobante() {
     this.showReceipt = false;

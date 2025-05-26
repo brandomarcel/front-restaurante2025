@@ -40,7 +40,10 @@ export class ProductsComponent implements OnInit {
   cargarProductos() {
     this.spinner.show();
     this.productsService.getAll().subscribe({
-      next: (res) => this.productos = res,
+      next: (res:any) => {
+        this.productos = res.data;
+        console.log('Productos cargados:', this.productos);
+      },
       error: (err) => console.error('Error al cargar productos', err),
       complete: () => this.spinner.hide()
     });
@@ -48,7 +51,7 @@ export class ProductsComponent implements OnInit {
 
   cargarCategorias() {
     this.categoriesService.getAll().subscribe({
-      next: (res) => this.categories = res,
+      next: (res:any) => this.categories = res,
       error: (err) => console.error('Error al cargar categorías', err)
     });
   }
