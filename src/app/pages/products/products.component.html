@@ -25,6 +25,7 @@
         <thead class="bg-gray-100 sticky top-0 z-10">
           <tr>
             <th class="p-3 text-left font-medium text-gray-700">Nombre</th>
+            <th class="p-3 text-left font-medium text-gray-700">Descripción</th>
             <th class="p-3 text-left font-medium text-gray-700">Precio</th>
             <th class="p-3 text-left font-medium text-gray-700">IVA</th>
             <th class="p-3 text-left font-medium text-gray-700">Categoría</th>
@@ -37,6 +38,7 @@
     class="hover:bg-gray-50 transition">
 
             <td class="p-3 text-gray-800">{{ product.nombre }}</td>
+             <td class="p-3 text-gray-800">{{ product.descripcion || '------' }}</td>
             <td class="p-3 text-gray-800">${{ product.precio | number: '1.2-2' }}</td>
             <td class="p-3 text-gray-800">{{ product.tax }}</td>
             <td class="p-3 capitalize text-gray-800">

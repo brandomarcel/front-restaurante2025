@@ -77,13 +77,19 @@
 
 
 
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3">
-                    <div *ngFor="let product of filteredProductList" (click)="addProduct(product)"
-                        class="cursor-pointer rounded border p-2 shadow-sm hover:bg-muted transition text-xs">
-                        <h3 class="font-medium text-foreground">{{ product.nombre }}</h3>
-                        <p class="text-muted-foreground">${{ product.precio | number: '1.2-2' }}</p>
+                <div class="max-h-[50vh] overflow-y-auto">
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3">
+                        <div *ngFor="let product of filteredProductList" (click)="addProduct(product)"
+                            class="cursor-pointer rounded border p-2 shadow-sm hover:bg-muted transition text-xs">
+                            <h3 class="font-medium text-foreground">{{ product.nombre }}</h3>
+                            <p class="text-muted-foreground">
+                                <span>{{ product.descripcion ? '(' + product.descripcion + ')' : '' }}</span>
+                            </p>
+                            <p class="text-muted-foreground text-lg">${{ product.precio | number: '1.2-2' }}</p>
+                        </div>
                     </div>
                 </div>
+
             </div>
 
             <!-- RESUMEN DEL PEDIDO -->
@@ -94,7 +100,7 @@
                     <div class="flex-grow overflow-auto space-y-1">
                         <div *ngFor="let item of cart" class="flex justify-between items-center border-b py-1">
                             <span class="font-medium text-foreground">
-                                {{ item.nombre }} <span class="text-foreground font-normal">x{{ item.quantity }}</span>
+                                {{ item.nombre }} {{ item.descripcion ? '(' + item.descripcion + ')' : '' }} <span class="text-foreground font-normal">x{{ item.quantity }}</span>
                             </span>
                             <div class="flex items-center gap-2">
                                 <button (click)="decrease(item)"
@@ -176,7 +182,8 @@
             <!-- Identificación -->
             <div>
                 <label class="block text-sm font-medium">Identificación</label>
-                <input maxlength="13" type="text" formControlName="num_identificacion" class="w-full border rounded px-3 py-2 text-sm" />
+                <input maxlength="13" type="text" formControlName="num_identificacion"
+                    class="w-full border rounded px-3 py-2 text-sm" />
                 <div *ngIf="f['num_identificacion'].invalid && submitted" class="text-red-500 text-sm">
                     Campo requerido.
                 </div>
@@ -195,7 +202,8 @@
             <!-- Teléfono -->
             <div>
                 <label class="block text-sm font-medium">Teléfono</label>
-                <input maxlength="10" type="text" formControlName="telefono" class="w-full border rounded px-3 py-2 text-sm" />
+                <input maxlength="10" type="text" formControlName="telefono"
+                    class="w-full border rounded px-3 py-2 text-sm" />
                 <div *ngIf="f['telefono'].invalid && submitted" class="text-red-500 text-sm">
                     Dirección inválido.
                 </div>
@@ -226,55 +234,85 @@
 <!-- MODAL DE PAGO -->
 
 <div *ngIf="showPaymentModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-    <div class="bg-white w-full max-w-lg rounded-lg shadow-2xl p-6 relative text-base">
+    <div class="bg-white w-full max-w-5xl rounded-lg shadow-2xl p-6 relative text-base">
+        <!-- Botón cerrar -->
         <button class="absolute top-3 right-4 text-2xl font-bold text-gray-500 hover:text-gray-700"
             (click)="showPaymentModal = false">×</button>
 
-        <h2 class="text-2xl font-bold text-center text-primary mb-6">Registrar Pago</h2>
+        <h2 class="text-2xl font-bold text-center text-primary mb-6">Finalizar Pedido</h2>
 
-        <div class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- 📦 Columna izquierda: Resumen de productos -->
+            <div class="bg-gray-50 rounded-md p-4 border max-h-[70vh] overflow-y-auto">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4">🧾 Detalle del Pedido</h3>
 
-            <!-- Método de pago -->
-            <div>
-                <label class="block text-sm font-medium mb-1 text-gray-700">Método de Pago</label>
-                <select [(ngModel)]="paymentMethod" (change)="calcularCambio()"
-                    class="w-full border border-gray-300 rounded px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary">
-                    <option [value]="item.codigo" *ngFor="let item of payments" >{{ item.nombre }}</option>
-                </select>
+                <div *ngIf="cart.length > 0; else noItems" class="space-y-3 text-sm">
+                    <div *ngFor="let item of cart" class="flex justify-between items-center border-b pb-2">
+                        <div>
+                            <p class="font-medium text-gray-800">{{ item.nombre }} {{item.descripcion?
+                                '('+item.descripcion+')' : ''}}</p>
+                            <p class="text-gray-600 text-xs">x{{ item.quantity }} • ${{ item.price | number: '1.2-2' }}
+                            </p>
+                        </div>
+                        <p class="font-semibold text-gray-800">${{ item.total | number: '1.2-2' }}</p>
+                    </div>
+                </div>
+
+                <ng-template #noItems>
+                    <p class="text-gray-500 text-sm">No hay productos en el carrito.</p>
+                </ng-template>
+
+                <div class="mt-6 border-t pt-4 text-sm space-y-1 text-gray-700">
+                    <p><strong>Subtotal:</strong> ${{ subtotal | number: '1.2-2' }}</p>
+                    <p><strong>IVA (15%):</strong> ${{ iva | number: '1.2-2' }}</p>
+                    <p class="text-base font-bold"><strong>Total:</strong> ${{ total | number: '1.2-2' }}</p>
+                </div>
             </div>
 
-            <!-- Total -->
-            <div class="text-center border-y py-4">
-                <p class="text-lg text-gray-600">Total a Pagar</p>
-                <p class="text-4xl font-bold text-green-600">${{ total | number: '1.2-2' }}</p>
-            </div>
 
-            <!-- Solo si es efectivo -->
-            <div *ngIf="paymentMethod === '01'" class="space-y-4">
+            <!-- 💳 Columna derecha: Formulario de pago -->
+            <div class="space-y-6">
+                <!-- Método de pago -->
                 <div>
-                    <label class="block text-sm font-medium mb-1 text-gray-700">Monto recibido</label>
-                    <input type="number" [(ngModel)]="amountReceived" (input)="calcularCambio()"
-                        class="w-full border border-gray-300 rounded px-4 py-2 text-xl font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
-                        placeholder="Ingrese monto entregado" />
+                    <label class="block text-sm font-medium mb-1 text-gray-700">Método de Pago</label>
+                    <select [(ngModel)]="paymentMethod" (change)="calcularCambio()"
+                        class="w-full border border-gray-300 rounded px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary">
+                        <option [value]="item.codigo" *ngFor="let item of payments">{{ item.nombre }}</option>
+                    </select>
                 </div>
 
-                <div class="text-center">
-                    <p class="text-lg text-gray-600">Cambio</p>
-                    <p class="text-4xl font-bold" [class.text-red-600]="change < 0"
-                        [class.text-green-600]="change >= 0">
-                        ${{ change | number: '1.2-2' }}
-                    </p>
+                <!-- Total -->
+                <div class="text-center border-y py-4">
+                    <p class="text-lg text-gray-600">Total a Pagar</p>
+                    <p class="text-4xl font-bold text-green-600">${{ total | number: '1.2-2' }}</p>
                 </div>
-            </div>
 
-            <!-- Confirmar -->
-            <div>
-                <button (click)="confirmarPago()"
-                    class="w-full py-3 text-xl font-bold bg-primary text-white rounded hover:bg-primary/90 transition">
-                    Confirmar y Guardar Orden
-                </button>
+                <!-- Si es efectivo -->
+                <div *ngIf="paymentMethod === '01'" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1 text-gray-700">Monto recibido</label>
+                        <input type="number" [(ngModel)]="amountReceived" (input)="calcularCambio()"
+                            class="w-full border border-gray-300 rounded px-4 py-2 text-xl font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="Ingrese monto entregado" />
+                    </div>
+
+                    <div class="text-center">
+                        <p class="text-lg text-gray-600">Cambio</p>
+                        <p class="text-4xl font-bold" [class.text-red-600]="change < 0"
+                            [class.text-green-600]="change >= 0">
+                            ${{ change | number: '1.2-2' }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Confirmar -->
+                <div>
+                    <button (click)="confirmarPago()"
+                        class="w-full py-3 text-xl font-bold bg-primary text-white rounded hover:bg-primary/90 transition">
+                        Confirmar y Guardar Orden
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 </div>
-

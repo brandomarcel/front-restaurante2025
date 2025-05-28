@@ -43,17 +43,17 @@ export class Menu {
     //   ],
     // },
 
-      {
-        group: 'Inicio',
-        separator: true,
-        items: [
-          {
-            icon: 'assets/icons/heroicons/outline/chart-pie.svg',
-            label: 'Dashboard',
-            route: '/dashboard',
-          }
-        ],
-      },
+      // {
+      //   group: 'Inicio',
+      //   separator: true,
+      //   items: [
+      //     {
+      //       icon: 'assets/icons/heroicons/outline/chart-pie.svg',
+      //       label: 'Dashboard',
+      //       route: '/dashboard',
+      //     }
+      //   ],
+      // },
       
     {
       group: 'Punto de Venta',
@@ -107,11 +107,11 @@ export class Menu {
           label: 'Ordenes',
           route: '/dashboard/orders',
         },
-        {
-          icon: 'assets/icons/heroicons/outline/bell.svg',
-          label: 'Reportes',
-          route: '/dashboard/reports',
-        },
+        // {
+        //   icon: 'assets/icons/heroicons/outline/bell.svg',
+        //   label: 'Reportes',
+        //   route: '/dashboard/reports',
+        // },
         {
           icon: 'assets/icons/heroicons/outline/bell.svg',
           label: 'Categorias',

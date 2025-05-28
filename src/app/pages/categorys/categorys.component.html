@@ -5,7 +5,7 @@
         <h2 class="text-2xl font-semibold text-primary">Categorías</h2>
         <div class="text-muted-foreground space-x-1 text-xs font-medium">
           <a class="hover:text-primary"># Registros:</a>
-          <span class="text-foreground">{{ categorias.length }}</span>
+          <span class="text-foreground">{{ categories.length }}</span>
         </div>
       </div>
       <div class="inline-block space-x-4">
@@ -16,7 +16,7 @@
       </div>
     </div>
   
-    <ng-container *ngIf="categoriasFiltradas().length > 0; else emptyCategorias">
+    <ng-container *ngIf="categoriesFiltradasList.length > 0; else emptyCategorias">
       <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar categorías..."
         class="mb-4 w-full border rounded px-4 py-2 text-sm" />
   
@@ -31,26 +31,28 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr *ngFor="let categoria of categoriasFiltradas() | paginate: { itemsPerPage: pageSize, currentPage: page }"
+            <tr *ngFor="let categoria of categoriesFiltradasList | paginate: { itemsPerPage: pageSize, currentPage: page }"
               class="hover:bg-gray-50 transition">
-              <td class="p-3 text-gray-800">{{ categoria.name }}</td>
+              <td class="p-3 text-gray-800">{{ categoria.nombre }}</td>
               <td class="p-3 text-gray-800">{{ categoria.description || '-' }}</td>
-              <td class="p-3">
-                <span class="text-xs font-medium px-2 py-1 rounded"
-                  [class.bg-green-100]="categoria.isActive"
-                  [class.bg-red-100]="!categoria.isActive"
-                  [class.text-green-800]="categoria.isActive"
-                  [class.text-red-800]="!categoria.isActive">
-                  {{ categoria.isActive ? 'Activo' : 'Inactivo' }}
-                </span>
-              </td>
+                  <td class="p-3">
+              <span
+                class="text-xs font-medium px-2 py-1 rounded"
+                [class.bg-green-100]="categoria.isactive"
+                [class.bg-red-100]="!categoria.isactive"
+                [class.text-green-800]="categoria.isactive"
+                [class.text-red-800]="!categoria.isactive"
+              >
+                {{ categoria.isactive ? 'Activo' : 'Inactivo' }}
+              </span>
+            </td>
               <td class="p-3 flex gap-2">
                 <button class="text-blue-600 hover:text-blue-800 font-medium transition"
                   (click)="abrirModal(categoria)">
                   ✏️ Editar
                 </button>
                 <button class="text-red-600 hover:text-red-800 font-medium transition"
-                  (click)="eliminar(categoria.id)">
+                  (click)="eliminar(categoria.name)">
                   🗑️ Eliminar
                 </button>
               </td>
@@ -80,8 +82,8 @@
         <form [formGroup]="categoriaForm" (ngSubmit)="guardarCategoria()" class="space-y-4">
           <div>
             <label class="block text-sm font-medium">Nombre</label>
-            <input formControlName="name" class="w-full border rounded px-3 py-2 text-sm" />
-            <p *ngIf="f['name'].touched && f['name'].invalid" class="text-red-500 text-xs">Nombre requerido.</p>
+            <input formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm" />
+            <p *ngIf="f['nombre'].touched && f['nombre'].invalid" class="text-red-500 text-xs">Nombre requerido.</p>
           </div>
   
           <div>

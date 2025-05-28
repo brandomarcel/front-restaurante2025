@@ -8,13 +8,15 @@ import { CategoryService } from 'src/app/services/category.service';
 
 @Component({
   selector: 'app-categorys',
-  imports: [CommonModule,FormsModule,ReactiveFormsModule,NgxPaginationModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule],
   templateUrl: './categorys.component.html',
   styleUrl: './categorys.component.css'
 })
 export class CategorysComponent implements OnInit {
-  categorias: any[] = [];
-  searchTerm: string = '';
+  categories: any[] = [];
+  categoriesFiltradasList: any[] = [];
+
+  private _searchTerm: string = '';
   mostrarModal: boolean = false;
   categoriaEditando: any = null;
   page: number = 1;
@@ -23,30 +25,41 @@ export class CategorysComponent implements OnInit {
   categoriaForm!: FormGroup;
 
   constructor(
-    private categoriesService: CategoryService,
+    private categoryService: CategoryService,
     private fb: FormBuilder,
     private spinner: NgxSpinnerService
-  ) {}
+  ) { }
 
   ngOnInit() {
-    this.cargarCategorias();
+    this.loadCategory();
     this.resetForm();
   }
 
-  cargarCategorias() {
+  loadCategory() {
     this.spinner.show();
-    this.categoriesService.getAll().subscribe({
-      next: (res:any) => this.categorias = res,
-      error: (err:any) => console.error('Error al cargar categorías', err),
-      complete: () => this.spinner.hide()
+    this.categoryService.getAll().subscribe((res: any) => {
+      this.spinner.hide();
+      this.categories = res.data || [];
+      this.categoriesFiltradasList = [...this.categories]; // Inicializar la lista filtrada
+      this.categories.sort((a, b) => a.name.localeCompare(b.name));
+      console.log(' this.categories', this.categories);
     });
   }
+  get searchTerm(): string {
+    return this._searchTerm;
+  }
 
-  categoriasFiltradas() {
-    return this.categorias.filter(c =>
-      c.name.toLowerCase().includes(this.searchTerm.toLowerCase())
+  set searchTerm(value: string) {
+    this._searchTerm = value;
+    this.actualizarCategoriasFiltradas(); // se actualiza cada vez que el usuario escribe
+  }
+  actualizarCategoriasFiltradas() {
+    const term = this._searchTerm.toLowerCase();
+    this.categoriesFiltradasList = this.categories.filter(p =>
+      p.name.toLowerCase().includes(term)
     );
   }
+
 
   abrirModal(categoria: any = null) {
     this.mostrarModal = true;
@@ -71,23 +84,31 @@ export class CategorysComponent implements OnInit {
     this.spinner.show();
 
     if (this.categoriaEditando) {
-      this.categoriesService.update(this.categoriaEditando.id, data).subscribe({
+      this.categoryService.update(this.categoriaEditando.name, data).subscribe({
         next: () => {
           toast.success('Categoría actualizada');
-          this.cargarCategorias();
+          this.loadCategory();
           this.cerrarModal();
+          this.spinner.hide()
         },
-        error: () => toast.error('Error al actualizar'),
+        error: () => {
+          toast.error('Error al actualizar')
+          this.spinner.hide()
+        },
         complete: () => this.spinner.hide()
       });
     } else {
-      this.categoriesService.create(data).subscribe({
+      this.categoryService.create(data).subscribe({
         next: () => {
           toast.success('Categoría creada');
-          this.cargarCategorias();
+          this.loadCategory();
           this.cerrarModal();
+          this.spinner.hide()
         },
-        error: () => toast.error('Error al crear'),
+        error: () => {
+          toast.error('Error al crear')
+          this.spinner.hide()
+        },
         complete: () => this.spinner.hide()
       });
     }
@@ -96,12 +117,16 @@ export class CategorysComponent implements OnInit {
   eliminar(name: string) {
     if (confirm('¿Eliminar esta categoría?')) {
       this.spinner.show();
-      this.categoriesService.delete(name).subscribe({
+      this.categoryService.delete(name).subscribe({
         next: () => {
           toast.success('Categoría eliminada');
-          this.cargarCategorias();
+          this.loadCategory();
+          this.spinner.hide()
         },
-        error: () => toast.error('Error al eliminar'),
+        error: () => {
+          toast.error('Error al eliminar')
+          this.spinner.hide()
+        },
         complete: () => this.spinner.hide()
       });
     }
@@ -109,7 +134,8 @@ export class CategorysComponent implements OnInit {
 
   resetForm() {
     this.categoriaForm = this.fb.group({
-      name: ['', Validators.required],
+      name: [''],
+      nombre: ['', Validators.required],
       description: [''],
       isActive: [true],
     });

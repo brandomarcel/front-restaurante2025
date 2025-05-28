@@ -11,7 +11,7 @@ export class ProductsService {
   getAll() {
     const campos = ['name', 'nombre', 'precio', 'descripcion', 'categoria', 'tax','isactive'];
 
-    return this.http.get(`${environment.apiUrl}/resource/Producto?fields=${JSON.stringify(campos)}`, {
+    return this.http.get(`${environment.apiUrl}/resource/Producto?fields=${JSON.stringify(campos)}&limit_page_length=1000&order_by=categoria asc`, {
       withCredentials: true
     });
   }
