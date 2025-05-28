@@ -16,8 +16,7 @@
         </div>
     </div>
 
-    <ng-container *ngIf="filteredCustomers().length > 0; else emptyCustomers">
-
+    <ng-container *ngIf="filteredCustomersList.length > 0; else emptyCustomers">
 
         <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar por nombre o cédula..."
             class="mb-4 w-full rounded border px-4 py-2 text-sm" />
@@ -28,7 +27,7 @@
                     <tr>
                         <th class="p-3 text-left font-medium text-gray-700">Nombre</th>
                         <th class="p-3 text-left font-medium text-gray-700">Identificación</th>
-                        <th class="p-3 text-left font-medium text-gray-700">Tipo</th>
+                        <!-- <th class="p-3 text-left font-medium text-gray-700">Tipo</th> -->
                         <th class="p-3 text-left font-medium text-gray-700">Teléfono</th>
                         <th class="p-3 text-left font-medium text-gray-700">Email</th>
                         <th class="p-3 text-left font-medium text-gray-700">Acciones</th>
@@ -36,19 +35,19 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     <tr
-                        *ngFor="let customer of filteredCustomers() | paginate: { itemsPerPage: pageSize, currentPage: page }">
-                        <td class="p-3 text-gray-800">{{ customer.fullName }}</td>
-                        <td class="p-3 text-gray-800">{{ customer.identification }}</td>
-                        <td class="p-3 capitalize text-gray-800">{{ customer.identificationType }}</td>
-                        <td class="p-3 text-gray-800">{{ customer.phone }}</td>
-                        <td class="p-3 text-gray-800">{{ customer.email }}</td>
+                        *ngFor="let customer of filteredCustomersList | paginate: { itemsPerPage: pageSize, currentPage: page }">
+                        <td class="p-3 text-gray-800">{{ customer.nombre }}</td>
+                        <td class="p-3 text-gray-800">{{ customer.num_identificacion }}</td>
+                        <!-- <td class="p-3 capitalize text-gray-800">{{ customer.tipo_identificacion }}</td> -->
+                        <td class="p-3 text-gray-800">{{ customer.telefono }}</td>
+                        <td class="p-3 text-gray-800">{{ customer.correo }}</td>
                         <td class="p-3 flex gap-2">
                             <button class="text-blue-600 hover:text-blue-800 font-medium transition"
                                 (click)="abrirModal(customer)">
                                 ✏️ Editar
                             </button>
                             <button class="text-red-600 hover:text-red-800 font-medium transition"
-                                (click)="eliminarCliente(customer.id)">
+                                (click)="delete(customer.name)">
                                 🗑️ Eliminar
                             </button>
                         </td>
@@ -59,7 +58,8 @@
 
 
             <!-- Opcional: mensaje si no hay resultados -->
-            <div *ngIf="filteredCustomers().length === 0" class="text-center text-gray-500 py-4">
+            <div *ngIf="filteredCustomersList.length === 0" class="text-center text-gray-500 py-4">
+
                 No se encontraron clientes.
             </div>
         </div>
@@ -79,73 +79,73 @@
                 {{ clienteEditando?.id ? 'Editar Cliente' : 'Nuevo Cliente' }}
             </h3>
 
-            <form [formGroup]="clienteForm" (ngSubmit)="guardarCliente()" class="space-y-4">
-                <!-- Nombre / Razón Social -->
-                <div>
-                    <label class="block text-sm font-medium">Nombre / Razón Social</label>
-                    <input type="text" formControlName="fullName" class="w-full border rounded px-3 py-2 text-sm" />
-                    <div *ngIf="f['fullName'].invalid && submitted" class="text-red-500 text-sm">
-                        Campo requerido.
-                    </div>
+             <form [formGroup]="clienteForm" (ngSubmit)="guardarCliente()" class="space-y-4">
+            <!-- Nombre / Razón Social -->
+            <div>
+                <label class="block text-sm font-medium">Nombre / Razón Social</label>
+                <input type="text" formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['nombre'].invalid && submitted" class="text-red-500 text-sm">
+                    Campo requerido.
                 </div>
+            </div>
 
-                <!-- Tipo -->
-                <div>
-                    <label class="block text-sm font-medium">Tipo</label>
-                    <select formControlName="identificationType" class="w-full border rounded px-3 py-2 text-sm">
-                        <option value="06">Consumidor Final</option>
-                        <option value="04">Cédula</option>
-                        <option value="05">RUC</option>
-                    </select>
-                    <div *ngIf="f['identificationType'].invalid && submitted" class="text-red-500 text-sm">
-                        Seleccione un tipo válido.
-                    </div>
+            <!-- Tipo -->
+            <div>
+                <label class="block text-sm font-medium">Tipo</label>
+                <select formControlName="tipo_identificacion" class="w-full border rounded px-3 py-2 text-sm">
+                    <option value="06 - Consumidor Final">Consumidor Final</option>
+                    <option value="04 - Cédula">Cédula</option>
+                    <option value="05 - RUC">RUC</option>
+                </select>
+                <div *ngIf="f['tipo_identificacion'].invalid && submitted" class="text-red-500 text-sm">
+                    Seleccione un tipo válido.
                 </div>
+            </div>
 
-                <!-- Identificación -->
-                <div>
-                    <label class="block text-sm font-medium">Identificación</label>
-                    <input type="text" formControlName="identification"
-                        class="w-full border rounded px-3 py-2 text-sm" />
-                    <div *ngIf="f['identification'].invalid && submitted" class="text-red-500 text-sm">
-                        Campo requerido.
-                    </div>
+            <!-- Identificación -->
+            <div>
+                <label class="block text-sm font-medium">Identificación</label>
+                <input maxlength="13" type="text" formControlName="num_identificacion" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['num_identificacion'].invalid && submitted" class="text-red-500 text-sm">
+                    Campo requerido.
                 </div>
+            </div>
 
-                <!-- Email -->
-                <div>
-                    <label class="block text-sm font-medium">Email</label>
-                    <input type="email" formControlName="email" class="w-full border rounded px-3 py-2 text-sm" />
-                    <div *ngIf="f['email'].invalid && submitted" class="text-red-500 text-sm">
-                        Email inválido.
-                    </div>
-                </div>
 
-                <!-- Teléfono -->
-                <div>
-                    <label class="block text-sm font-medium">Teléfono</label>
-                    <input type="text" formControlName="phone" class="w-full border rounded px-3 py-2 text-sm" />
-                    <div *ngIf="f['phone'].invalid && submitted" class="text-red-500 text-sm">
-                        Teléfono inválido.
-                    </div>
+            <!-- Email -->
+            <div>
+                <label class="block text-sm font-medium">Email</label>
+                <input type="email" formControlName="correo" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['correo'].invalid && submitted" class="text-red-500 text-sm">
+                    Email inválido.
                 </div>
+            </div>
 
-                <!-- Dirección -->
-                <div>
-                    <label class="block text-sm font-medium">Dirección</label>
-                    <input type="text" formControlName="address" class="w-full border rounded px-3 py-2 text-sm" />
-                    <div *ngIf="f['address'].invalid && submitted" class="text-red-500 text-sm">
-                        Dirección inválida.
-                    </div>
+            <!-- Teléfono -->
+            <div>
+                <label class="block text-sm font-medium">Teléfono</label>
+                <input maxlength="10" type="text" formControlName="telefono" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['telefono'].invalid && submitted" class="text-red-500 text-sm">
+                    Dirección inválido.
                 </div>
+            </div>
 
-                <!-- Botón -->
-                <div class="pt-2">
-                    <button type="submit" class="bg-primary text-white px-4 py-2 rounded w-full disabled:opacity-50">
-                        Guardar
-                    </button>
+            <!-- Dirección -->
+            <div>
+                <label class="block text-sm font-medium">Dirección</label>
+                <input type="text" formControlName="direccion" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['direccion'].invalid && submitted" class="text-red-500 text-sm">
+                    Dirección inválido.
                 </div>
-            </form>
+            </div>
+
+            <!-- Botón -->
+            <div class="pt-2">
+                <button type="submit" class="bg-primary text-white px-4 py-2 rounded w-full disabled:opacity-50">
+                    Guardar
+                </button>
+            </div>
+        </form>
         </div>
     </div>
 

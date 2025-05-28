@@ -1,4 +1,5 @@
-// company-info.service.ts
+// taxes.service.ts
+
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -16,15 +17,15 @@ export interface CompanyInfo {
 }
 
 @Injectable({ providedIn: 'root' })
-export class CompanyService {
+export class TaxesService {
   private readonly apiUrl = environment.apiUrl; // Cambia si usás otro backend
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
- getAll() {
-     const campos = ["name","businessname","ruc","address","phone","email","establishmentcode","emissionpoint","invoiceseq","salenoteseq"];
+  getAll() {
+    const campos = ["name", "value"];
 
-    return this.http.get(`${environment.apiUrl}/resource/Company?fields=${JSON.stringify(campos)}`, {
+    return this.http.get(`${environment.apiUrl}/resource/taxes?fields=${JSON.stringify(campos)}`, {
       withCredentials: true
     });
   }

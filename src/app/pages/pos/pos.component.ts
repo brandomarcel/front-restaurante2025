@@ -123,7 +123,7 @@ export class PosComponent implements OnInit {
     console.log('identification', this.identificationCustomer);
 
     if (!identification || (identification.length !== 10 && identification.length !== 13)) {
-      alert('La identificación debe tener 10');
+      toast.warning('La identificación debe tener 10');
       return;
     }
 
@@ -155,26 +155,52 @@ export class PosComponent implements OnInit {
     this.findByIdentificationCustomer();
 
   }
-  guardarCliente() {
-    this.submitted = true
-    console.log('this.clienteForm', this.clienteForm);
-    if (this.clienteForm.invalid) {
-      return;
-    }
+guardarCliente() {
+  this.submitted = true;
+  console.log('this.clienteForm', this.clienteForm);
 
-    this.customersService.create(this.clienteForm.getRawValue()).subscribe({
-      next: (res) => {
-        console.log('Cliente creado:', res);
-        toast.success('Cliente creado exitosamente');
-        this.cerrarModal();
-        this.customer = res;
-      },
-      error: (err) => {
-        toast.error('Error:' + err.error.message);
-        console.error('Error al crear cliente:', err);
-      }
-    });
+  if (this.clienteForm.invalid) {
+    return;
   }
+
+  this.customersService.create(this.clienteForm.getRawValue()).subscribe({
+    next: (res) => {
+      console.log('Cliente creado:', res);
+      toast.success('Cliente creado exitosamente');
+      this.cerrarModal();
+      this.customer = res;
+    },
+    error: (err) => {
+      // Manejo de error específico de Frappe
+      if (err.error && err.error._server_messages) {
+        try {
+          const messages = JSON.parse(err.error._server_messages);
+          const mensaje = JSON.parse(messages[0]);
+          const mensajeLimpio = this.stripHtml(mensaje.message);
+          toast.error('Error: ' + mensajeLimpio); // Mostrar mensaje sin HTML
+        } catch (e) {
+          toast.error('Ocurrió un error al procesar la respuesta del servidor.');
+          console.error('Error al parsear mensaje del servidor:', e);
+        }
+      } else if (err.error && err.error.message) {
+        toast.error('Error: ' + err.error.message);
+      } else {
+        toast.error('Error desconocido al crear el cliente.');
+      }
+
+      console.error('Error al crear cliente:', err);
+    }
+  });
+}
+
+// Función para eliminar etiquetas HTML del mensaje
+stripHtml(html: string): string {
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  return div.textContent || div.innerText || '';
+}
+
+
 
   applyFilters() {
     this.filteredProductList = this.products.filter((product: any) =>
@@ -219,27 +245,27 @@ export class PosComponent implements OnInit {
     }
   }
 
-get subtotal(): number {
-  return this.cart.reduce((acc, item) => {
-    const price = Number(item.price);
-    const quantity = Number(item.quantity);
-    return acc + (price * quantity); // precio sin IVA
-  }, 0);
-}
+  get subtotal(): number {
+    return this.cart.reduce((acc, item) => {
+      const price = Number(item.price);
+      const quantity = Number(item.quantity);
+      return acc + (price * quantity); // precio sin IVA
+    }, 0);
+  }
 
-get iva(): number {
-  return this.cart.reduce((acc, item) => {
-    const price = Number(item.price);
-    const quantity = Number(item.quantity);
-    let taxRate = 0;
+  get iva(): number {
+    return this.cart.reduce((acc, item) => {
+      const price = Number(item.price);
+      const quantity = Number(item.quantity);
+      let taxRate = 0;
 
-    if (item.tax === 'IVA-15') {
-      taxRate = 0.15;
-    }
+      if (item.tax === 'IVA-15') {
+        taxRate = 0.15;
+      }
 
-    return acc + (price * quantity * taxRate);
-  }, 0);
-}
+      return acc + (price * quantity * taxRate);
+    }, 0);
+  }
 
 
   get total(): number {
@@ -287,8 +313,12 @@ get iva(): number {
 
   // Método para abrir el modal
   abrirModalPago() {
-    if (!this.identificationCustomer || this.cart.length === 0) {
-      alert('Selecciona un cliente y agrega productos al carrito.');
+    if (!this.identificationCustomer ) {
+      toast.error('Selecciona un cliente.');
+      return;
+    }
+    if (this.cart.length === 0) {
+      toast.error('Agrega productos al carrito.');
       return;
     }
 
@@ -336,14 +366,12 @@ get iva(): number {
     this.spinner.show();
 
     this.ordersService.create(order).subscribe({
-      next: () => {
+      next: (res) => {
+        console.log('Pedido guardado:', res);
+        const orderId = res.data.name; // Asegúrate de que el ID del pedido se obtenga correctamente
         this.spinner.hide();
         toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
-        // this.showReceipt = true;
-        //this.clearPage();
-        // Imprimir nota + comanda juntas
-        //this.autoPrint('ORD-00017');
-        setTimeout(() => this.printCombinedTicket('ORD-00017'), 500);
+        setTimeout(() => this.printCombinedTicket(orderId), 500);
 
 
       },
@@ -354,15 +382,36 @@ get iva(): number {
     });
 
   };
- 
+
 
   showKitchenTicket = false;
   showReceipt = false;
 
   printCombinedTicket(orderId: string) {
-    const order = 'http://192.168.100.73:1012'+this.printService.getOrderPdf(orderId);
+    const order = 'http://192.168.100.73:1012' + this.printService.getOrderPdf(orderId);
     console.log('order', order);
-    const printWindow = window.open(order, '_blank');
+    const width = 800;
+    const height = 800;
+
+    const left = window.screenX + (window.innerWidth - width) / 2;
+    const top = window.screenY + (window.innerHeight - height) / 2;
+
+    const features = [
+      `width=${width}`,
+      `height=${height}`,
+      `left=${left}`,
+      `top=${top}`,
+      'toolbar=no',
+      'location=no',
+      'directories=no',
+      'status=no',
+      'menubar=no',
+      'scrollbars=yes',
+      'resizable=yes',
+    ];
+
+    const printWindow = window.open(order, '_blank', features.join(','));
+
     if (!printWindow) {
       toast.error('No se pudo abrir la ventana de impresión');
       return;
@@ -388,10 +437,6 @@ get iva(): number {
     this.applyFilters();
   }
 
-  cerrarComprobante() {
-    this.showReceipt = false;
-  }
-
   cerrarModal() {
     this.showCustomerModal = false;
     this.submitted = false;
@@ -408,5 +453,7 @@ get iva(): number {
     this.showReceipt = false;
     this.showKitchenTicket = false;
   }
+
+  
 
 }

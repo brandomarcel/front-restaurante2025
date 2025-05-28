@@ -9,7 +9,7 @@ export class ProductsService {
   constructor(private http: HttpClient) { }
 
   getAll() {
-    const campos = ['name', 'nombre', 'precio', 'descripcion', 'categoria','tax'];
+    const campos = ['name', 'nombre', 'precio', 'descripcion', 'categoria', 'tax','isactive'];
 
     return this.http.get(`${environment.apiUrl}/resource/Producto?fields=${JSON.stringify(campos)}`, {
       withCredentials: true
@@ -21,14 +21,22 @@ export class ProductsService {
   }
 
   create(data: any) {
-    return this.http.post(this.baseUrl, data);
+    return this.http.post(`${environment.apiUrl}/resource/Producto`, data, {
+      withCredentials: true
+    });
   }
 
-  update(id: number, data: any) {
-    return this.http.patch(`${this.baseUrl}/${id}`, data);
-  }
 
-  delete(id: number) {
-    return this.http.delete(`${this.baseUrl}/${id}`);
-  }
+update(name: string, data: any) {
+  return this.http.put(`${environment.apiUrl}/resource/Producto/${name}`, data, {
+    withCredentials: true
+  });
+}
+
+
+delete(name: string) {
+  return this.http.delete(`${environment.apiUrl}/resource/Producto/${name}`, {
+    withCredentials: true
+  });
+}
 }

@@ -56,9 +56,9 @@ export class CompanyComponent implements OnInit {
 
   loadCompanyInfo() {
     this.service.getAll().subscribe((data:any) => {
-      console.log('data', data.message);
-      if (data.message) {
-        const company = data.message;
+      console.log('data', data.data);
+      if (data) {
+        const company = data.data[0];
         console.log('company', company);
         this.companyId = company.name!;
         this.form.patchValue(company);

@@ -26,25 +26,6 @@ export class CustomersService {
     return this.http.get<any>(`${this.apiUrl}/${id}`);
   }
 
-  // Buscar por identificación
-  // findByIdentification(identification: string): Observable<any> {
-  //   return this.http.get<any>(`${this.apiUrl}/identification/${identification}`);
-  // }
-
-  // Crear
-  // create(data: Omit<any, 'id'>): Observable<any> {
-  //   return this.http.post<any>(this.apiUrl, data);
-  // }
-
-  // Actualizar
-  update(id: number, data: Partial<any>): Observable<any> {
-    return this.http.patch<any>(`${this.apiUrl}/${id}`, data);
-  }
-
-  // Eliminar
-  delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
-  }
 
 
   ////////////////////////////////////////////////////
@@ -65,5 +46,16 @@ export class CustomersService {
   create(data: Omit<any, 'id'>): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/resource/Cliente`, data);
   }
+  update(name: string, data: any) {
+  return this.http.put(`${environment.apiUrl}/resource/Cliente/${name}`, data, {
+    withCredentials: true
+  });
+}
+
+delete(name: string) {
+  return this.http.delete(`${environment.apiUrl}/resource/Cliente/${name}`, {
+    withCredentials: true
+  });
+}
 
 }

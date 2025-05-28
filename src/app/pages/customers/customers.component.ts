@@ -11,9 +11,14 @@ import { CustomersService } from 'src/app/services/customers.service';
   templateUrl: './customers.component.html',
   styleUrl: './customers.component.css'
 })
+
+
 export class CustomersComponent implements OnInit {
+
+
   customers: any[] = [];
-  searchTerm = '';
+  private _searchTerm: string = '';
+  filteredCustomersList: any[] = []; // reemplaza filteredCustomers()
   mostrarModal = false;
   clienteEditando: any = null;
   submitted = false;
@@ -35,16 +40,27 @@ export class CustomersComponent implements OnInit {
   }
 
   initForm(data: any = null) {
-    this.clienteForm = this.fb.group({
-      fullName: [data?.fullName || '', [Validators.required]],
-      identification: [data?.identification || '', [Validators.required]],
-      identificationType: [data?.identificationType || '04', [Validators.required]],
-      email: [data?.email || '', [Validators.required, Validators.email]],
-      phone: [data?.phone || '', [Validators.required]],
-      address: [data?.address || '', [Validators.required]],
-    });
+   this.clienteForm = this.fb.group({
+  nombre: ['', Validators.required],
+  num_identificacion: ['', Validators.required],
+  tipo_identificacion: ['', Validators.required],
+  correo: ['', [Validators.required, Validators.email]],
+  telefono: ['', Validators.required],
+  direccion: ['', Validators.required],
+  isactive: [1]
+});
+
+
   }
 
+  get searchTerm(): string {
+    return this._searchTerm;
+  }
+
+  set searchTerm(value: string) {
+    this._searchTerm = value;
+    this.filtrarClientes();
+  }
   get f() {
     return this.clienteForm.controls;
   }
@@ -54,9 +70,12 @@ export class CustomersComponent implements OnInit {
     this.spinner.show();
     this.customersService.getAll().subscribe({
       next: (res: any) => {
+        console.log('res', res);
         this.spinner.hide();
 
-        this.customers = res || [];
+        this.customers = res.data || [];
+        this.filteredCustomersList = [...this.customers]; // Inicializar la lista filtrada
+        this.filteredCustomersList.sort((a, b) => a.nombre.localeCompare(b.nombre));
       },
       error: (err) => {
         this.spinner.hide();
@@ -69,18 +88,26 @@ export class CustomersComponent implements OnInit {
   }
 
 
-  filteredCustomers() {
-    return this.customers.filter(c =>
-      c.fullName.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-      c.identification.includes(this.searchTerm)
+  filtrarClientes() {
+    const term = this._searchTerm.toLowerCase();
+    this.filteredCustomersList = this.customers.filter(c =>
+      (c.fullName && c.fullName.toLowerCase().includes(term)) ||
+      (c.identification && c.identification.toLowerCase().includes(term))
     );
   }
 
   abrirModal(cliente: any = null) {
+    console.log('cliente', cliente);
     this.mostrarModal = true;
     this.submitted = false;
     this.clienteEditando = cliente;
-    this.initForm(cliente); // inicializa el form con o sin datos
+
+    if (cliente) {
+      this.clienteForm.patchValue({
+        ...cliente
+      });
+    }
+   
   }
 
   cerrarModal() {
@@ -101,12 +128,12 @@ export class CustomersComponent implements OnInit {
     this.submitted = true;
     if (this.clienteForm.invalid) return;
 
-    const data = this.clienteForm.value;
+    const data = this.clienteForm.getRawValue();
 
     if (this.clienteEditando) {
       this.spinner.show();
       // Actualizar
-      this.customersService.update(this.clienteEditando.id, data).subscribe(() => {
+      this.customersService.update(this.clienteEditando.name, data).subscribe(() => {
         this.cargarClientes();
         this.cerrarModal();
         this.spinner.hide();
@@ -122,7 +149,7 @@ export class CustomersComponent implements OnInit {
     }
   }
 
-  eliminarCliente(id: number) {
+  delete(id: string) {
     if (confirm('¿Eliminar este cliente?')) {
       this.customersService.delete(id).subscribe(() => {
         this.cargarClientes();

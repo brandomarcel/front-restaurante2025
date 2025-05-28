@@ -8,6 +8,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NgxPaginationModule } from 'ngx-pagination';
 import { CategoryService } from 'src/app/services/category.service';
+import { TaxesService } from 'src/app/services/taxes.service';
 
 @Component({
   selector: 'app-products',
@@ -17,8 +18,12 @@ import { CategoryService } from 'src/app/services/category.service';
 })
 export class ProductsComponent implements OnInit {
   productos: any[] = [];
+  productosFiltradosList: any[] = [];
+
   categories: any[] = [];
-  searchTerm = '';
+
+  taxes: any[] = [];
+  private _searchTerm: string = '';
   mostrarModal = false;
   productoEditando: any = null;
   productoForm!: FormGroup;
@@ -27,21 +32,25 @@ export class ProductsComponent implements OnInit {
 
   constructor(
     private productsService: ProductsService,
-    private categoriesService: CategoryService,
+    private categoryService: CategoryService,
+    private taxesService: TaxesService,
     public spinner: NgxSpinnerService,
     private fb: FormBuilder
   ) { }
 
   ngOnInit() {
     this.cargarProductos();
-    this.cargarCategorias();
+    this.loadCategory();
+    this.loadTaxes();
   }
 
   cargarProductos() {
     this.spinner.show();
     this.productsService.getAll().subscribe({
-      next: (res:any) => {
+      next: (res: any) => {
         this.productos = res.data;
+        this.productosFiltradosList = res.data; // Inicializar la lista filtrada
+        this.productosFiltradosList.sort((a, b) => a.name.localeCompare(b.name));
         console.log('Productos cargados:', this.productos);
       },
       error: (err) => console.error('Error al cargar productos', err),
@@ -49,19 +58,39 @@ export class ProductsComponent implements OnInit {
     });
   }
 
-  cargarCategorias() {
-    this.categoriesService.getAll().subscribe({
-      next: (res:any) => this.categories = res,
-      error: (err) => console.error('Error al cargar categorías', err)
+  loadCategory() {
+    this.spinner.show();
+    this.categoryService.getAll().subscribe((res: any) => {
+      this.spinner.hide();
+      this.categories = res.data || [];
+      console.log(' this.categories', this.categories);
+    });
+  }
+  loadTaxes() {
+    this.spinner.show();
+    this.taxesService.getAll().subscribe((res: any) => {
+      this.spinner.hide();
+      this.taxes = res.data || [];
+      console.log(' this.taxes', this.taxes);
     });
   }
 
-  productosFiltrados() {
-    return this.productos.filter(p =>
-      p.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-      (p.barcode && p.barcode.includes(this.searchTerm))
+  get searchTerm(): string {
+    return this._searchTerm;
+  }
+
+  set searchTerm(value: string) {
+    this._searchTerm = value;
+    this.actualizarProductosFiltrados(); // se actualiza cada vez que el usuario escribe
+  }
+
+  actualizarProductosFiltrados() {
+    const term = this._searchTerm.toLowerCase();
+    this.productosFiltradosList = this.productos.filter(p =>
+      p.name.toLowerCase().includes(term)
     );
   }
+
 
   abrirModal(producto: any = null) {
     this.mostrarModal = true;
@@ -116,7 +145,8 @@ export class ProductsComponent implements OnInit {
     this.spinner.show();
     const data = this.productoForm.value;
     console.log('data', data);
-    this.productsService.update(this.productoEditando.id, data).subscribe({
+    console.log('productoEditando', this.productoEditando);
+    this.productsService.update(this.productoEditando.name, data).subscribe({
       next: () => {
         toast.success('Producto actualizado con éxito');
         this.cerrarModal();
@@ -130,7 +160,7 @@ export class ProductsComponent implements OnInit {
     });
   }
 
-  eliminar(id: number) {
+  eliminar(id: string) {
     if (confirm('¿Eliminar este producto?')) {
       this.spinner.show();
       this.productsService.delete(id).subscribe({
@@ -141,6 +171,7 @@ export class ProductsComponent implements OnInit {
         error: (err) => {
           toast.error('Error al eliminar el producto');
           console.error(err);
+          this.spinner.hide();
         },
         complete: () => this.spinner.hide()
       });
@@ -149,18 +180,23 @@ export class ProductsComponent implements OnInit {
 
   resetForm() {
     return this.productoForm = this.fb.group({
-      name: ['', Validators.required],
-      description: [''],
-      price: [null, [Validators.required, Validators.min(0)]],
-      tax: ['0.00', Validators.required],
-      categoryId: ['', Validators.required], // ahora es categoryId
-      code: [''],
-      barcode: [''],
-      isActive: [true]
+      nombre: ['', Validators.required],
+      descripcion: [''],
+      precio: [null, [Validators.required, Validators.min(0)]],
+      tax: ['IVA-0', Validators.required],
+      categoria: ['', Validators.required], // ahora es categoryId
+      codigo: [''],
+      isactive: [true]
     });
   }
 
   get f() {
     return this.productoForm.controls;
+  }
+
+
+  getNameCategory(categoryId: string): string {
+    const document = this.categories.find(d => d.name === categoryId);
+    return document ? document.nombre : 'No disponible';
   }
 }

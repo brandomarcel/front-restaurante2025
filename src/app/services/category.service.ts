@@ -16,15 +16,28 @@ export class CategoryService {
     });
   }
 
-  create(data: any) {
-    return this.http.post(this.apiUrl, data);
-  }
+create(data: any) {
+  return this.http.post(`${environment.apiUrl}/resource/categorias`, data, {
+    withCredentials: true
+  });
+}
 
-  update(id: number, data: any) {
-    return this.http.patch(`${this.apiUrl}/${id}`, data);
-  }
+getByName(name: string) {
+  return this.http.get(`${environment.apiUrl}/resource/categorias/${name}`, {
+    withCredentials: true
+  });
+}
 
-  delete(id: number) {
-    return this.http.delete(`${this.apiUrl}/${id}`);
-  }
+update(name: string, data: any) {
+  return this.http.put(`${environment.apiUrl}/resource/categorias/${name}`, data, {
+    withCredentials: true
+  });
+}
+
+delete(name: string) {
+  return this.http.delete(`${environment.apiUrl}/resource/categorias/${name}`, {
+    withCredentials: true
+  });
+}
+
 }

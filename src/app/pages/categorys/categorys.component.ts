@@ -93,10 +93,10 @@ export class CategorysComponent implements OnInit {
     }
   }
 
-  eliminar(id: number) {
+  eliminar(name: string) {
     if (confirm('¿Eliminar esta categoría?')) {
       this.spinner.show();
-      this.categoriesService.delete(id).subscribe({
+      this.categoriesService.delete(name).subscribe({
         next: () => {
           toast.success('Categoría eliminada');
           this.cargarCategorias();
