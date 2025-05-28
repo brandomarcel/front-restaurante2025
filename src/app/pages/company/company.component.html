@@ -9,9 +9,9 @@
 
             <div>
                 <label class="block font-medium mb-1">Razón Social</label>
-                <input type="text" formControlName="businessName" class="w-full border rounded px-2 py-1"
-                    [class.border-red-500]="f['businessName'].invalid && submitted" />
-                <small *ngIf="f['businessName'].invalid && submitted" class="text-red-500">Campo
+                <input type="text" formControlName="businessname" class="w-full border rounded px-2 py-1"
+                    [class.border-red-500]="f['businessname'].invalid && submitted" />
+                <small *ngIf="f['businessname'].invalid && submitted" class="text-red-500">Campo
                     requerido</small>
             </div>
 
@@ -57,36 +57,36 @@
             <h3 class="text-sm font-semibold text-gray-700">SRI</h3>
             <div>
                 <label class="block font-medium mb-1">Código Establecimiento</label>
-                <input type="text" formControlName="establishmentCode" class="w-full border rounded px-2 py-1"
-                    [class.border-red-500]="f['establishmentCode'].invalid && submitted" />
-                <small *ngIf="f['establishmentCode'].errors?.['required'] && submitted"
+                <input type="text" formControlName="establishmentcode" class="w-full border rounded px-2 py-1"
+                    [class.border-red-500]="f['establishmentcode'].invalid && submitted" />
+                <small *ngIf="f['establishmentcode'].errors?.['required'] && submitted"
                     class="text-red-500">Campo requerido</small>
-                <small *ngIf="f['establishmentCode'].errors?.['pattern'] && submitted"
+                <small *ngIf="f['establishmentcode'].errors?.['pattern'] && submitted"
                     class="text-red-500">3 dígitos</small>
             </div>
 
             <div>
                 <label class="block font-medium mb-1">Punto Emisión</label>
-                <input type="text" formControlName="emissionPoint" class="w-full border rounded px-2 py-1"
-                    [class.border-red-500]="f['emissionPoint'].invalid && submitted" />
-                <small *ngIf="f['emissionPoint'].errors?.['required'] && submitted"
+                <input type="text" formControlName="emissionpoint" class="w-full border rounded px-2 py-1"
+                    [class.border-red-500]="f['emissionpoint'].invalid && submitted" />
+                <small *ngIf="f['emissionpoint'].errors?.['required'] && submitted"
                     class="text-red-500">Campo requerido</small>
-                <small *ngIf="f['emissionPoint'].errors?.['pattern'] && submitted"
+                <small *ngIf="f['emissionpoint'].errors?.['pattern'] && submitted"
                     class="text-red-500">3 dígitos</small>
             </div>
             <div>
                 <label class="block font-medium mb-1">Secuencia Factura</label>
-                <input type="number" formControlName="invoiceSeq" class="w-full border rounded px-2 py-1"
-                    [class.border-red-500]="f['invoiceSeq'].invalid && submitted" />
-                <small *ngIf="f['invoiceSeq'].invalid && submitted" class="text-red-500">Campo
+                <input type="number" formControlName="emissionpoint" class="w-full border rounded px-2 py-1"
+                    [class.border-red-500]="f['emissionpoint'].invalid && submitted" />
+                <small *ngIf="f['emissionpoint'].invalid && submitted" class="text-red-500">Campo
                     requerido</small>
             </div>
 
             <div>
                 <label class="block font-medium mb-1">Secuencia Nota de Venta</label>
-                <input type="number" formControlName="saleNoteSeq" class="w-full border rounded px-2 py-1"
-                    [class.border-red-500]="f['saleNoteSeq'].invalid && submitted" />
-                <small *ngIf="f['saleNoteSeq'].invalid && submitted" class="text-red-500">Campo
+                <input type="number" formControlName="salenoteseq" class="w-full border rounded px-2 py-1"
+                    [class.border-red-500]="f['salenoteseq'].invalid && submitted" />
+                <small *ngIf="f['salenoteseq'].invalid && submitted" class="text-red-500">Campo
                     requerido</small>
             </div>
 

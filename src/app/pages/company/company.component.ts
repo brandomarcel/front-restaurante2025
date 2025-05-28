@@ -41,25 +41,26 @@ export class CompanyComponent implements OnInit {
   }
   initForm() {
     this.form = this.fb.group({
-      businessName: ['', Validators.required],
+      businessname: ['', Validators.required],
       ruc: ['', [Validators.required, Validators.pattern(/^\d{13}$/)]],
       address: ['', Validators.required],
       phone: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
-      establishmentCode: ['', [Validators.required, Validators.pattern(/^\d{3}$/)]],
-      emissionPoint: ['', [Validators.required, Validators.pattern(/^\d{3}$/)]],
-      invoiceSeq: ['', Validators.required],
-      saleNoteSeq: ['', Validators.required]
+      establishmentcode: ['', [Validators.required, Validators.pattern(/^\d{3}$/)]],
+      emissionpoint: ['', [Validators.required, Validators.pattern(/^\d{3}$/)]],
+      invoiceseq: ['', Validators.required],
+      salenoteseq: ['', Validators.required]
     });
     
   }
 
   loadCompanyInfo() {
     this.service.getAll().subscribe((data:any) => {
-      if (data.length) {
-        const company = data[0];
+      console.log('data', data.message);
+      if (data.message) {
+        const company = data.message;
         console.log('company', company);
-        this.companyId = company.id!;
+        this.companyId = company.name!;
         this.form.patchValue(company);
       }
     });

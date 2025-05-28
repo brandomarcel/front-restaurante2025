@@ -17,12 +17,14 @@ export interface CompanyInfo {
 
 @Injectable({ providedIn: 'root' })
 export class CompanyService {
-  private readonly apiUrl = environment.apiUrl + 'company-info'; // Cambia si usás otro backend
+  private readonly apiUrl = environment.apiUrl; // Cambia si usás otro backend
 
   constructor(private http: HttpClient) {}
 
-  getAll(): Observable<CompanyInfo[]> {
-    return this.http.get<CompanyInfo[]>(this.apiUrl);
+ getAll() {
+    return this.http.get(`${environment.apiUrl}/method/restaurante_app.restaurante_bmarc.api.user.get_empresa`, {
+      withCredentials: true
+    });
   }
 
   create(data: CompanyInfo): Observable<CompanyInfo> {

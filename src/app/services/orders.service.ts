@@ -9,12 +9,16 @@ export class OrdersService {
 
   constructor(private http: HttpClient) {}
 
-  getAll() {
-    return this.http.get<any[]>(this.apiUrl);
+ getAll() {
+    return this.http.get(`${environment.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.get_all_orders`, {
+      withCredentials: true
+    });
   }
 
   getById(id: number) {
-    return this.http.get<any>(`${this.apiUrl}/${id}`);
+   return this.http.get(`${environment.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.get_order_with_details?order_name${id}`, {
+      withCredentials: true
+    });
   }
 
   // create(order: any) {

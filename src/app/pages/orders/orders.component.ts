@@ -33,7 +33,7 @@ export class OrdersComponent implements OnInit {
       next: (orders: any) => {
         console.log('Pedidos cargados:', orders);
 
-        this.orders = orders;
+        this.orders = orders.message;
         this.spinner.hide();
       },
 

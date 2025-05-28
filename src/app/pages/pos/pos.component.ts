@@ -11,6 +11,7 @@ import { CategoryService } from 'src/app/services/category.service';
 import { CustomersService } from 'src/app/services/customers.service';
 import { OrdersService } from 'src/app/services/orders.service';
 import { PaymentsService } from 'src/app/services/payments.service';
+import { PrintService } from 'src/app/services/print.service';
 import { ProductsService } from 'src/app/services/products.service';
 
 @Component({
@@ -54,7 +55,8 @@ export class PosComponent implements OnInit {
     private paymentsService: PaymentsService,
     private fb: FormBuilder,
     private ordersService: OrdersService,
-    private spinner: NgxSpinnerService
+    private spinner: NgxSpinnerService,
+    private printService: PrintService
   ) { }
 
   ngOnInit(): void {
@@ -338,10 +340,11 @@ get iva(): number {
         this.spinner.hide();
         toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
         // this.showReceipt = true;
-        // this.showPaymentModal = false;
+        //this.clearPage();
         // Imprimir nota + comanda juntas
-        //setTimeout(() => this.printCombinedTicket(), 500);
-        //setTimeout(() => this.printCombinedTicketWithPageBreak(), 500);
+        //this.autoPrint('ORD-00017');
+        setTimeout(() => this.printCombinedTicket('ORD-00017'), 500);
+
 
       },
       error: () => {
@@ -350,180 +353,29 @@ get iva(): number {
       }
     });
 
-  }
-
+  };
+ 
 
   showKitchenTicket = false;
   showReceipt = false;
 
-  printCombinedTicket() {
-    const nota = document.getElementById('print-area');
-    const cocina = document.getElementById('kitchen-area');
-
-    if (!nota || !cocina) {
-      toast.error('No se encontraron los contenidos de impresión');
-      return;
-    }
-
-    // Clonar y limpiar ambos bloques
-    const notaClone = nota.cloneNode(true) as HTMLElement;
-    const cocinaClone = cocina.cloneNode(true) as HTMLElement;
-
-    notaClone.querySelectorAll('.no-print').forEach(el => el.remove());
-    cocinaClone.querySelectorAll('.no-print').forEach(el => el.remove());
-
-    const combinedHTML = `
-    <div>
-      ${notaClone.innerHTML}
-      <hr style="margin: 20px 0; border-top: 1px dashed #000;" />
-      <div class="text-center" style="margin-bottom: 10px;">
-        <strong>--- COMANDA DE COCINA ---</strong>
-      </div>
-      ${cocinaClone.innerHTML}
-    </div>
-  `;
-
-    const printWindow = window.open('', '_blank', 'width=400,height=800');
+  printCombinedTicket(orderId: string) {
+    const order = 'http://192.168.100.73:1012'+this.printService.getOrderPdf(orderId);
+    console.log('order', order);
+    const printWindow = window.open(order, '_blank');
     if (!printWindow) {
       toast.error('No se pudo abrir la ventana de impresión');
       return;
     }
 
-    const html = `
-    <html>
-      <head>
-        <title>Nota de Venta + Comanda</title>
-        <style>
-          body { font-family: monospace; font-size: 12px; padding: 10px; }
-          table { width: 100%; border-collapse: collapse; }
-          th, td { text-align: left; padding: 4px; }
-          .text-right { text-align: right; }
-          .text-center { text-align: center; }
-          hr { margin: 10px 0; }
-          .no-print { display: none !important; }
-          @media print {
-            .no-print { display: none !important; }
-          }
-        </style>
-      </head>
-      <body>
-        ${combinedHTML}
-        <script>
-          window.onload = function() {
-            window.print();
-            window.close();
-          };
-        </script>
-      </body>
-    </html>
-  `;
 
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
+    // printWindow.document.open();
+    // printWindow.document.close();
 
     // Limpieza final del estado del POS
-    this.cart = [];
-    this.customer = null;
-    this.identificationCustomer = '';
-    this.amountReceived = null;
-    this.change = 0;
-    this.showReceipt = false;
-    this.showKitchenTicket = false;
+    this.clearPage();
   }
 
-
-
-
-  printCombinedTicketWithPageBreak() {
-    const nota = document.getElementById('print-area');
-    const cocina = document.getElementById('kitchen-area');
-
-    if (!nota || !cocina) {
-      toast.error('No se encontraron los contenidos de impresión');
-      return;
-    }
-
-    // Clonar y limpiar
-    const notaClone = nota.cloneNode(true) as HTMLElement;
-    const cocinaClone = cocina.cloneNode(true) as HTMLElement;
-
-    notaClone.querySelectorAll('.no-print').forEach(el => el.remove());
-    cocinaClone.querySelectorAll('.no-print').forEach(el => el.remove());
-
-    // Envolver cada sección en contenedores separados
-    const combinedHTML = `
-    <div class="nota-section">
-      ${notaClone.innerHTML}
-    </div>
-    <div class="page-break"></div>
-    <div class="cocina-section">
-      <div class="text-center" style="margin-bottom: 10px;">
-        <strong>--- COMANDA DE COCINA ---</strong>
-      </div>
-      ${cocinaClone.innerHTML}
-    </div>
-  `;
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast.error('No se pudo abrir la ventana de impresión');
-      return;
-    }
-
-    const html = `
-    <html>
-      <head>
-        <title>Nota + Comanda</title>
-        <style>
-          body { font-family: monospace; font-size: 12px; padding: 10px; }
-          table { width: 100%; border-collapse: collapse; }
-          th, td { text-align: left; padding: 4px; }
-          .text-right { text-align: right; }
-          .text-center { text-align: center; }
-          hr { margin: 10px 0; }
-          .no-print { display: none !important; }
-
-          /* 🔥 Esto fuerza una hoja nueva entre secciones */
-          .page-break {
-            page-break-after: always;
-            break-after: page;
-          }
-
-          @media print {
-            .no-print { display: none !important; }
-            .page-break {
-              page-break-after: always;
-              break-after: page;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        ${combinedHTML}
-        <script>
-          window.onload = function() {
-            window.print();
-            window.close();
-          };
-        </script>
-      </body>
-    </html>
-  `;
-
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
-
-    // Limpieza del estado del POS
-    this.cart = [];
-    this.customer = null;
-    this.identificationCustomer = '';
-    this.amountReceived = null;
-    this.change = 0;
-    this.showReceipt = false;
-    this.showKitchenTicket = false;
-  }
 
 
   onCategorySelected(category: string) {
@@ -544,6 +396,17 @@ get iva(): number {
     this.showCustomerModal = false;
     this.submitted = false;
     this.clienteForm.reset();
+  }
+
+  clearPage() {
+    this.cart = [];
+    this.customer = null;
+    this.identificationCustomer = '';
+    this.amountReceived = null;
+    this.change = 0;
+    this.showPaymentModal = false;
+    this.showReceipt = false;
+    this.showKitchenTicket = false;
   }
 
 }

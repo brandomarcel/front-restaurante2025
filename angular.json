@@ -20,9 +20,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": {
-              "base": "dist/angular-tailwind"
-            },
+            "outputPath": "dist/angular",
             "index": "src/index.html",
             "polyfills": [
               "src/polyfills.ts"
@@ -84,7 +82,7 @@
             },
             "development": {
               "buildTarget": "angular-tailwind:build:development",
-              "proxyConfig": "src/proxy.conf.json" 
+              "proxyConfig": "src/proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"
