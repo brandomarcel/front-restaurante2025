@@ -9,6 +9,8 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NgxPaginationModule } from 'ngx-pagination';
 import { CategoryService } from 'src/app/services/category.service';
 import { TaxesService } from 'src/app/services/taxes.service';
+import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
+import { AlertService } from 'src/app/core/services/alert.service';
 
 @Component({
   selector: 'app-products',
@@ -35,7 +37,9 @@ export class ProductsComponent implements OnInit {
     private categoryService: CategoryService,
     private taxesService: TaxesService,
     public spinner: NgxSpinnerService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private frappeErrorService: FrappeErrorService,
+    private alertService: AlertService
   ) { }
 
   ngOnInit() {
@@ -53,8 +57,10 @@ export class ProductsComponent implements OnInit {
         this.productosFiltradosList.sort((a, b) => a.name.localeCompare(b.name));
         console.log('Productos cargados:', this.productos);
       },
-      error: (err) => console.error('Error al cargar productos', err),
-      complete: () => this.spinner.hide()
+      error: (error:any) => {
+        const mensaje: any = this.frappeErrorService.handle(error); 
+          this.alertService.error(mensaje);
+      }
     });
   }
 
@@ -132,12 +138,13 @@ export class ProductsComponent implements OnInit {
         toast.success('Producto creado con éxito');
         this.cargarProductos();
         this.cerrarModal();
+        this.spinner.hide();
       },
-      error: (err) => {
-        toast.error('Error al crear el producto');
-        console.error(err);
-      },
-      complete: () => this.spinner.hide()
+      error: (error: any) => {
+         const mensaje: any = this.frappeErrorService.handle(error); 
+          this.alertService.error(mensaje);
+          this.spinner.hide();
+      }
     });
   }
 
@@ -151,12 +158,15 @@ export class ProductsComponent implements OnInit {
         toast.success('Producto actualizado con éxito');
         this.cerrarModal();
         this.cargarProductos();
+        this.spinner.hide();
       },
       error: (err) => {
         toast.error('Error al actualizar el producto');
         console.error(err);
-      },
-      complete: () => this.spinner.hide()
+        const mensaje: any = this.frappeErrorService.handle(err);
+        this.alertService.error(mensaje);
+        this.spinner.hide();
+      }
     });
   }
 
@@ -167,13 +177,13 @@ export class ProductsComponent implements OnInit {
         next: () => {
           toast.success('Producto eliminado con éxito');
           this.cargarProductos();
-        },
-        error: (err) => {
-          toast.error('Error al eliminar el producto');
-          console.error(err);
           this.spinner.hide();
         },
-        complete: () => this.spinner.hide()
+        error: (err) => {
+          const mensaje: any = this.frappeErrorService.handle(err);
+          this.alertService.error(mensaje);
+          this.spinner.hide();
+        }
       });
     }
   }

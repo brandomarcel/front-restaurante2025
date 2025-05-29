@@ -97,8 +97,8 @@
                 <h2 class="text-lg font-semibold text-primary">Resumen</h2>
 
                 <ng-container *ngIf="cart.length > 0; else emptyCart">
-                    <div class="flex-grow overflow-auto space-y-1">
-                        <div *ngFor="let item of cart" class="flex justify-between items-center border-b py-1">
+                    <div class="flex-grow overflow-auto space-y-1 max-h-[50vh] overflow-y-auto">
+                        <div *ngFor="let item of cart" class="flex justify-between items-center border-b py-1 ">
                             <span class="font-medium text-foreground">
                                 {{ item.nombre }} {{ item.descripcion ? '(' + item.descripcion + ')' : '' }} <span class="text-foreground font-normal">x{{ item.quantity }}</span>
                             </span>

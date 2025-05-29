@@ -236,14 +236,19 @@ stripHtml(html: string): string {
     item.total = item.quantity * parseFloat(item.price);
   }
 
-  decrease(item: any) {
-    if (item.quantity > 1) {
-      item.quantity--;
-      item.total = item.quantity * parseFloat(item.price);
-    } else {
-      this.cart = this.cart.filter(i => i.id !== item.id);
+decrease(item: any) {
+  if (item.quantity > 1) {
+    item.quantity--;
+    item.total = item.quantity * item.price;
+  } else {
+    const index = this.cart.indexOf(item);
+    if (index !== -1) {
+      this.cart.splice(index, 1);
     }
   }
+}
+
+
 
   get subtotal(): number {
     return this.cart.reduce((acc, item) => {

@@ -2,9 +2,12 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgxPaginationModule } from 'ngx-pagination';
+import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
+import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { CustomersService } from 'src/app/services/customers.service';
-
+import Swal from 'sweetalert2'
+import { AlertService } from '../../core/services/alert.service';
 @Component({
   selector: 'app-customers',
   imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule],
@@ -30,7 +33,9 @@ export class CustomersComponent implements OnInit {
   constructor(
     private customersService: CustomersService,
     private fb: FormBuilder,
-    private spinner: NgxSpinnerService
+    private spinner: NgxSpinnerService,
+    private frappeErrorService: FrappeErrorService,
+    private alertService: AlertService
   ) { }
 
   ngOnInit() {
@@ -40,15 +45,15 @@ export class CustomersComponent implements OnInit {
   }
 
   initForm(data: any = null) {
-   this.clienteForm = this.fb.group({
-  nombre: ['', Validators.required],
-  num_identificacion: ['', Validators.required],
-  tipo_identificacion: ['', Validators.required],
-  correo: ['', [Validators.required, Validators.email]],
-  telefono: ['', Validators.required],
-  direccion: ['', Validators.required],
-  isactive: [1]
-});
+    this.clienteForm = this.fb.group({
+      nombre: ['', Validators.required],
+      num_identificacion: ['', Validators.required],
+      tipo_identificacion: ['', Validators.required],
+      correo: ['', [Validators.required, Validators.email]],
+      telefono: ['', Validators.required],
+      direccion: ['', Validators.required],
+      isactive: [1]
+    });
 
 
   }
@@ -70,19 +75,18 @@ export class CustomersComponent implements OnInit {
     this.spinner.show();
     this.customersService.getAll().subscribe({
       next: (res: any) => {
-        console.log('res', res);
         this.spinner.hide();
 
         this.customers = res.data || [];
         this.filteredCustomersList = [...this.customers]; // Inicializar la lista filtrada
         this.filteredCustomersList.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
       },
       error: (err) => {
         this.spinner.hide();
+        const mensaje: any = this.frappeErrorService.handle(err);
+        this.alertService.error(mensaje);
         console.error('Error al cargar clientes', err);
-      },
-      complete: () => {
-        this.spinner.hide();
       }
     });
   }
@@ -97,7 +101,6 @@ export class CustomersComponent implements OnInit {
   }
 
   abrirModal(cliente: any = null) {
-    console.log('cliente', cliente);
     this.mostrarModal = true;
     this.submitted = false;
     this.clienteEditando = cliente;
@@ -107,7 +110,7 @@ export class CustomersComponent implements OnInit {
         ...cliente
       });
     }
-   
+
   }
 
   cerrarModal() {
@@ -133,27 +136,53 @@ export class CustomersComponent implements OnInit {
     if (this.clienteEditando) {
       this.spinner.show();
       // Actualizar
-      this.customersService.update(this.clienteEditando.name, data).subscribe(() => {
-        this.cargarClientes();
-        this.cerrarModal();
-        this.spinner.hide();
+      this.customersService.update(this.clienteEditando.name, data).subscribe({
+        next: () => {
+          this.spinner.hide();
+          this.cerrarModal();
+          toast.success('Cliente actualizado');
+          this.cargarClientes();
+        },
+        error: (error: any) => {
+          const mensaje: any = this.frappeErrorService.handle(error); 
+          this.alertService.error(mensaje);
+          this.spinner.hide();
+        }
       });
+
     } else {
       // Crear
       this.spinner.show();
-      this.customersService.create(data).subscribe(() => {
-        this.spinner.hide();
-        this.cargarClientes();
-        this.cerrarModal();
+      this.customersService.create(data).subscribe({
+        next: () => {
+          this.spinner.hide();
+          this.cargarClientes();
+          this.cerrarModal();
+        },
+        error: (error: any) => {
+          const mensaje: any = this.frappeErrorService.handle(error); 
+          this.alertService.error(mensaje);
+          this.spinner.hide();
+        }
+
       });
     }
   }
 
   delete(id: string) {
     if (confirm('¿Eliminar este cliente?')) {
-      this.customersService.delete(id).subscribe(() => {
-        this.cargarClientes();
+      this.customersService.delete(id).subscribe({
+        next: () => {
+          toast.success('Cliente eliminado');
+          this.cargarClientes();
+        },
+        error: (err) => {
+          const mensaje: any = this.frappeErrorService.handle(err);
+          console.error('Error al eliminar cliente', err);
+          this.alertService.error(mensaje);
+        }
       });
     }
   }
+
 }

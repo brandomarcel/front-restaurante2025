@@ -79,73 +79,75 @@
                 {{ clienteEditando?.id ? 'Editar Cliente' : 'Nuevo Cliente' }}
             </h3>
 
-             <form [formGroup]="clienteForm" (ngSubmit)="guardarCliente()" class="space-y-4">
-            <!-- Nombre / Razón Social -->
-            <div>
-                <label class="block text-sm font-medium">Nombre / Razón Social</label>
-                <input type="text" formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm" />
-                <div *ngIf="f['nombre'].invalid && submitted" class="text-red-500 text-sm">
-                    Campo requerido.
+            <form [formGroup]="clienteForm" (ngSubmit)="guardarCliente()" class="space-y-4">
+                <!-- Nombre / Razón Social -->
+                <div>
+                    <label class="block text-sm font-medium">Nombre / Razón Social</label>
+                    <input type="text" formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm" />
+                    <div *ngIf="f['nombre'].invalid && submitted" class="text-red-500 text-sm">
+                        Campo requerido.
+                    </div>
                 </div>
-            </div>
 
-            <!-- Tipo -->
-            <div>
-                <label class="block text-sm font-medium">Tipo</label>
-                <select formControlName="tipo_identificacion" class="w-full border rounded px-3 py-2 text-sm">
-                    <option value="06 - Consumidor Final">Consumidor Final</option>
-                    <option value="04 - Cédula">Cédula</option>
-                    <option value="05 - RUC">RUC</option>
-                </select>
-                <div *ngIf="f['tipo_identificacion'].invalid && submitted" class="text-red-500 text-sm">
-                    Seleccione un tipo válido.
+                <!-- Tipo -->
+                <div>
+                    <label class="block text-sm font-medium">Tipo</label>
+                    <select formControlName="tipo_identificacion" class="w-full border rounded px-3 py-2 text-sm">
+                        <option value="06 - Consumidor Final">Consumidor Final</option>
+                        <option value="04 - Cédula">Cédula</option>
+                        <option value="05 - RUC">RUC</option>
+                    </select>
+                    <div *ngIf="f['tipo_identificacion'].invalid && submitted" class="text-red-500 text-sm">
+                        Seleccione un tipo válido.
+                    </div>
                 </div>
-            </div>
 
-            <!-- Identificación -->
-            <div>
-                <label class="block text-sm font-medium">Identificación</label>
-                <input maxlength="13" type="text" formControlName="num_identificacion" class="w-full border rounded px-3 py-2 text-sm" />
-                <div *ngIf="f['num_identificacion'].invalid && submitted" class="text-red-500 text-sm">
-                    Campo requerido.
+                <!-- Identificación -->
+                <div>
+                    <label class="block text-sm font-medium">Identificación</label>
+                    <input maxlength="13" type="text" formControlName="num_identificacion"
+                        class="w-full border rounded px-3 py-2 text-sm" />
+                    <div *ngIf="f['num_identificacion'].invalid && submitted" class="text-red-500 text-sm">
+                        Campo requerido.
+                    </div>
                 </div>
-            </div>
 
 
-            <!-- Email -->
-            <div>
-                <label class="block text-sm font-medium">Email</label>
-                <input type="email" formControlName="correo" class="w-full border rounded px-3 py-2 text-sm" />
-                <div *ngIf="f['correo'].invalid && submitted" class="text-red-500 text-sm">
-                    Email inválido.
+                <!-- Email -->
+                <div>
+                    <label class="block text-sm font-medium">Email</label>
+                    <input type="email" formControlName="correo" class="w-full border rounded px-3 py-2 text-sm" />
+                    <div *ngIf="f['correo'].invalid && submitted" class="text-red-500 text-sm">
+                        Email inválido.
+                    </div>
                 </div>
-            </div>
 
-            <!-- Teléfono -->
-            <div>
-                <label class="block text-sm font-medium">Teléfono</label>
-                <input maxlength="10" type="text" formControlName="telefono" class="w-full border rounded px-3 py-2 text-sm" />
-                <div *ngIf="f['telefono'].invalid && submitted" class="text-red-500 text-sm">
-                    Dirección inválido.
+                <!-- Teléfono -->
+                <div>
+                    <label class="block text-sm font-medium">Teléfono</label>
+                    <input maxlength="10" type="text" formControlName="telefono"
+                        class="w-full border rounded px-3 py-2 text-sm" />
+                    <div *ngIf="f['telefono'].invalid && submitted" class="text-red-500 text-sm">
+                        Dirección inválido.
+                    </div>
                 </div>
-            </div>
 
-            <!-- Dirección -->
-            <div>
-                <label class="block text-sm font-medium">Dirección</label>
-                <input type="text" formControlName="direccion" class="w-full border rounded px-3 py-2 text-sm" />
-                <div *ngIf="f['direccion'].invalid && submitted" class="text-red-500 text-sm">
-                    Dirección inválido.
+                <!-- Dirección -->
+                <div>
+                    <label class="block text-sm font-medium">Dirección</label>
+                    <input type="text" formControlName="direccion" class="w-full border rounded px-3 py-2 text-sm" />
+                    <div *ngIf="f['direccion'].invalid && submitted" class="text-red-500 text-sm">
+                        Dirección inválido.
+                    </div>
                 </div>
-            </div>
 
-            <!-- Botón -->
-            <div class="pt-2">
-                <button type="submit" class="bg-primary text-white px-4 py-2 rounded w-full disabled:opacity-50">
-                    Guardar
-                </button>
-            </div>
-        </form>
+                <!-- Botón -->
+                <div class="pt-2">
+                    <button type="submit" class="bg-primary text-white px-4 py-2 rounded w-full disabled:opacity-50">
+                        Guardar
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 

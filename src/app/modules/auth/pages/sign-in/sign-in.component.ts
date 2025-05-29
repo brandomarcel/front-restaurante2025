@@ -7,6 +7,8 @@ import { ButtonComponent } from '../../../../shared/components/button/button.com
 import { AuthService } from 'src/app/services/auth.service';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerComponent, NgxSpinnerService } from 'ngx-spinner';
+import { AlertService } from 'src/app/core/services/alert.service';
+import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 
 
 @Component({
@@ -20,8 +22,12 @@ export class SignInComponent implements OnInit {
   submitted = false;
   passwordTextType!: boolean;
 
-  constructor(private readonly _formBuilder: FormBuilder, private authService: AuthService, private readonly _router: Router,
-    private spinner: NgxSpinnerService
+  constructor(private readonly _formBuilder: FormBuilder,
+    private authService: AuthService,
+    private readonly _router: Router,
+    private spinner: NgxSpinnerService,
+    private frappeErrorService: FrappeErrorService,
+    private alertService: AlertService
   ) { }
   ngOnInit(): void {
 
@@ -62,9 +68,9 @@ export class SignInComponent implements OnInit {
         this.spinner.hide();
         this._router.navigate(['/dashboard']); // Ruta protegida del POS
       },
-      error: (err) => {
-        toast.error('Credenciales incorrectas');
-        console.error(err);
+      error: (error: any) => {
+        const mensaje: any = this.frappeErrorService.handle(error);
+        this.alertService.error(mensaje);
         this.spinner.hide();
       }
     });
