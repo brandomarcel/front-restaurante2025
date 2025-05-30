@@ -78,7 +78,7 @@
 
 
                 <div class="max-h-[50vh] overflow-y-auto">
-                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3">
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 pb-5">
                         <div *ngFor="let product of filteredProductList" (click)="addProduct(product)"
                             class="cursor-pointer rounded border p-2 shadow-sm hover:bg-muted transition text-xs">
                             <h3 class="font-medium text-foreground">{{ product.nombre }}</h3>

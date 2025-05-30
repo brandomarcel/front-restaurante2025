@@ -5,50 +5,51 @@ import { NftDualCardComponent } from '../../components/nft/nft-dual-card/nft-dua
 import { NftHeaderComponent } from '../../components/nft/nft-header/nft-header.component';
 import { NftSingleCardComponent } from '../../components/nft/nft-single-card/nft-single-card.component';
 import { Nft } from '../../models/nft';
+import { CommonModule } from '@angular/common';
+import { OrdersService } from '../../../../services/orders.service';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-nft',
   templateUrl: './nft.component.html',
   imports: [
-    NftHeaderComponent,
-    NftDualCardComponent,
-    NftSingleCardComponent,
-    NftChartCardComponent,
-    NftAuctionsTableComponent,
+    CommonModule,
+    RouterModule
+
   ],
 })
 export class NftComponent implements OnInit {
-  nft: Array<Nft>;
 
-  constructor() {
-    this.nft = [
-      {
-        id: 34356771,
-        title: 'Girls of the Cartoon Universe',
-        creator: 'Jhon Doe',
-        instant_price: 4.2,
-        price: 187.47,
-        ending_in: '06h 52m 47s',
-        last_bid: 0.12,
-        image: './assets/images/img-01.jpg',
-        avatar: './assets/avatars/avt-01.jpg',
-      },
-      {
-        id: 34356772,
-        title: 'Pupaks',
-        price: 548.79,
-        last_bid: 0.35,
-        image: './assets/images/img-02.jpg',
-      },
-      {
-        id: 34356773,
-        title: 'Seeing Green collection',
-        price: 234.88,
-        last_bid: 0.15,
-        image: './assets/images/img-03.jpg',
-      },
-    ];
+  totalOrdersToday = 120;
+  total_sales_today = 34500;
+  ordersInProgress = 8;
+  topProducts = [
+    { name: 'Hamburguesa Clásica', count: 35 },
+    { name: 'Pizza Pepperoni', count: 28 },
+    { name: 'Tacos al Pastor', count: 22 },
+  ];
+
+  constructor(private ordersService: OrdersService) {
+
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.get_dashboard_metrics();
+   }
+
+  get_dashboard_metrics() {
+    this.ordersService.get_dashboard_metrics().subscribe({
+      next: (res: any) => {
+        const data = res.message;
+        console.log('Datos obtenidos de la API:', data);
+        this.totalOrdersToday = data.total_orders_today;
+        this.total_sales_today = data.total_sales_today;
+        this.topProducts = data.top_products;
+      },
+      error: (error: any) => {
+        console.error('Error al obtener los datos de la API:', error);
+      },
+    });
+  }
+
 }

@@ -14,6 +14,11 @@ export class OrdersService {
       withCredentials: true
     });
   }
+   get_dashboard_metrics() {
+    return this.http.get(`${environment.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.get_dashboard_metrics`, {
+      withCredentials: true
+    });
+  }
 
   getById(id: number) {
    return this.http.get(`${environment.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.get_order_with_details?order_name${id}`, {
