@@ -71,7 +71,7 @@ export class Menu {
       separator: true,
       items: [
         {
-          icon: 'assets/icons/heroicons/outline/cog.svg',
+          icon: 'assets/icons/heroicons/outline/building-storefront.svg',
           label: 'POS',
           route: '/dashboard/pos',
         }
@@ -104,17 +104,17 @@ export class Menu {
       separator: false,
       items: [
         {
-          icon: 'assets/icons/heroicons/outline/cog.svg',
+          icon: 'assets/icons/heroicons/outline/users.svg',
           label: 'Clientes',
           route: '/dashboard/customers',
         },
         {
-          icon: 'assets/icons/heroicons/outline/bell.svg',
+          icon: 'assets/icons/heroicons/outline/list-bullet.svg',
           label: 'Productos',
           route: '/dashboard/products',
         },
         {
-          icon: 'assets/icons/heroicons/outline/bell.svg',
+          icon: 'assets/icons/heroicons/outline/clipboard-document-list.svg',
           label: 'Ordenes',
           route: '/dashboard/orders',
         },
@@ -124,7 +124,7 @@ export class Menu {
         //   route: '/dashboard/reports',
         // },
         {
-          icon: 'assets/icons/heroicons/outline/bell.svg',
+          icon: 'assets/icons/heroicons/outline/list-bullet.svg',
           label: 'Categorias',
           route: '/dashboard/categories',
         },

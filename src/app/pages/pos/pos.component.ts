@@ -13,6 +13,7 @@ import { OrdersService } from 'src/app/services/orders.service';
 import { PaymentsService } from 'src/app/services/payments.service';
 import { PrintService } from 'src/app/services/print.service';
 import { ProductsService } from 'src/app/services/products.service';
+import { environment } from '../../../environments/environment.prod';
 
 @Component({
   selector: 'app-pos',
@@ -22,6 +23,7 @@ import { ProductsService } from 'src/app/services/products.service';
 })
 
 export class PosComponent implements OnInit {
+  private apiUrl = environment.apiUrl;
   showPaymentModal: boolean = false;
   amountReceived: number | null = null;
   change: number = 0;
@@ -393,7 +395,7 @@ decrease(item: any) {
   showReceipt = false;
 
   printCombinedTicket(orderId: string) {
-    const order = 'http://192.168.100.73:1012' + this.printService.getOrderPdf(orderId);
+    const order = this.apiUrl + this.printService.getOrderPdf(orderId);
     console.log('order', order);
     const width = 800;
     const height = 800;
