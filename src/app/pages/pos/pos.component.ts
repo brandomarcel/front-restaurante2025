@@ -23,7 +23,7 @@ import { environment } from '../../../environments/environment.prod';
 })
 
 export class PosComponent implements OnInit {
-  private apiUrl = environment.apiUrl;
+  private apiUrl = 'http://207.180.197.160:1012/'; // Reemplaza con tu URL de API real
   showPaymentModal: boolean = false;
   amountReceived: number | null = null;
   change: number = 0;

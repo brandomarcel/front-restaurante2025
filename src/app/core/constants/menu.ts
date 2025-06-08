@@ -78,27 +78,7 @@ export class Menu {
       ],
     },
 
-    // {
-    //   group: 'Collaboration',
-    //   separator: true,
-    //   items: [
-    //     {
-    //       icon: 'assets/icons/heroicons/outline/download.svg',
-    //       label: 'Download',
-    //       route: '/download',
-    //     },
-    //     {
-    //       icon: 'assets/icons/heroicons/outline/gift.svg',
-    //       label: 'Gift Card',
-    //       route: '/gift',
-    //     },
-    //     {
-    //       icon: 'assets/icons/heroicons/outline/users.svg',
-    //       label: 'Users',
-    //       route: '/users',
-    //     },
-    //   ],
-    // },
+
     {
       group: 'Configuracion',
       separator: false,
@@ -138,6 +118,17 @@ export class Menu {
         //     { label: 'Trash', route: '/folders/trash' },
         //   ],
         // },
+      ],
+    },
+        {
+      group: 'Reportes',
+      separator: true,
+      items: [
+        {
+          icon: 'assets/icons/heroicons/outline/download.svg',
+          label: 'Productos Mas Vendidos',
+          route: '/dashboard/ventasproducto',
+        },
       ],
     },
   ];

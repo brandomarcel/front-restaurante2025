@@ -9,6 +9,7 @@ import { CompanyComponent } from 'src/app/pages/company/company.component';
 import { OrdersComponent } from 'src/app/pages/orders/orders.component';
 import { ReportOrdernesComponent } from 'src/app/pages/reports/report-ordernes/report-ordernes.component';
 import { CategorysComponent } from 'src/app/pages/categorys/categorys.component';
+import { VentasProductoComponent } from 'src/app/pages/reports/ventas-producto/ventas-producto.component';
 
 const routes: Routes = [
   {
@@ -23,7 +24,7 @@ const routes: Routes = [
       { path: 'company', component: CompanyComponent },
       { path: 'orders', component: OrdersComponent },
       { path: 'categories', component: CategorysComponent },
-      { path: 'reports', component: ReportOrdernesComponent },
+      { path: 'ventasproducto', component: VentasProductoComponent },
       { path: '**', redirectTo: 'errors/404' },
     ],
   },
