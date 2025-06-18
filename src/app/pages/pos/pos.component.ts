@@ -455,6 +455,7 @@ decrease(item: any) {
   clearPage() {
     this.cart = [];
     this.customer = null;
+    this.alias = '';
     this.identificationCustomer = '';
     this.amountReceived = null;
     this.change = 0;
