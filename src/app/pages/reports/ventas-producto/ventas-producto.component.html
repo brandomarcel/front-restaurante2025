@@ -1,10 +1,22 @@
+<div class="container bg-primary-foreground mx-auto my-8 px-4 p-3 ">
 
-<div class="container bg-primary-foreground mx-auto my-8 px-4 p-3" >
+  <!-- Título + botón -->
+  <div class="mb-4 flex justify-between">
+    <div class="inline-block">
+      <h2 class="text-2xl font-semibold text-primary">Reporte</h2>
+      <div class="text-muted-foreground space-x-1 text-xs font-medium">
+        <span class="hover:text-primary">Filtrado por fecha</span>
+      </div>
+    </div>
+    <div class="inline-block space-x-4">
+      <button (click)="exportarExcel()" class="bg-green-600 text-white rounded-md px-4 py-2.5 text-xs font-semibold hover:bg-green-700 transition">
+        Descargar Excel
+      </button>
+    </div>
+  </div>
 
-
-<div class="p-4 space-y-4">
   <!-- Filtros -->
-  <div class="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-2 md:space-y-0">
+  <div class="mb-4 flex flex-col md:flex-row md:items-end md:space-x-4 space-y-2 md:space-y-0">
     <div>
       <label class="block text-sm font-medium text-gray-700">Desde</label>
       <input type="date" [(ngModel)]="fromDate"
@@ -15,25 +27,19 @@
       <input type="date" [(ngModel)]="toDate"
         class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm focus:ring-blue-500 focus:border-blue-500" />
     </div>
-    <div class="mt-4 md:mt-6">
-      <button (click)="cargarDatos()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">
+    <div>
+      <button (click)="cargarDatos()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition mt-1 md:mt-0">
         Buscar
       </button>
     </div>
   </div>
 
-  <button (click)="exportarExcel()" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition">
-    Descargar Excel
-  </button>
-
-
   <!-- Cargando -->
-  <div *ngIf="loading" class="text-blue-600 font-medium">Cargando...</div>
+  <div *ngIf="loading" class="text-blue-600 font-medium mb-2">Cargando...</div>
 
   <!-- Tabla -->
-  <div *ngIf="!loading && data.length" class="overflow-x-auto">
-
-    <!-- Selector de cantidad por página -->
+  <ng-container *ngIf="!loading && data.length > 0; else emptyData">
+    <!-- Selector de página -->
     <div class="flex items-center justify-between mb-3 text-sm">
       <div class="flex gap-2 items-center">
         <span class="text-gray-700">Mostrar:</span>
@@ -55,38 +61,34 @@
       </div>
     </div>
 
-    <!-- Tabla -->
-    <table class="min-w-full table-auto border border-gray-300">
-      <thead class="bg-gray-100">
-        <tr>
+    <!-- Tabla con scroll horizontal -->
+    <div class="overflow-x-auto rounded-lg shadow-md overflow-auto">
+      <table class="min-w-full divide-y divide-gray-200 bg-white text-sm">
+        <thead class="bg-gray-100 sticky top-0 z-10">
+          <tr>
+            <th *ngFor="let col of columns" class="px-4 py-2 text-left font-medium text-gray-700 whitespace-nowrap">
+              {{ col.label }}
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr *ngFor="let row of data | paginate: { itemsPerPage: pageSize, currentPage: page }" class="hover:bg-gray-50 transition">
+            <td *ngFor="let col of columns" class="px-4 py-2 text-gray-800 whitespace-nowrap">
+              {{ row[col.fieldname] }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
-          <th *ngFor="let col of columns" class="px-4 py-2 border-b text-left text-sm font-semibold text-gray-700">
-            {{ col.label }}
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let row of data | paginate: { itemsPerPage: pageSize, currentPage: page } ; index as i" class="hover:bg-gray-50">
-
-          <td *ngFor="let col of columns" class="px-4 py-2 border-b text-sm">
-            {{ row[col.fieldname] }}
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <!-- Paginador -->
-    <div class="mt-4 flex justify-center">
-      <pagination-controls (pageChange)="page = $event" previousLabel="Anterior"
-        nextLabel="Siguiente"></pagination-controls>
+      <pagination-controls
+        (pageChange)="page = $event"
+        class="mt-4 flex justify-center">
+      </pagination-controls>
     </div>
+  </ng-container>
 
-  </div>
-
-
-  <div *ngIf="!loading && !data.length" class="text-gray-500">
-    No se encontraron datos.
-  </div>
-</div>
-
+  <!-- Sin datos -->
+  <ng-template #emptyData>
+    <p class="text-center text-gray-500 mt-4">No se encontraron datos.</p>
+  </ng-template>
 </div>

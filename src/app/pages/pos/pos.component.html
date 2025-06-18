@@ -282,15 +282,15 @@
                 </div>
 
                 <!-- Total -->
-                <div class="text-center border-y py-4">
+                <div class="text-center border-y">
                     <p class="text-lg text-gray-600">Total a Pagar</p>
                     <p class="text-4xl font-bold text-green-600">${{ total | number: '1.2-2' }}</p>
                 </div>
 
                 <!-- Si es efectivo -->
-                <div *ngIf="paymentMethod === '01'" class="space-y-4">
+                <div *ngIf="paymentMethod === '01'" class="space-y-2">
                     <div>
-                        <label class="block text-sm font-medium mb-1 text-gray-700">Monto recibido</label>
+                        <!-- <label class="block text-sm font-medium mb-1 text-gray-700">Monto recibido</label> -->
                         <input type="number" [(ngModel)]="amountReceived" (input)="calcularCambio()"
                             class="w-full border border-gray-300 rounded px-4 py-2 text-xl font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
                             placeholder="Ingrese monto entregado" />
@@ -302,6 +302,15 @@
                             [class.text-green-600]="change >= 0">
                             ${{ change | number: '1.2-2' }}
                         </p>
+                    </div>
+                </div>
+
+                 <div class="space-y-2">
+                    <div>
+                        <!-- <label class="block text-sm font-medium mb-1 text-gray-700">Alias</label> -->
+                        <input type="text" [(ngModel)]="alias" (input)="calcularCambio()" oninput="this.value = this.value.toUpperCase()" maxlength="15"
+                            class="w-full border border-gray-300 rounded px-4 py-2 text-xl font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="Ingrese el nombre/alias para la entrega del pedido" />
                     </div>
                 </div>
 

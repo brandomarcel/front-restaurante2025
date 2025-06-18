@@ -36,6 +36,7 @@ export class PosComponent implements OnInit {
 
   identificationCustomer: string = '';
   customer: any = null;
+  alias: string = '';
   cart: any[] = [];
   searchTerm: string = '';
   selectedCategory = '';
@@ -357,7 +358,8 @@ decrease(item: any) {
     }
 
     const order = {
-      customer: this.customer?.num_identificacion, // o this.customer?.id si estás usando el ID
+      customer: this.customer?.num_identificacion,
+      alias: this.alias, // o this.customer?.id si estás usando el ID
       items: this.cart.map(item => ({
         product: item.name, // Asegúrate que sea el código tipo "PROD-0012"
         qty: item.quantity,
