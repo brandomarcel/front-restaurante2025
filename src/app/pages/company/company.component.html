@@ -5,6 +5,7 @@
 
         <!-- Columna 1: Empresa -->
         <div class="space-y-3">
+
             <h3 class="text-sm font-semibold text-gray-700">Datos de la Empresa</h3>
 
             <div>
@@ -49,36 +50,62 @@
                     inválido</small>
             </div>
 
-         
+
         </div>
 
         <!-- Columna 2: Secuencias -->
         <div class="space-y-3">
+
             <h3 class="text-sm font-semibold text-gray-700">SRI</h3>
+
+            <label class="inline-flex items-center cursor-pointer relative">
+                <input type="checkbox" class="sr-only peer" formControlName="ambiente" (change)="cambiarAmbiente()" />
+
+                <!-- Switch -->
+                <div class="w-11 h-6 bg-gray-300 rounded-full peer-checked:bg-green-600 transition-colors"></div>
+                <div
+                    class="absolute w-5 h-5 bg-white rounded-full transform translate-x-1 top-0.5 left-0.5 peer-checked:translate-x-5 transition-transform">
+                </div>
+
+                <!-- Texto del ambiente -->
+                <div>
+                    <span class="ml-3 text-lg font-semibold"
+                        [ngClass]="ambiente === 'PRODUCCION' ? 'text-green-700' : 'text-yellow-600'">
+                        Ambiente: {{ ambiente }}
+                    </span>
+                </div>
+            </label>
             <div>
                 <label class="block font-medium mb-1">Código Establecimiento</label>
                 <input type="text" formControlName="establishmentcode" class="w-full border rounded px-2 py-1"
                     [class.border-red-500]="f['establishmentcode'].invalid && submitted" />
-                <small *ngIf="f['establishmentcode'].errors?.['required'] && submitted"
-                    class="text-red-500">Campo requerido</small>
-                <small *ngIf="f['establishmentcode'].errors?.['pattern'] && submitted"
-                    class="text-red-500">3 dígitos</small>
+                <small *ngIf="f['establishmentcode'].errors?.['required'] && submitted" class="text-red-500">Campo
+                    requerido</small>
+                <small *ngIf="f['establishmentcode'].errors?.['pattern'] && submitted" class="text-red-500">3
+                    dígitos</small>
             </div>
 
             <div>
                 <label class="block font-medium mb-1">Punto Emisión</label>
                 <input type="text" formControlName="emissionpoint" class="w-full border rounded px-2 py-1"
                     [class.border-red-500]="f['emissionpoint'].invalid && submitted" />
-                <small *ngIf="f['emissionpoint'].errors?.['required'] && submitted"
-                    class="text-red-500">Campo requerido</small>
-                <small *ngIf="f['emissionpoint'].errors?.['pattern'] && submitted"
-                    class="text-red-500">3 dígitos</small>
+                <small *ngIf="f['emissionpoint'].errors?.['required'] && submitted" class="text-red-500">Campo
+                    requerido</small>
+                <small *ngIf="f['emissionpoint'].errors?.['pattern'] && submitted" class="text-red-500">3
+                    dígitos</small>
             </div>
             <div>
-                <label class="block font-medium mb-1">Secuencia Factura</label>
-                <input type="number" formControlName="emissionpoint" class="w-full border rounded px-2 py-1"
-                    [class.border-red-500]="f['emissionpoint'].invalid && submitted" />
-                <small *ngIf="f['emissionpoint'].invalid && submitted" class="text-red-500">Campo
+                <label class="block font-medium mb-1">Secuencial Factura (PRODUCCIÓN)</label>
+                <input type="number" formControlName="invoiceseq_prod" class="w-full border rounded px-2 py-1"
+                    [class.border-red-500]="f['invoiceseq_prod'].invalid && submitted" />
+                <small *ngIf="f['invoiceseq_prod'].invalid && submitted" class="text-red-500">Campo
+                    requerido</small>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Secuencial Factura(PRUEBAS)</label>
+                <input type="number" formControlName="invoiceseq_pruebas" class="w-full border rounded px-2 py-1"
+                    [class.border-red-500]="f['invoiceseq_pruebas'].invalid && submitted" />
+                <small *ngIf="f['invoiceseq_pruebas'].invalid && submitted" class="text-red-500">Campo
                     requerido</small>
             </div>
 

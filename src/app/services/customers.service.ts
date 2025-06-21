@@ -33,7 +33,7 @@ export class CustomersService {
   getAll() {
     const campos = ["name","nombre","num_identificacion","telefono","correo","direccion","tipo_identificacion","isactive"];
 
-    return this.http.get(`${environment.apiUrl}/resource/Cliente?fields=${JSON.stringify(campos)}`, {
+    return this.http.get(`${this.apiUrl}/resource/Cliente?fields=${JSON.stringify(campos)}`, {
       withCredentials: true
     });
   }
@@ -47,13 +47,13 @@ export class CustomersService {
     return this.http.post<any>(`${this.apiUrl}/resource/Cliente`, data);
   }
   update(name: string, data: any) {
-  return this.http.put(`${environment.apiUrl}/resource/Cliente/${name}`, data, {
+  return this.http.put(`${this.apiUrl}/resource/Cliente/${name}`, data, {
     withCredentials: true
   });
 }
 
 delete(name: string) {
-  return this.http.delete(`${environment.apiUrl}/resource/Cliente/${name}`, {
+  return this.http.delete(`${this.apiUrl}/resource/Cliente/${name}`, {
     withCredentials: true
   });
 }

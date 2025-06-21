@@ -13,7 +13,8 @@ import { OrdersService } from 'src/app/services/orders.service';
 import { PaymentsService } from 'src/app/services/payments.service';
 import { PrintService } from 'src/app/services/print.service';
 import { ProductsService } from 'src/app/services/products.service';
-import { environment } from '../../../environments/environment.prod';
+import { environment } from '../../../environments/environment';
+import { UtilsService } from '../../core/services/utils.service';
 
 @Component({
   selector: 'app-pos',
@@ -23,7 +24,9 @@ import { environment } from '../../../environments/environment.prod';
 })
 
 export class PosComponent implements OnInit {
-  private apiUrl = 'http://207.180.197.160:1012/'; // Reemplaza con tu URL de API real
+  ambiente: string = '';
+
+  private apiUrl = environment.apiUrl; // Reemplaza con tu URL de API real
   showPaymentModal: boolean = false;
   amountReceived: number | null = null;
   change: number = 0;
@@ -59,10 +62,18 @@ export class PosComponent implements OnInit {
     private fb: FormBuilder,
     private ordersService: OrdersService,
     private spinner: NgxSpinnerService,
-    private printService: PrintService
+    private printService: PrintService,
+    private utilsService: UtilsService
   ) { }
 
   ngOnInit(): void {
+    const ambienteGuardado = localStorage.getItem('ambiente');
+    console.log('📦ambienteGuardado', ambienteGuardado);
+    this.ambiente = ambienteGuardado ?? '----------';
+    // this.utilsService.ambiente$.subscribe(valor => {
+    //   this.ambiente = valor;
+    //   console.log('Ambiente actualizado:', valor);
+    // });
     const fechaEcuador = new Date(
       new Date().toLocaleString('en-US', { timeZone: 'America/Guayaquil' })
     );
@@ -158,50 +169,50 @@ export class PosComponent implements OnInit {
     this.findByIdentificationCustomer();
 
   }
-guardarCliente() {
-  this.submitted = true;
-  console.log('this.clienteForm', this.clienteForm);
+  guardarCliente() {
+    this.submitted = true;
+    console.log('this.clienteForm', this.clienteForm);
 
-  if (this.clienteForm.invalid) {
-    return;
+    if (this.clienteForm.invalid) {
+      return;
+    }
+
+    this.customersService.create(this.clienteForm.getRawValue()).subscribe({
+      next: (res) => {
+        console.log('Cliente creado:', res);
+        toast.success('Cliente creado exitosamente');
+        this.cerrarModal();
+        this.customer = res;
+      },
+      error: (err) => {
+        // Manejo de error específico de Frappe
+        if (err.error && err.error._server_messages) {
+          try {
+            const messages = JSON.parse(err.error._server_messages);
+            const mensaje = JSON.parse(messages[0]);
+            const mensajeLimpio = this.stripHtml(mensaje.message);
+            toast.error('Error: ' + mensajeLimpio); // Mostrar mensaje sin HTML
+          } catch (e) {
+            toast.error('Ocurrió un error al procesar la respuesta del servidor.');
+            console.error('Error al parsear mensaje del servidor:', e);
+          }
+        } else if (err.error && err.error.message) {
+          toast.error('Error: ' + err.error.message);
+        } else {
+          toast.error('Error desconocido al crear el cliente.');
+        }
+
+        console.error('Error al crear cliente:', err);
+      }
+    });
   }
 
-  this.customersService.create(this.clienteForm.getRawValue()).subscribe({
-    next: (res) => {
-      console.log('Cliente creado:', res);
-      toast.success('Cliente creado exitosamente');
-      this.cerrarModal();
-      this.customer = res;
-    },
-    error: (err) => {
-      // Manejo de error específico de Frappe
-      if (err.error && err.error._server_messages) {
-        try {
-          const messages = JSON.parse(err.error._server_messages);
-          const mensaje = JSON.parse(messages[0]);
-          const mensajeLimpio = this.stripHtml(mensaje.message);
-          toast.error('Error: ' + mensajeLimpio); // Mostrar mensaje sin HTML
-        } catch (e) {
-          toast.error('Ocurrió un error al procesar la respuesta del servidor.');
-          console.error('Error al parsear mensaje del servidor:', e);
-        }
-      } else if (err.error && err.error.message) {
-        toast.error('Error: ' + err.error.message);
-      } else {
-        toast.error('Error desconocido al crear el cliente.');
-      }
-
-      console.error('Error al crear cliente:', err);
-    }
-  });
-}
-
-// Función para eliminar etiquetas HTML del mensaje
-stripHtml(html: string): string {
-  const div = document.createElement('div');
-  div.innerHTML = html;
-  return div.textContent || div.innerText || '';
-}
+  // Función para eliminar etiquetas HTML del mensaje
+  stripHtml(html: string): string {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.textContent || div.innerText || '';
+  }
 
 
 
@@ -239,17 +250,17 @@ stripHtml(html: string): string {
     item.total = item.quantity * parseFloat(item.price);
   }
 
-decrease(item: any) {
-  if (item.quantity > 1) {
-    item.quantity--;
-    item.total = item.quantity * item.price;
-  } else {
-    const index = this.cart.indexOf(item);
-    if (index !== -1) {
-      this.cart.splice(index, 1);
+  decrease(item: any) {
+    if (item.quantity > 1) {
+      item.quantity--;
+      item.total = item.quantity * item.price;
+    } else {
+      const index = this.cart.indexOf(item);
+      if (index !== -1) {
+        this.cart.splice(index, 1);
+      }
     }
   }
-}
 
 
 
@@ -321,7 +332,7 @@ decrease(item: any) {
 
   // Método para abrir el modal
   abrirModalPago() {
-    if (!this.identificationCustomer ) {
+    if (!this.identificationCustomer) {
       toast.error('Selecciona un cliente.');
       return;
     }
@@ -360,6 +371,8 @@ decrease(item: any) {
     const order = {
       customer: this.customer?.num_identificacion,
       alias: this.alias, // o this.customer?.id si estás usando el ID
+      estado: 'Nota de Venta',
+      total: this.total.toFixed(2),
       items: this.cart.map(item => ({
         product: item.name, // Asegúrate que sea el código tipo "PROD-0012"
         qty: item.quantity,
@@ -464,6 +477,6 @@ decrease(item: any) {
     this.showKitchenTicket = false;
   }
 
-  
+
 
 }

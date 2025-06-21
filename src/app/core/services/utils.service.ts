@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { BehaviorSubject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -17,6 +18,30 @@ export class UtilsService {
     return fechaFormateada
 
   }
+
+
+
+
+
+
+
+
+  private ambienteSubject = new BehaviorSubject<string>('');
+
+  // Observable que pueden usar los componentes
+  ambiente$ = this.ambienteSubject.asObservable();
+
+  // Función para cambiar el ambiente
+  cambiarAmbiente(nuevoAmbiente: string) {
+    this.ambienteSubject.next(nuevoAmbiente);
+  }
+
+  // Opcional: obtener el valor actual
+  getAmbienteActual(): string {
+    return this.ambienteSubject.value;
+  }
+
+
 
   
 }

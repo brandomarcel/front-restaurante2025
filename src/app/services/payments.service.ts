@@ -9,7 +9,7 @@ export class PaymentsService {
   constructor(private http: HttpClient) { }
 
   getAll() {
-    const campos = ['name', 'nombre', 'codigo'];
+    const campos = ['name', 'nombre','description', 'codigo'];
 
     return this.http.get(`${environment.apiUrl}/resource/payments?fields=${JSON.stringify(campos)}`, {
       withCredentials: true

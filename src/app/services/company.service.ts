@@ -5,14 +5,17 @@ import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
 
 export interface CompanyInfo {
-  name: number;
-  businessname: string;
-  ruc: string;
-  address: string;
-  phone: string;
-  email: string;
-  establishmentcode: string;
-  emissionpoint: string;
+  name?: number;
+  businessname?: string;
+  ambiente?: string;
+  ruc?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  establishmentcode?: string;
+  emissionpoint?: string;
+  invoiceseq_prod?: number;
+  invoiceseq_pruebas?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -22,9 +25,9 @@ export class CompanyService {
   constructor(private http: HttpClient) {}
 
  getAll() {
-     const campos = ["name","businessname","ruc","address","phone","email","establishmentcode","emissionpoint","invoiceseq","salenoteseq"];
+     const campos = ["*"];
 
-    return this.http.get(`${environment.apiUrl}/resource/Company?fields=${JSON.stringify(campos)}`, {
+    return this.http.get(`${this.apiUrl}/resource/Company?fields=${JSON.stringify(campos)}`, {
       withCredentials: true
     });
   }
@@ -36,10 +39,10 @@ export class CompanyService {
   update(id: number, data: CompanyInfo): Observable<CompanyInfo> {
     console.log('id', id);
     console.log('data', data);
-    return this.http.patch<CompanyInfo>(`${this.apiUrl}/${id}`, data);
+    return this.http.put<CompanyInfo>(`${this.apiUrl}/resource/Company/${id}`, data);
   }
 
   delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    return this.http.delete<void>(`${this.apiUrl}/resource/Company/${id}`);
   }
 }

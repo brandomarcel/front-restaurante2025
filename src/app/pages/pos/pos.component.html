@@ -81,7 +81,7 @@
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 pb-5">
                         <div *ngFor="let product of filteredProductList" (click)="addProduct(product)"
                             class="cursor-pointer rounded border p-2 shadow-sm hover:bg-muted transition text-xs">
-                            <h3 class="font-medium text-foreground">{{ product.nombre }}</h3>
+                            <h3 class="font-semibold text-foreground">{{ product.nombre }}</h3>
                             <p class="text-muted-foreground">
                                 <span>{{ product.descripcion ? '(' + product.descripcion + ')' : '' }}</span>
                             </p>
@@ -94,6 +94,13 @@
 
             <!-- RESUMEN DEL PEDIDO -->
             <div class="flex flex-col  h-full overflow-auto text-xs">
+                <!-- Texto del ambiente -->
+                <div>
+                    <span class="text-lg font-semibold"
+                        [ngClass]="ambiente === 'PRODUCCION' ? 'text-green-700' : 'text-yellow-600'">
+                        Ambiente: {{ ambiente }}
+                    </span>
+                </div>
                 <h2 class="text-lg font-semibold text-primary">Resumen</h2>
 
                 <ng-container *ngIf="cart.length > 0; else emptyCart">
@@ -277,7 +284,7 @@
                     <label class="block text-sm font-medium mb-1 text-gray-700">Método de Pago</label>
                     <select [(ngModel)]="paymentMethod" (change)="calcularCambio()"
                         class="w-full border border-gray-300 rounded px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary">
-                        <option [value]="item.codigo" *ngFor="let item of payments">{{ item.nombre }}</option>
+                        <option [value]="item.codigo" *ngFor="let item of payments">{{ item.description || item.nombre }}</option>
                     </select>
                 </div>
 
@@ -308,7 +315,7 @@
                  <div class="space-y-2">
                     <div>
                         <!-- <label class="block text-sm font-medium mb-1 text-gray-700">Alias</label> -->
-                        <input type="text" [(ngModel)]="alias" (input)="calcularCambio()" oninput="this.value = this.value.toUpperCase()" maxlength="15"
+                        <input type="text" [(ngModel)]="alias" (input)="calcularCambio()" oninput="this.value = this.value.toUpperCase()" maxlength="20"
                             class="w-full border border-gray-300 rounded px-4 py-2 text-xl font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
                             placeholder="Ingrese el nombre/alias para la entrega del pedido" />
                     </div>
