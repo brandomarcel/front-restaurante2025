@@ -164,14 +164,7 @@
         <h3 class="text-base font-semibold mb-2">Nuevo Cliente</h3>
 
         <form [formGroup]="clienteForm" (ngSubmit)="guardarCliente()" class="space-y-4">
-            <!-- Nombre / Razón Social -->
-            <div>
-                <label class="block text-sm font-medium">Nombre / Razón Social</label>
-                <input type="text" formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm" />
-                <div *ngIf="f['nombre'].invalid && submitted" class="text-red-500 text-sm">
-                    Campo requerido.
-                </div>
-            </div>
+ 
 
             <!-- Tipo -->
             <div>
@@ -197,6 +190,15 @@
             </div>
 
 
+                       <!-- Nombre / Razón Social -->
+            <div>
+                <label class="block text-sm font-medium">Nombre / Razón Social</label>
+                <input type="text" formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['nombre'].invalid && submitted" class="text-red-500 text-sm">
+                    Campo requerido.
+                </div>
+            </div>
+            
             <!-- Email -->
             <div>
                 <label class="block text-sm font-medium">Email</label>
@@ -323,9 +325,15 @@
 
                 <!-- Confirmar -->
                 <div>
-                    <button (click)="confirmarPago()"
+                    <button (click)="confirmarPago('Nota de venta')"
                         class="w-full py-3 text-xl font-bold bg-primary text-white rounded hover:bg-primary/90 transition">
-                        Confirmar y Guardar Orden
+                        Nota de Venta
+                    </button>
+                </div>
+                <div>
+                    <button (click)="confirmarPago('Factura')"
+                        class="w-full py-3 text-xl font-bold bg-emerald-500 text-white rounded hover:bg-emerald-500/90 transition">
+                        Factura
                     </button>
                 </div>
             </div>

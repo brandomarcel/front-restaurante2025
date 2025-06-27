@@ -15,6 +15,7 @@ import { PrintService } from 'src/app/services/print.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { environment } from '../../../environments/environment';
 import { UtilsService } from '../../core/services/utils.service';
+import { AlertService } from '../../core/services/alert.service';
 
 @Component({
   selector: 'app-pos',
@@ -63,10 +64,14 @@ export class PosComponent implements OnInit {
     private ordersService: OrdersService,
     private spinner: NgxSpinnerService,
     private printService: PrintService,
-    private utilsService: UtilsService
+    private utilsService: UtilsService,
+    private alertService: AlertService
   ) { }
 
   ngOnInit(): void {
+
+
+      
     const ambienteGuardado = localStorage.getItem('ambiente');
     console.log('📦ambienteGuardado', ambienteGuardado);
     this.ambiente = ambienteGuardado ?? '----------';
@@ -151,7 +156,11 @@ export class PosComponent implements OnInit {
         console.error('Error al buscar cliente:', err);
         this.customer = null;
         this.clienteForm.patchValue({ identification: this.identificationCustomer });
-        this.identificationCustomer = '';
+        //this.identificationCustomer = '';
+        this.showCustomerModal = true;
+        this.clienteForm.patchValue({
+          num_identificacion: this.identificationCustomer,
+        });
         toast.error('Cliente no encontrado con esa identificación');
         this.spinner.hide();
       },
@@ -182,7 +191,7 @@ export class PosComponent implements OnInit {
         console.log('Cliente creado:', res);
         toast.success('Cliente creado exitosamente');
         this.cerrarModal();
-        this.customer = res;
+        this.customer = res.data;
       },
       error: (err) => {
         // Manejo de error específico de Frappe
@@ -355,7 +364,7 @@ export class PosComponent implements OnInit {
     }
   }
 
-  confirmarPago() {
+  confirmarPago(typePago: string) {
     console.log('this.paymentMethod', this.paymentMethod);
     console.log('this.amountReceived', this.amountReceived);
     console.log('this.change', this.change);
@@ -371,7 +380,7 @@ export class PosComponent implements OnInit {
     const order = {
       customer: this.customer?.num_identificacion,
       alias: this.alias, // o this.customer?.id si estás usando el ID
-      estado: 'Nota de Venta',
+      estado: typePago,
       total: this.total.toFixed(2),
       items: this.cart.map(item => ({
         product: item.name, // Asegúrate que sea el código tipo "PROD-0012"
@@ -385,8 +394,36 @@ export class PosComponent implements OnInit {
       ]
     };
 
-    this.spinner.show();
+    
 
+    if (typePago === 'Factura') {
+          this.alertService.confirm('¿Deseas continuar con la factura?', 'Esta acción no se puede deshacer.').then((result) => {
+      if (result.isConfirmed) {
+        console.log('Confirmado');
+        this.spinner.show();
+          this.ordersService.create(order).subscribe({
+      next: (res) => {
+        console.log('Pedido guardado:', res);
+        const orderId = res.data.name; // Asegúrate de que el ID del pedido se obtenga correctamente
+        this.spinner.hide();
+        toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
+        setTimeout(() => this.printCombinedTicket(orderId), 500);
+
+
+      },
+      error: () => {
+        this.spinner.hide();
+        toast.error('Error al guardar el pedido.');
+      }
+    });
+      } else {
+        console.log('Cancelado');
+      }
+    });
+      
+    return
+    }
+this.spinner.show();
     this.ordersService.create(order).subscribe({
       next: (res) => {
         console.log('Pedido guardado:', res);
@@ -410,7 +447,7 @@ export class PosComponent implements OnInit {
   showReceipt = false;
 
   printCombinedTicket(orderId: string) {
-    const order = this.apiUrl + this.printService.getOrderPdf(orderId);
+    const order = 'http://207.180.197.160:1012' + this.printService.getOrderPdf(orderId);
     console.log('order', order);
     const width = 800;
     const height = 800;
