@@ -33,7 +33,7 @@
                         </div>
 
                         <div class="text-xs text-muted-foreground space-y-0.5">
-                            <p>{{ customer?.nombre }}</p>
+                            <p>{{ customer?.nombre }} </p>
                             <p>{{ customer?.correo }}</p>
                         </div>
                     </div>
@@ -76,19 +76,33 @@
 
 
 
-
                 <div class="max-h-[50vh] overflow-y-auto">
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 pb-5">
-                        <div *ngFor="let product of filteredProductList" (click)="addProduct(product)"
-                            class="cursor-pointer rounded border p-2 shadow-sm hover:bg-muted transition text-xs">
-                            <h3 class="font-semibold text-foreground">{{ product.nombre }}</h3>
-                            <p class="text-muted-foreground">
-                                <span>{{ product.descripcion ? '(' + product.descripcion + ')' : '' }}</span>
+                        <div *ngFor="let product of filteredProductList" (click)="addProduct(product)" [ngClass]="{
+        'cursor-pointer rounded border p-2 shadow-sm transition text-xs': true,
+        'hover:bg-muted': !product.is_out_of_stock,
+        'border-red-500 bg-red-50': product.is_out_of_stock
+      }">
+                            <h3 class="font-semibold text-foreground">
+                                {{ product.nombre }}
+                            </h3>
+
+                            <!-- Etiqueta 'Agotado' discreta -->
+                            <p *ngIf="product.is_out_of_stock" class="text-red-600 text-[10px] italic mb-1">
+                                (Agotado)
                             </p>
-                            <p class="text-muted-foreground text-lg">${{ product.precio | number: '1.2-2' }}</p>
+
+                            <p class="text-muted-foreground">
+                                <span *ngIf="product.descripcion">({{ product.descripcion }})</span>
+                            </p>
+
+                            <p class="text-muted-foreground text-lg">
+                                ${{ product.precio | number: '1.2-2' }}
+                            </p>
                         </div>
                     </div>
                 </div>
+
 
             </div>
 
@@ -107,7 +121,8 @@
                     <div class="flex-grow overflow-auto space-y-1 max-h-[50vh] overflow-y-auto">
                         <div *ngFor="let item of cart" class="flex justify-between items-center border-b py-1 ">
                             <span class="font-medium text-foreground">
-                                {{ item.nombre }} {{ item.descripcion ? '(' + item.descripcion + ')' : '' }} <span class="text-foreground font-normal">x{{ item.quantity }}</span>
+                                {{ item.nombre }} {{ item.descripcion ? '(' + item.descripcion + ')' : '' }} <span
+                                    class="text-foreground font-normal">x{{ item.quantity }}</span>
                             </span>
                             <div class="flex items-center gap-2">
                                 <button (click)="decrease(item)"
@@ -164,7 +179,7 @@
         <h3 class="text-base font-semibold mb-2">Nuevo Cliente</h3>
 
         <form [formGroup]="clienteForm" (ngSubmit)="guardarCliente()" class="space-y-4">
- 
+
 
             <!-- Tipo -->
             <div>
@@ -187,10 +202,17 @@
                 <div *ngIf="f['num_identificacion'].invalid && submitted" class="text-red-500 text-sm">
                     Campo requerido.
                 </div>
+
+                <div *ngIf="f['num_identificacion'].hasError('minlength') && submitted" class="text-red-500 text-sm">
+                    Mínimo 10 caracteres.
+                </div>
+                <div *ngIf="f['num_identificacion'].hasError('maxlength') && submitted" class="text-red-500 text-sm">
+                    Máximo 13 caracteres.
+                </div>
             </div>
 
 
-                       <!-- Nombre / Razón Social -->
+            <!-- Nombre / Razón Social -->
             <div>
                 <label class="block text-sm font-medium">Nombre / Razón Social</label>
                 <input type="text" formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm" />
@@ -198,7 +220,7 @@
                     Campo requerido.
                 </div>
             </div>
-            
+
             <!-- Email -->
             <div>
                 <label class="block text-sm font-medium">Email</label>
@@ -286,7 +308,8 @@
                     <label class="block text-sm font-medium mb-1 text-gray-700">Método de Pago</label>
                     <select [(ngModel)]="paymentMethod" (change)="calcularCambio()"
                         class="w-full border border-gray-300 rounded px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary">
-                        <option [value]="item.codigo" *ngFor="let item of payments">{{ item.description || item.nombre }}</option>
+                        <option [value]="item.codigo" *ngFor="let item of payments">{{ item.description || item.nombre
+                            }}</option>
                     </select>
                 </div>
 
@@ -314,10 +337,11 @@
                     </div>
                 </div>
 
-                 <div class="space-y-2">
+                <div class="space-y-2">
                     <div>
                         <!-- <label class="block text-sm font-medium mb-1 text-gray-700">Alias</label> -->
-                        <input type="text" [(ngModel)]="alias" (input)="calcularCambio()" oninput="this.value = this.value.toUpperCase()" maxlength="20"
+                        <input type="text" [(ngModel)]="alias" (input)="calcularCambio()"
+                            oninput="this.value = this.value.toUpperCase()" maxlength="20"
                             class="w-full border border-gray-300 rounded px-4 py-2 text-xl font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
                             placeholder="Ingrese el nombre/alias para la entrega del pedido" />
                     </div>

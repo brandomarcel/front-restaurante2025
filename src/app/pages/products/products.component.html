@@ -1,4 +1,4 @@
-<div class="container bg-primary-foreground mx-auto my-8 px-4 p-3" >
+<div class="container bg-primary-foreground mx-auto my-8 px-4 p-3">
 
 
   <div class="mb-4 flex justify-between">
@@ -17,82 +17,85 @@
     </div>
   </div>
 
-    <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar productos..."
+  <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar productos..."
     class="mb-4 w-full border rounded px-4 py-2 text-sm" />
   <ng-container *ngIf="productosFiltradosList.length > 0; else emptyProducts">
     <div class="overflow-x-auto rounded-lg shadow-md">
       <table class="min-w-full divide-y divide-gray-200 bg-white text-sm">
         <thead class="bg-gray-100 sticky top-0 z-10">
           <tr>
+            <th class="p-3 text-left font-medium text-gray-700">Estado</th>
             <th class="p-3 text-left font-medium text-gray-700">Nombre</th>
             <th class="p-3 text-left font-medium text-gray-700">Descripción</th>
             <th class="p-3 text-left font-medium text-gray-700">Precio</th>
             <th class="p-3 text-left font-medium text-gray-700">IVA</th>
             <th class="p-3 text-left font-medium text-gray-700">Categoría</th>
-            <th class="p-3 text-left font-medium text-gray-700">Estado</th>
+            <th class="p-3 text-left font-medium text-gray-700">Stock</th>
             <th class="p-3 text-left font-medium text-gray-700">Acciones</th>
+
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
-          <tr *ngFor="let product of productosFiltradosList | paginate: { itemsPerPage: pageSize, currentPage: page }" 
-    class="hover:bg-gray-50 transition">
+          <tr *ngFor="let product of productosFiltradosList | paginate: { itemsPerPage: pageSize, currentPage: page }"
+            class="hover:bg-gray-50 transition">
+
+            <td class="p-3">
+              <span class="text-xs font-medium px-2 py-1 rounded" [class.bg-green-100]="product.isactive"
+                [class.bg-red-100]="!product.isactive" [class.text-green-800]="product.isactive"
+                [class.text-red-800]="!product.isactive">
+                {{ product.isactive ? 'Activo' : 'Inactivo' }}
+              </span>
+            </td>
 
             <td class="p-3 text-gray-800">{{ product.nombre }}</td>
-             <td class="p-3 text-gray-800">{{ product.descripcion || '------' }}</td>
+            <td class="p-3 text-gray-800">
+              {{ (product.descripcion?.length > 15) ? (product.descripcion | slice:0:15) + '...' : product.descripcion
+              || '------' }}
+            </td>
+
             <td class="p-3 text-gray-800">${{ product.precio | number: '1.2-2' }}</td>
             <td class="p-3 text-gray-800">{{ product.tax }}</td>
             <td class="p-3 capitalize text-gray-800">
               {{ getNameCategory(product.categoria) || '—' }}
             </td>
-            
+
+
+
             <td class="p-3">
-              <span
-                class="text-xs font-medium px-2 py-1 rounded"
-                [class.bg-green-100]="product.isactive"
-                [class.bg-red-100]="!product.isactive"
-                [class.text-green-800]="product.isactive"
-                [class.text-red-800]="!product.isactive"
-              >
-                {{ product.isactive ? 'Activo' : 'Inactivo' }}
+              <span class="text-xs font-medium px-2 py-1 rounded" [class.bg-green-100]="!product.is_out_of_stock"
+                [class.bg-red-100]="product.is_out_of_stock" [class.text-green-800]="!product.is_out_of_stock"
+                [class.text-red-800]="product.is_out_of_stock">
+                {{ !product.is_out_of_stock ? 'Disponible' : 'Agotado' }}
               </span>
             </td>
             <td class="p-3 flex gap-2">
-              <button
-                class="text-blue-600 hover:text-blue-800 font-medium transition"
-                (click)="abrirModal(product)"
-              >
+              <button class="text-blue-600 hover:text-blue-800 font-medium transition" (click)="abrirModal(product)">
                 ✏️ Editar
               </button>
-              <button
-                class="text-red-600 hover:text-red-800 font-medium transition"
-                (click)="eliminar(product.name)"
-              >
+              <button class="text-red-600 hover:text-red-800 font-medium transition" (click)="eliminar(product.name)">
                 🗑️ Eliminar
               </button>
             </td>
           </tr>
         </tbody>
       </table>
-    
+
       <!-- Mensaje si no hay productos -->
       <div *ngIf="productosFiltradosList.length === 0" class="text-center text-gray-500 py-4">
         No se encontraron productos.
       </div>
-    
+
       <!-- Controles de paginación -->
-      <pagination-controls
-        (pageChange)="page = $event"
-        class="mt-4 flex justify-center"
-      ></pagination-controls>
+      <pagination-controls (pageChange)="page = $event" class="mt-4 flex justify-center"></pagination-controls>
     </div>
   </ng-container>
   <ng-template #emptyProducts>
     <p class="text-center text-gray-500">No hay datos para mostrar</p>
-    
-  </ng-template>
-  
 
-    
+  </ng-template>
+
+
+
 
   <!-- MODAL CREAR / EDITAR -->
   <div *ngIf="mostrarModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
@@ -140,9 +143,10 @@
             <option value="" disabled selected>Selecciona una categoría</option>
             <option *ngFor="let cat of categories" [value]="cat.name">{{ cat.nombre }}</option>
           </select>
-          <p *ngIf="f['categoria'].touched && f['categoria'].invalid" class="text-red-500 text-xs">Categoría requerida.</p>
+          <p *ngIf="f['categoria'].touched && f['categoria'].invalid" class="text-red-500 text-xs">Categoría requerida.
+          </p>
         </div>
-        
+
 
         <!-- <div>
             <label class="block text-sm font-medium">Código</label>
@@ -158,6 +162,12 @@
           <input type="checkbox" formControlName="isactive" />
           <label class="text-sm font-medium">Activo</label>
         </div>
+
+        <div class="flex items-center gap-2">
+          <input type="checkbox" formControlName="is_out_of_stock" />
+          <label class="text-sm font-medium">Agotado</label>
+        </div>
+
 
         <div class="pt-2">
           <button type="submit" class="bg-primary text-white px-4 py-2 rounded w-full">

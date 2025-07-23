@@ -91,7 +91,7 @@ export class PosComponent implements OnInit {
     console.log('entro');
     this.clienteForm = this.fb.group({
       nombre: ['', [Validators.required]],
-      num_identificacion: ['', [Validators.required]],
+      num_identificacion: ['', [Validators.required,Validators.minLength(10), Validators.maxLength(13)]],
       tipo_identificacion: ['04 - Cédula', [Validators.required]],
       correo: ['', [Validators.required, Validators.email]],
       telefono: ['', [Validators.required]],
@@ -115,6 +115,8 @@ export class PosComponent implements OnInit {
     this.productsService.getAll().subscribe((res: any) => {
       this.spinner.hide();
       this.products = res.data || [];
+      
+      console.log('Productos cargados:', this.products);
       this.applyFilters(); // 🔥 Actualiza lista filtrada
     });
   }
@@ -192,6 +194,7 @@ export class PosComponent implements OnInit {
         toast.success('Cliente creado exitosamente');
         this.cerrarModal();
         this.customer = res.data;
+         this.identificationCustomer = this.customer.num_identificacion;
       },
       error: (err) => {
         // Manejo de error específico de Frappe

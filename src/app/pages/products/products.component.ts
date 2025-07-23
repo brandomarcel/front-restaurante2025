@@ -30,7 +30,7 @@ export class ProductsComponent implements OnInit {
   productoEditando: any = null;
   productoForm!: FormGroup;
   page = 1;
-  pageSize = 10;
+  pageSize = 20;
 
   constructor(
     private productsService: ProductsService,
@@ -57,9 +57,9 @@ export class ProductsComponent implements OnInit {
         this.productosFiltradosList.sort((a, b) => a.name.localeCompare(b.name));
         console.log('Productos cargados:', this.productos);
       },
-      error: (error:any) => {
-        const mensaje: any = this.frappeErrorService.handle(error); 
-          this.alertService.error(mensaje);
+      error: (error: any) => {
+        const mensaje: any = this.frappeErrorService.handle(error);
+        this.alertService.error(mensaje);
       }
     });
   }
@@ -92,10 +92,15 @@ export class ProductsComponent implements OnInit {
 
   actualizarProductosFiltrados() {
     const term = this._searchTerm.toLowerCase();
-    this.productosFiltradosList = this.productos.filter(p =>
-      p.name.toLowerCase().includes(term)
-    );
+
+    this.productosFiltradosList = this.productos.filter(p => {
+      const nombre = p.nombre.toLowerCase();
+      const estadoStock = p.is_out_of_stock === 1 ? 'agotado' : 'disponible';
+
+      return nombre.includes(term) || estadoStock.includes(term);
+    });
   }
+
 
 
   abrirModal(producto: any = null) {
@@ -141,9 +146,9 @@ export class ProductsComponent implements OnInit {
         this.spinner.hide();
       },
       error: (error: any) => {
-         const mensaje: any = this.frappeErrorService.handle(error); 
-          this.alertService.error(mensaje);
-          this.spinner.hide();
+        const mensaje: any = this.frappeErrorService.handle(error);
+        this.alertService.error(mensaje);
+        this.spinner.hide();
       }
     });
   }
@@ -196,7 +201,8 @@ export class ProductsComponent implements OnInit {
       tax: ['IVA-0', Validators.required],
       categoria: ['', Validators.required], // ahora es categoryId
       codigo: [''],
-      isactive: [true]
+      isactive: [true],
+      is_out_of_stock: [false]
     });
   }
 

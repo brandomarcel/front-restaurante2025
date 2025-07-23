@@ -9,11 +9,18 @@ export class OrdersService {
 
   constructor(private http: HttpClient) {}
 
- getAll() {
-    return this.http.get(`${environment.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.get_all_orders`, {
-      withCredentials: true
-    });
-  }
+getAll(limit: number = 10, offset: number = 0) {
+  const params = new HttpParams()
+    .set('limit', limit.toString())
+    .set('offset', offset.toString());
+
+  return this.http.get(`${environment.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.get_all_orders`, {
+    withCredentials: true,
+    params: params
+  });
+}
+
+
    get_dashboard_metrics() {
     return this.http.get(`${environment.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.get_dashboard_metrics`, {
       withCredentials: true

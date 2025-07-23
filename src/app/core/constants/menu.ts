@@ -126,7 +126,7 @@ export class Menu {
       items: [
         {
           icon: 'assets/icons/heroicons/outline/download.svg',
-          label: 'Productos Mas Vendidos',
+          label: 'Reporte',
           route: '/dashboard/ventasproducto',
         },
       ],

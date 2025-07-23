@@ -10,4 +10,21 @@ export class PrintService {
     const url = `/printview?doctype=orders&name=${orderId}&trigger_print=1&format=Nota%20y%20Comanda&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
     return url;
   }
+
+  getComandaPdf(orderId: string) {
+    const url = `/printview?doctype=orders&name=${orderId}&trigger_print=1&format=Comanda&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
+    return url;
+  }
+
+  getFacturaPdf(orderId: string) {
+    const url = `/api/method/frappe.utils.print_format.download_pdf?doctype=orders&name=${orderId}&trigger_print=1&format=Factura&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
+    return url;
+  }
+
+  getNotaVentaPdf(orderId: string) {
+    const url = `/api/method/frappe.utils.print_format.download_pdf?doctype=orders&name=${orderId}&format=Nota%20de%20Venta&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC_lang`;
+    return url;
+  }
+
+  
 }
