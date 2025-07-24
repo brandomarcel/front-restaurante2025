@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { toast } from 'ngx-sonner';
@@ -16,6 +16,7 @@ import { ProductsService } from 'src/app/services/products.service';
 import { environment } from '../../../environments/environment';
 import { UtilsService } from '../../core/services/utils.service';
 import { AlertService } from '../../core/services/alert.service';
+import { filter } from 'rxjs';
 
 @Component({
   selector: 'app-pos',
@@ -71,7 +72,7 @@ export class PosComponent implements OnInit {
   ngOnInit(): void {
 
 
-      
+
     const ambienteGuardado = localStorage.getItem('ambiente');
     console.log('📦ambienteGuardado', ambienteGuardado);
     this.ambiente = ambienteGuardado ?? '----------';
@@ -91,8 +92,8 @@ export class PosComponent implements OnInit {
     console.log('entro');
     this.clienteForm = this.fb.group({
       nombre: ['', [Validators.required]],
-      num_identificacion: ['', [Validators.required,Validators.minLength(10), Validators.maxLength(13)]],
-      tipo_identificacion: ['04 - Cédula', [Validators.required]],
+      num_identificacion: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(13)]],
+      tipo_identificacion: ['05 - Cédula', [Validators.required]],
       correo: ['', [Validators.required, Validators.email]],
       telefono: ['', [Validators.required]],
       direccion: ['', [Validators.required]],
@@ -103,7 +104,20 @@ export class PosComponent implements OnInit {
     this.loadProducts();
     this.loadCategory();
     this.loadMethodPayment();
+
+    // Agrega la validación personalizada
+    this.clienteForm.get('tipo_identificacion')?.valueChanges.subscribe(() => {
+      this.clienteForm.patchValue({ num_identificacion: null }); 
+      this.clienteForm.get('num_identificacion')?.updateValueAndValidity();
+    });
+
+    this.clienteForm.get('num_identificacion')?.setValidators([
+      Validators.required,
+      this.identificacionLengthValidator()
+    ]);
+
   }
+
   public toggleSidebar() {
     this.menuService.toggleSidebar();
   }
@@ -115,7 +129,14 @@ export class PosComponent implements OnInit {
     this.productsService.getAll().subscribe((res: any) => {
       this.spinner.hide();
       this.products = res.data || [];
-      
+      if ((res.data).length > 0) {
+        console.log('res.data', res.data);
+
+        this.products = (res.data).filter((product: any) => {
+          return product.isactive === 1
+        });
+      }
+
       console.log('Productos cargados:', this.products);
       this.applyFilters(); // 🔥 Actualiza lista filtrada
     });
@@ -174,7 +195,7 @@ export class PosComponent implements OnInit {
 
 
   selectFinalConsumer() {
-    this.identificationCustomer = '9999999999';
+    this.identificationCustomer = '9999999999999';
 
     console.log('this.identificationCustomer', this.identificationCustomer);
     this.findByIdentificationCustomer();
@@ -194,7 +215,7 @@ export class PosComponent implements OnInit {
         toast.success('Cliente creado exitosamente');
         this.cerrarModal();
         this.customer = res.data;
-         this.identificationCustomer = this.customer.num_identificacion;
+        this.identificationCustomer = this.customer.num_identificacion;
       },
       error: (err) => {
         // Manejo de error específico de Frappe
@@ -397,36 +418,36 @@ export class PosComponent implements OnInit {
       ]
     };
 
-    
+
 
     if (typePago === 'Factura') {
-          this.alertService.confirm('¿Deseas continuar con la factura?', 'Esta acción no se puede deshacer.').then((result) => {
-      if (result.isConfirmed) {
-        console.log('Confirmado');
-        this.spinner.show();
+      this.alertService.confirm('¿Deseas continuar con la factura?', 'Esta acción no se puede deshacer.').then((result) => {
+        if (result.isConfirmed) {
+          console.log('Confirmado');
+          this.spinner.show();
           this.ordersService.create(order).subscribe({
-      next: (res) => {
-        console.log('Pedido guardado:', res);
-        const orderId = res.data.name; // Asegúrate de que el ID del pedido se obtenga correctamente
-        this.spinner.hide();
-        toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
-        setTimeout(() => this.printCombinedTicket(orderId), 500);
+            next: (res) => {
+              console.log('Pedido guardado:', res);
+              const orderId = res.data.name; // Asegúrate de que el ID del pedido se obtenga correctamente
+              this.spinner.hide();
+              toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
+              setTimeout(() => this.printCombinedTicket(orderId), 500);
 
 
-      },
-      error: () => {
-        this.spinner.hide();
-        toast.error('Error al guardar el pedido.');
-      }
-    });
-      } else {
-        console.log('Cancelado');
-      }
-    });
-      
-    return
+            },
+            error: () => {
+              this.spinner.hide();
+              toast.error('Error al guardar el pedido.');
+            }
+          });
+        } else {
+          console.log('Cancelado');
+        }
+      });
+
+      return
     }
-this.spinner.show();
+    this.spinner.show();
     this.ordersService.create(order).subscribe({
       next: (res) => {
         console.log('Pedido guardado:', res);
@@ -517,6 +538,34 @@ this.spinner.show();
     this.showKitchenTicket = false;
   }
 
+  identificacionLengthValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const tipo = this.clienteForm?.get('tipo_identificacion')?.value;
+      const valor = control.value;
+      console.log('tipo', tipo);
+      console.log('valor', valor);
 
+      if (!valor) return null;
+      if (tipo.slice(0, 2) === '05' && valor?.length !== 10) {
+        return { cedulaInvalida: true };
+      }
+
+      if (tipo.slice(0, 2) === '04' && valor?.length !== 13) {
+        return { rucInvalido: true };
+      }
+
+      return null; // válido
+    };
+
+
+  }
+
+  getMaxLength(): number {
+    const tipo = this.clienteForm?.get('tipo_identificacion')?.value;
+    if (tipo?.slice(0, 2) === '05') {
+      return 10; // cédula
+    }
+    return 13; // RUC u otros
+  }
 
 }

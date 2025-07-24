@@ -7,28 +7,35 @@ import { Observable } from 'rxjs';
 export class OrdersService {
   private readonly apiUrl = environment.apiUrl; // Cambia si usás otro backend
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
-getAll(limit: number = 10, offset: number = 0) {
-  const params = new HttpParams()
-    .set('limit', limit.toString())
-    .set('offset', offset.toString());
+  getAll(limit: number = 10, offset: number = 0) {
+    const params = new HttpParams()
+      .set('limit', limit.toString())
+      .set('offset', offset.toString());
 
-  return this.http.get(`${environment.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.get_all_orders`, {
-    withCredentials: true,
-    params: params
-  });
-}
+    return this.http.get(`${environment.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.get_all_orders`, {
+      withCredentials: true,
+      params: params
+    });
+  }
 
 
-   get_dashboard_metrics() {
+  get_dashboard_metrics() {
     return this.http.get(`${environment.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.get_dashboard_metrics`, {
       withCredentials: true
     });
   }
 
   getById(id: number) {
-   return this.http.get(`${environment.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.get_order_with_details?order_name${id}`, {
+    return this.http.get(`${environment.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.get_order_with_details?order_name${id}`, {
+      withCredentials: true
+    });
+  }
+
+  validar_y_generar_factura(docname: string) {
+    return this.http.post(`${environment.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.validar_y_generar_factura`, {
+      docname: docname,
       withCredentials: true
     });
   }
@@ -36,7 +43,7 @@ getAll(limit: number = 10, offset: number = 0) {
   // create(order: any) {
   //   return this.http.post(this.apiUrl, order);
   // }
-    create(order: any): Observable<any> {
+  create(order: any): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/resource/orders`, order);
   }
 

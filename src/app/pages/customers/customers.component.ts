@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { NgxPaginationModule } from 'ngx-pagination';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
@@ -120,7 +120,7 @@ export class CustomersComponent implements OnInit {
     this.clienteForm.reset({
       fullName: '',
       identification: '',
-      identificationType: '06',
+      identificationType: '',
       email: '',
       phone: '',
       address: ''
@@ -156,6 +156,7 @@ export class CustomersComponent implements OnInit {
       this.customersService.create(data).subscribe({
         next: () => {
           this.spinner.hide();
+           toast.success('Cliente creado exitosamente');
           this.cargarClientes();
           this.cerrarModal();
         },
@@ -184,5 +185,36 @@ export class CustomersComponent implements OnInit {
       });
     }
   }
+
+
+    identificacionLengthValidator(): ValidatorFn {
+      return (control: AbstractControl): ValidationErrors | null => {
+        const tipo = this.clienteForm?.get('tipo_identificacion')?.value;
+        const valor = control.value;
+        console.log('tipo', tipo);
+        console.log('valor', valor);
+  
+        if (!valor) return null;
+        if (tipo.slice(0, 2) === '05' && valor?.length !== 10) {
+          return { cedulaInvalida: true };
+        }
+  
+        if (tipo.slice(0, 2) === '04' && valor?.length !== 13) {
+          return { rucInvalido: true };
+        }
+  
+        return null; // válido
+      };
+  
+  
+    }
+  
+    getMaxLength(): number {
+      const tipo = this.clienteForm?.get('tipo_identificacion')?.value;
+      if (tipo?.slice(0, 2) === '05') {
+        return 10; // cédula
+      }
+      return 13; // RUC u otros
+    }
 
 }

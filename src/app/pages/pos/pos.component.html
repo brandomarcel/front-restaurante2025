@@ -12,7 +12,7 @@
                         <h2 class="text-lg font-semibold text-primary mb-2">Cliente</h2>
 
                         <div class="flex items-center gap-2 mb-2">
-                            <input type="text" maxlength="10" appOnlyNumbers [(ngModel)]="identificationCustomer"
+                            <input type="text" maxlength="13" appOnlyNumbers [(ngModel)]="identificationCustomer"
                                 placeholder="Ingrese el número de cédula"
                                 class="rounded  px-3 py-1 text-xs disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                                 [disabled]="customer" />
@@ -183,11 +183,11 @@
 
             <!-- Tipo -->
             <div>
-                <label class="block text-sm font-medium">Tipo</label>
+                <label class="block text-sm font-medium">Tipo de Identificación</label>
                 <select formControlName="tipo_identificacion" class="w-full border rounded px-3 py-2 text-sm">
-                    <option value="06 - Consumidor Final">Consumidor Final</option>
-                    <option value="04 - Cédula">Cédula</option>
-                    <option value="05 - RUC">RUC</option>
+                    <!-- <option value="07 - Consumidor Final">Consumidor Final</option> -->
+                    <option value="05 - Cedula">Cédula</option>
+                    <option value="04 - RUC">RUC</option>
                 </select>
                 <div *ngIf="f['tipo_identificacion'].invalid && submitted" class="text-red-500 text-sm">
                     Seleccione un tipo válido.
@@ -197,25 +197,26 @@
             <!-- Identificación -->
             <div>
                 <label class="block text-sm font-medium">Identificación</label>
-                <input maxlength="13" type="text" formControlName="num_identificacion"
+                <input [attr.maxlength]="getMaxLength()" type="text" formControlName="num_identificacion"
                     class="w-full border rounded px-3 py-2 text-sm" />
                 <div *ngIf="f['num_identificacion'].invalid && submitted" class="text-red-500 text-sm">
                     Campo requerido.
                 </div>
 
-                <div *ngIf="f['num_identificacion'].hasError('minlength') && submitted" class="text-red-500 text-sm">
-                    Mínimo 10 caracteres.
+                <div *ngIf="f['num_identificacion'].errors?.['cedulaInvalida'] && submitted" class="text-red-500 text-sm">
+                    La cédula debe tener 10 caracteres.
                 </div>
-                <div *ngIf="f['num_identificacion'].hasError('maxlength') && submitted" class="text-red-500 text-sm">
-                    Máximo 13 caracteres.
+                <div *ngIf="f['num_identificacion'].errors?.['rucInvalido'] && submitted" class="text-red-500 text-sm">
+                    El RUC debe tener 13 caracteres.
                 </div>
             </div>
+
 
 
             <!-- Nombre / Razón Social -->
             <div>
                 <label class="block text-sm font-medium">Nombre / Razón Social</label>
-                <input type="text" formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm" />
+                <input type="text" formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm" oninput="this.value = this.value.toUpperCase()" />
                 <div *ngIf="f['nombre'].invalid && submitted" class="text-red-500 text-sm">
                     Campo requerido.
                 </div>

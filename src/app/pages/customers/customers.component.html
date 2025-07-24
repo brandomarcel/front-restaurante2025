@@ -83,7 +83,8 @@
                 <!-- Nombre / Razón Social -->
                 <div>
                     <label class="block text-sm font-medium">Nombre / Razón Social</label>
-                    <input type="text" formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm" />
+                    <input type="text" formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm"
+                        oninput="this.value = this.value.toUpperCase()" />
                     <div *ngIf="f['nombre'].invalid && submitted" class="text-red-500 text-sm">
                         Campo requerido.
                     </div>
@@ -91,11 +92,11 @@
 
                 <!-- Tipo -->
                 <div>
-                    <label class="block text-sm font-medium">Tipo</label>
+                    <label class="block text-sm font-medium">Tipo de Identificación</label>
                     <select formControlName="tipo_identificacion" class="w-full border rounded px-3 py-2 text-sm">
-                        <option value="06 - Consumidor Final">Consumidor Final</option>
-                        <option value="04 - Cédula">Cédula</option>
-                        <option value="05 - RUC">RUC</option>
+                        <!-- <option value="07 - Consumidor Final">Consumidor Final</option> -->
+                        <option value="05 - Cedula">Cédula</option>
+                        <option value="04 - RUC">RUC</option>
                     </select>
                     <div *ngIf="f['tipo_identificacion'].invalid && submitted" class="text-red-500 text-sm">
                         Seleccione un tipo válido.
@@ -105,13 +106,21 @@
                 <!-- Identificación -->
                 <div>
                     <label class="block text-sm font-medium">Identificación</label>
-                    <input maxlength="13" type="text" formControlName="num_identificacion"
+                    <input [attr.maxlength]="getMaxLength()" type="text" formControlName="num_identificacion"
                         class="w-full border rounded px-3 py-2 text-sm" />
                     <div *ngIf="f['num_identificacion'].invalid && submitted" class="text-red-500 text-sm">
                         Campo requerido.
                     </div>
-                </div>
 
+                    <div *ngIf="f['num_identificacion'].errors?.['cedulaInvalida'] && submitted"
+                        class="text-red-500 text-sm">
+                        La cédula debe tener 10 caracteres.
+                    </div>
+                    <div *ngIf="f['num_identificacion'].errors?.['rucInvalido'] && submitted"
+                        class="text-red-500 text-sm">
+                        El RUC debe tener 13 caracteres.
+                    </div>
+                </div>
 
                 <!-- Email -->
                 <div>

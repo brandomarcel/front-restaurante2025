@@ -23,11 +23,12 @@ export class OrdersComponent implements OnInit {
   mostrarModal: boolean = false;
 
   page = 1;
-  pageSize = 10;
+  pageSize = 15;
   totalOrders = 0; // se actualiza desde la respuesta
   totalPages = 1;
 
   private _searchTerm: string = '';
+activeTab = 'info'; // 'info' o 'sri'
 
 
   constructor(private ordersService: OrdersService,
@@ -95,7 +96,9 @@ export class OrdersComponent implements OnInit {
   }
 
   toggleOrderDetail(order: any) {
+    this.activeTab = 'info';
     this.orderSelected = order ? order : null;
+    console.log('this.orderSelected', this.orderSelected);
     this.mostrarModal = true;
 
   }
@@ -142,6 +145,22 @@ export class OrdersComponent implements OnInit {
 
   }
 
+  validarYGenerarFactura() {
+    this.spinner.show();
+    this.ordersService.validar_y_generar_factura(this.orderSelected.name).subscribe({
+      next: (res: any) => {
+        console.log('res', res);
+        this.spinner.hide();
+        toast.success('Factura regenerada con éxito');
+        this.loadOrders();
+        this.cerrarModal();
+      },
+      error: (err) => {
+        this.spinner.hide();
+        console.error('Error al cargar los pedidos:', err);
+      }
+    });
+  }
 
   getFacturaPdf() {
     const order = 'http://207.180.197.160:1012' + this.printService.getFacturaPdf(this.orderSelected.name);
