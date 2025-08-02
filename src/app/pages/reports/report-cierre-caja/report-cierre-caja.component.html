@@ -1,0 +1,106 @@
+<div class="bg-primary-foreground p-4 space-y-6 text-xs leading-tight">
+  <!-- Encabezado -->
+  <div>
+    <h2 class="text-xl font-semibold text-primary">Reporte de Cierres de Caja</h2>
+  </div>
+
+  <!-- Filtros -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+    <input type="text" placeholder="Usuario" [(ngModel)]="filters.usuario" class="input px-2 py-1 text-xs" />
+    <input type="date" [(ngModel)]="filters.desde" class="input px-2 py-1 text-xs" />
+    <input type="date" [(ngModel)]="filters.hasta" class="input px-2 py-1 text-xs" [max]="today" />
+    <button (click)="buscar()" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-xs">
+      Buscar
+    </button>
+  </div>
+
+  <!-- Tabla de cierres -->
+  <ng-container *ngIf="cierres.length > 0; else noData">
+    <div class="overflow-auto rounded-lg shadow">
+      <table class="min-w-full bg-white text-xs text-left">
+        <thead class="bg-gray-100 text-gray-700">
+          <tr>
+            <th class="p-2">#</th>
+            <th class="p-2">Fecha</th>
+            <th class="p-2">Usuario</th>
+            <th class="p-2">Apertura</th>
+            <th class="p-2">Sistema</th>
+            <th class="p-2">Real</th>
+            <th class="p-2">Retiros</th>
+            <th class="p-2">Apertura $</th>
+            <th class="p-2">Diferencia</th>
+            <th class="p-2">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let cierre of cierres; let i = index">
+            <!-- Fila principal -->
+            <tr
+              class="border-b cursor-pointer hover:bg-gray-50 transition"
+              (click)="cierreSeleccionado = cierreSeleccionado === cierre.name ? null : cierre.name"
+            >
+              <td class="p-2 flex items-center gap-1">
+                {{ i + 1 }}
+                <span class="text-gray-500">
+                  {{ cierreSeleccionado === cierre.name ? '▴' : '▾' }}
+                </span>
+              </td>
+              <td class="p-2">{{ cierre.fecha_hora | date: 'short' }}</td>
+              <td class="p-2">{{ cierre.usuario }}</td>
+              <td class="p-2">{{ cierre.apertura }}</td>
+              <td class="p-2">${{ cierre.efectivo_sistema | number: '1.2-2' }}</td>
+              <td class="p-2">${{ cierre.efectivo_real | number: '1.2-2' }}</td>
+              <td class="p-2">${{ cierre.total_retiros | number: '1.2-2' }}</td>
+              <td class="p-2">${{ cierre.monto_apertura | number: '1.2-2' }}</td>
+              <td class="p-2">
+                <span
+                  [ngClass]="{
+                    'text-red-600': cierre.diferencia < 0,
+                    'text-green-600': cierre.diferencia >= 0
+                  }"
+                >
+                  ${{ cierre.diferencia | number: '1.2-2' }}
+                </span>
+              </td>
+              <td class="p-2">{{ cierre.estado }}</td>
+            </tr>
+
+            <!-- Fila de detalle -->
+            <tr *ngIf="cierreSeleccionado === cierre.name && cierre.detalle?.length > 0" class="bg-gray-50">
+              <td colspan="10" class="p-2">
+                <strong class="text-xs text-gray-700">Detalle de pagos:</strong>
+                <ul class="list-disc list-inside text-xs text-gray-600 mt-1">
+                  <li *ngFor="let pago of cierre.detalle">
+                    {{ pago.metodo_pago }}: ${{ pago.monto | number: '1.2-2' }}
+                  </li>
+                </ul>
+              </td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Botón de exportación -->
+    <div class="flex justify-end mt-2">
+        
+         <app-button
+        impact="bold"
+        tone="success"
+        shape="rounded"
+        size="medium"
+        
+        (click)="exportarExcel()"
+      >
+       Exportar a Excel
+      </app-button>
+
+
+
+    </div>
+  </ng-container>
+
+  <ng-template #noData>
+    <p class="text-center text-gray-500 text-xs">No hay cierres registrados en el rango seleccionado.</p>
+  </ng-template>
+</div>

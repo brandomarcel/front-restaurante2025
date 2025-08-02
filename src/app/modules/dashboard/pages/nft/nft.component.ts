@@ -8,6 +8,7 @@ import { Nft } from '../../models/nft';
 import { CommonModule } from '@angular/common';
 import { OrdersService } from '../../../../services/orders.service';
 import { RouterModule } from '@angular/router';
+import { CajasService } from 'src/app/services/cajas.service';
 
 @Component({
   selector: 'app-nft',
@@ -20,22 +21,36 @@ import { RouterModule } from '@angular/router';
 })
 export class NftComponent implements OnInit {
 
-  totalOrdersToday = 120;
-  total_sales_today = 34500;
-  ordersInProgress = 8;
-  topProducts = [
-    { name: 'Hamburguesa Clásica', count: 35 },
-    { name: 'Pizza Pepperoni', count: 28 },
-    { name: 'Tacos al Pastor', count: 22 },
-  ];
+  // Métricas
+  totalOrdersToday = 0;
+  total_sales_today = 0;
+  montoApertura = 0;
+  totalRetiros = 0;
+  efectivoSistema = 0;
 
-  constructor(private ordersService: OrdersService) {
+  // Top productos (si los necesitas fuera del gráfico)
+  topProducts: any[] = [];
+
+
+  constructor(private ordersService: OrdersService,
+    private cajasService: CajasService
+  ) {
 
   }
 
   ngOnInit(): void {
     this.get_dashboard_metrics();
-   }
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+    this.cajasService.getDatosCierre(user.email).subscribe(res => {
+      const data = res.message || {};
+      console.log(data);
+      this.montoApertura = data.monto_apertura;
+      this.totalRetiros = data.total_retiros;
+      this.efectivoSistema = data.efectivo_sistema;
+    });
+
+  }
 
   get_dashboard_metrics() {
     this.ordersService.get_dashboard_metrics().subscribe({

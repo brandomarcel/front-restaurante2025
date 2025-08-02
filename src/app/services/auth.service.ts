@@ -23,7 +23,7 @@ export class AuthService {
 
   constructor(private http: HttpClient,
     private userService: UserService
-  ) {}
+  ) { }
 
 
   // login(credentials: { email: string; password: string }): Observable<LoginResponse> {
@@ -46,39 +46,48 @@ export class AuthService {
 
   /////////////////////////////////////////////////////////////
 
-login(username: string, password: string) {
-  const body = { usr: username, pwd: password };
+  login(username: string, password: string) {
+    const body = { usr: username, pwd: password };
 
-  return this.http.post(`${this.apiUrl}/method/login`, body, {
-    withCredentials: true
-  }).pipe(
-    switchMap(() => this.getUserInfo())
-  );
-}
+    return this.http.post(`${this.apiUrl}/method/login`, body, {
+      withCredentials: true
+    }).pipe(
+      switchMap(() => this.getUserInfo())
+    );
+  }
 
-getUserInfo() {
-  return this.http.get<any>(`${this.apiUrl}/method/restaurante_app.restaurante_bmarc.api.user.get_user_info`, {
-    withCredentials: true
-  }).pipe(
-    tap(res => {
-      console.log('res', res);
-      const user = {
-        email: res.message.email,
-        fullName: res.message.full_name,
-        roles: res.message.roles // <--- CORRECTO
-      };
-      this.userService.setUser(user);
-    })
-  );
-}
+  getUserInfo() {
+    return this.http.get<any>(`${this.apiUrl}/method/restaurante_app.restaurante_bmarc.api.user.get_user_info`, {
+      withCredentials: true
+    }).pipe(
+      tap(res => {
+        const user = {
+          email: res.message.email,
+          fullName: res.message.full_name,
+          roles: res.message.roles
+        };
+        // Guardar en memoria
+        this.userService.setUser(user);
 
-logout() {
-  return this.http.get(`${this.apiUrl}/api/method/logout`, {
-    withCredentials: true
-  }).pipe(
-    tap(() => this.userService.clearUser())
-  );
-}
+        // Guardar en localStorage para persistencia
+        localStorage.setItem('user', JSON.stringify(user));
+      })
+    );
+  }
+
+
+  logout() {
+    return this.http.get(`${this.apiUrl}/api/method/logout`, {
+      withCredentials: true
+    }).pipe(
+      tap(() => {
+        this.userService.clearUser();
+        localStorage.removeItem('user');
+        localStorage.removeItem('access_token'); // si lo estás usando
+      })
+    );
+  }
+
 
 
 }

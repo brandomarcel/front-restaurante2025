@@ -13,6 +13,13 @@ const routes: Routes = [
     component: LayoutComponent,
     loadChildren: () => import('../uikit/uikit.module').then((m) => m.UikitModule),
   },
+
+{
+  path: 'caja',
+  component: LayoutComponent,
+  loadChildren: () => import('../caja/caja.module').then((m) => m.CajaModule),
+},
+
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: '**', redirectTo: 'error/404' },
 ];

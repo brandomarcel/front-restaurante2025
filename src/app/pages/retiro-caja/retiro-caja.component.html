@@ -1,0 +1,87 @@
+<div class="max-w-md mx-auto my-10 p-6 border rounded shadow-sm bg-white">
+  <div class="text-center mb-6">
+    <h2 class="text-3xl font-semibold text-foreground">Retiro de Caja</h2>
+    <p class="text-sm text-muted-foreground">Registra un retiro durante el turno</p>
+  </div>
+
+  <!-- Si no hay apertura activa -->
+  <div *ngIf="!cajaActiva" class="text-red-600 text-center font-medium bg-red-50 border border-red-300 rounded p-3 mb-4">
+    No puedes registrar retiros sin una apertura de caja activa.
+  </div>
+
+  <!-- Formulario de retiro -->
+  <form *ngIf="cajaActiva" class="space-y-4">
+    <!-- Monto -->
+    <div>
+      <label class="block text-sm text-muted-foreground mb-1" for="monto">Monto</label>
+      <input
+        type="number"
+        id="monto"
+        name="monto"
+        [(ngModel)]="retiro.monto"
+        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+        placeholder="Ej: 15.00"
+      />
+    </div>
+
+    <!-- Motivo -->
+    <div>
+      <label class="block text-sm text-muted-foreground mb-1" for="motivo">Motivo</label>
+      <textarea
+        id="motivo"
+        name="motivo"
+        [(ngModel)]="retiro.motivo"
+        rows="3"
+        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+        placeholder="Ej: compra de insumos, propina, etc."
+      ></textarea>
+    </div>
+
+    <!-- Botón -->
+    <div class="text-center pt-4">
+      <app-button
+        impact="bold"
+        tone="primary"
+        shape="rounded"
+        size="medium"
+        (click)="registrarRetiro()"
+      >
+        Registrar Retiro
+      </app-button>
+    </div>
+  </form>
+</div>
+
+
+<!-- 🧾 Lista de Retiros del Turno -->
+<div *ngIf="retiros.length > 0" class="mt-10">
+  <h3 class="text-xl font-semibold text-gray-800 mb-4">🧾 Retiros del Turno</h3>
+
+  <div class="space-y-3">
+<div *ngFor="let r of retiros" class="flex justify-between items-center bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm group hover:shadow-md transition">
+  <div>
+    <p class="text-sm font-medium text-gray-800">{{ r.motivo }}</p>
+    <p class="text-xs text-gray-500">{{ r.fecha_hora | date:'short' }}</p>
+  </div>
+  <div class="flex items-center gap-4">
+    <p class="text-sm font-semibold text-red-600">- {{ r.monto | currency }}</p>
+    <button
+      class="text-gray-400 hover:text-red-600 transition"
+      (click)="eliminarRetiro(r.name)"
+      title="Eliminar retiro"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+</div>
+
+  </div>
+
+  <!-- Total -->
+  <div class="mt-4 text-right text-gray-700 text-sm">
+    Total retirado: <span class="font-semibold text-red-600">{{ totalRetiros | currency }}</span>
+  </div>
+</div>

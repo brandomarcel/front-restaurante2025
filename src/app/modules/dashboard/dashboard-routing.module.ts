@@ -10,6 +10,10 @@ import { OrdersComponent } from 'src/app/pages/orders/orders.component';
 import { ReportOrdernesComponent } from 'src/app/pages/reports/report-ordernes/report-ordernes.component';
 import { CategorysComponent } from 'src/app/pages/categorys/categorys.component';
 import { VentasProductoComponent } from 'src/app/pages/reports/ventas-producto/ventas-producto.component';
+import { CloseCajaComponent } from 'src/app/pages/close-caja/close-caja.component';
+import { AperturaCajaComponent } from 'src/app/pages/apertura-caja/apertura-caja.component';
+import { RetiroCajaComponent } from 'src/app/pages/retiro-caja/retiro-caja.component';
+import { ReportCierreCajaComponent } from 'src/app/pages/reports/report-cierre-caja/report-cierre-caja.component';
 
 const routes: Routes = [
   {
@@ -25,6 +29,14 @@ const routes: Routes = [
       { path: 'orders', component: OrdersComponent },
       { path: 'categories', component: CategorysComponent },
       { path: 'ventasproducto', component: VentasProductoComponent },
+      { path: 'reportes', component: ReportOrdernesComponent },
+      { path: 'close-caja', component: CloseCajaComponent },
+      { path: 'apertura-caja', component: AperturaCajaComponent },
+      { path: 'retiro-caja', component: RetiroCajaComponent },
+      { path: 'report-cierre-caja', component: ReportCierreCajaComponent },
+      
+
+
       { path: '**', redirectTo: 'errors/404' },
     ],
   },

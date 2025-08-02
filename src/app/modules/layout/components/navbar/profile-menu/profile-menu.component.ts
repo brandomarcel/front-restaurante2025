@@ -88,9 +88,14 @@ export class ProfileMenuComponent implements OnInit {
   public themeMode = ['light', 'dark'];
   public themeDirection = ['ltr', 'rtl'];
 
+  public user: any = {};
   constructor(public themeService: ThemeService) {}
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+
+    this.user = JSON.parse(localStorage.getItem('user') || '{}');
+
+  }
 
   public toggleMenu(): void {
     this.isOpen = !this.isOpen;

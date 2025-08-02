@@ -67,6 +67,60 @@
 
     </div>
 
+    <!-- 🧾 Resumen de Caja -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+  <!-- Apertura de Caja -->
+  <div class="bg-white rounded-xl shadow-md p-5">
+    <div class="flex items-center gap-4">
+      <div class="bg-indigo-100 p-3 rounded-full">
+        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2"
+             viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <div>
+        <p class="text-sm text-gray-500">Monto Apertura</p>
+        <p class="text-2xl font-bold text-gray-800">{{ montoApertura | currency }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Retiros realizados -->
+  <div class="bg-white rounded-xl shadow-md p-5">
+    <div class="flex items-center gap-4">
+      <div class="bg-red-100 p-3 rounded-full">
+        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" stroke-width="2"
+             viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3M6 12a9 9 0 0118 0" />
+        </svg>
+      </div>
+      <div>
+        <p class="text-sm text-gray-500">Retiros Turno</p>
+        <p class="text-2xl font-bold text-gray-800">{{ totalRetiros | currency }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Efectivo Esperado en Caja -->
+  <div class="bg-white rounded-xl shadow-md p-5">
+    <div class="flex items-center gap-4">
+      <div class="bg-yellow-100 p-3 rounded-full">
+        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" stroke-width="2"
+             viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 8c-1.657 0-3 1.343-3 3 0 1.38.938 2.5 2.188 2.875C11.5 14.563 11 15.75 11 17h2c0-1.25-.5-2.438-1.188-3.125C13.063 13.5 14 12.38 14 11c0-1.657-1.343-3-3-3z" />
+        </svg>
+      </div>
+      <div>
+        <p class="text-sm text-gray-500">Efectivo Sistema</p>
+        <p class="text-2xl font-bold text-gray-800">{{ efectivoSistema | currency }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
     <!-- Productos más vendidos -->
     <div class="bg-white rounded-xl shadow-md p-6 mb-8">
       <h2 class="text-xl font-semibold text-gray-800 mb-4">🍔 Top 5 Productos Más Vendidos del dia</h2>
@@ -113,3 +167,6 @@
 
   </div>
 </div>
+
+
+
