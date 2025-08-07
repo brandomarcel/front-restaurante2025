@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
+import { API_ENDPOINT } from '../core/constants/api.constants';
 export interface Customer {
   id: number;
   fullName: string;
@@ -14,7 +15,14 @@ export interface Customer {
 export class CustomersService {
   private readonly apiUrl = environment.apiUrl; // Cambia si usás otro backend
 
-  constructor(private http: HttpClient) {}
+  private urlBase:string = '';
+  
+
+
+  constructor(private http: HttpClient) {
+
+    this.urlBase = this.apiUrl + API_ENDPOINT.Cliente + 'get_clientes';
+  }
 
   // Obtener todos
   // findAll(): Observable<any[]> {

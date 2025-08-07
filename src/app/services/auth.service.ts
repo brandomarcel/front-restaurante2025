@@ -57,13 +57,14 @@ export class AuthService {
   }
 
   getUserInfo() {
-    return this.http.get<any>(`${this.apiUrl}/method/restaurante_app.restaurante_bmarc.api.user.get_user_info`, {
+    return this.http.get<any>(`${this.apiUrl}/method/restaurante_app.restaurante_bmarc.api.user.get_user_roles_and_doctype_permissions`, {
       withCredentials: true
     }).pipe(
       tap(res => {
+        console.log('getUserInfo', res);
         const user = {
-          email: res.message.email,
-          fullName: res.message.full_name,
+          email: res.message.user,
+          fullName: res.message.user_data.full_name,
           roles: res.message.roles
         };
         // Guardar en memoria
