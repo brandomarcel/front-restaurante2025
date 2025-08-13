@@ -144,7 +144,7 @@
 
 
                     <!-- TOTALES -->
-                    <div class="border-t pt-4 space-y-1 text-xs text-foreground">
+                    <div class=" pt-4 space-y-1 text-xs text-foreground">
                         <p>Subtotal: ${{ subtotal | number: '1.2-2' }}</p>
                         <p>IVA (15%): ${{ iva | number: '1.2-2' }}</p>
                         <p class="text-base font-bold">Total: ${{ total | number: '1.2-2' }}</p>
@@ -203,7 +203,8 @@
                     Campo requerido.
                 </div>
 
-                <div *ngIf="f['num_identificacion'].errors?.['cedulaInvalida'] && submitted" class="text-red-500 text-sm">
+                <div *ngIf="f['num_identificacion'].errors?.['cedulaInvalida'] && submitted"
+                    class="text-red-500 text-sm">
                     La cédula debe tener 10 caracteres.
                 </div>
                 <div *ngIf="f['num_identificacion'].errors?.['rucInvalido'] && submitted" class="text-red-500 text-sm">
@@ -216,7 +217,8 @@
             <!-- Nombre / Razón Social -->
             <div>
                 <label class="block text-sm font-medium">Nombre / Razón Social</label>
-                <input type="text" formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm" oninput="this.value = this.value.toUpperCase()" />
+                <input type="text" formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm"
+                    oninput="this.value = this.value.toUpperCase()" />
                 <div *ngIf="f['nombre'].invalid && submitted" class="text-red-500 text-sm">
                     Campo requerido.
                 </div>
@@ -237,7 +239,7 @@
                 <input maxlength="10" type="text" formControlName="telefono"
                     class="w-full border rounded px-3 py-2 text-sm" />
                 <div *ngIf="f['telefono'].invalid && submitted" class="text-red-500 text-sm">
-                    Dirección inválido.
+                    Teléfono inválido.
                 </div>
             </div>
 
@@ -266,73 +268,87 @@
 <!-- MODAL DE PAGO -->
 
 <div *ngIf="showPaymentModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-    <div class="bg-white w-full max-w-5xl rounded-lg shadow-2xl p-6 relative text-base">
-        <!-- Botón cerrar -->
-        <button class="absolute top-3 right-4 text-2xl font-bold text-gray-500 hover:text-gray-700"
+    <div class="bg-white w-full max-w-5xl rounded-lg shadow-2xl p-8 relative text-base">
+        <button class="absolute top-4 right-4 text-3xl font-light text-gray-500 hover:text-gray-700"
             (click)="showPaymentModal = false">×</button>
 
-        <h2 class="text-2xl font-bold text-center text-primary mb-6">Finalizar Pedido</h2>
+        <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">Finalizar Pedido</h2>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- 📦 Columna izquierda: Resumen de productos -->
-            <div class="bg-gray-50 rounded-md p-4 border max-h-[70vh] overflow-y-auto">
-                <h3 class="text-lg font-semibold text-gray-700 mb-4">🧾 Detalle del Pedido</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="space-y-6">
+                <div class="bg-blue-50 rounded-lg p-2 shadow-sm text-sm border border-blue-200">
+                    <h4 class="font-bold text-blue-800 ">👤 Consumidor Final</h4>
+                    <div *ngIf="customer.nombre != 'Consumidor Final'">
 
-                <div *ngIf="cart.length > 0; else noItems" class="space-y-3 text-sm">
-                    <div *ngFor="let item of cart" class="flex justify-between items-center border-b pb-2">
-                        <div>
-                            <p class="font-medium text-gray-800">{{ item.nombre }} {{item.descripcion?
-                                '('+item.descripcion+')' : ''}}</p>
-                            <p class="text-gray-600 text-xs">x{{ item.quantity }} • ${{ item.price | number: '1.2-2' }}
-                            </p>
-                        </div>
-                        <p class="font-semibold text-gray-800">${{ item.total | number: '1.2-2' }}</p>
+
+                        <p class="font-medium text-gray-800">{{ customer.nombre }}</p>
+                        <!-- <p class="text-blue-600 text-xs">{{ customer.num_identificacion }}</p>
+                        <p class="text-blue-600 text-xs">{{ customer.telefono }}</p> -->
+                        <p class="text-blue-600 text-xs">{{ customer.correo }}</p>
                     </div>
                 </div>
 
-                <ng-template #noItems>
-                    <p class="text-gray-500 text-sm">No hay productos en el carrito.</p>
-                </ng-template>
+                <div class="bg-gray-50 rounded-md p-2 border max-h-[70vh] overflow-y-auto">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">🧾 Detalle del Pedido</h3>
 
-                <div class="mt-6 border-t pt-4 text-sm space-y-1 text-gray-700">
-                    <p><strong>Subtotal:</strong> ${{ subtotal | number: '1.2-2' }}</p>
-                    <p><strong>IVA (15%):</strong> ${{ iva | number: '1.2-2' }}</p>
-                    <p class="text-base font-bold"><strong>Total:</strong> ${{ total | number: '1.2-2' }}</p>
+                    <div *ngIf="cart.length > 0; else noItems" class="space-y-3 text-xs">
+                        <div *ngFor="let item of cart"
+                            class="flex justify-between items-center border-b border-gray-200 pb-2">
+                            <div>
+                                <p class="font-medium text-gray-800">{{ item.nombre }} {{item.descripcion ? '(' +
+                                    item.descripcion + ')' : ''}}</p>
+                                <p class="text-gray-600 text-xs">x{{ item.quantity }} • ${{ item.price | number: '1.2-2'
+                                    }}</p>
+                            </div>
+                            <p class="font-semibold text-gray-800">${{ item.total | number: '1.2-2' }}</p>
+                        </div>
+                    </div>
+
+                    <ng-template #noItems>
+                        <p class="text-gray-500 text-sm italic">No hay productos en el carrito.</p>
+                    </ng-template>
+
+                    <div class="pt-4 text-sm space-y-2 text-gray-700">
+                        <div class="flex justify-between"><span>Subtotal:</span><span class="font-medium">${{ subtotal |
+                                number: '1.2-2' }}</span></div>
+                        <div class="flex justify-between"><span>IVA (15%):</span><span class="font-medium">${{ iva |
+                                number: '1.2-2' }}</span></div>
+                        <div class="flex justify-between font-bold text-base border-t pt-2"><span>Total:</span><span>${{
+                                total | number: '1.2-2' }}</span></div>
+                    </div>
                 </div>
             </div>
 
-
-            <!-- 💳 Columna derecha: Formulario de pago -->
-            <div class="space-y-6">
-                <!-- Método de pago -->
+            <div class="space-y-6 flex flex-col justify-between">
                 <div>
-                    <label class="block text-sm font-medium mb-1 text-gray-700">Método de Pago</label>
-                    <select [(ngModel)]="paymentMethod" (change)="calcularCambio()"
-                        class="w-full border border-gray-300 rounded px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary">
-                        <option [value]="item.codigo" *ngFor="let item of payments">{{ item.description || item.nombre
-                            }}</option>
-                    </select>
-                </div>
-
-                <!-- Total -->
-                <div class="text-center border-y">
-                    <p class="text-lg text-gray-600">Total a Pagar</p>
-                    <p class="text-4xl font-bold text-green-600">${{ total | number: '1.2-2' }}</p>
-                </div>
-
-                <!-- Si es efectivo -->
-                <div *ngIf="paymentMethod === '01'" class="space-y-2">
                     <div>
-                        <!-- <label class="block text-sm font-medium mb-1 text-gray-700">Monto recibido</label> -->
-                        <input type="number" [(ngModel)]="amountReceived" (input)="calcularCambio()"
-                            class="w-full border border-gray-300 rounded px-4 py-2 text-xl font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                        <label for="payment-method" class="block text-sm font-medium mb-1 text-gray-700">Método de
+                            Pago</label>
+                        <select id="payment-method" [(ngModel)]="paymentMethod" (change)="calcularCambio()"
+                            class="w-full border border-gray-300 rounded-md px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option [value]="item.codigo" *ngFor="let item of payments">{{ item.description ||
+                                item.nombre }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <p class="text-lg text-gray-600">Total a Pagar</p>
+                    <p class="text-5xl font-bold text-emerald-500">${{ total | number: '1.2-2' }}</p>
+                </div>
+
+                <div *ngIf="paymentMethod === '01'" class="space-y-4">
+                    <div>
+                        <label for="amount-received" class="sr-only">Monto entregado</label>
+                        <input id="amount-received" type="number" [(ngModel)]="amountReceived"
+                            (input)="calcularCambio()"
+                            class="w-full border border-gray-300 rounded-md px-4 py-3 text-xl font-semibold text-center text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
                             placeholder="Ingrese monto entregado" />
                     </div>
-
                     <div class="text-center">
                         <p class="text-lg text-gray-600">Cambio</p>
-                        <p class="text-4xl font-bold" [class.text-red-600]="change < 0"
-                            [class.text-green-600]="change >= 0">
+                        <p class="text-5xl font-bold" [class.text-red-500]="change < 0"
+                            [class.text-emerald-500]="change >= 0">
                             ${{ change | number: '1.2-2' }}
                         </p>
                     </div>
@@ -340,26 +356,23 @@
 
                 <div class="space-y-2">
                     <div>
-                        <!-- <label class="block text-sm font-medium mb-1 text-gray-700">Alias</label> -->
-                        <input type="text" [(ngModel)]="alias" (input)="calcularCambio()"
+                        <label for="alias-input" class="sr-only">Alias para la entrega</label>
+                        <input id="alias-input" type="text" [(ngModel)]="alias"
                             oninput="this.value = this.value.toUpperCase()" maxlength="20"
-                            class="w-full border border-gray-300 rounded px-4 py-2 text-xl font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
-                            placeholder="Ingrese el nombre/alias para la entrega del pedido" />
+                            class="w-full border border-gray-300 rounded-md px-4 py-3 text-xl font-semibold text-center text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="Ingrese el nombre/alias para la entrega (Opcional)" />
                     </div>
                 </div>
 
-                <!-- Confirmar -->
-                <div>
-                    <button (click)="confirmarPago('Nota de venta')"
-                        class="w-full py-3 text-xl font-bold bg-primary text-white rounded hover:bg-primary/90 transition">
-                        Nota de Venta
-                    </button>
-                </div>
-                <div>
-                    <button (click)="confirmarPago('Factura')"
-                        class="w-full py-3 text-xl font-bold bg-emerald-500 text-white rounded hover:bg-emerald-500/90 transition">
-                        Factura
-                    </button>
+                <div class="flex space-x-4 mt-8">
+                    <div class="flex-grow">
+                        <app-button type="button" (click)="confirmarPago('Nota de venta')" full impact="bold"
+                            tone="warning" shape="rounded" size="large">Nota de Venta</app-button>
+                    </div>
+                    <div class="flex-grow">
+                        <app-button type="button" (click)="confirmarPago('Factura')" full impact="bold" tone="primary"
+                            shape="rounded" size="large">Facturar</app-button>
+                    </div>
                 </div>
             </div>
         </div>

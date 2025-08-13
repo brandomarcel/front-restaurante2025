@@ -17,10 +17,11 @@ import { environment } from '../../../environments/environment';
 import { UtilsService } from '../../core/services/utils.service';
 import { AlertService } from '../../core/services/alert.service';
 import { filter } from 'rxjs';
+import { ButtonComponent } from "src/app/shared/components/button/button.component";
 
 @Component({
   selector: 'app-pos',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, OnlyNumbersDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, OnlyNumbersDirective, ButtonComponent],
   templateUrl: './pos.component.html',
   styleUrl: './pos.component.css'
 })
@@ -107,7 +108,7 @@ export class PosComponent implements OnInit {
 
     // Agrega la validación personalizada
     this.clienteForm.get('tipo_identificacion')?.valueChanges.subscribe(() => {
-      this.clienteForm.patchValue({ num_identificacion: null }); 
+      this.clienteForm.patchValue({ num_identificacion: null });
       this.clienteForm.get('num_identificacion')?.updateValueAndValidity();
     });
 
@@ -165,20 +166,28 @@ export class PosComponent implements OnInit {
     console.log('identification', this.identificationCustomer);
 
     if (!identification || (identification.length !== 10 && identification.length !== 13)) {
-      toast.warning('La identificación debe tener 10');
+      toast.warning('La identificación debe tener 10 o 13 digitos.');
       return;
     }
 
     this.spinner.show();
-    this.customersService.findByIdentification(identification).subscribe({
+    this.customersService.get_cliente_by_identificacion(identification).subscribe({
       next: (res) => {
-        this.customer = res.data;
+        this.customer = res.message;
         console.log('Cliente encontrado:', res);
       },
       error: (err) => {
         console.error('Error al buscar cliente:', err);
         this.customer = null;
-        this.clienteForm.patchValue({ identification: this.identificationCustomer });
+        let tipo_identificacion = '';
+        if (this.identificationCustomer.length === 10) {
+          tipo_identificacion = '05 - Cedula';
+        } else if (this.identificationCustomer.length === 13) {
+          tipo_identificacion = '04 - RUC';
+
+
+        }
+        this.clienteForm.patchValue({ identification: this.identificationCustomer, tipo_identificacion: tipo_identificacion });
         //this.identificationCustomer = '';
         this.showCustomerModal = true;
         this.clienteForm.patchValue({
@@ -402,7 +411,7 @@ export class PosComponent implements OnInit {
     }
 
     const order = {
-      customer: this.customer?.num_identificacion,
+      customer: this.customer?.name,
       alias: this.alias, // o this.customer?.id si estás usando el ID
       estado: typePago,
       total: this.total.toFixed(2),

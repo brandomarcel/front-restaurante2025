@@ -6,7 +6,10 @@
 
   <!-- Filtros -->
   <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
-    <input type="text" placeholder="Usuario" [(ngModel)]="filters.usuario" class="input px-2 py-1 text-xs" />
+    <ng-select class="ng-select-tailwind" [(ngModel)]="filters.usuario" placeholder="Usuario" [items]="usuarios" bindLabel="email"
+      bindValue="email" (change)="buscar()"></ng-select>  
+      
+    <!-- <input type="text" placeholder="Usuario" [(ngModel)]="filters.usuario" class="input px-2 py-1 text-xs" /> -->
     <input type="date" [(ngModel)]="filters.desde" class="input px-2 py-1 text-xs" />
     <input type="date" [(ngModel)]="filters.hasta" class="input px-2 py-1 text-xs" [max]="today" />
     <button (click)="buscar()" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-xs">
@@ -45,7 +48,7 @@
                   {{ cierreSeleccionado === cierre.name ? '▴' : '▾' }}
                 </span>
               </td>
-              <td class="p-2">{{ cierre.fecha_hora | date: 'short' }}</td>
+              <td class="p-2">{{ cierre.fecha_hora | date: 'yyyy-MM-dd' }}</td>
               <td class="p-2">{{ cierre.usuario }}</td>
               <td class="p-2">{{ cierre.apertura }}</td>
               <td class="p-2">${{ cierre.efectivo_sistema | number: '1.2-2' }}</td>

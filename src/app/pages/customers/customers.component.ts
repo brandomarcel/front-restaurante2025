@@ -46,6 +46,7 @@ export class CustomersComponent implements OnInit {
 
   initForm(data: any = null) {
     this.clienteForm = this.fb.group({
+      name: [''],
       nombre: ['', Validators.required],
       num_identificacion: ['', Validators.required],
       tipo_identificacion: ['', Validators.required],
@@ -77,7 +78,7 @@ export class CustomersComponent implements OnInit {
       next: (res: any) => {
         this.spinner.hide();
 
-        this.customers = res.data || [];
+        this.customers = res.message.data || [];
         this.filteredCustomersList = [...this.customers]; // Inicializar la lista filtrada
         this.filteredCustomersList.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
@@ -136,7 +137,7 @@ export class CustomersComponent implements OnInit {
     if (this.clienteEditando) {
       this.spinner.show();
       // Actualizar
-      this.customersService.update(this.clienteEditando.name, data).subscribe({
+      this.customersService.update(data).subscribe({
         next: () => {
           this.spinner.hide();
           this.cerrarModal();

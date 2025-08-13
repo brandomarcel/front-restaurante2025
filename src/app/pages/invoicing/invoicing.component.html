@@ -1,0 +1,303 @@
+<div class="flex flex-col mx-auto">
+
+
+    <form [formGroup]="invoiceForm" (ngSubmit)="finalizeInvoice()">
+        <!-- Header / Metadatos -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-2">
+            <h1 class="text-xl font-bold text-gray-800">Generar Nueva Factura</h1>
+            <div class="flex flex-col md:flex-row gap-3 md:items-center">
+                <!-- Compañía (si usas multiempresa)
+      <ng-select class="ng-select-tailwind w-full md:w-64"
+                 [items]="companies"
+                 bindLabel="company_name"
+                 bindValue="name"
+                 placeholder="Compañía"
+                 formControlName="company">
+      </ng-select> -->
+
+                <!-- Fecha -->
+                <input type="date" class="border rounded-md px-3 py-2 text-xs w-full md:w-44"
+                    formControlName="postingDate" />
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Columna principal (cliente + ítems) -->
+            <div class="md:col-span-2 space-y-6">
+
+                <!-- Cliente -->
+                <section class="bg-white rounded-lg shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold text-gray-700">Información del Cliente</h2>
+                        <button type="button" (click)="showCustomerModal = true"
+                            class="bg-blue-600 text-white px-4 py-2 rounded-md text-xs hover:bg-blue-700">
+                            <fa-icon [icon]="['fas', 'user-plus']"></fa-icon> Nuevo
+                        </button>
+                    </div>
+
+                    <label for="customer-select" class="block text-xs font-medium text-gray-700 mb-1">Buscar
+                        Cliente</label>
+                    <ng-select id="customer-select" class="ng-select-tailwind" [items]="customers" bindLabel="nombre"
+                        bindValue="name" placeholder="Selecciona un cliente o busca por nombre/identificación"
+                        [searchable]="true" formControlName="selectedCustomer" (change)="onCustomerSelected($event)"
+                        [ngClass]="{
+                      'ng-select-invalid': invoiceForm.get('selectedCustomer')?.invalid && invoiceForm.get('selectedCustomer')?.touched
+                     }">
+                    </ng-select>
+                    <div *ngIf="invoiceForm.get('selectedCustomer')?.invalid && invoiceForm.get('selectedCustomer')?.touched"
+                        class="text-red-500 text-xs mt-1">
+                        Debes seleccionar un cliente.
+                    </div>
+
+                    <div *ngIf="selectedCustomer" class="mt-4 p-4 bg-gray-50 rounded-lg border text-xs">
+                        <p class="font-bold text-gray-800">{{ selectedCustomer.nombre }}</p>
+                        <p class="text-gray-600">{{ selectedCustomer.num_identificacion }}</p>
+                        <p class="text-gray-600">{{ selectedCustomer.correo }}</p>
+                    </div>
+                </section>
+
+                <!-- Ítems -->
+                <section class="bg-white rounded-lg shadow-sm p-6">
+                    <h2 class="text-lg font-semibold text-gray-700 mb-4">Detalle de la Factura</h2>
+
+                    <!-- Agregar producto/servicio -->
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 mb-4">
+                        <div class="flex-grow">
+                            <label for="product-select" class="block text-xs font-medium text-gray-700 mb-1">
+                                Agregar Producto/Servicio
+                            </label>
+                            <ng-select id="product-select" class="ng-select-tailwind" [items]="products"
+                                bindLabel="nombre" bindValue="name" placeholder="Busca y agrega un ítem"
+                                [searchable]="true" (change)="addProductToCart($event)">
+                            </ng-select>
+                        </div>
+                        <!-- Línea ad-hoc rápida -->
+                        <div class="flex gap-2">
+                            <input type="text" class="border rounded-md px-3 py-2 text-xs w-full sm:w-64"
+                                placeholder="Descripción ad-hoc" [(ngModel)]="adHoc.description"
+                                [ngModelOptions]="{standalone: true}">
+                            <button type="button" class="px-3 py-2 rounded-md border text-xs" (click)="addAdHocLine()">
+                                Añadir
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabla -->
+                    <div class="overflow-x-auto max-h-[360px] overflow-y-auto table-compact">
+                        <table class="min-w-full table-fixed divide-y divide-gray-200">
+                            <thead class="bg-gray-50 sticky top-0 z-10">
+                                <tr>
+                                    <th
+                                        class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wide text-[10px]">
+                                        Ítem / Descripción</th>
+                                    <th
+                                        class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wide text-[10px] w-20">
+                                        Cant.</th>
+                                    <th
+                                        class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide text-[10px] w-28">
+                                        Precio</th>
+                                    <th
+                                        class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide text-[10px] w-20">
+                                        Desc. %</th>
+                                    <th
+                                        class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide text-[10px] w-28">
+                                        Total</th>
+                                    <th class="px-2 py-2 w-8"></th>
+                                </tr>
+                            </thead>
+
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr *ngFor="let item of cartItems; let i = index; trackBy: trackByIndex">
+                                    <td class="px-3 py-2 whitespace-nowrap text-gray-900">
+                                        <div class="font-medium">{{ item.nombre || item.description }}</div>
+                                        <div class="text-gray-500 text-[10px]" *ngIf="item.codigo">{{ item.codigo }}
+                                        </div>
+                                    </td>
+
+                                    <td class="px-3 py-2 whitespace-nowrap">
+                                        <div class="flex items-center gap-1">
+                                            <button type="button" class="w-6 h-6 grid place-items-center border rounded"
+                                                (click)="decrementQty(i)">−</button>
+                                            <input type="number" class="w-14 h-8 text-center border-gray-300 rounded-md"
+                                                min="1" step="1" [ngModelOptions]="{standalone: true}"
+                                                [(ngModel)]="item.quantity" (ngModelChange)="updateCartTotals()">
+                                            <button type="button" class="w-6 h-6 grid place-items-center border rounded"
+                                                (click)="incrementQty(i)">+</button>
+                                        </div>
+                                    </td>
+
+                                    <td class="px-3 py-2 whitespace-nowrap text-right">
+                                        <input type="number" class="w-24 h-8 text-center border-gray-300 rounded-md"
+                                            min="0" step="0.01" [ngModelOptions]="{standalone: true}"
+                                            [(ngModel)]="item.price" (ngModelChange)="updateCartTotals()">
+                                    </td>
+
+                                    <td class="px-3 py-2 whitespace-nowrap text-right">
+                                        <input type="number" class="w-16 h-8 text-center border-gray-300 rounded-md"
+                                            min="0" max="100" step="0.01" [ngModelOptions]="{standalone: true}"
+                                            [(ngModel)]="item.discount_pct" (ngModelChange)="updateCartTotals()">
+                                    </td>
+
+                                    <td class="px-3 py-2 whitespace-nowrap font-semibold text-gray-800 text-right">
+                                        ${{ item.total | number:'1.2-2' }}
+                                    </td>
+
+                                    <td class="px-2 py-2 text-right">
+                                        <button type="button" (click)="removeProductFromCart(i)"
+                                            class="text-red-600 hover:text-red-900" title="Eliminar">
+                                            <fa-icon [icon]="['fas', 'trash']" class="text-[12px]"></fa-icon>
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                <tr *ngIf="cartItems.length === 0">
+                                    <td colspan="6" class="text-center py-6 text-gray-500 italic">
+                                        No hay ítems en la factura.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </section>
+            </div>
+
+            <!-- Resumen (sticky) -->
+            <aside class="md:col-span-1">
+                <div class="bg-white rounded-lg shadow-sm p-6 md:sticky md:top-6 space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-700">Resumen</h3>
+
+                    <div class="space-y-2 text-gray-700">
+                        <div class="flex justify-between"><span class="text-xs">Subtotal:</span><span
+                                class="font-medium">${{ subtotal | number:'1.2-2' }}</span></div>
+                        <div class="flex justify-between"><span class="text-xs">IVA (15%):</span><span
+                                class="font-medium">${{ iva | number:'1.2-2' }}</span></div>
+                        <div class="flex justify-between font-bold text-lg pt-2 border-t mt-2">
+                            <span>Total:</span><span>${{ total | number:'1.2-2' }}</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="payment-method" class="block text-xs font-medium mb-1 text-gray-700">Método de
+                            Pago</label>
+                        <ng-select id="payment-method" class="ng-select-tailwind" formControlName="paymentMethod"
+                            [items]="payments" bindLabel="nombre" bindValue="codigo"
+                            placeholder="Selecciona un método de pago">
+                        </ng-select>
+                        <div *ngIf="invoiceForm.get('paymentMethod')?.invalid && invoiceForm.get('paymentMethod')?.touched"
+                            class="text-red-500 text-xs mt-1">
+                            Selecciona un método de pago.
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="alias-input" class="block text-xs font-medium mb-1 text-gray-700">Referencia
+                            (Opcional)</label>
+                        <input id="alias-input" type="text" formControlName="alias"
+                            class="w-full border-gray-300 rounded-md px-3 py-2 text-xs"
+                            placeholder="Ej. Orden de compra #123" />
+                    </div>
+
+                    <app-button type="submit" full impact="bold" tone="primary" shape="rounded" size="large"
+                        [disabled]="invoiceForm.invalid || cartItems.length === 0">
+                        Generar Factura
+                    </app-button>
+                </div>
+            </aside>
+        </div>
+    </form>
+</div>
+
+<!-- Barra inferior en móvil -->
+<div class="fixed inset-x-0 bottom-0 bg-white border-t shadow-sm p-3 md:hidden" *ngIf="cartItems.length > 0">
+    <div class="flex items-center justify-between">
+        <div class="text-xs">
+            <div class="text-gray-500">Total</div>
+            <div class="text-lg font-bold">${{ total | number:'1.2-2' }}</div>
+        </div>
+        <app-button type="button" tone="primary" shape="rounded" (click)="finalizeInvoice()">
+            Generar
+        </app-button>
+    </div>
+</div>
+<!-- Modal Cliente -->
+<div *ngIf="showCustomerModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+    <div class="bg-white w-full max-w-md rounded-lg shadow-xl p-6 text-sm relative">
+        <button class="absolute top-3 right-4 text-gray-400 hover:text-gray-700 text-2xl font-light"
+            (click)="closeCustomerModal()" aria-label="Cerrar">×</button>
+        <h3 class="text-xl font-semibold text-gray-800 mb-4">Nuevo Cliente</h3>
+
+        <form [formGroup]="customerForm" (ngSubmit)="saveCustomer()" class="space-y-4">
+            <div>
+                <label class="block font-medium text-gray-700">Tipo de Identificación</label>
+                <select formControlName="tipo_identificacion"
+                    class="w-full border rounded-md px-3 py-2 mt-1 text-gray-900">
+                    <option value="05 - Cédula">Cédula</option>
+                    <option value="04 - RUC">RUC</option>
+                </select>
+                <div *ngIf="customerForm.get('tipo_identificacion')?.invalid && submittedCustomerForm"
+                    class="text-red-500 text-xs mt-1">
+                    Seleccione un tipo válido.
+                </div>
+            </div>
+
+            <div>
+                <label class="block font-medium text-gray-700">Identificación</label>
+                <input [attr.maxlength]="getMaxLength()" type="text" formControlName="num_identificacion"
+                    class="w-full border rounded-md px-3 py-2 mt-1 text-gray-900" inputmode="numeric"
+                    autocomplete="off" />
+                <div *ngIf="customerForm.get('num_identificacion')?.invalid && submittedCustomerForm"
+                    class="text-red-500 text-xs mt-1">
+                    <ng-container *ngIf="customerForm.get('num_identificacion')?.errors?.['required']">Campo
+                        requerido.</ng-container>
+                    <ng-container *ngIf="customerForm.get('num_identificacion')?.errors?.['cedulaInvalida']">La cédula
+                        debe tener 10 caracteres.</ng-container>
+                    <ng-container *ngIf="customerForm.get('num_identificacion')?.errors?.['rucInvalido']">El RUC debe
+                        tener 13 caracteres.</ng-container>
+                </div>
+            </div>
+
+            <div>
+                <label class="block font-medium text-gray-700">Nombre / Razón Social</label>
+                <input type="text" formControlName="nombre"
+                    class="w-full border rounded-md px-3 py-2 mt-1 text-gray-900" (input)="toUpper($event)" />
+            </div>
+
+
+             <!-- Email -->
+            <div>
+                <label class="block text-sm font-medium">Email</label>
+                <input type="email" formControlName="correo" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="customerForm.get('correo')?.invalid && submittedCustomerForm" class="text-red-500 text-sm">
+                    Email inválido.
+                </div>
+            </div>
+
+            <!-- Teléfono -->
+            <div>
+                <label class="block text-sm font-medium">Teléfono</label>
+                <input maxlength="10" type="text" formControlName="telefono"
+                    class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="customerForm.get('telefono')?.invalid && submittedCustomerForm" class="text-red-500 text-sm">
+                    Teléfono inválido.
+                </div>
+            </div>
+
+            <!-- Dirección -->
+            <div>
+                <label class="block text-sm font-medium">Dirección</label>
+                <input type="text" formControlName="direccion" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="customerForm.get('direccion')?.invalid && submittedCustomerForm" class="text-red-500 text-sm">
+                    Dirección inválido.
+                </div>
+            </div>
+
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" (click)="closeCustomerModal()"
+                    class="px-4 py-2 rounded-md border text-gray-700">Cancelar</button>
+                <button type="submit"
+                    class="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>

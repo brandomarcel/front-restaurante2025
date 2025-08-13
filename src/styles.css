@@ -291,33 +291,87 @@ select {
   @apply h-4 w-4 rounded-sm border-border bg-background checked:border-primary checked:bg-primary indeterminate:border-primary indeterminate:bg-primary focus:ring-2 focus:ring-primary;
 }
 
+/* CONTENEDOR */
 .ng-select-tailwind .ng-select-container {
-  @apply border rounded px-3 py-1 h-auto min-h-0 shadow-none;
-  font-size: 0.75rem; /* text-xs */
+  @apply bg-white border border-slate-300 rounded-md px-3 py-2 h-auto min-h-[2.5rem] shadow-none;
+  font-size: 0.875rem; /* text-sm */
   line-height: 1.25rem;
-  background-color: white;
+}
+.ng-select-tailwind:hover .ng-select-container {
+  @apply border-slate-400;
+}
+.ng-select-tailwind:focus-within .ng-select-container {
+  @apply border-slate-500 ring-2 ring-slate-200;
 }
 
+/* PLACEHOLDER / VALOR */
 .ng-select-tailwind .ng-value,
 .ng-select-tailwind .ng-placeholder {
-  font-size: 0.75rem;
+  font-size: 0.875rem; /* text-sm */
   line-height: 1.25rem;
 }
+.ng-select-tailwind .ng-placeholder {
+  @apply text-slate-400;
+}
 
+/* INPUT INTERNO */
 .ng-select-tailwind .ng-input input {
   padding: 0 !important;
   margin: 0 !important;
-  font-size: 0.75rem;
-}
-
-.ng-select-tailwind .ng-arrow-wrapper {
-  padding-right: 0.5rem;
-}
-
-.ng-select-tailwind .ng-dropdown-panel .ng-dropdown-panel-items .ng-option {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1.25rem;
 }
 
+/* FLECHA / CLEAR */
+.ng-select-tailwind .ng-arrow-wrapper {
+  padding-right: 0.5rem;
+}
+.ng-select-tailwind .ng-clear-wrapper {
+  @apply pr-1;
+}
 
+/* DROPDOWN */
+.ng-select-tailwind .ng-dropdown-panel {
+  @apply mt-1 border border-slate-200 rounded-md shadow-lg overflow-hidden;
+  z-index: 1000; /* evita que lo tape otro contenedor */
+}
+.ng-select-tailwind .ng-dropdown-panel .ng-dropdown-panel-items .ng-option {
+  @apply px-3 py-2 text-sm;
+}
+.ng-select-tailwind .ng-dropdown-panel .ng-option:hover,
+.ng-select-tailwind .ng-dropdown-panel .ng-option-marked {
+  @apply bg-slate-50;
+}
+.ng-select-tailwind .ng-dropdown-panel .ng-option-selected {
+  @apply bg-slate-100 font-medium;
+}
+
+/* MULTI: TAGS */
+.ng-select-tailwind.ng-select-multiple .ng-value {
+  @apply bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 text-xs;
+}
+.ng-select-tailwind.ng-select-multiple .ng-value-icon {
+  @apply ml-1 rounded hover:bg-slate-200;
+}
+
+/* DISABLED */
+.ng-select-tailwind.ng-select-disabled .ng-select-container {
+  @apply bg-slate-100 text-slate-400 cursor-not-allowed;
+}
+
+/* ERROR (si envuelves con .has-error en tu form) */
+.has-error .ng-select-tailwind .ng-select-container {
+  @apply border-red-300 ring-2 ring-red-100;
+}
+
+
+/* Tailwind + @apply */
+@layer components {
+  .table-compact { @apply text-xs leading-4; }
+  .table-compact thead th { @apply px-3 py-2 text-[11px] uppercase tracking-wide text-gray-500; }
+  .table-compact tbody td { @apply px-3 py-2; }
+  .table-compact input { @apply h-8 text-xs; }
+  .table-compact .qty-input { @apply w-14 text-center; }
+  .table-compact .price-input { @apply w-24 text-center; }
+  .table-compact .disc-input { @apply w-16 text-center; }
+}

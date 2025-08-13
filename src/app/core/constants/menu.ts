@@ -67,6 +67,11 @@ export class Menu {
           icon: 'assets/icons/heroicons/outline/building-storefront.svg',
           label: 'POS',
           route: '/dashboard/pos',
+        },
+         {
+          icon: 'assets/icons/heroicons/outline/building-storefront.svg',
+          label: 'Facturación',
+          route: '/dashboard/invoicing',
         }
         
       ],

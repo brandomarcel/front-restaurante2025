@@ -15,13 +15,13 @@ export interface Customer {
 export class CustomersService {
   private readonly apiUrl = environment.apiUrl; // Cambia si usás otro backend
 
-  private urlBase:string = '';
-  
+  private urlBase: string = '';
+
 
 
   constructor(private http: HttpClient) {
 
-    this.urlBase = this.apiUrl + API_ENDPOINT.Cliente + 'get_clientes';
+    this.urlBase = this.apiUrl + API_ENDPOINT.Cliente;
   }
 
   // Obtener todos
@@ -38,32 +38,56 @@ export class CustomersService {
 
   ////////////////////////////////////////////////////
   // Obtener todos  
-  getAll() {
-    const campos = ["name","nombre","num_identificacion","telefono","correo","direccion","tipo_identificacion","isactive"];
+  // getAll() {
+  //   const campos = ["name","nombre","num_identificacion","telefono","correo","direccion","tipo_identificacion","isactive"];
 
-    return this.http.get(`${this.apiUrl}/resource/Cliente?fields=${JSON.stringify(campos)}`, {
+  //   return this.http.get(`${this.apiUrl}/resource/Cliente?fields=${JSON.stringify(campos)}`, {
+  //     withCredentials: true
+  //   });
+  // }
+
+
+  getAll() {
+    return this.http.get(`${this.urlBase}.get_clientes`, {
       withCredentials: true
     });
   }
 
-    findByIdentification(identification: string): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/resource/Cliente/${identification}`);
+
+
+  // Crear
+  // create(data: Omit<any, 'id'>): Observable<any> {
+  //   return this.http.post<any>(`${this.apiUrl}/resource/Cliente`, data);
+  // }
+
+  create(data: Omit<any, 'name'>): Observable<any> {
+    return this.http.post<any>(`${this.urlBase}.create_cliente`, data);
   }
 
-    // Crear
-  create(data: Omit<any, 'id'>): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/resource/Cliente`, data);
+  update(data: any) {
+    return this.http.put(`${this.urlBase}.update_cliente`, data, {
+      withCredentials: true
+    });
   }
-  update(name: string, data: any) {
-  return this.http.put(`${this.apiUrl}/resource/Cliente/${name}`, data, {
-    withCredentials: true
-  });
-}
 
-delete(name: string) {
-  return this.http.delete(`${this.apiUrl}/resource/Cliente/${name}`, {
-    withCredentials: true
-  });
-}
+
+
+  // update(name: string, data: any) {
+  //   return this.http.put(`${this.apiUrl}/resource/Cliente/${name}`, data, {
+  //     withCredentials: true
+  //   });
+  // }
+
+  delete(name: string) {
+    return this.http.delete(`${this.apiUrl}/resource/Cliente/${name}`, {
+      withCredentials: true
+    });
+  }
+
+
+  get_cliente_by_identificacion(identification: string): Observable<any> {
+    return this.http.get<any>(`${this.urlBase}.get_cliente_by_identificacion?num_identificacion=${identification}`);
+  }
+
 
 }

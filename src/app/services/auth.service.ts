@@ -65,7 +65,8 @@ export class AuthService {
         const user = {
           email: res.message.user,
           fullName: res.message.user_data.full_name,
-          roles: res.message.roles
+          roles: res.message.roles,
+          user_data: res.message.user_data
         };
         // Guardar en memoria
         this.userService.setUser(user);

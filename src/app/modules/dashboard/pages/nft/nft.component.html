@@ -4,11 +4,11 @@
   <!-- end Header -->
 
   <div class="p-6 bg-gray-100 min-h-screen">
-    <h1 class="text-3xl font-bold mb-6 text-gray-800">📊 Bienvenido </h1>
+    <h1 class="text-3xl font-bold mb-6 text-gray-800">📊 Bienvenido {{userData?.first_name}} </h1>
 
     <!-- Métricas principales -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-      <!-- Card: Pedidos Hoy -->
+      <!-- Card: Pedidos del Dia -->
       <div class="bg-white rounded-xl shadow-md p-5 flex items-center gap-4">
         <div class="bg-green-100 p-3 rounded-full">
           <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -16,7 +16,7 @@
           </svg>
         </div>
         <div>
-          <p class="text-gray-500 text-sm">Pedidos Hoy</p>
+          <p class="text-gray-500 text-sm">Pedidos del Dia</p>
           <p class="text-2xl font-bold text-gray-800">{{ totalOrdersToday }}</p>
         </div>
       </div>
@@ -30,7 +30,7 @@
           </svg>
         </div>
         <div>
-          <p class="text-gray-500 text-sm">Ventas Hoy</p>
+          <p class="text-gray-500 text-sm">Ventas del Dia</p>
           <p class="text-2xl font-bold text-gray-800">{{ total_sales_today | currency }}</p>
         </div>
       </div>

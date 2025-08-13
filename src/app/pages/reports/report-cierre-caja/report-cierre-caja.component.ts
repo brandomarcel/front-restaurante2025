@@ -6,9 +6,10 @@ import { FormsModule } from '@angular/forms';
 import { UtilsService } from '../../../core/services/utils.service';
 import { UserService } from '../../../services/user.service';
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
+import { NgSelectComponent } from "@ng-select/ng-select";
 @Component({
   selector: 'app-report-cierre-caja',
-  imports: [CommonModule, FormsModule, ButtonComponent],
+  imports: [CommonModule, FormsModule, ButtonComponent, NgSelectComponent],
   templateUrl: './report-cierre-caja.component.html',
   styleUrl: './report-cierre-caja.component.css'
 })
@@ -29,7 +30,7 @@ export class ReportCierreCajaComponent implements OnInit {
 
   // Filtros
   filtrosUsers = {
-    usuario: '',
+    usuario: null,
     rol: ''
   };
 
@@ -50,9 +51,10 @@ export class ReportCierreCajaComponent implements OnInit {
 
 
   cargarUsuarios(): void {
-    this.userService.getUsuariosConRoles(this.filtrosUsers.usuario, this.filtrosUsers.rol)
+    this.userService.getUsuariosConRoles(this.filtrosUsers.usuario || ''  , this.filtrosUsers.rol)
       .subscribe({
         next: (res) => {
+          console.log('Usuarios con roles obtenidos:', res);
           this.usuarios = res.message || res;
         },
         error: (err) => {

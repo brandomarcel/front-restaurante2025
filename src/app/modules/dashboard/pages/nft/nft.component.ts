@@ -9,6 +9,7 @@ import { CommonModule } from '@angular/common';
 import { OrdersService } from '../../../../services/orders.service';
 import { RouterModule } from '@angular/router';
 import { CajasService } from 'src/app/services/cajas.service';
+import { UserData } from 'src/app/core/models/user_data';
 
 @Component({
   selector: 'app-nft',
@@ -31,6 +32,7 @@ export class NftComponent implements OnInit {
   // Top productos (si los necesitas fuera del gráfico)
   topProducts: any[] = [];
 
+  userData?: UserData | null;
 
   constructor(private ordersService: OrdersService,
     private cajasService: CajasService
@@ -41,6 +43,8 @@ export class NftComponent implements OnInit {
   ngOnInit(): void {
     this.get_dashboard_metrics();
     const user = JSON.parse(localStorage.getItem('user') || '{}');
+    console.log('user', user);
+    this.userData = user.user_data;
 
     this.cajasService.getDatosCierre(user.email).subscribe(res => {
       const data = res.message || {};

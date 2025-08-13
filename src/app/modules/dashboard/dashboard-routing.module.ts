@@ -14,6 +14,7 @@ import { CloseCajaComponent } from 'src/app/pages/close-caja/close-caja.componen
 import { AperturaCajaComponent } from 'src/app/pages/apertura-caja/apertura-caja.component';
 import { RetiroCajaComponent } from 'src/app/pages/retiro-caja/retiro-caja.component';
 import { ReportCierreCajaComponent } from 'src/app/pages/reports/report-cierre-caja/report-cierre-caja.component';
+import { InvoicingComponent } from 'src/app/pages/invoicing/invoicing.component';
 
 const routes: Routes = [
   {
@@ -34,6 +35,8 @@ const routes: Routes = [
       { path: 'apertura-caja', component: AperturaCajaComponent },
       { path: 'retiro-caja', component: RetiroCajaComponent },
       { path: 'report-cierre-caja', component: ReportCierreCajaComponent },
+      { path: 'invoicing', component: InvoicingComponent },
+
       
 
 

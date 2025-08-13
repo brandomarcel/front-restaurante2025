@@ -49,7 +49,7 @@ getUsuariosConRoles(usuario?: string, rol?: string) {
   if (rol) params.rol = rol;
 
   const query = new URLSearchParams(params).toString();
-  const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.apis.utils.get_usuarios_con_roles${query ? '?' + query : ''}`;
+  const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.api.utils.get_usuarios_con_roles${query ? '?' + query : ''}`;
   
   return this.http.get<any>(url, { withCredentials: true });
 }
