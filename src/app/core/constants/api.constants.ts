@@ -9,5 +9,7 @@ export const API_ENDPOINT = {
   Categoria: "/method/restaurante_app.restaurante_bmarc.doctype.categorias.categorias",
   Caja: "/method/restaurante_app.restaurante_bmarc.doctype.caja.caja",
   CierreCaja: "/method/restaurante_app.restaurante_bmarc.doctype.cierre_de_caja.cierre_de_caja",
+  Payments: "/method/restaurante_app.restaurante_bmarc.doctype.payments.payments",
+  Register: "/method/restaurante_app.restaurante_bmarc.api.register",
   
 };

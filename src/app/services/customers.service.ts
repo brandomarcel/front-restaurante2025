@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { catchError, EMPTY, Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { API_ENDPOINT } from '../core/constants/api.constants';
+import { toast } from 'ngx-sonner';
+import { FrappeErrorService } from '../core/services/frappe-error.service';
 export interface Customer {
   id: number;
   fullName: string;
@@ -19,7 +21,9 @@ export class CustomersService {
 
 
 
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient,
+    private frappeErr: FrappeErrorService
+  ) {
 
     this.urlBase = this.apiUrl + API_ENDPOINT.Cliente;
   }
@@ -61,9 +65,14 @@ export class CustomersService {
   // }
 
   create(data: Omit<any, 'name'>): Observable<any> {
-    return this.http.post<any>(`${this.urlBase}.create_cliente`, data);
-  }
-
+    return this.http.post<any>(`${this.urlBase}.create_cliente`, data).pipe(
+          catchError((error) => {
+            const msg = this.frappeErr.handle(error) || 'Error al crear el cliente.';
+            toast.error(msg);
+            return EMPTY;
+          })
+        );
+      }
   update(data: any) {
     return this.http.put(`${this.urlBase}.update_cliente`, data, {
       withCredentials: true

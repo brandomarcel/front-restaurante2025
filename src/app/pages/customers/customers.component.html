@@ -1,162 +1,166 @@
-<div class="container bg-primary-foreground mx-auto my-8 px-4 p-3">
+<div class="app-container">
 
-    <div class="mb-4 flex justify-between">
-        <div class="inline-block">
-            <h2 class="text-2xl font-semibold text-primary">Clientes</h2>
-            <div class="text-muted-foreground space-x-1 text-xs font-medium">
-                <a href="" class="hover:text-primary"># Registros:</a>
-                <span class="text-foreground">{{ customers.length }}</span>
+    <!-- Header -->
+    <div class="app-page-header">
+        <div>
+            <h2 class="app-page-title">Clientes</h2>
+            <div class="app-page-subtle space-x-1">
+                <span># Registros:</span>
+                <span class="text-foreground font-semibold">{{ filteredCustomersList.length }}</span>
             </div>
         </div>
-        <div class="inline-block space-x-4">
-            <button class="bg-primary text-primary-foreground flex-none rounded-md px-4 py-2.5 text-xs font-semibold"
-                (click)="abrirModal()">
-                + Nuevo Cliente
-            </button>
+
+        <button class="btn btn-primary" (click)="abrirModal()">
+            + Nuevo Cliente
+        </button>
+    </div>
+
+    <!-- Filtros -->
+    <div class="toolbar">
+        <input class="input" type="text" [(ngModel)]="searchTerm" placeholder="Buscar por nombre o identificación..." />
+        <div class="flex gap-2">
+            <app-button (click)="_searchTerm=''; filtrarClientes()" full impact="bold" tone="light" shape="rounded"
+                size="small">
+                Limpiar
+            </app-button>
+
+
         </div>
     </div>
 
-    <ng-container *ngIf="filteredCustomersList.length > 0; else emptyCustomers">
-
-        <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar por nombre o cédula..."
-            class="mb-4 w-full rounded border px-4 py-2 text-sm" />
-
-        <div class="overflow-x-auto rounded-lg shadow-md">
-            <table class="min-w-full divide-y divide-gray-200 bg-white text-sm">
-                <thead class="bg-gray-100 sticky top-0 z-10">
+    <!-- Tabla -->
+    <ng-container *ngIf="filteredCustomersList.length; else emptyCustomers">
+        <div class="app-table-wrap">
+            <table class="app-table">
+                <thead class="app-thead">
                     <tr>
-                        <th class="p-3 text-left font-medium text-gray-700">Nombre</th>
-                        <th class="p-3 text-left font-medium text-gray-700">Identificación</th>
-                        <!-- <th class="p-3 text-left font-medium text-gray-700">Tipo</th> -->
-                        <th class="p-3 text-left font-medium text-gray-700">Teléfono</th>
-                        <th class="p-3 text-left font-medium text-gray-700">Email</th>
-                        <th class="p-3 text-left font-medium text-gray-700">Acciones</th>
+                        <th class="app-th">Nombre</th>
+                        <th class="app-th">Identificación</th>
+                        <th class="app-th">Teléfono</th>
+                        <th class="app-th">Email</th>
+                        <th class="app-th">Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <tr
-                        *ngFor="let customer of filteredCustomersList | paginate: { itemsPerPage: pageSize, currentPage: page }">
-                        <td class="p-3 text-gray-800">{{ customer.nombre }}</td>
-                        <td class="p-3 text-gray-800">{{ customer.num_identificacion }}</td>
-                        <!-- <td class="p-3 capitalize text-gray-800">{{ customer.tipo_identificacion }}</td> -->
-                        <td class="p-3 text-gray-800">{{ customer.telefono }}</td>
-                        <td class="p-3 text-gray-800">{{ customer.correo }}</td>
-                        <td class="p-3 flex gap-2">
-                            <button class="text-blue-600 hover:text-blue-800 font-medium transition"
-                                (click)="abrirModal(customer)">
-                                ✏️ Editar
-                            </button>
-                            <button class="text-red-600 hover:text-red-800 font-medium transition"
-                                (click)="delete(customer.name)">
-                                🗑️ Eliminar
-                            </button>
+
+                <tbody>
+                    <tr *ngFor="let customer of filteredCustomersList | paginate: { itemsPerPage: pageSize, currentPage: page }; trackBy: trackById"
+                        class="app-tr">
+                        <td class="app-td">{{ customer.nombre }}</td>
+                        <td class="app-td">{{ customer.num_identificacion }}</td>
+                        <td class="app-td">{{ customer.telefono || '—' }}</td>
+                        <td class="app-td">{{ customer.correo || '—' }}</td>
+                        <td class="app-td">
+                            <div class="flex gap-2">
+                                <button class="btn btn-outline" (click)="abrirModal(customer)">✏️ Editar</button>
+                                <button class="btn btn-warn" (click)="delete(customer.name)">🗑️ Eliminar</button>
+                            </div>
                         </td>
                     </tr>
                 </tbody>
             </table>
-            <pagination-controls (pageChange)="page = $event" class="mt-4 flex justify-center"></pagination-controls>
 
-
-            <!-- Opcional: mensaje si no hay resultados -->
-            <div *ngIf="filteredCustomersList.length === 0" class="text-center text-gray-500 py-4">
-
-                No se encontraron clientes.
+            <!-- Paginación -->
+            <div class="pager">
+                <button class="pager-btn" (click)="page = page - 1" [disabled]="page === 1">« Anterior</button>
+                <span class="text-sm">Página {{ page }}</span>
+                <button class="pager-btn" (click)="page = page + 1"
+                    [disabled]="(filteredCustomersList.length || 0) <= (page * pageSize)">
+                    Siguiente »
+                </button>
             </div>
         </div>
     </ng-container>
-    <ng-template #emptyCustomers>
-        <p class="text-center text-gray-500">No hay datos para mostrar</p>
 
+    <ng-template #emptyCustomers>
+        <div class="app-card">
+            <div class="app-card-body text-center text-gray-500">
+                No hay datos para mostrar
+            </div>
+        </div>
     </ng-template>
 
-
-
     <!-- MODAL -->
-    <div *ngIf="mostrarModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-        <div class="bg-white w-full max-w-md rounded shadow-lg p-6 relative">
-            <button class="absolute top-2 right-3 text-xl" (click)="cerrarModal()">×</button>
-            <h3 class="text-lg font-semibold mb-4">
-                {{ clienteEditando?.id ? 'Editar Cliente' : 'Nuevo Cliente' }}
-            </h3>
+    <div *ngIf="mostrarModal" class="app-modal-backdrop">
+        <div class="app-modal">
+            <button class="app-modal-close" (click)="cerrarModal()">×</button>
 
-            <form [formGroup]="clienteForm" (ngSubmit)="guardarCliente()" class="space-y-4">
-                <!-- Nombre / Razón Social -->
-                <div>
-                    <label class="block text-sm font-medium">Nombre / Razón Social</label>
-                    <input type="text" formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm"
-                        oninput="this.value = this.value.toUpperCase()" />
-                    <div *ngIf="f['nombre'].invalid && submitted" class="text-red-500 text-sm">
-                        Campo requerido.
-                    </div>
-                </div>
+            <div class="app-card-body">
+                <h3 class="text-lg font-semibold mb-4">
+                    {{ clienteEditando ? 'Editar Cliente' : 'Nuevo Cliente' }}
+                </h3>
 
-                <!-- Tipo -->
-                <div>
-                    <label class="block text-sm font-medium">Tipo de Identificación</label>
-                    <select formControlName="tipo_identificacion" class="w-full border rounded px-3 py-2 text-sm">
-                        <!-- <option value="07 - Consumidor Final">Consumidor Final</option> -->
-                        <option value="05 - Cedula">Cédula</option>
-                        <option value="04 - RUC">RUC</option>
-                    </select>
-                    <div *ngIf="f['tipo_identificacion'].invalid && submitted" class="text-red-500 text-sm">
-                        Seleccione un tipo válido.
-                    </div>
-                </div>
+                <form [formGroup]="clienteForm" (ngSubmit)="guardarCliente()" class="grid gap-4 text-sm">
 
-                <!-- Identificación -->
-                <div>
-                    <label class="block text-sm font-medium">Identificación</label>
-                    <input [attr.maxlength]="getMaxLength()" type="text" formControlName="num_identificacion"
-                        class="w-full border rounded px-3 py-2 text-sm" />
-                    <div *ngIf="f['num_identificacion'].invalid && submitted" class="text-red-500 text-sm">
-                        Campo requerido.
+                    <div>
+                        <label class="block mb-1 font-medium">Nombre / Razón Social</label>
+                        <input type="text" class="input" formControlName="nombre"
+                            (input)="clienteForm.patchValue({ nombre: ($any($event.target)?.value || '').toUpperCase() }, { emitEvent: false })" />
+                        <div *ngIf="submitted && f['nombre'].invalid" class="text-red-600 text-xs mt-1">Campo requerido.
+                        </div>
                     </div>
 
-                    <div *ngIf="f['num_identificacion'].errors?.['cedulaInvalida'] && submitted"
-                        class="text-red-500 text-sm">
-                        La cédula debe tener 10 caracteres.
-                    </div>
-                    <div *ngIf="f['num_identificacion'].errors?.['rucInvalido'] && submitted"
-                        class="text-red-500 text-sm">
-                        El RUC debe tener 13 caracteres.
-                    </div>
-                </div>
+                    <div>
+                        <label class="block mb-1 font-medium">Tipo de Identificación</label>
+                        <select class="select" formControlName="tipo_identificacion">
+                            <option *ngFor="let item of identificationTypes" [value]="item.value"> {{ item.label }}
+                            </option>
 
-                <!-- Email -->
-                <div>
-                    <label class="block text-sm font-medium">Email</label>
-                    <input type="email" formControlName="correo" class="w-full border rounded px-3 py-2 text-sm" />
-                    <div *ngIf="f['correo'].invalid && submitted" class="text-red-500 text-sm">
-                        Email inválido.
+                        </select>
+                        <div *ngIf="submitted && f['tipo_identificacion'].invalid" class="text-red-600 text-xs mt-1">
+                            Seleccione un tipo válido.
+                        </div>
                     </div>
-                </div>
 
-                <!-- Teléfono -->
-                <div>
-                    <label class="block text-sm font-medium">Teléfono</label>
-                    <input maxlength="10" type="text" formControlName="telefono"
-                        class="w-full border rounded px-3 py-2 text-sm" />
-                    <div *ngIf="f['telefono'].invalid && submitted" class="text-red-500 text-sm">
-                        Dirección inválido.
+                    <div>
+                        <label class="block mb-1 font-medium">Identificación</label>
+                        <input class="input" type="text" [attr.maxlength]="getMaxLength()"
+                            formControlName="num_identificacion" />
+                        <div *ngIf="submitted && f['num_identificacion'].invalid" class="text-red-600 text-xs mt-1">
+                            Campo requerido.
+                        </div>
+                        <div *ngIf="submitted && f['num_identificacion'].errors?.['cedulaInvalida']"
+                            class="text-red-600 text-xs mt-1">
+                            La cédula debe tener 10 caracteres.
+                        </div>
+                        <div *ngIf="submitted && f['num_identificacion'].errors?.['rucInvalido']"
+                            class="text-red-600 text-xs mt-1">
+                            El RUC debe tener 13 caracteres.
+                        </div>
                     </div>
-                </div>
 
-                <!-- Dirección -->
-                <div>
-                    <label class="block text-sm font-medium">Dirección</label>
-                    <input type="text" formControlName="direccion" class="w-full border rounded px-3 py-2 text-sm" />
-                    <div *ngIf="f['direccion'].invalid && submitted" class="text-red-500 text-sm">
-                        Dirección inválido.
+                    <div>
+                        <label class="block mb-1 font-medium">Email</label>
+                        <input class="input" type="email" formControlName="correo" />
+                        <div *ngIf="submitted && f['correo'].invalid" class="text-red-600 text-xs mt-1">Email inválido.
+                        </div>
                     </div>
-                </div>
 
-                <!-- Botón -->
-                <div class="pt-2">
-                    <button type="submit" class="bg-primary text-white px-4 py-2 rounded w-full disabled:opacity-50">
-                        Guardar
-                    </button>
-                </div>
-            </form>
+                    <div>
+                        <label class="block mb-1 font-medium">Teléfono</label>
+                        <input class="input no-spinner" type="number" maxlength="10" formControlName="telefono" />
+                        <div *ngIf="submitted && f['telefono'].invalid" class="text-red-600 text-xs mt-1">Teléfono
+                            inválido.</div>
+                    </div>
+
+                    <div>
+                        <label class="block mb-1 font-medium">Dirección</label>
+                        <input class="input" type="text" formControlName="direccion" />
+                        <div *ngIf="submitted && f['direccion'].invalid" class="text-red-600 text-xs mt-1">Dirección
+                            inválida.</div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <input id="isactive" type="checkbox" formControlName="isactive" />
+                        <label for="isactive">Activo</label>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" class="btn btn-outline" (click)="cerrarModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+
         </div>
     </div>
 

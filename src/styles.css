@@ -1,14 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap') layer(base);
 @import 'tailwindcss';
 
-
 /** Plugins **/
 @import './assets/styles/apexchart.css';
+/* Si prefieres no tener todo en este archivo, puedes importar externo:
+   @import './assets/styles/ui-products.css';
+*/
 
 @plugin "@tailwindcss/forms";
 @plugin "@tailwindcss/typography";
 @plugin "@tailwindcss/aspect-ratio";
-@plugin "tailwind-scrollbar";
+/* Si diera error, comenta esta línea: */
+/* @plugin "tailwind-scrollbar"; */
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -42,105 +45,48 @@
   --color-card-foreground: var(--card-foreground);
 
   @keyframes wiggle {
-
-    0%,
-    100% {
-      transform: rotate(-3deg);
-    }
-
-    50% {
-      transform: rotate(3deg);
-    }
+    0%, 100% { transform: rotate(-3deg); }
+    50% { transform: rotate(3deg); }
   }
 
   @keyframes fade-in-down {
-    0% {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-
-    100% {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    0% { opacity: 0; transform: translateY(-10px); }
+    100% { opacity: 1; transform: translateY(0); }
   }
 
   @keyframes fade-out-down {
-    from {
-      opacity: 1;
-      transform: translateY(0px);
-    }
-
-    to {
-      opacity: 0;
-      transform: translateY(10px);
-    }
+    from { opacity: 1; transform: translateY(0px); }
+    to   { opacity: 0; transform: translateY(10px); }
   }
 
   @keyframes fade-in-up {
-    0% {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-
-    100% {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
   }
 
   @keyframes fade-out-up {
-    from {
-      opacity: 1;
-      transform: translateY(0px);
-    }
-
-    to {
-      opacity: 0;
-      transform: translateY(10px);
-    }
+    from { opacity: 1; transform: translateY(0px); }
+    to   { opacity: 0; transform: translateY(10px); }
   }
 }
 
 @utility container {
   padding-inline: 1rem;
 
-  @media (width >=theme(--breakpoint-sm)) {
-    padding-inline: 2rem;
-  }
-
-  @media (width >=theme(--breakpoint-lg)) {
-    padding-inline: 4rem;
-  }
-
-  @media (width >=theme(--breakpoint-xl)) {
-    padding-inline: 5rem;
-  }
-
-  @media (width >=theme(--breakpoint-2xl)) {
-    padding-inline: 6rem;
-  }
+  @media (width >=theme(--breakpoint-sm)) { padding-inline: 2rem; }
+  @media (width >=theme(--breakpoint-lg)) { padding-inline: 4rem; }
+  @media (width >=theme(--breakpoint-xl)) { padding-inline: 5rem; }
+  @media (width >=theme(--breakpoint-2xl)) { padding-inline: 6rem; }
 }
 
-/*
-  The default border color has changed to `currentColor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
+/* Tailwind v4 compat: borde por defecto como v3 */
 @layer base {
-
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
     border-color: var(--color-gray-200, currentColor);
   }
 }
 
+/* Dropdown utilities (usa nesting nativo; si no compila, expando abajo) */
 @utility dropdown-content {
   @apply pointer-events-none scale-95 opacity-0 duration-100 ease-in;
 
@@ -148,13 +94,13 @@
     @apply pointer-events-auto block scale-100 animate-fade-in-up opacity-100 duration-200;
   }
 }
-
 @utility dropdown {
   &:hover>.dropdown-content {
     @apply pointer-events-auto block scale-100 animate-fade-in-up opacity-100 duration-200;
   }
 }
 
+/* Tema base (variables) */
 @layer base {
   :root {
     --background: #FFFFFF;
@@ -180,10 +126,7 @@
     --border: #262626;
   }
 
-  :root[data-theme='violet'] {
-    --primary: #6E56CF;
-  }
-
+  :root[data-theme='violet'] { --primary: #6E56CF; }
   .dark[data-theme='violet'] {
     --background: #060815;
     --foreground: #F6F8FB;
@@ -195,18 +138,10 @@
     --border: #232B3D;
   }
 
-  :root[data-theme='red'] {
-    --primary: #CC0033;
-  }
+  :root[data-theme='red'] { --primary: #CC0033; }
+  .dark[data-theme='red'] { --primary-foreground: #FFE5E5; }
 
-  .dark[data-theme='red'] {
-    --primary-foreground: #FFE5E5;
-  }
-
-  :root[data-theme='blue'] {
-    --primary: #2490FF;
-  }
-
+  :root[data-theme='blue'] { --primary: #2490FF; }
   .dark[data-theme='blue'] {
     --background: #02080F;
     --foreground: #F8FAFC;
@@ -218,10 +153,7 @@
     --border: #1E293B;
   }
 
-  :root[data-theme='orange'] {
-    --primary: #EA580C;
-  }
-
+  :root[data-theme='orange'] { --primary: #EA580C; }
   .dark[data-theme='orange'] {
     --background: #0C0A09;
     --foreground: #FAFAF9;
@@ -233,10 +165,7 @@
     --border: #292524;
   }
 
-  :root[data-theme='yellow'] {
-    --primary: #FACC15;
-  }
-
+  :root[data-theme='yellow'] { --primary: #FACC15; }
   .dark[data-theme='yellow'] {
     --background: #0C0A09;
     --foreground: #FAFAF9;
@@ -249,25 +178,19 @@
     --border: #292524;
   }
 
-  :root[data-theme='green'] {
-    --primary: #22C55E;
-  }
-
+  :root[data-theme='green'] { --primary: #22C55E; }
   .dark[data-theme='green'] {
     --primary: #22C55E;
     --primary-foreground: #052E16;
   }
-
 }
 
 /** Scroll bar **/
 @supports selector(::-webkit-scrollbar) {
-  .supports-scrollbars\: pr-2 {
-    padding-right: 0.5rem;
-  }
+  .supports-scrollbars\: pr-2 { padding-right: 0.5rem; }
 }
 
-/** Custom Forms **/
+/** Custom Forms (FIX: focus:outline-hidden -> focus:outline-none) **/
 [type='text'],
 [type='email'],
 [type='url'],
@@ -283,89 +206,58 @@
 [multiple],
 textarea,
 select {
-  @apply w-full rounded-md border border-border bg-background text-xs text-foreground placeholder-muted-foreground focus:z-10 focus:border-primary focus:outline-hidden focus:ring-primary;
+  @apply w-full rounded-md border border-border bg-background text-xs text-foreground placeholder-muted-foreground
+         focus:z-10 focus:border-primary focus:outline-none focus:ring-primary;
 }
 
 [type='checkbox'],
 [type='radio'] {
-  @apply h-4 w-4 rounded-sm border-border bg-background checked:border-primary checked:bg-primary indeterminate:border-primary indeterminate:bg-primary focus:ring-2 focus:ring-primary;
+  @apply h-4 w-4 rounded-sm border-border bg-background checked:border-primary checked:bg-primary
+         indeterminate:border-primary indeterminate:bg-primary focus:ring-2 focus:ring-primary;
 }
 
-/* CONTENEDOR */
+/* NG-SELECT estilos */
 .ng-select-tailwind .ng-select-container {
-  @apply bg-white border border-slate-300 rounded-md px-3 py-2 h-auto min-h-[2.5rem] shadow-none;
-  font-size: 0.875rem; /* text-sm */
+  @apply bg-white border border-slate-300 rounded-md px-2 py-1 h-auto min-h-[2rem] shadow-none;
+  font-size: 0.875rem; /* text-xs */
   line-height: 1.25rem;
 }
-.ng-select-tailwind:hover .ng-select-container {
-  @apply border-slate-400;
-}
-.ng-select-tailwind:focus-within .ng-select-container {
-  @apply border-slate-500 ring-2 ring-slate-200;
-}
+.ng-select-tailwind:hover .ng-select-container { @apply border-slate-400; }
+.ng-select-tailwind:focus-within .ng-select-container { @apply border-slate-500 ring-1 ring-slate-200; }
 
-/* PLACEHOLDER / VALOR */
 .ng-select-tailwind .ng-value,
 .ng-select-tailwind .ng-placeholder {
-  font-size: 0.875rem; /* text-sm */
+  font-size: 0.875rem;
   line-height: 1.25rem;
 }
-.ng-select-tailwind .ng-placeholder {
-  @apply text-slate-400;
-}
+.ng-select-tailwind .ng-placeholder { @apply text-slate-400; }
 
-/* INPUT INTERNO */
 .ng-select-tailwind .ng-input input {
   padding: 0 !important;
   margin: 0 !important;
   font-size: 0.875rem;
   line-height: 1.25rem;
 }
+.ng-select-tailwind .ng-arrow-wrapper { padding-right: 0.5rem; }
+.ng-select-tailwind .ng-clear-wrapper { @apply pr-1; }
 
-/* FLECHA / CLEAR */
-.ng-select-tailwind .ng-arrow-wrapper {
-  padding-right: 0.5rem;
-}
-.ng-select-tailwind .ng-clear-wrapper {
-  @apply pr-1;
-}
-
-/* DROPDOWN */
 .ng-select-tailwind .ng-dropdown-panel {
-  @apply mt-1 border border-slate-200 rounded-md shadow-lg overflow-hidden;
-  z-index: 1000; /* evita que lo tape otro contenedor */
+  @apply mt-1 border bg-white border-slate-200 rounded-md shadow-lg overflow-hidden;
+  z-index: 1000;
 }
-.ng-select-tailwind .ng-dropdown-panel .ng-dropdown-panel-items .ng-option {
-  @apply px-3 py-2 text-sm;
-}
+.ng-select-tailwind .ng-dropdown-panel .ng-dropdown-panel-items .ng-option { @apply px-3 py-2 text-xs; }
 .ng-select-tailwind .ng-dropdown-panel .ng-option:hover,
-.ng-select-tailwind .ng-dropdown-panel .ng-option-marked {
-  @apply bg-slate-50;
-}
-.ng-select-tailwind .ng-dropdown-panel .ng-option-selected {
-  @apply bg-slate-100 font-medium;
-}
+.ng-select-tailwind .ng-dropdown-panel .ng-option-marked { @apply bg-slate-50; }
+.ng-select-tailwind .ng-dropdown-panel .ng-option-selected { @apply bg-slate-100 font-medium; }
 
-/* MULTI: TAGS */
 .ng-select-tailwind.ng-select-multiple .ng-value {
   @apply bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 text-xs;
 }
-.ng-select-tailwind.ng-select-multiple .ng-value-icon {
-  @apply ml-1 rounded hover:bg-slate-200;
-}
+.ng-select-tailwind.ng-select-multiple .ng-value-icon { @apply ml-1 rounded hover:bg-slate-200; }
+.ng-select-tailwind.ng-select-disabled .ng-select-container { @apply bg-slate-100 text-slate-400 cursor-not-allowed; }
+.has-error .ng-select-tailwind .ng-select-container { @apply border-red-300 ring-2 ring-red-100; }
 
-/* DISABLED */
-.ng-select-tailwind.ng-select-disabled .ng-select-container {
-  @apply bg-slate-100 text-slate-400 cursor-not-allowed;
-}
-
-/* ERROR (si envuelves con .has-error en tu form) */
-.has-error .ng-select-tailwind .ng-select-container {
-  @apply border-red-300 ring-2 ring-red-100;
-}
-
-
-/* Tailwind + @apply */
+/* Table compact */
 @layer components {
   .table-compact { @apply text-xs leading-4; }
   .table-compact thead th { @apply px-3 py-2 text-[11px] uppercase tracking-wide text-gray-500; }
@@ -374,4 +266,131 @@ select {
   .table-compact .qty-input { @apply w-14 text-center; }
   .table-compact .price-input { @apply w-24 text-center; }
   .table-compact .disc-input { @apply w-16 text-center; }
+    .input { @apply block w-full h-9 rounded-md border border-slate-300 bg-white px-3 text-[13px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20; }
+  .field-error { @apply block mt-1 text-[11px] text-red-600; }
+}
+
+/* No spinners en inputs number */
+@layer utilities {
+  .no-spinner::-webkit-outer-spin-button,
+  .no-spinner::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .no-spinner { -moz-appearance: textfield; }
+}
+
+/* ============================
+   KIT UI (Products/Orders/etc)
+   ============================ */
+@layer utilities {
+  /* Layout base */
+  .app-container { @apply container mx-auto my-2 px-2; }
+
+  /* Header de página */
+  .app-page-header { @apply mb-4 flex items-end justify-between gap-4; }
+  .app-page-title { @apply text-2xl font-semibold text-primary; }
+  .app-page-subtle { @apply text-muted-foreground text-xs font-medium; }
+
+  /* Toolbar / filtros */
+  .toolbar { @apply mb-4 flex flex-col md:flex-row gap-3 md:items-center md:justify-between; }
+  .input  { @apply w-full md:w-80 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30; }
+  .select { @apply w-full md:w-60 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30; }
+
+  /* Botones */
+  .btn { @apply inline-flex items-center justify-center rounded-md px-3.5 py-2 text-xs font-semibold transition; }
+  .btn:disabled { @apply opacity-50 cursor-not-allowed; }
+  .btn-primary { @apply bg-primary text-primary-foreground hover:opacity-90; }
+  .btn-ghost   { @apply bg-gray-100 text-gray-800 hover:bg-gray-200; }
+  .btn-outline { @apply border border-gray-300 text-gray-800 bg-white hover:bg-gray-50; }
+  .btn-warn    { @apply bg-amber-500 text-black hover:bg-amber-600; }
+
+  /* Badges */
+  .badge { @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium; }
+  .badge-green  { @apply bg-green-100 text-green-800; }
+  .badge-yellow { @apply bg-yellow-100 text-yellow-800; }
+  .badge-red    { @apply bg-red-100 text-red-800; }
+  .badge-gray   { @apply bg-gray-100 text-gray-800; }
+
+  /* Cards */
+  .app-card { @apply bg-white rounded-xl shadow-sm border border-gray-200; }
+  .app-card-body { @apply p-4 md:p-6; }
+
+  /* Tablas */
+  .app-table-wrap { @apply overflow-x-auto rounded-lg border border-gray-200 shadow-sm; }
+  .app-table { @apply min-w-full text-xs bg-white; }
+  .app-thead { @apply sticky top-0 bg-gray-50; }
+  .app-th { @apply p-3 text-left font-medium text-gray-700; }
+  .app-td { @apply p-3 align-middle text-gray-800; }
+  .app-tr { @apply border-t hover:bg-gray-50; }
+
+  /* Paginación */
+  .pager { @apply mt-4 flex items-center justify-center gap-2; }
+.pager-btn {
+  @apply inline-flex items-center justify-center rounded-md
+         px-3.5 py-2 text-xs font-semibold transition
+         bg-gray-100 text-gray-800 hover:bg-gray-200
+         px-3 py-1; /* extra tamaño compacto que tenías */
+}
+
+  /* Modal */
+  .app-modal-backdrop { @apply fixed inset-0 bg-black/30 flex items-center justify-center z-50; }
+.app-modal {
+  @apply bg-white rounded-xl shadow-sm border border-gray-200
+         w-full max-w-2xl max-h-[90vh] overflow-y-auto relative;
+}
+
+  .app-modal-close { @apply absolute top-2 right-3 text-xl; }
+
+  /* Tabs */
+  .tabs { @apply mb-4 border-b border-gray-200 flex gap-4 text-xs font-medium; }
+  .tab { @apply px-3 py-2 -mb-px border-b-2 border-transparent text-gray-600 hover:text-blue-700; }
+  .tab-active { @apply border-blue-600 text-blue-600; }
+}
+
+/* (Opcional) Si tu herramienta no soporta nesting en @utility dropdown, usa esto plano:
+.dropdown:hover > .dropdown-content {
+  pointer-events: auto;
+  display: block;
+  transform: scale(1);
+  opacity: 1;
+  animation: fade-in-up 0.3s ease-out;
+}
+*/
+/* ===========================
+   DENSITY: modo compacto global
+   Actívalo con <body class="density-compact">
+   =========================== */
+@layer utilities {
+  /* Tamaño base más pequeño */
+  .density-compact { @apply text-[13px]; } /* texto general */
+
+  /* Títulos y separaciones */
+  .density-compact .app-page-title { @apply text-xl; }
+  .density-compact .app-page-header { @apply mb-3; }
+
+  /* Inputs / selects */
+  .density-compact .input  { @apply text-xs px-2.5 py-1.5; }
+  .density-compact .select { @apply text-xs px-2.5 py-1.5; }
+
+  /* Botones */
+  .density-compact .btn { @apply text-xs px-3 py-1.5; }
+  /* Botón de paginación más compacto */
+  .density-compact .pager-btn { @apply px-2.5 py-1 text-xs; }
+
+  /* Badges */
+  .density-compact .badge { @apply text-[10px] px-1.5 py-[2px]; }
+
+  /* Tablas */
+  .density-compact .app-table     { @apply text-xs; }
+  .density-compact .app-th        { @apply p-2 text-[11px]; }
+  .density-compact .app-td        { @apply p-2; }
+  .density-compact .app-tr        { @apply border-t; }
+
+  /* Cards / contenedores */
+  .density-compact .app-card-body { @apply p-4; }
+
+  /* Tabs */
+  .density-compact .tabs      { @apply text-xs; }
+  .density-compact .tab       { @apply px-2 py-1.5; }
+
+  /* Modal algo más angosto */
+  .density-compact .app-modal { @apply max-w-xl; }
 }

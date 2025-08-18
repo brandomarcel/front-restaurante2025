@@ -5,11 +5,12 @@ import { VentasProductoService } from 'src/app/services/ventas-producto.service'
 import { NgxPaginationModule } from 'ngx-pagination';
 import * as XLSX from 'xlsx';
 import * as FileSaver from 'file-saver';
+import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 
 @Component({
   selector: 'app-ventas-producto',
   standalone: true,
-  imports: [CommonModule, FormsModule,NgxPaginationModule],
+  imports: [CommonModule, FormsModule,NgxPaginationModule,ButtonComponent],
   templateUrl: './ventas-producto.component.html',
   styleUrl: './ventas-producto.component.css'
 })
@@ -21,7 +22,7 @@ export class VentasProductoComponent implements OnInit {
   columns: any[] = [];
 
   page = 1;
-  pageSize = 20; // Valor por defecto (puede cambiar a 50, 100, etc.)
+  pageSize = 10; // Valor por defecto (puede cambiar a 50, 100, etc.)
 
 
   constructor(private ventasService: VentasProductoService) { }

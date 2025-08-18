@@ -5,7 +5,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
-import { Subscription } from 'rxjs';
+import { finalize, Subscription } from 'rxjs';
 
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
 import { AlertService } from '../../core/services/alert.service';
@@ -14,19 +14,21 @@ import { OrdersService } from 'src/app/services/orders.service';
 import { PaymentsService } from 'src/app/services/payments.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { PrintService } from 'src/app/services/print.service';
+import { Product } from '../../core/models/product';
 
-type Customer = { name: string; nombre: string; num_identificacion?: string; correo?: string; };
-type Product  = { name: string; nombre: string; precio: number | string; tax?: string; tax_code?: string; codigo?: string; isactive?: number; };
-type Payment  = { name: string; codigo: string; nombre: string; };
+type Customer = { name: string; nombre: string; num_identificacion?: string; correo?: string;tipo_identificacion?:string };
+
+type Payment = { name: string; codigo: string; nombre: string; };
 type CartItem = {
   name?: string; nombre?: string; description?: string; codigo?: string;
   quantity: number; price: number; discount_pct: number; tax?: string | null; total: number;
+  tax_value?: number
 };
 
 @Component({
   selector: 'app-invoicing',
   standalone: true,
-  imports: [ CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, ButtonComponent ],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, ButtonComponent],
   templateUrl: './invoicing.component.html',
   styleUrls: ['./invoicing.component.css']
 })
@@ -34,6 +36,8 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   // --- Formularios ---
   invoiceForm!: FormGroup;
   customerForm!: FormGroup;
+
+  product: Product | null = null;
 
   // --- Datos ---
   customers: Customer[] = [];
@@ -45,7 +49,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   cartItems: CartItem[] = [];
   showCustomerModal = false;
   submittedCustomerForm = false;
-
+  ambiente: string = '';
   private subscriptions: Subscription[] = [];
 
   constructor(
@@ -57,9 +61,12 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     private spinner: NgxSpinnerService,
     private alertService: AlertService,
     private fb: FormBuilder
-  ) {}
+  ) { }
 
   ngOnInit(): void {
+    const ambienteGuardado = localStorage.getItem('ambiente');
+    console.log('📦ambienteGuardado', ambienteGuardado);
+    this.ambiente = ambienteGuardado ?? '----------';
     this.initializeForms();
     this.loadInitialData();
   }
@@ -69,33 +76,33 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   }
 
   // ------------------ Inicialización ------------------
-private initializeForms(): void {
-  this.customerForm = this.fb.group({
-    nombre: ['', Validators.required],
-    num_identificacion: ['', [Validators.required, this.identificacionLengthValidator()]],
-    tipo_identificacion: ['05 - Cédula', Validators.required],
-    correo: ['', [Validators.required, Validators.email]],
-    telefono: ['', Validators.required],
-    direccion: ['', Validators.required],
-  });
+  private initializeForms(): void {
+    this.customerForm = this.fb.group({
+      nombre: ['', Validators.required],
+      num_identificacion: ['', [Validators.required, this.identificacionLengthValidator()]],
+      tipo_identificacion: ['05 - Cedula', Validators.required],
+      correo: ['', [Validators.required, Validators.email]],
+      telefono: ['', Validators.required],
+      direccion: ['', Validators.required],
+    });
 
-  this.invoiceForm = this.fb.group({
-    selectedCustomer: [null, Validators.required],
-    paymentMethod: ['01', Validators.required],
-    alias: [''],
-    postingDate: [this.todayISO(), Validators.required],
-    // company: [null, Validators.required], // <-- descomenta si usas el select de compañía
-  });
+    this.invoiceForm = this.fb.group({
+      selectedCustomer: [null, Validators.required],
+      paymentMethod: ['01', Validators.required],
+      alias: [''],
+      postingDate: [this.todayISO(), Validators.required],
+      // company: [null, Validators.required], // <-- descomenta si usas el select de compañía
+    });
 
-  const sub = this.customerForm.get('tipo_identificacion')?.valueChanges.subscribe(() => {
-    this.customerForm.get('num_identificacion')?.reset();
-  });
-  if (sub) this.subscriptions.push(sub);
-}
+    const sub = this.customerForm.get('tipo_identificacion')?.valueChanges.subscribe(() => {
+      this.customerForm.get('num_identificacion')?.reset();
+    });
+    if (sub) this.subscriptions.push(sub);
+  }
 
-private todayISO(): string {
-  return new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD' para <input type="date">
-}
+  private todayISO(): string {
+    return new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD' para <input type="date">
+  }
 
   private loadInitialData(): void {
     this.loadCustomers();
@@ -107,7 +114,7 @@ private todayISO(): string {
   loadCustomers(): void {
     this.spinner.show();
     this.customersService.getAll().subscribe({
-      next: (res: any) => this.customers = (res?.data || []) as Customer[],
+      next: (res: any) => this.customers = (res?.message.data || []) as Customer[],
       error: () => toast.error('Error al cargar la lista de clientes.'),
       complete: () => this.spinner.hide()
     });
@@ -117,8 +124,9 @@ private todayISO(): string {
     this.spinner.show();
     this.productsService.getAll().subscribe({
       next: (res: any) => {
-        const all = (res?.data || []) as Product[];
+        const all = (res || []) as Product[];
         this.products = all.filter(p => Number((p as any).isactive) === 1);
+        console.log('Productos cargados:', this.products);
       },
       error: () => toast.error('Error al cargar la lista de productos.'),
       complete: () => this.spinner.hide()
@@ -128,16 +136,22 @@ private todayISO(): string {
   loadPaymentMethods(): void {
     this.spinner.show();
     this.paymentsService.getAll().subscribe({
-      next: (res: any) => this.payments = (res?.data || []) as Payment[],
+      next: (res: any) => this.payments = (res || []) as Payment[],
       error: () => toast.error('Error al cargar métodos de pago.'),
       complete: () => this.spinner.hide()
     });
   }
 
   // ------------------ Cliente ------------------
-  onCustomerSelected(value: string) {
+  onCustomerSelected(value: Customer) {
     // value = name (por bindValue="name" en ng-select)
-    this.selectedCustomer = this.customers.find(c => c.name === value) || null;
+    console.log('value', value);
+    if (!value) {
+      this.selectedCustomer = null;
+      return
+    };
+    this.selectedCustomer = this.customers.find(c => c.name === value.name) || null;
+    console.log('selectedCustomer', this.selectedCustomer);
     // opcional: ya que el control tiene el value, no hace falta setear de nuevo
   }
 
@@ -149,23 +163,22 @@ private todayISO(): string {
     }
     this.spinner.show();
     const payload = this.customerForm.getRawValue();
-    this.customersService.create(payload).subscribe({
-      next: (res: any) => {
-        const created: Customer = res?.data;
-        toast.success('Cliente creado exitosamente.');
-        // añade a la lista y selecciona de inmediato
-        this.customers = [created, ...this.customers];
-        this.selectedCustomer = created;
-        this.invoiceForm.patchValue({ selectedCustomer: created.name });
-        this.closeCustomerModal();
-      },
-      error: (err) => {
-        const errorMessage = this.getErrorMessage(err);
-        toast.error(`Error al crear cliente: ${errorMessage}`);
-        this.spinner.hide();
-      },
-      complete: () => this.spinner.hide()
-    });
+    this.customersService.create(payload)
+      .pipe(finalize(() => this.spinner.hide()))
+      .subscribe({
+        next: (res: any) => {
+          
+          const created: Customer = res.message.data;
+          toast.success('Cliente creado exitosamente.');
+          // añade a la lista y selecciona de inmediato
+          this.customers = [created, ...this.customers];
+          this.selectedCustomer = created;
+          this.invoiceForm.patchValue({ selectedCustomer: created.name });
+          this.closeCustomerModal();
+        }
+      });
+
+
   }
 
   closeCustomerModal(): void {
@@ -177,11 +190,15 @@ private todayISO(): string {
   // ------------------ Carrito ------------------
   addProductToCart(product: Product | null): void {
     if (!product) return;
+
     const existing = this.cartItems.find(ci => ci.name === product.name);
     if (existing) {
       existing.quantity = this.safeNumber(existing.quantity, 0) + 1;
     } else {
       const price = this.safeMoney(product.precio);
+      // Inferir tax_value si no viene
+      const inferredTaxValue = product.tax_value ?? (product.tax === 'IVA-15' ? 15 : 0);
+
       this.cartItems.push({
         name: product.name,
         nombre: product.nombre,
@@ -189,12 +206,14 @@ private todayISO(): string {
         price,
         quantity: 1,
         discount_pct: 0,
-        tax: product.tax ?? product.tax_code ?? null,
+        tax: product.tax ?? product.tax_id ?? null, // sigues mandando el ID al backend
+        tax_value: inferredTaxValue,                 // % numérico (0 o 15)
         total: price
       });
     }
     this.updateCartTotals();
   }
+
 
   addAdHocLine(): void {
     const desc = (this.adHoc.description || '').trim();
@@ -232,7 +251,7 @@ private todayISO(): string {
 
   updateCartTotals(): void {
     this.cartItems.forEach(it => {
-      const qty  = Math.max(1, this.safeNumber(it.quantity, 1));
+      const qty = Math.max(1, this.safeNumber(it.quantity, 1));
       const rate = Math.max(0, this.safeMoney(it.price));
       const disc = Math.min(100, Math.max(0, this.safeNumber(it.discount_pct, 0)));
       const lineSubtotal = qty * rate * (1 - disc / 100);
@@ -249,16 +268,16 @@ private todayISO(): string {
   }
 
   get iva(): number {
-    // IVA por línea si tax === 'IVA-15'
     return this.round2(this.cartItems.reduce((acc, it) => {
-      const rate = it.tax === 'IVA-15' ? 0.15 : 0;
-      return acc + it.total * rate;
+      const pct = this.getTaxPct(it);
+      return acc + it.total * pct; // 'total' es el subtotal de la línea sin IVA
     }, 0));
   }
 
   get total(): number {
     return this.round2(this.subtotal + this.iva);
   }
+
 
   // ------------------ Factura ------------------
   finalizeInvoice(): void {
@@ -270,6 +289,17 @@ private todayISO(): string {
       toast.error('Agrega al menos un producto a la factura.');
       return;
     }
+    const TYPE_IDENTIFICATION_RUC = "07 - Consumidor Final";
+    const UMBRAL = 50;
+
+    const isConsumidorFinal = this.selectedCustomer?.tipo_identificacion === TYPE_IDENTIFICATION_RUC;
+    const total = Number(this.total); // asegúrate que es número
+
+    if (isConsumidorFinal && total >= UMBRAL) {
+      toast.error(`El consumidor final no puede facturar por un monto mayor o igual a $${UMBRAL}.`);
+      return;
+    }
+
 
     const customerName: string = this.invoiceForm.get('selectedCustomer')?.value;
     const paymentCode: string = this.invoiceForm.get('paymentMethod')?.value;
@@ -290,21 +320,22 @@ private todayISO(): string {
       })),
       payments: [{ formas_de_pago: payment?.name }]
     };
+    console.log('invoiceData', invoiceData);
 
     this.alertService.confirm('¿Deseas emitir la factura?', 'Esta acción creará un documento legal.').then(result => {
       if (!result.isConfirmed) return;
 
       this.spinner.show();
-      this.ordersService.create(invoiceData).subscribe({
-        next: (res: any) => {
-          const id = res?.data?.name;
-          toast.success(`Factura #${id} creada exitosamente.`);
-          setTimeout(() => this.printInvoice(id), 300);
-          this.clearInvoiceForm();
-        },
-        error: () => toast.error('Error al crear la factura.'),
-        complete: () => this.spinner.hide()
-      });
+      this.ordersService.create(invoiceData)
+        .pipe(finalize(() => this.spinner.hide()))
+        .subscribe({
+          next: (res: any) => {
+            const id = res?.data?.name;
+            toast.success(`Factura #${id} creada exitosamente.`);
+            this.clearInvoiceForm();
+          }
+          // 👈 sin error handler; el servicio ya mostró el toast
+        });
     });
   }
 
@@ -315,7 +346,7 @@ private todayISO(): string {
   }
 
   private clearInvoiceForm(): void {
-    this.invoiceForm.reset({ paymentMethod: '01', selectedCustomer: null, alias: '' });
+    this.invoiceForm.reset({ paymentMethod: '01', selectedCustomer: null, alias: '', postingDate: this.todayISO() });
     this.cartItems = [];
     this.selectedCustomer = null;
   }
@@ -366,7 +397,7 @@ private todayISO(): string {
   private safeMoney(v: any): number {
     const n = typeof v === 'string' ? parseFloat(v) : Number(v);
     return Number.isFinite(n) ? this.round2(n) : 0;
-    }
+  }
 
   private round2(n: number): number {
     return Math.round((n + Number.EPSILON) * 100) / 100;
@@ -374,4 +405,15 @@ private todayISO(): string {
 
   // ad-hoc helper
   adHoc = { description: '' };
+
+  private getTaxPct(it: CartItem): number {
+    // Prioriza tax_value numérico (0 o 15); si no existe, compatibilidad con 'IVA-15'
+    if (Number.isFinite(it.tax_value as number)) {
+      return Math.max(0, (it.tax_value as number) / 100); // 15 -> 0.15
+    }
+    return it.tax === 'IVA-15' ? 0.15 : 0;
+  }
+
+
 }
+

@@ -1,181 +1,200 @@
-<div class="container bg-primary-foreground mx-auto my-8 px-4 p-3">
+<div class="app-container">
 
-
-  <div class="mb-4 flex justify-between">
-    <div class="inline-block">
-      <h2 class="text-2xl font-semibold text-primary">Productos</h2>
-      <div class="text-muted-foreground space-x-1 text-xs font-medium">
-        <a href="" class="hover:text-primary"># Registros:</a>
-        <span class="text-foreground">{{ productos.length }}</span>
+  <!-- Header -->
+  <div class="app-page-header">
+    <div>
+      <h2 class="app-page-title">Productos</h2>
+      <div class="app-page-subtle space-x-1">
+        <span># Registros:</span>
+        <span class="text-foreground font-semibold">{{ productosFiltradosList.length || 0 }}</span>
       </div>
     </div>
-    <div class="inline-block space-x-4">
-      <button class="bg-primary text-primary-foreground flex-none rounded-md px-4 py-2.5 text-xs font-semibold"
-        (click)="abrirModal()">
-        + Nuevo Producto
-      </button>
+
+    <div class="flex gap-2">
+      <button class="btn btn-primary" (click)="abrirModal()">+ Nuevo Producto</button>
     </div>
   </div>
 
-  <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar productos..."
-    class="mb-4 w-full border rounded px-4 py-2 text-sm" />
-  <ng-container *ngIf="productosFiltradosList.length > 0; else emptyProducts">
-    <div class="overflow-x-auto rounded-lg shadow-md">
-      <table class="min-w-full divide-y divide-gray-200 bg-white text-sm">
-        <thead class="bg-gray-100 sticky top-0 z-10">
-          <tr>
-            <th class="p-3 text-left font-medium text-gray-700">Estado</th>
-            <th class="p-3 text-left font-medium text-gray-700">Nombre</th>
-            <th class="p-3 text-left font-medium text-gray-700">Descripción</th>
-            <th class="p-3 text-left font-medium text-gray-700">Precio</th>
-            <th class="p-3 text-left font-medium text-gray-700">IVA</th>
-            <th class="p-3 text-left font-medium text-gray-700">Categoría</th>
-            <th class="p-3 text-left font-medium text-gray-700">Stock</th>
-            <th class="p-3 text-left font-medium text-gray-700">Acciones</th>
+  <!-- Filtros -->
+  <div class="toolbar">
+    <div class="flex gap-2 w-full md:w-auto">
+      <input class="input" type="text" [(ngModel)]="searchTerm"
+        placeholder="Buscar por nombre o estado (disponible / agotado)..." />
+      <select class="select" [(ngModel)]="categoriaFiltro" (ngModelChange)="actualizarProductosFiltrados()">
+        <option value="">Todas las categorías</option>
+        <option *ngFor="let c of categories" [value]="c.name">{{ c.nombre }}</option>
+      </select>
+    </div>
 
+    <div class="flex gap-2" (click)="categoriaFiltro=''; searchTerm=''; actualizarProductosFiltrados()">
+
+      <app-button full impact="bold" tone="light" shape="rounded" size="small">
+        Limpiar
+      </app-button>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <ng-container *ngIf="productosFiltradosList?.length; else emptyProducts">
+    <div class="app-table-wrap">
+      <table class="app-table">
+        <thead class="app-thead">
+          <tr>
+            <th class="app-th">Producto</th>
+            <th class="app-th">Código</th>
+            <th class="app-th">Categoría</th>
+            <th class="app-th">Impuesto</th>
+            <th class="app-th">Precio</th>
+            <th class="app-th">Stock</th>
+            <th class="app-th">Acciones</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100">
-          <tr *ngFor="let product of productosFiltradosList | paginate: { itemsPerPage: pageSize, currentPage: page }"
-            class="hover:bg-gray-50 transition">
 
-            <td class="p-3">
-              <span class="text-xs font-medium px-2 py-1 rounded" [class.bg-green-100]="product.isactive"
-                [class.bg-red-100]="!product.isactive" [class.text-green-800]="product.isactive"
-                [class.text-red-800]="!product.isactive">
-                {{ product.isactive ? 'Activo' : 'Inactivo' }}
+        <tbody>
+          <tr
+            *ngFor="let p of productosFiltradosList | paginate: { itemsPerPage: pageSize, currentPage: page }; trackBy: trackByName"
+            class="app-tr">
+
+            <td class="app-td">
+              <div class="flex flex-col">
+                <span class="font-medium text-gray-900">{{ p.nombre }}</span>
+                <span class="text-xs text-gray-500">{{ p.descripcion || '' }}</span>
+              </div>
+            </td>
+
+            <td class="app-td font-mono text-xs text-gray-600">{{ p.codigo || '—' }}</td>
+
+            <td class="app-td">
+              {{ getNameCategory(p.categoria) }}
+            </td>
+
+            <td class="app-td">
+              <span class="badge badge-gray">{{ p.tax || 'IVA-0' }}</span>
+            </td>
+
+            <td class="app-td font-semibold">{{ p.precio | currency }}</td>
+
+            <td class="app-td">
+              <span class="badge" [ngClass]="{
+                      'badge-green':  !p.is_out_of_stock,
+                      'badge-red':    p.is_out_of_stock
+                    }">
+                {{ p.is_out_of_stock ? 'Agotado' : 'Disponible' }}
               </span>
             </td>
 
-            <td class="p-3 text-gray-800">{{ product.nombre }}</td>
-            <td class="p-3 text-gray-800">
-              {{ (product.descripcion?.length > 15) ? (product.descripcion | slice:0:15) + '...' : product.descripcion
-              || '------' }}
+            <td class="app-td">
+              <div class="flex gap-2">
+                <button class="btn btn-outline" (click)="abrirModal(p)">✏️ Editar</button>
+                <button class="btn btn-warn" (click)="eliminar(p.name)">🗑️ Eliminar</button>
+              </div>
             </td>
 
-            <td class="p-3 text-gray-800">${{ product.precio | number: '1.2-2' }}</td>
-            <td class="p-3 text-gray-800">{{ product.tax }}</td>
-            <td class="p-3 capitalize text-gray-800">
-              {{ getNameCategory(product.categoria) || '—' }}
-            </td>
-
-
-
-            <td class="p-3">
-              <span class="text-xs font-medium px-2 py-1 rounded" [class.bg-green-100]="!product.is_out_of_stock"
-                [class.bg-red-100]="product.is_out_of_stock" [class.text-green-800]="!product.is_out_of_stock"
-                [class.text-red-800]="product.is_out_of_stock">
-                {{ !product.is_out_of_stock ? 'Disponible' : 'Agotado' }}
-              </span>
-            </td>
-            <td class="p-3 flex gap-2">
-              <button class="text-blue-600 hover:text-blue-800 font-medium transition" (click)="abrirModal(product)">
-                ✏️ Editar
-              </button>
-              <button class="text-red-600 hover:text-red-800 font-medium transition" (click)="eliminar(product.name)">
-                🗑️ Eliminar
-              </button>
-            </td>
           </tr>
         </tbody>
       </table>
 
-      <!-- Mensaje si no hay productos -->
-      <div *ngIf="productosFiltradosList.length === 0" class="text-center text-gray-500 py-4">
-        No se encontraron productos.
+      <!-- Paginación (ngx-pagination) -->
+      <div class="pager">
+        <button class="pager-btn" (click)="page = page - 1" [disabled]="page === 1">« Anterior</button>
+        <span class="text-sm">Página {{ page }}</span>
+        <button class="pager-btn" (click)="page = page + 1"
+          [disabled]="(productosFiltradosList.length || 0) <= (page * pageSize)">
+          Siguiente »
+        </button>
       </div>
-
-      <!-- Controles de paginación -->
-      <pagination-controls (pageChange)="page = $event" class="mt-4 flex justify-center"></pagination-controls>
     </div>
   </ng-container>
-  <ng-template #emptyProducts>
-    <p class="text-center text-gray-500">No hay datos para mostrar</p>
 
+  <ng-template #emptyProducts>
+    <div class="app-card">
+      <div class="app-card-body text-center text-gray-500">
+        No hay productos para mostrar.
+      </div>
+    </div>
   </ng-template>
 
+  <!-- Modal Crear/Editar -->
+  <div *ngIf="mostrarModal" class="app-modal-backdrop">
+    <div class="app-modal">
+      <button class="app-modal-close" (click)="cerrarModal()">×</button>
 
+      <div class="app-card-body">
+        <h3 class="text-lg font-semibold mb-4">
+          {{ productoEditando ? 'Editar Producto' : 'Nuevo Producto' }}
+        </h3>
 
+        <form [formGroup]="productoForm" (ngSubmit)="guardarProducto()" class="grid md:grid-cols-2 gap-4 text-sm">
+          <div>
+            <label class="block mb-1 font-medium">Nombre</label>
+            <input type="text" class="input" formControlName="nombre" />
+            <div *ngIf="f['nombre'].touched && f['nombre'].invalid" class="text-red-600 text-xs mt-1">
+              Nombre es requerido
+            </div>
+          </div>
 
-  <!-- MODAL CREAR / EDITAR -->
-  <div *ngIf="mostrarModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-    <div class="bg-white w-full max-w-md rounded shadow-lg p-6 relative">
-      <button class="absolute top-2 right-3 text-xl" (click)="cerrarModal()">×</button>
-      <h3 class="text-lg font-semibold mb-4">
-        {{ productoEditando?.id ? 'Editar Producto' : 'Nuevo Producto' }}
-      </h3>
+          <div>
+            <label class="block mb-1 font-medium">Código</label>
+            <input type="text" class="input" formControlName="codigo" />
+          </div>
 
-      <form [formGroup]="productoForm" (ngSubmit)="guardarProducto()" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium">Nombre</label>
-          <input formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm" />
-          <p *ngIf="f['nombre'].touched && f['nombre'].invalid" class="text-red-500 text-xs">Nombre requerido.</p>
-        </div>
+          <div class="md:col-span-2">
+            <label class="block mb-1 font-medium">Descripción</label>
+            <textarea rows="3" class="input" formControlName="descripcion"></textarea>
+          </div>
 
-        <div>
-          <label class="block text-sm font-medium">Descripción</label>
-          <input formControlName="descripcion" class="w-full border rounded px-3 py-2 text-sm" />
-          <p *ngIf="f['descripcion'].touched && f['descripcion'].invalid" class="text-red-500 text-xs">Descripción
-            requerido.</p>
-        </div>
+          <div>
+            <label class="block mb-1 font-medium">Precio</label>
+            <input type="number" step="0.01" class="input" formControlName="precio" />
+            <div *ngIf="f['precio'].touched && f['precio'].invalid" class="text-red-600 text-xs mt-1">
+              Precio inválido
+            </div>
+          </div>
 
-        <div>
-          <label class="block text-sm font-medium">Precio</label>
-          <input type="number" step="0.01" formControlName="precio" class="w-full border rounded px-3 py-2 text-sm" />
-          <p *ngIf="f['precio'].touched && f['precio'].hasError('required')" class="text-red-500 text-xs">Precio
-            requerido.</p>
-          <p *ngIf="f['precio'].touched && f['precio'].hasError('min')" class="text-red-500 text-xs">Debe ser mayor o
-            igual a 0.</p>
-        </div>
+          <div>
+            <label class="block mb-1 font-medium">Impuesto</label>
+            <select class="select" formControlName="tax">
+              <option *ngFor="let t of taxes" [value]="t.name">{{ t.name }}</option>
+              <!-- fallback si no llega taxes -->
+              <option *ngIf="taxes.length === 0" value="IVA-0" disabled>No hay impuestos disponibles</option>
+            </select>
+          </div>
 
-        <div>
-          <label class="block text-sm font-medium">Impuesto</label>
-          <select formControlName="tax" class="w-full border rounded px-3 py-2 text-sm">
-            <option value="" disabled selected>Selecciona un impuesto</option>
-            <option *ngFor="let tax of taxes" [ngValue]="tax.name">{{ tax.name }}</option>
-          </select>
-          <p *ngIf="f['tax'].touched && f['tax'].invalid" class="text-red-500 text-xs">Iva requerido.</p>
-        </div>
+          <div>
+            <label class="block mb-1 font-medium">Categoría</label>
+            <select class="select" formControlName="categoria">
+              <option *ngFor="let c of categories" [value]="c.name">{{ c.nombre }}</option>
+              <option *ngIf="categories.length === 0" value="" disabled>No hay categorías disponibles</option>
+            </select>
+            <div *ngIf="f['categoria'].touched && f['categoria'].invalid" class="text-red-600 text-xs mt-1">
+              Categoría es requerida
+            </div>
+          </div>
 
-        <div>
-          <label class="block text-sm font-medium">Categoría</label>
-          <select formControlName="categoria" class="w-full border rounded px-3 py-2 text-sm">
-            <option value="" disabled selected>Selecciona una categoría</option>
-            <option *ngFor="let cat of categories" [value]="cat.name">{{ cat.nombre }}</option>
-          </select>
-          <p *ngIf="f['categoria'].touched && f['categoria'].invalid" class="text-red-500 text-xs">Categoría requerida.
-          </p>
-        </div>
+          <div>
+            <label class="block mb-1 font-medium">Estado</label>
+            <div class="flex items-center gap-3">
+              <label class="inline-flex items-center gap-2">
+                <input type="checkbox" formControlName="isactive" />
+                <span>Activo</span>
+              </label>
+              <label class="inline-flex items-center gap-2">
+                <input type="checkbox" formControlName="is_out_of_stock" />
+                <span>Agotado</span>
+              </label>
+            </div>
+          </div>
 
+          <div class="md:col-span-2 flex justify-end gap-2 mt-2">
+            <button type="button" class="btn btn-outline" (click)="cerrarModal()">Cancelar</button>
+            <button type="submit" class="btn btn-primary">
+              {{ productoEditando ? 'Guardar cambios' : 'Crear' }}
+            </button>
+          </div>
+        </form>
 
-        <!-- <div>
-            <label class="block text-sm font-medium">Código</label>
-            <input formControlName="code" class="w-full border rounded px-3 py-2 text-sm" />
-          </div> -->
-
-        <!-- <div>
-            <label class="block text-sm font-medium">Código de barras</label>
-            <input formControlName="barcode" class="w-full border rounded px-3 py-2 text-sm" />
-          </div> -->
-
-        <div class="flex items-center gap-2">
-          <input type="checkbox" formControlName="isactive" />
-          <label class="text-sm font-medium">Activo</label>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <input type="checkbox" formControlName="is_out_of_stock" />
-          <label class="text-sm font-medium">Agotado</label>
-        </div>
-
-
-        <div class="pt-2">
-          <button type="submit" class="bg-primary text-white px-4 py-2 rounded w-full">
-            Guardar
-          </button>
-        </div>
-      </form>
-
+      </div>
     </div>
   </div>
+
 </div>

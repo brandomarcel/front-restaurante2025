@@ -103,6 +103,7 @@ export class Menu {
             { label: 'Retiros', route: '/caja/retiro' }
           ],
         },
+        
 
       ],
     },
@@ -112,6 +113,8 @@ export class Menu {
 //           route: '/dashboard/ventasproducto',
 //         },
 
+
+
      {
       group: 'Reportes',
       separator: false,
@@ -119,10 +122,10 @@ export class Menu {
         {
           icon: 'assets/icons/heroicons/outline/download.svg',
           label: 'Reportes',
-          route: '/dashboard',
+          route: '/report',
           children: [
-            { label: 'Productos Mas Vendidos', route: '/dashboard/ventasproducto' },
-            { label: 'Cierres de Caja', route: '/dashboard/report-cierre-caja' },
+            { label: 'Productos Mas Vendidos', route: '/report/ventasproducto' },
+            { label: 'Cierres de Caja', route: '/report/report-cierre-caja' },
             
           ],
         },
@@ -156,21 +159,7 @@ export class Menu {
         //   label: 'Reportes',
         //   route: '/dashboard/reports',
         // },
-        {
-          icon: 'assets/icons/heroicons/outline/list-bullet.svg',
-          label: 'Categorias',
-          route: '/dashboard/categories',
-        },
-        // {
-        //   icon: 'assets/icons/heroicons/outline/folder.svg',
-        //   label: 'Folders',
-        //   route: '/folders',
-        //   children: [
-        //     { label: 'Current Files', route: '/folders/current-files' },
-        //     { label: 'Downloads', route: '/folders/download' },
-        //     { label: 'Trash', route: '/folders/trash' },
-        //   ],
-        // },
+
         
 
         // {

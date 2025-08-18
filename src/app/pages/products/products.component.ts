@@ -11,10 +11,11 @@ import { CategoryService } from 'src/app/services/category.service';
 import { TaxesService } from 'src/app/services/taxes.service';
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { AlertService } from 'src/app/core/services/alert.service';
+import { ButtonComponent } from "src/app/shared/components/button/button.component";
 
 @Component({
   selector: 'app-products',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule, ButtonComponent],
   templateUrl: './products.component.html',
   styleUrl: './products.component.css'
 })
@@ -30,7 +31,7 @@ export class ProductsComponent implements OnInit {
   productoEditando: any = null;
   productoForm!: FormGroup;
   page = 1;
-  pageSize = 20;
+  pageSize = 10;
 
   constructor(
     private productsService: ProductsService,
@@ -52,8 +53,8 @@ export class ProductsComponent implements OnInit {
     this.spinner.show();
     this.productsService.getAll().subscribe({
       next: (res: any) => {
-        this.productos = res.data;
-        this.productosFiltradosList = res.data; // Inicializar la lista filtrada
+        this.productos = res;
+        this.productosFiltradosList = res; // Inicializar la lista filtrada
         this.productosFiltradosList.sort((a, b) => a.name.localeCompare(b.name));
         console.log('Productos cargados:', this.productos);
       },
@@ -91,14 +92,16 @@ export class ProductsComponent implements OnInit {
   }
 
   actualizarProductosFiltrados() {
-    const term = this._searchTerm.toLowerCase();
+    const term = (this._searchTerm || '').toLowerCase();
+    const cat = this.categoriaFiltro || '';
 
-    this.productosFiltradosList = this.productos.filter(p => {
-      const nombre = p.nombre.toLowerCase();
-      const estadoStock = p.is_out_of_stock === 1 ? 'agotado' : 'disponible';
-
-      return nombre.includes(term) || estadoStock.includes(term);
-    });
+    this.productosFiltradosList = (this.productos || []).filter(p => {
+      const nombre = (p.nombre || '').toLowerCase();
+      const estadoStock = (p.is_out_of_stock ? 'agotado' : 'disponible');
+      const byText = nombre.includes(term) || estadoStock.includes(term);
+      const byCat = !cat || p.categoria === cat;
+      return byText && byCat;
+    }).sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
   }
 
 
@@ -215,4 +218,14 @@ export class ProductsComponent implements OnInit {
     const document = this.categories.find(d => d.name === categoryId);
     return document ? document.nombre : 'No disponible';
   }
+
+  // Filtro por texto + categoría (respeta tu API de datos)
+  categoriaFiltro: string = '';
+
+
+
+  // trackBy para rendimiento al paginar
+  trackByName = (_: number, item: any) => item?.name || item?.codigo || item?.nombre;
+
+
 }

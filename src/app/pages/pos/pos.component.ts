@@ -16,7 +16,7 @@ import { ProductsService } from 'src/app/services/products.service';
 import { environment } from '../../../environments/environment';
 import { UtilsService } from '../../core/services/utils.service';
 import { AlertService } from '../../core/services/alert.service';
-import { filter } from 'rxjs';
+import { filter, finalize } from 'rxjs';
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
 
 @Component({
@@ -129,11 +129,11 @@ export class PosComponent implements OnInit {
     this.spinner.show();
     this.productsService.getAll().subscribe((res: any) => {
       this.spinner.hide();
-      this.products = res.data || [];
-      if ((res.data).length > 0) {
-        console.log('res.data', res.data);
+      this.products = res || [];
+      if ((res).length > 0) {
+        console.log('res', res);
 
-        this.products = (res.data).filter((product: any) => {
+        this.products = (res).filter((product: any) => {
           return product.isactive === 1
         });
       }
@@ -156,7 +156,7 @@ export class PosComponent implements OnInit {
     this.spinner.show();
     this.paymentsService.getAll().subscribe((res: any) => {
       this.spinner.hide();
-      this.payments = res.data || [];
+      this.payments = res || [];
       console.log(' this.payments', this.payments);
     });
   }
@@ -223,7 +223,7 @@ export class PosComponent implements OnInit {
         console.log('Cliente creado:', res);
         toast.success('Cliente creado exitosamente');
         this.cerrarModal();
-        this.customer = res.data;
+        this.customer = res.message.data;
         this.identificationCustomer = this.customer.num_identificacion;
       },
       error: (err) => {
@@ -404,6 +404,20 @@ export class PosComponent implements OnInit {
     console.log('this.cart', this.cart);
     const payment = this.payments.find((p: any) => p.codigo === this.paymentMethod);
     console.log('paymentCode', payment);
+    console.log('this.client', this.customer);
+
+    const TYPE_IDENTIFICATION_RUC = "07 - Consumidor Final";
+    const UMBRAL = 50;
+
+    const isConsumidorFinal = this.customer?.tipo_identificacion === TYPE_IDENTIFICATION_RUC;
+    const total = Number(this.total); // asegúrate que es número
+
+
+    if (isConsumidorFinal && total >= UMBRAL) {
+      toast.error(`El consumidor final no puede facturar por un monto mayor o igual a $${UMBRAL}.`);
+      return;
+    }
+
 
     if (this.paymentMethod === '01' && (this.amountReceived === null || this.change < 0)) {
       toast.warning('Monto recibido insuficiente.');
@@ -434,21 +448,16 @@ export class PosComponent implements OnInit {
         if (result.isConfirmed) {
           console.log('Confirmado');
           this.spinner.show();
-          this.ordersService.create(order).subscribe({
-            next: (res) => {
-              console.log('Pedido guardado:', res);
-              const orderId = res.data.name; // Asegúrate de que el ID del pedido se obtenga correctamente
-              this.spinner.hide();
-              toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
-              setTimeout(() => this.printCombinedTicket(orderId), 500);
-
-
-            },
-            error: () => {
-              this.spinner.hide();
-              toast.error('Error al guardar el pedido.');
-            }
-          });
+          this.ordersService.create(order).pipe(finalize(() => this.spinner.hide()))
+            .subscribe({
+              next: (res: any) => {
+                console.log('Pedido guardado:', res);
+                const orderId = res.data.name; // Asegúrate de que el ID del pedido se obtenga correctamente
+                this.spinner.hide();
+                toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
+                setTimeout(() => this.printCombinedTicket(orderId), 500);
+              }
+            });
         } else {
           console.log('Cancelado');
         }

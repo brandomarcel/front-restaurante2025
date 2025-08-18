@@ -1,34 +1,38 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
+import { API_ENDPOINT } from '../core/constants/api.constants';
+import { map } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class PaymentsService {
-  private baseUrl = environment.apiUrl;
+  private readonly apiUrl = environment.apiUrl; // Cambia si usás otro backend
 
-  constructor(private http: HttpClient) { }
-
-  getAll() {
-    const campos = ['name', 'nombre','description', 'codigo'];
-
-    return this.http.get(`${environment.apiUrl}/resource/payments?fields=${JSON.stringify(campos)}`, {
-      withCredentials: true
-    });
+  private urlBase: string = '';
+  constructor(private http: HttpClient) {
+    this.urlBase = this.apiUrl + API_ENDPOINT.Payments;
   }
+    getAll() {
+      return this.http.get<any>(`${this.urlBase}.get_payments`, {
+        withCredentials: true
+      }).pipe(
+        map((res: any) => res.message.data) // extrae solo el array
+      );
+    }
 
-  getById(id: number) {
-    return this.http.get<any>(`${this.baseUrl}/${id}`);
-  }
+  // getById(id: number) {
+  //   return this.http.get<any>(`${this.baseUrl}/${id}`);
+  // }
 
-  create(data: any) {
-    return this.http.post(this.baseUrl, data);
-  }
+  // create(data: any) {
+  //   return this.http.post(this.baseUrl, data);
+  // }
 
-  update(id: number, data: any) {
-    return this.http.patch(`${this.baseUrl}/${id}`, data);
-  }
+  // update(id: number, data: any) {
+  //   return this.http.patch(`${this.baseUrl}/${id}`, data);
+  // }
 
-  delete(id: number) {
-    return this.http.delete(`${this.baseUrl}/${id}`);
-  }
+  // delete(id: number) {
+  //   return this.http.delete(`${this.baseUrl}/${id}`);
+  // }
 }

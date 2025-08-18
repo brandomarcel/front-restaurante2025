@@ -9,6 +9,7 @@ export class FrappeErrorService {
 
     const serverMessage = this.extractServerMessage(error?.error?._server_messages);
     if (serverMessage) {
+      console.log('serverMessage',serverMessage);
       return (serverMessage);
     }
 
@@ -25,16 +26,28 @@ export class FrappeErrorService {
 
   private extractServerMessage(_server_messages: any): string | null {
     try {
-      const msgs = JSON.parse(_server_messages);
-      if (Array.isArray(msgs) && msgs.length > 0) {
-        const msgObj = JSON.parse(msgs[0]);
-        return msgObj.message || 'Error del servidor';
+      const decoded = typeof _server_messages === 'string'
+        ? decodeURIComponent(_server_messages)
+        : _server_messages;
+
+      const msgs = JSON.parse(decoded);
+      if (Array.isArray(msgs) && msgs.length) {
+        // concatena todos por si vienen varios
+        const texts = msgs.map(m => {
+          const obj = JSON.parse(m);
+          const raw = obj.message || obj;
+          // quitar tags simples
+          return String(raw).replace(/<[^>]+>/g, '').trim();
+        }).filter(Boolean);
+
+        if (texts.length) return texts.join(' | ');
       }
-    } catch (e) {
+    } catch (_) {
       console.warn('No se pudo parsear _server_messages');
     }
     return null;
   }
+
 
   private extractExceptionMessage(exc: any): string {
     const raw = (exc.message || '').toLowerCase();

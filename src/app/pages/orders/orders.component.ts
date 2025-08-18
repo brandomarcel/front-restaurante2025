@@ -7,54 +7,52 @@ import { NgxPaginationModule } from 'ngx-pagination';
 import { FormsModule } from '@angular/forms';
 import { PrintService } from 'src/app/services/print.service';
 import { toast } from 'ngx-sonner';
+import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 
 @Component({
   selector: 'app-orders',
-  imports: [CommonModule, EcuadorTimePipe, NgxPaginationModule, FormsModule],
+  imports: [CommonModule, EcuadorTimePipe, NgxPaginationModule, FormsModule,ButtonComponent],
   templateUrl: './orders.component.html',
   styleUrl: './orders.component.css'
 })
 export class OrdersComponent implements OnInit {
-
   orders: any;
   ordersFiltradosList: any[] = [];
   orderSelected: any | null = null;
   expandedOrderId: number | null = null;
-  mostrarModal: boolean = false;
+  mostrarModal = false;
 
   page = 1;
   pageSize = 15;
-  totalOrders = 0; // se actualiza desde la respuesta
+  totalOrders = 0;
   totalPages = 1;
 
-  private _searchTerm: string = '';
-activeTab = 'info'; // 'info' o 'sri'
+  private _searchTerm = '';
+  activeTab = 'info';
 
+  // NUEVOS filtros
+  tipoFiltro: '' | 'Factura' | 'Nota de venta' = '';
+  anulacionFiltro: '' | 'soloAnuladas' | 'excluirAnuladas' = '';
 
-  constructor(private ordersService: OrdersService,
+  constructor(
+    private ordersService: OrdersService,
     public spinner: NgxSpinnerService,
     private printService: PrintService,
-  ) { }
-  ngOnInit() {
-    this.loadOrders();
-  }
+  ) {}
 
-  //cargar order
-  // Cargar pedidos desde el servicio
+  ngOnInit() { this.loadOrders(); }
+
   loadOrders(): void {
     this.spinner.show();
-
     const offset = (this.page - 1) * this.pageSize;
 
     this.ordersService.getAll(this.pageSize, offset).subscribe({
       next: (res: any) => {
+        this.orders = res.message.data || [];
+        this.totalOrders = res.message.total || 0;
+        this.totalPages = Math.ceil(this.totalOrders / this.pageSize) || 1;
 
-        console.log('res', res);
-        this.orders = res.message.data;
-        this.totalOrders = res.message.total;
-        this.totalPages = Math.ceil(this.totalOrders / this.pageSize);
-
-        this.ordersFiltradosList = [...this.orders];
+        this.actualizarOrdenesFiltradas();  // ✅ aplicar filtros con la data nueva
         this.spinner.hide();
       },
       error: (err) => {
@@ -65,49 +63,81 @@ activeTab = 'info'; // 'info' o 'sri'
   }
 
   nextPage(): void {
-    if (this.page < this.totalPages) {
-      this.page++;
-      this.loadOrders();
-    }
+    if (this.page < this.totalPages) { this.page++; this.loadOrders(); }
   }
-
   prevPage(): void {
-    if (this.page > 1) {
-      this.page--;
-      this.loadOrders();
-    }
+    if (this.page > 1) { this.page--; this.loadOrders(); }
   }
 
-
-  get searchTerm(): string {
-    return this._searchTerm;
-  }
-
+  get searchTerm(): string { return this._searchTerm; }
   set searchTerm(value: string) {
-    this._searchTerm = value;
-    this.actualizarProductosFiltrados(); // se actualiza cada vez que el usuario escribe
+    this._searchTerm = value || '';
+    this.actualizarOrdenesFiltradas();
   }
 
-  actualizarProductosFiltrados() {
-    const term = this._searchTerm.toLowerCase();
-    this.ordersFiltradosList = this.orders.filter((p: any) =>
-      p.name.toLowerCase().includes(term)
-    );
+  /** Determina si la orden está anulada (estado_sri que contenga 'anul') */
+  private esAnulada(o: any): boolean {
+    const estado = (o?.estado_sri || o?.sri?.estado_sri || '').toString().toLowerCase();
+    return estado.includes('anul'); // cubre 'ANULADO', 'ANULADA'
+  }
+
+  /** Texto para búsqueda: name, cliente, identificación, tipo, estado */
+  private textHayCoincidencia(o: any, term: string): boolean {
+    if (!term) return true;
+    const hay = [
+      o?.name,
+      o?.customer?.fullName,
+      o?.customer?.identification,
+      o?.type,
+      o?.estado_sri || o?.sri?.estado_sri
+    ]
+      .map(v => (v ?? '').toString().toLowerCase())
+      .some(v => v.includes(term));
+    return hay;
+  }
+
+  /** Aplica todos los filtros */
+  actualizarOrdenesFiltradas(): void {
+    const term = (this._searchTerm || '').toLowerCase();
+
+    let lista = Array.isArray(this.orders) ? [...this.orders] : [];
+
+    lista = lista.filter((o: any) => {
+      // filtro por texto
+      const byText = this.textHayCoincidencia(o, term);
+
+      // filtro por tipo (Factura / Nota de venta)
+      const byTipo = !this.tipoFiltro || (o?.type === this.tipoFiltro);
+
+      // filtro por anulación
+      const anulada = this.esAnulada(o);
+      const byAnulacion =
+        this.anulacionFiltro === ''
+          ? true
+          : this.anulacionFiltro === 'soloAnuladas'
+            ? anulada
+            : !anulada; // 'excluirAnuladas'
+
+      return byText && byTipo && byAnulacion;
+    });
+
+    this.ordersFiltradosList = lista;
+  }
+
+  limpiarFiltros(): void {
+    this._searchTerm = '';
+    this.tipoFiltro = '';
+    this.anulacionFiltro = '';
+    this.actualizarOrdenesFiltradas();
   }
 
   toggleOrderDetail(order: any) {
     this.activeTab = 'info';
-    this.orderSelected = order ? order : null;
-    console.log('this.orderSelected', this.orderSelected);
+    this.orderSelected = order || null;
     this.mostrarModal = true;
-
   }
 
-  cerrarModal() {
-    this.mostrarModal = false;
-    // this.productoEditando = null;
-    // this.productoForm = this.resetForm();
-  }
+  cerrarModal() { this.mostrarModal = false; }
 
   getComandaPdf() {
     const order = 'http://207.180.197.160:1012' + this.printService.getComandaPdf(this.orderSelected.name);

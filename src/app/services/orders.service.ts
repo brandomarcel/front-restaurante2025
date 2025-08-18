@@ -1,13 +1,17 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
-import { Observable } from 'rxjs';
+import { catchError, EMPTY, Observable, throwError } from 'rxjs';
+import { FrappeErrorService } from '../core/services/frappe-error.service';
+import { toast } from 'ngx-sonner';
 
 @Injectable({ providedIn: 'root' })
 export class OrdersService {
   private readonly apiUrl = environment.apiUrl; // Cambia si usás otro backend
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient,
+    private frappeErr: FrappeErrorService,
+  ) { }
 
   getAll(limit: number = 10, offset: number = 0) {
     const params = new HttpParams()
@@ -43,10 +47,15 @@ export class OrdersService {
   // create(order: any) {
   //   return this.http.post(this.apiUrl, order);
   // }
-  create(order: any): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/resource/orders`, order);
+create(order: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/resource/orders`, order).pipe(
+      catchError((error) => {
+        const msg = this.frappeErr.handle(error) || 'Error al crear la factura.';
+        toast.error(msg);
+        return EMPTY; // 👈 corta la cadena sin “romper” el flujo
+      })
+    );
   }
-
   delete(id: number) {
     return this.http.delete(`${this.apiUrl}/${id}`);
   }
