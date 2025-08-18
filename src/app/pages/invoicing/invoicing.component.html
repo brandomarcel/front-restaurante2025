@@ -73,7 +73,7 @@
               <label for="product-select" class="block text-xs font-medium text-gray-700 mb-1">
                 Agregar Producto/Servicio
               </label>
-              <ng-select id="product-select" class="ng-select-tailwind" [items]="products" bindLabel="nombre"
+              <ng-select formControlName="selectedProduct" id="product-select" class="ng-select-tailwind" [items]="products" bindLabel="nombre"
                 bindValue="name" placeholder="Busca y agrega un ítem" [searchable]="true"
                 (change)="addProductToCart($event)">
               </ng-select>

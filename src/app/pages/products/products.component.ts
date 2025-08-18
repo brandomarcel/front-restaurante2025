@@ -201,7 +201,7 @@ export class ProductsComponent implements OnInit {
       nombre: ['', Validators.required],
       descripcion: [''],
       precio: [null, [Validators.required, Validators.min(0)]],
-      tax: ['IVA-0', Validators.required],
+      tax: [null, Validators.required],
       categoria: ['', Validators.required], // ahora es categoryId
       codigo: [''],
       isactive: [true],

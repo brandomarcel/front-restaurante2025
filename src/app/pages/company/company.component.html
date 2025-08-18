@@ -23,7 +23,7 @@
 
                     <div>
                         <label class="block font-medium mb-1">RUC</label>
-                        <input appOnlyNumbers type="text" class="input no-spinner" formControlName="ruc"
+                        <input appOnlyNumbers type="text" maxlength="13" class="input no-spinner" formControlName="ruc"
                             [class.border-red-500]="f['ruc'].invalid && submitted" />
                         <small *ngIf="f['ruc'].errors?.['required'] && submitted" class="text-red-600">Campo
                             requerido</small>
@@ -155,7 +155,7 @@
                             </div>
 
                             <div>
-                                <label class="block font-medium mb-1">Secuencia Nota de Credito</label>
+                                <label class="block font-medium mb-1">Secuencia Nota de Credito (PRUEBAS)</label>
                                 <input type="number" class="input no-spinner" formControlName="salenoteseq"
                                     [class.border-red-500]="f['salenoteseq'].invalid && submitted" />
                                 <small *ngIf="f['salenoteseq'].invalid && submitted" class="text-red-600">Campo

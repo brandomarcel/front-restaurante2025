@@ -16,7 +16,7 @@ import { ProductsService } from 'src/app/services/products.service';
 import { PrintService } from 'src/app/services/print.service';
 import { Product } from '../../core/models/product';
 
-type Customer = { name: string; nombre: string; num_identificacion?: string; correo?: string;tipo_identificacion?:string };
+type Customer = { name: string; nombre: string; num_identificacion?: string; correo?: string; tipo_identificacion?: string };
 
 type Payment = { name: string; codigo: string; nombre: string; };
 type CartItem = {
@@ -88,6 +88,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
     this.invoiceForm = this.fb.group({
       selectedCustomer: [null, Validators.required],
+      selectedProduct: [null],
       paymentMethod: ['01', Validators.required],
       alias: [''],
       postingDate: [this.todayISO(), Validators.required],
@@ -167,7 +168,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       .pipe(finalize(() => this.spinner.hide()))
       .subscribe({
         next: (res: any) => {
-          
+
           const created: Customer = res.message.data;
           toast.success('Cliente creado exitosamente.');
           // añade a la lista y selecciona de inmediato
@@ -212,6 +213,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       });
     }
     this.updateCartTotals();
+    this.invoiceForm.patchValue({ selectedProduct: null });
   }
 
 
