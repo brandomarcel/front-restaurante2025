@@ -94,6 +94,7 @@ export class ProfileMenuComponent implements OnInit {
   ngOnInit(): void {
 
     this.user = JSON.parse(localStorage.getItem('user') || '{}');
+    console.log('user', this.user);
 
   }
 

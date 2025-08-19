@@ -65,7 +65,7 @@
             <th class="app-th">Total</th>
             <th class="app-th">Tipo</th>
             <th class="app-th">Estado SRI</th>
-            <th class="app-th">Acciones</th>
+            <th class="app-th last:text-center">Acciones</th>
           </tr>
         </thead>
 
@@ -90,10 +90,12 @@
                 {{ order.estado_sri }}
               </span>
             </td>
-            <td class="app-td">
+                        <td class="app-td text-center">
+              <div class="inline-flex gap-2 ">
               <button class="btn btn-outline" (click)="toggleOrderDetail(order)">
                 🔍 Detalle
               </button>
+              </div>
             </td>
           </tr>
         </tbody>

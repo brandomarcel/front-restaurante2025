@@ -38,7 +38,7 @@
                         <th class="app-th">Identificación</th>
                         <th class="app-th">Teléfono</th>
                         <th class="app-th">Email</th>
-                        <th class="app-th">Acciones</th>
+                        <th class="app-th last:text-center">Acciones</th>
                     </tr>
                 </thead>
 
@@ -49,8 +49,8 @@
                         <td class="app-td">{{ customer.num_identificacion }}</td>
                         <td class="app-td">{{ customer.telefono || '—' }}</td>
                         <td class="app-td">{{ customer.correo || '—' }}</td>
-                        <td class="app-td">
-                            <div class="flex gap-2">
+                                    <td class="app-td text-center">
+              <div class="inline-flex gap-2 ">
                                 <button class="btn btn-outline" (click)="abrirModal(customer)">✏️ Editar</button>
                                 <button class="btn btn-warn" (click)="delete(customer.name)">🗑️ Eliminar</button>
                             </div>

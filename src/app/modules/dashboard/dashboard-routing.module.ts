@@ -10,6 +10,7 @@ import { OrdersComponent } from 'src/app/pages/orders/orders.component';
 import { ReportOrdernesComponent } from 'src/app/pages/reports/report-ordernes/report-ordernes.component';
 import { CategorysComponent } from 'src/app/pages/categorys/categorys.component';
 import { InvoicingComponent } from 'src/app/pages/invoicing/invoicing.component';
+import { UsersComponent } from 'src/app/pages/users/users.component';
 
 const routes: Routes = [
   {
@@ -25,6 +26,7 @@ const routes: Routes = [
       { path: 'orders', component: OrdersComponent },
       { path: 'categories', component: CategorysComponent },
       { path: 'reportes', component: ReportOrdernesComponent },
+      { path: 'users', component: UsersComponent },
 
       { path: 'invoicing', component: InvoicingComponent },
 

@@ -7,6 +7,7 @@ import { UtilsService } from '../../../core/services/utils.service';
 import { UserService } from '../../../services/user.service';
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
 import { NgSelectComponent } from "@ng-select/ng-select";
+import { NgxSpinnerService } from 'ngx-spinner';
 @Component({
   selector: 'app-report-cierre-caja',
   imports: [CommonModule, FormsModule, ButtonComponent, NgSelectComponent],
@@ -36,7 +37,9 @@ export class ReportCierreCajaComponent implements OnInit {
 
   constructor(private cajasService: CajasService,
     private utilsService: UtilsService,
-    private userService: UserService
+    private userService: UserService,
+    private usersService: UserService,
+    private spinner: NgxSpinnerService,
   ) { }
 
   ngOnInit(): void {
@@ -50,18 +53,33 @@ export class ReportCierreCajaComponent implements OnInit {
   }
 
 
-  cargarUsuarios(): void {
-    this.userService.getUsuariosConRoles(this.filtrosUsers.usuario || ''  , this.filtrosUsers.rol)
-      .subscribe({
-        next: (res) => {
-          console.log('Usuarios con roles obtenidos:', res);
-          this.usuarios = res.message || res;
-        },
-        error: (err) => {
-          console.error('Error al obtener usuarios con roles:', err);
-        }
-      });
+  // cargarUsuarios(): void {
+  //   this.userService.getUsuariosConRoles(this.filtrosUsers.usuario || ''  , this.filtrosUsers.rol)
+  //     .subscribe({
+  //       next: (res) => {
+  //         console.log('Usuarios con roles obtenidos:', res);
+  //         this.usuarios = res.message || res;
+  //       },
+  //       error: (err) => {
+  //         console.error('Error al obtener usuarios con roles:', err);
+  //       }
+  //     });
+  // }
+
+    cargarUsuarios() {
+    this.spinner.show();
+    this.usersService.listByCompany({
+      search: undefined,
+      limit: 1000
+    }).subscribe({
+      next: (rows) => {
+        this.spinner.hide();
+        this.usuarios = rows;
+      },
+      error: () => this.spinner.hide()
+    });
   }
+
 
   /** 🔍 Buscar cierres según filtros */
   buscar(): void {
@@ -71,7 +89,7 @@ export class ReportCierreCajaComponent implements OnInit {
       this.filters.hasta
     ).subscribe({
       next: (res) => {
-        this.cierres = res.message || res; // depende si tu backend usa return o frappe.response
+        this.cierres = res.message.data || res; // depende si tu backend usa return o frappe.response
       },
       error: (err) => {
         console.error('Error al obtener cierres:', err);

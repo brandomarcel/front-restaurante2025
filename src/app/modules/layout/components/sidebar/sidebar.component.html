@@ -1,48 +1,60 @@
-<nav [ngClass]="menuService.showSideBar ? 'w-[210px] xl:w-[280px]' : 'w-[70px]'"
-  class="bg-background hidden h-full flex-col justify-between pt-3 transition-all duration-300 lg:flex">
-  <div class="overflow-hidden">
-    <!-- Logo -->
-    <div [ngClass]="menuService.showSideBar ? 'justify-between' : 'justify-center'"
-      class="mx-4 mb-2 flex h-9 items-center">
+<nav
+  [ngClass]="menuService.showSideBar ? 'w-[210px] xl:w-[280px] min-w-[210px] xl:min-w-[280px]' : 'w-[70px] min-w-[70px]'"
+  class="bg-background hidden h-full min-h-0 flex-col justify-between pt-3 transition-[width] duration-300 motion-reduce:transition-none lg:flex"
+  role="navigation"
+  aria-label="Sidebar"
+>
+   <div class="overflow-hidden min-h-0 h-full flex flex-col">
+    <!-- Logo y título -->
+    <div
+      [ngClass]="menuService.showSideBar ? 'justify-between' : 'justify-center'"
+      class="mx-4 mb-2 flex h-9 items-center shrink-0"
+    >
       <div class="flex items-center" *ngIf="menuService.showSideBar">
-        <a (click)="toggleSidebar()"
-          class="bg-primary flex cursor-pointer items-center justify-center rounded-sm p-2 focus:outline-hidden focus:ring-1">
-          <!-- <svg-icon src="assets/icons/logo.svg"> </svg-icon> -->
-          <img src="./assets/icons/olla_de_barro_icon.png" alt="dashboard widget" class="h-8 w-8" />
-        </a>
+<button type="button"
+  (click)="toggleSidebar()"
+  class="bg-primary flex items-center justify-center rounded-sm p-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
+  [attr.aria-expanded]="menuService.showSideBar ? 'true' : 'false'"
+  [attr.aria-controls]="'sidebar-menu'">
+  <img src="./assets/icons/olla_de_barro_icon.png" alt="Inicio" class="h-8 w-8" />
+</button>
         <b class="text-foreground ps-2 ml-1 grow text-sm font-bold">
           {{ appJson.displayName }}
         </b>
       </div>
-      <button (click)="toggleSidebar()"
-        class="text-muted-foreground/50 hover:text-muted-foreground flex items-center justify-center rounded-md p-2 transition-all duration-200 focus:outline-hidden"
-        [ngClass]="{ 'rotate-180': !menuService.showSideBar }">
-        <svg-icon src="assets/icons/heroicons/solid/chevron-double-left.svg"> </svg-icon>
-      </button>
+
+<button type="button" (click)="toggleSidebar()"
+  class="text-muted-foreground/50 hover:text-muted-foreground flex items-center justify-center rounded-md p-2 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
+  [ngClass]="{ 'rotate-180': !menuService.showSideBar }"
+  [attr.aria-expanded]="menuService.showSideBar ? 'true' : 'false'"
+  [attr.aria-controls]="'sidebar-menu'">
+  <svg-icon src="assets/icons/heroicons/solid/chevron-double-left.svg"></svg-icon>
+</button>
     </div>
 
-    <!-- Menu Items -->
+    <!-- Menú -->
     <div
-      class="h-full overflow-auto px-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
+      id="sidebar-menu"
+      class="flex-1 min-h-0 overflow-auto px-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400"
+    >
       <app-sidebar-menu></app-sidebar-menu>
     </div>
-
   </div>
 
-  <div class="mx-4 my-4 space-y-1">
-    <!-- Version -->
-    <a class="-sm hover:bg-card group flex h-9 cursor-pointer items-center justify-start p-2">
+  <div class="mx-4 my-4 space-y-1 shrink-0">
+    <!-- Versión -->
+    <a class="rounded-sm hover:bg-card group relative flex h-9 cursor-pointer items-center justify-start p-2">
       <svg-icon src="assets/icons/heroicons/outline/information-circle.svg"
-        [svgClass]="'h-5 w-5 text-muted-foreground/50'">
-      </svg-icon>
+        [svgClass]="'h-5 w-5 text-muted-foreground/50'"></svg-icon>
 
-      <div class="ml-3 truncate text-[10px] font-semibold tracking-wide focus:outline-hidden">
+      <div class="ml-3 truncate text-[10px] font-semibold tracking-wide focus:outline-none">
         <span class="bg-primary/10 text-primary px-2 font-semibold">v{{ appJson.version }}</span>
       </div>
 
-      <div class="fixed w-full" *ngIf="!menuService.showSideBar">
+      <!-- Tooltip cuando está colapsado -->
+      <div class="absolute left-12 -top-4" *ngIf="!menuService.showSideBar">
         <span
-          class="z-1 bg-foreground text-background absolute left-12 -top-4 w-auto min-w-max origin-left scale-0 p-2 text-xs font-bold shadow-md transition-all duration-200 group-hover:scale-100">
+          class="bg-foreground text-background w-max origin-left scale-0 p-2 text-xs font-bold shadow-md transition-transform duration-200 group-hover:scale-100 pointer-events-none z-10">
           v{{ appJson.version }}
         </span>
       </div>

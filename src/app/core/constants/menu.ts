@@ -154,6 +154,16 @@ export class Menu {
           label: 'Ordenes',
           route: '/dashboard/orders',
         },
+         {
+          icon: 'assets/icons/heroicons/outline/clipboard-document-list.svg',
+          label: 'Categorias',
+          route: '/dashboard/categories',
+        },
+        {
+          icon: 'assets/icons/heroicons/outline/clipboard-document-list.svg',
+          label: 'Usuarios',
+          route: '/dashboard/users',
+        },
         // {
         //   icon: 'assets/icons/heroicons/outline/bell.svg',
         //   label: 'Reportes',

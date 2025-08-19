@@ -1,4 +1,4 @@
-<div class="app-container">
+<div class="flex flex-col">
 
   <!-- Header -->
   <div class="app-page-header">
@@ -18,12 +18,7 @@
   <!-- Filtros -->
   <div class="toolbar">
     <div class="flex flex-col sm:flex-row gap-2 w-full">
-      <input
-        class="input"
-        type="text"
-        [(ngModel)]="searchTerm"
-        placeholder="Buscar por nombre o descripción..."
-      />
+      <input class="input" type="text" [(ngModel)]="searchTerm" placeholder="Buscar por nombre o descripción..." />
 
       <select class="select" [(ngModel)]="estadoFiltro" (ngModelChange)="actualizarCategoriasFiltradas()">
         <option value="">Todos</option>
@@ -34,8 +29,8 @@
 
 
 
-    
-    <div class="flex gap-2" >
+
+    <div class="flex gap-2">
 
       <app-button (click)="limpiarFiltros()" full impact="bold" tone="light" shape="rounded" size="small">
         Limpiar
@@ -53,24 +48,24 @@
             <th class="app-th">Nombre</th>
             <th class="app-th">Descripción</th>
             <th class="app-th">Estado</th>
-            <th class="app-th">Acciones</th>
+            <th class="app-th last:text-center">Acciones</th>
+
           </tr>
         </thead>
 
         <tbody>
           <tr
             *ngFor="let categoria of categoriesFiltradasList | paginate: { itemsPerPage: pageSize, currentPage: page }; trackBy: trackByName"
-            class="app-tr"
-          >
+            class="app-tr">
             <td class="app-td">{{ categoria.nombre }}</td>
             <td class="app-td">{{ categoria.description || '—' }}</td>
-            <td class="app-td">
+            <td class="app-td ">
               <span class="badge" [ngClass]="{ 'badge-green': categoria.isactive, 'badge-red': !categoria.isactive }">
                 {{ categoria.isactive ? 'Activo' : 'Inactivo' }}
               </span>
             </td>
-            <td class="app-td">
-              <div class="flex gap-2">
+            <td class="app-td text-center">
+              <div class="inline-flex gap-2 ">
                 <button class="btn btn-outline" (click)="abrirModal(categoria)">✏️ Editar</button>
                 <button class="btn btn-warn" (click)="eliminar(categoria.name)">🗑️ Eliminar</button>
               </div>
@@ -83,11 +78,8 @@
       <div class="pager">
         <button class="pager-btn" (click)="page = page - 1" [disabled]="page === 1">« Anterior</button>
         <span class="text-sm">Página {{ page }}</span>
-        <button
-          class="pager-btn"
-          (click)="page = page + 1"
-          [disabled]="(categoriesFiltradasList.length || 0) <= (page * pageSize)"
-        >
+        <button class="pager-btn" (click)="page = page + 1"
+          [disabled]="(categoriesFiltradasList.length || 0) <= (page * pageSize)">
           Siguiente »
         </button>
       </div>
@@ -114,7 +106,8 @@
           <div>
             <label class="block mb-1 font-medium">Nombre</label>
             <input class="input" formControlName="nombre" />
-            <p *ngIf="f['nombre'].touched && f['nombre'].invalid" class="text-red-600 text-xs mt-1">Nombre requerido.</p>
+            <p *ngIf="f['nombre'].touched && f['nombre'].invalid" class="text-red-600 text-xs mt-1">Nombre requerido.
+            </p>
           </div>
 
           <div>

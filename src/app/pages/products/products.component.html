@@ -46,7 +46,7 @@
             <th class="app-th">Impuesto(IVA)</th>
             <th class="app-th">Precio</th>
             <th class="app-th">Stock</th>
-            <th class="app-th">Acciones</th>
+            <th class="app-th last:text-center">Acciones</th>
           </tr>
         </thead>
 
@@ -83,8 +83,8 @@
               </span>
             </td>
 
-            <td class="app-td">
-              <div class="flex gap-2">
+            <td class="app-td text-center">
+              <div class="inline-flex gap-2 ">
                 <button class="btn btn-outline" (click)="abrirModal(p)">✏️ Editar</button>
                 <button class="btn btn-warn" (click)="eliminar(p.name)">🗑️ Eliminar</button>
               </div>

@@ -23,7 +23,7 @@ export class OrdersComponent implements OnInit {
   mostrarModal = false;
 
   page = 1;
-  pageSize = 15;
+  pageSize = 10;
   totalOrders = 0;
   totalPages = 1;
 

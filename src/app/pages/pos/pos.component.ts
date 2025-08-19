@@ -413,7 +413,7 @@ export class PosComponent implements OnInit {
     const total = Number(this.total); // asegúrate que es número
 
 
-    if (isConsumidorFinal && total >= UMBRAL) {
+    if (isConsumidorFinal && typePago === 'Factura' && total >= UMBRAL) {
       toast.error(`El consumidor final no puede facturar por un monto mayor o igual a $${UMBRAL}.`);
       return;
     }
