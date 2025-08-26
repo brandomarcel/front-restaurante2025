@@ -16,8 +16,8 @@ export class PrintService {
     return url;
   }
 
-  getFacturaPdf(orderId: string) {
-    const url = `/api/method/frappe.utils.print_format.download_pdf?doctype=orders&name=${orderId}&trigger_print=1&format=Factura&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
+  getFacturaPdf(factId: string) {
+    const url = `/api/method/frappe.utils.print_format.download_pdf?doctype=Sales Invoice&name=${factId}&trigger_print=1&format=Sales Invoice&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
     return url;
   }
 

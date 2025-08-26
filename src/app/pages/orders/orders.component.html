@@ -1,4 +1,3 @@
-<!-- <div class="app-container"> -->
 <div class="flex flex-col">
 
   <!-- Header -->
@@ -10,47 +9,36 @@
         <span class="text-foreground font-semibold">{{ totalOrders }}</span>
       </div>
     </div>
-
-    <!-- Botón opcional -->
-    <!--
-    <button class="btn btn-primary" (click)="abrirModalNuevaOrden()">
-      + Nueva Orden
-    </button>
-    -->
   </div>
 
   <!-- Filtros -->
-<div class="toolbar">
-  <div class="flex flex-col sm:flex-row gap-2 w-full">
-    <!-- Texto: N° orden / cliente / cédula / tipo / estado -->
-    <input
-      class="input"
-      type="text"
-      [(ngModel)]="searchTerm"
-      placeholder="Buscar por #orden, cliente, cédula, tipo o estado SRI..."
-    />
+  <div class="toolbar">
+    <div class="flex flex-col sm:flex-row gap-2 w-full">
+      <!-- Texto: N° orden / cliente / cédula / tipo / estado -->
+      <input class="input" type="text" [(ngModel)]="searchTerm" (ngModelChange)="actualizarOrdenesFiltradas()"
+        placeholder="Buscar por #orden, cliente, cédula, tipo o estado SRI..." />
 
-    <!-- Tipo: Factura / Nota de venta -->
-    <select class="select" [(ngModel)]="tipoFiltro" (ngModelChange)="actualizarOrdenesFiltradas()">
-      <option value="">Todos los tipos</option>
-      <option value="Factura">Factura</option>
-      <option value="Nota de venta">Nota de venta</option>
-    </select>
+      <!-- Tipo -->
+      <select class="select" [(ngModel)]="tipoFiltro" (ngModelChange)="actualizarOrdenesFiltradas()">
+        <option value="">Todos los tipos</option>
+        <option value="Factura">Factura</option>
+        <option value="Nota de venta">Nota de venta</option>
+      </select>
 
-    <!-- Anulación -->
-    <select class="select" [(ngModel)]="anulacionFiltro" (ngModelChange)="actualizarOrdenesFiltradas()">
-      <option value="">Todas (incluye anuladas)</option>
-      <option value="soloAnuladas">Solo anuladas</option>
-      <option value="excluirAnuladas">Excluir anuladas</option>
-    </select>
-  </div>
+      <!-- Anulación -->
+      <select class="select" [(ngModel)]="anulacionFiltro" (ngModelChange)="actualizarOrdenesFiltradas()">
+        <option value="">Todas (incluye anuladas)</option>
+        <option value="soloAnuladas">Solo anuladas</option>
+        <option value="excluirAnuladas">Excluir anuladas</option>
+      </select>
+    </div>
 
-  <div class="flex gap-2">
-         <app-button (click)="limpiarFiltros()" full impact="bold" tone="light" shape="rounded" size="small">
+    <div class="flex gap-2">
+      <app-button (click)="limpiarFiltros()" full impact="bold" tone="light" shape="rounded" size="small">
         Limpiar
       </app-button>
+    </div>
   </div>
-</div>
 
   <!-- Tabla de órdenes -->
   <ng-container *ngIf="ordersFiltradosList.length > 0; else emptyOrders">
@@ -64,7 +52,7 @@
             <th class="app-th">IVA</th>
             <th class="app-th">Total</th>
             <th class="app-th">Tipo</th>
-            <th class="app-th">Estado SRI</th>
+            <th class="app-th last:text-center">Estado SRI</th>
             <th class="app-th last:text-center">Acciones</th>
           </tr>
         </thead>
@@ -73,28 +61,43 @@
           <tr *ngFor="let order of ordersFiltradosList" class="app-tr text-xs">
             <td class="app-td">{{ order.name }}</td>
             <td class="app-td">{{ order.createdAt | date: 'dd/MM/yyyy' }}</td>
-            <td class="app-td">{{ order.customer.fullName }}</td>
-            <td class="app-td">${{ order.iva }}</td>
-            <td class="app-td font-semibold">${{ order.total }}</td>
+            <td class="app-td">
+              {{ order.customer?.fullName || order.customer?.name || '—' }}
+            </td>
+            <td class="app-td">
+              {{ order.iva | currency:'USD':'symbol':'1.2-2' }}
+            </td>
+            <td class="app-td font-semibold">
+              {{ order.total | currency:'USD':'symbol':'1.2-2' }}
+            </td>
             <td class="app-td">
               <span class="badge badge-gray">{{ order.type }}</span>
             </td>
-            <td class="app-td">
-              <span
-                class="badge"
-                [ngClass]="{
-                  'badge-green': order.estado_sri === 'AUTORIZADO',
-                  'badge-yellow': order.estado_sri !== 'AUTORIZADO'
-                }"
-              >
-                {{ order.estado_sri }}
+            <td class="app-td text-center">
+              <span class="badge" [ngClass]="{
+                  'badge-green': order.sri?.status === 'AUTORIZADO',
+                  'badge-red': order.sri?.status === 'Rejected' || order.sri?.status === 'Error',
+                  'badge-yellow': order.sri?.status !== 'AUTORIZADO'
+                                   && order.sri?.status !== 'Rejected'
+                                   && order.sri?.status !== 'Error'
+                }">
+                {{
+                order.sri?.status === 'AUTORIZADO' ? 'AUTORIZADO' :
+                order.sri?.status === 'Rejected' ? 'Rechazada' :
+                order.sri?.status === 'Error' ? 'Error' :
+                order.sri?.status === 'Queued' ? 'En cola' :
+                order.sri?.status === 'Processing'? 'En proceso' :
+                order.sri?.status === 'Draft' ? 'Borrador' :
+                (order.sri?.status || 'Sin factura')
+                }}
               </span>
             </td>
-                        <td class="app-td text-center">
-              <div class="inline-flex gap-2 ">
-              <button class="btn btn-outline" (click)="toggleOrderDetail(order)">
-                🔍 Detalle
-              </button>
+
+            <td class="app-td text-center">
+              <div class="inline-flex gap-2">
+                <button class="btn btn-outline" (click)="toggleOrderDetail(order)">
+                  🔍 Detalle
+                </button>
               </div>
             </td>
           </tr>
@@ -125,24 +128,21 @@
 
       <div class="app-card-body">
         <h3 class="text-lg font-semibold mb-4">
-          Detalle del Pedido #{{ orderSelected.name }}
+          Detalle del Pedido #{{ orderSelected?.name }}
         </h3>
 
         <!-- Botones de acción -->
         <div class="mb-4 flex flex-wrap gap-2">
           <button class="btn btn-outline" (click)="getComandaPdf()">Imprimir Comanda</button>
 
-          <button *ngIf="orderSelected.type === 'Nota de venta'"
-                  class="btn btn-warn"
-                  (click)="getNotaVentaPdf()">Descargar Nota</button>
+          <button *ngIf="orderSelected?.type === 'Nota Venta'" class="btn btn-warn"
+            (click)="getNotaVentaPdf()">Descargar Nota</button>
 
-          <button *ngIf="orderSelected.type !== 'Nota de venta'"
-                  class="btn btn-warn"
-                  (click)="getFacturaPdf()">Descargar Factura</button>
+          <button *ngIf="orderSelected?.type !== 'Nota Venta'" class="btn btn-warn" (click)="getFacturaPdf()">Descargar
+            Factura</button>
 
-          <button *ngIf="orderSelected.type === 'Factura' && orderSelected.estado_sri !== 'AUTORIZADO'"
-                  class="btn btn-primary"
-                  (click)="validarYGenerarFactura()">Reenviar Factura</button>
+          <button *ngIf="orderSelected?.type === 'Factura' && orderSelected?.sri?.status !== 'AUTORIZADO'"
+            class="btn btn-primary" (click)="validarYGenerarFactura()">Reenviar Factura</button>
         </div>
 
         <!-- Tabs -->
@@ -151,10 +151,8 @@
             Información
           </button>
 
-          <button *ngIf="orderSelected.type === 'Factura' && orderSelected.sri"
-                  class="tab"
-                  [ngClass]="{ 'tab-active': activeTab === 'sri' }"
-                  (click)="activeTab = 'sri'">
+          <button *ngIf="orderSelected?.type === 'Factura' && orderSelected?.sri" class="tab"
+            [ngClass]="{ 'tab-active': activeTab === 'sri' }" (click)="activeTab = 'sri'">
             SRI
           </button>
         </div>
@@ -166,13 +164,14 @@
             <div>
               <h4 class="text-base font-semibold text-gray-700 mb-2">🧾 Información del Pedido</h4>
               <ul class="text-sm text-gray-700 space-y-1">
-                <li><strong>ID:</strong> {{ orderSelected.name }}</li>
-                <li><strong>Tipo:</strong> {{ orderSelected.type | titlecase }}</li>
-                <li><strong>Fecha:</strong> {{ orderSelected.createdAt | ecuadorTime }}</li>
-                <li><strong>Subtotal:</strong> {{ orderSelected.subtotal | currency }}</li>
-                <li><strong>IVA:</strong> {{ orderSelected.iva | currency }}</li>
+                <li><strong>ID:</strong> {{ orderSelected?.name }}</li>
+                <li><strong>Tipo:</strong> {{ orderSelected?.type | titlecase }}</li>
+                <li><strong>Fecha:</strong> {{ orderSelected?.createdAt | ecuadorTime }}</li>
+                <li><strong>Subtotal:</strong> {{ orderSelected?.subtotal | currency:'USD':'symbol':'1.2-2' }}</li>
+                <li><strong>IVA:</strong> {{ orderSelected?.iva | currency:'USD':'symbol':'1.2-2' }}</li>
                 <li><strong>Total:</strong>
-                  <span class="text-green-700 font-semibold">{{ orderSelected.total | currency }}</span>
+                  <span class="text-green-700 font-semibold">{{ orderSelected?.total | currency:'USD':'symbol':'1.2-2'
+                    }}</span>
                 </li>
               </ul>
             </div>
@@ -181,12 +180,12 @@
             <div>
               <h4 class="text-base font-semibold text-gray-700 mb-2">👤 Cliente</h4>
               <ul class="text-sm text-gray-700 space-y-1">
-                <li><strong>Nombre:</strong> {{ orderSelected.customer.fullName }}</li>
-                <li><strong>Cédula/RUC:</strong> {{ orderSelected.customer.identification }}</li>
-                <li><strong>Tipo ID:</strong> {{ orderSelected.customer.identificationType }}</li>
-                <li><strong>Email:</strong> {{ orderSelected.customer.email }}</li>
-                <li><strong>Teléfono:</strong> {{ orderSelected.customer.phone }}</li>
-                <li><strong>Dirección:</strong> {{ orderSelected.customer.address }}</li>
+                <li><strong>Nombre:</strong> {{ orderSelected?.customer?.nombre || '—' }}
+                </li>
+                <li><strong>Cédula/RUC:</strong> {{ orderSelected?.customer?.num_identificacion || '—' }}</li>
+                <li><strong>Email:</strong> {{ orderSelected?.customer?.correo || '—' }}</li>
+                <li><strong>Teléfono:</strong> {{ orderSelected?.customer?.telefono || '—' }}</li>
+                <li><strong>Dirección:</strong> {{ orderSelected?.customer?.direccion || '—' }}</li>
               </ul>
             </div>
           </div>
@@ -201,15 +200,29 @@
                     <th class="p-2 text-left">Producto</th>
                     <th class="p-2 text-left">Cantidad</th>
                     <th class="p-2 text-left">Precio Unitario</th>
+                    <th class="p-2 text-left">IVA</th>
+                    <th class="p-2 text-left">Subtotal</th>
                     <th class="p-2 text-left">Total</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let item of orderSelected.items" class="border-t hover:bg-gray-50">
+                  <tr *ngFor="let item of orderSelected?.items" class="border-t hover:bg-gray-50">
                     <td class="p-2">{{ item.productName }}</td>
                     <td class="p-2">{{ item.quantity }}</td>
-                    <td class="p-2">{{ item.price | currency }}</td>
-                    <td class="p-2 font-medium">{{ item.total | currency }}</td>
+                    <td class="p-2">{{ item.price | currency:'USD':'symbol':'1.2-2' }}</td>
+                    <td class="p-2">
+                      <span class="badge badge-gray">{{ (item.tax_rate ?? 0) }}%</span>
+                    </td>
+                    <td class="p-2">{{ (item.subtotal ?? (item.quantity * item.price)) | currency:'USD':'symbol':'1.2-2'
+                      }}</td>
+                    <td class="p-2 font-medium">
+                      {{
+                      (item.total ??
+                      ((item.subtotal ?? (item.quantity * item.price)) + ((item.subtotal ?? (item.quantity *
+                      item.price)) * ((item.tax_rate ?? 0)/100)))
+                      ) | currency:'USD':'symbol':'1.2-2'
+                      }}
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -221,15 +234,38 @@
         <div *ngIf="activeTab === 'sri'" class="text-sm text-gray-700">
           <h4 class="text-base font-semibold text-gray-700 mb-2">📤 Información del SRI</h4>
           <ul class="space-y-1">
-            <li><strong>Estado Firma:</strong> {{ orderSelected.sri.estado_firma }}</li>
-            <li><strong>Estado SRI:</strong> {{ orderSelected.sri.estado_sri }}</li>
-            <li><strong>Mensaje SRI:</strong> {{ orderSelected.sri.mensaje_sri }}</li>
-            <li><strong>Fecha Emisión:</strong> {{ orderSelected.sri.fecha_emision }}</li>
-            <li><strong>Fecha Autorización:</strong> {{ orderSelected.sri.fecha_autorizacion }}</li>
-            <li><strong>Clave de Acceso:</strong>
-              <span class="break-all font-mono text-sm text-blue-700">{{ orderSelected.sri.clave_acceso }}</span>
+            <li><strong>Estado SRI:</strong>
+              <span class="badge" [ngClass]="{
+                  'badge-green': orderSelected?.sri?.status === 'AUTORIZADO',
+                  'badge-red': orderSelected?.sri?.status === 'Rejected' || orderSelected?.sri?.status === 'Error',
+                  'badge-yellow': orderSelected?.sri?.status !== 'AUTORIZADO'
+                                   && orderSelected?.sri?.status !== 'Rejected'
+                                   && orderSelected?.sri?.status !== 'Error'
+                }">
+                {{
+                orderSelected?.sri?.status === 'AUTORIZADO' ? 'AUTORIZADO' :
+                orderSelected?.sri?.status === 'Rejected' ? 'Rechazada' :
+                orderSelected?.sri?.status === 'Error' ? 'Error' :
+                orderSelected?.sri?.status === 'Queued' ? 'En cola' :
+                orderSelected?.sri?.status === 'Processing'? 'En proceso' :
+                orderSelected?.sri?.status === 'Draft' ? 'Borrador' :
+                (orderSelected?.sri?.status || 'Sin factura')
+                }}
+              </span>
             </li>
-            <li><strong>Establecimiento:</strong> {{ orderSelected.sri.estab }}</li>
+
+            <li *ngIf="orderSelected?.sri?.number"><strong>Número:</strong> {{ orderSelected.sri.number }}</li>
+            <li *ngIf="orderSelected?.sri?.invoice"><strong>Factura:</strong> {{ orderSelected.sri.invoice }}</li>
+            <li *ngIf="orderSelected?.sri?.grand_total !== undefined">
+              <strong>Total Factura:</strong> {{ orderSelected.sri.grand_total | currency:'USD':'symbol':'1.2-2' }}
+            </li>
+            <li *ngIf="orderSelected?.sri?.access_key">
+              <strong>Clave de Acceso:</strong>
+              <span class="break-all font-mono text-sm text-blue-700">{{ orderSelected.sri.access_key }}</span>
+            </li>
+            <li *ngIf="orderSelected?.sri?.authorization_datetime">
+              <strong>F. Autorización:</strong> {{ orderSelected.sri.authorization_datetime }}
+            </li>
           </ul>
         </div>
 

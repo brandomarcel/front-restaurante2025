@@ -1,3 +1,8 @@
+<div
+  (mouseenter)="menuService.showSideBar = true"
+  (mouseleave)="menuService.showSideBar = false"
+  [ngClass]="{ expanded: menuService.showSideBar }"
+>
 <div *ngFor="let menu of menuService.pagesMenu">
   <!-- Grupo -->
   <div *ngIf="menuService.showSideBar" class="mx-2 flex items-center justify-between py-2">
@@ -44,13 +49,13 @@
         </button>
 
         <!-- Tooltip (si sidebar oculto) -->
-        <div *ngIf="!menuService.showSideBar" class="absolute left-full ml-2 z-20">
+        <!-- <div *ngIf="!menuService.showSideBar" class="absolute left-full ml-2 z-20">
           <span
             class="invisible group-hover:visible whitespace-nowrap bg-foreground text-background rounded px-2 py-1 text-[10px] font-bold shadow transition-all duration-150 opacity-0 group-hover:opacity-100"
           >
             {{ item.label }}
           </span>
-        </div>
+        </div> -->
       </div>
 
       <!-- Submenú (se mantiene tu componente) -->
@@ -90,3 +95,4 @@
     </a>
   </div>
 </ng-template>
+  </div>

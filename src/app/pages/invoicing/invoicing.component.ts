@@ -15,8 +15,9 @@ import { PaymentsService } from 'src/app/services/payments.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { PrintService } from 'src/app/services/print.service';
 import { Product } from '../../core/models/product';
-
-type Customer = { name: string; nombre: string; num_identificacion?: string; correo?: string; tipo_identificacion?: string };
+import { InvoicesService } from 'src/app/services/invoices.service';
+import { UtilsService } from '../../core/services/utils.service';
+import { Customer } from 'src/app/core/models/customer';
 
 type Payment = { name: string; codigo: string; nombre: string; };
 type CartItem = {
@@ -60,7 +61,10 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     private printService: PrintService,
     private spinner: NgxSpinnerService,
     private alertService: AlertService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private invoicesService: InvoicesService,
+    private utilsService: UtilsService,
+
   ) { }
 
   ngOnInit(): void {
@@ -91,7 +95,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       selectedProduct: [null],
       paymentMethod: ['01', Validators.required],
       alias: [''],
-      postingDate: [this.todayISO(), Validators.required],
+      postingDate: [this.utilsService.getSoloFechaEcuador(), Validators.required], // YYYY-MM-DD, Validators.required],
       // company: [null, Validators.required], // <-- descomenta si usas el select de compañía
     });
 
@@ -99,10 +103,6 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       this.customerForm.get('num_identificacion')?.reset();
     });
     if (sub) this.subscriptions.push(sub);
-  }
-
-  private todayISO(): string {
-    return new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD' para <input type="date">
   }
 
   private loadInitialData(): void {
@@ -144,16 +144,11 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   }
 
   // ------------------ Cliente ------------------
-  onCustomerSelected(value: Customer) {
-    // value = name (por bindValue="name" en ng-select)
-    console.log('value', value);
-    if (!value) {
-      this.selectedCustomer = null;
-      return
-    };
-    this.selectedCustomer = this.customers.find(c => c.name === value.name) || null;
-    console.log('selectedCustomer', this.selectedCustomer);
-    // opcional: ya que el control tiene el value, no hace falta setear de nuevo
+  onCustomerSelected(value: string | null) {
+    if (!value) { this.selectedCustomer = null; return; }
+    console.log('Valor seleccionado del cliente:', value);
+    this.selectedCustomer = this.customers.find((c:any) => c === value) || null;
+    console.log('Cliente seleccionado:', this.selectedCustomer);
   }
 
   saveCustomer(): void {
@@ -291,54 +286,54 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       toast.error('Agrega al menos un producto a la factura.');
       return;
     }
-    const TYPE_IDENTIFICATION_RUC = "07 - Consumidor Final";
+
+    const TYPE_IDENTIFICATION_RUC = '07 - Consumidor Final';
     const UMBRAL = 50;
-
     const isConsumidorFinal = this.selectedCustomer?.tipo_identificacion === TYPE_IDENTIFICATION_RUC;
-    const total = Number(this.total); // asegúrate que es número
-
+    const total = Number(this.total);
     if (isConsumidorFinal && total >= UMBRAL) {
       toast.error(`El consumidor final no puede facturar por un monto mayor o igual a $${UMBRAL}.`);
       return;
     }
 
-
     const customerName: string = this.invoiceForm.get('selectedCustomer')?.value;
     const paymentCode: string = this.invoiceForm.get('paymentMethod')?.value;
     const payment = this.payments.find(p => p.codigo === paymentCode);
 
-    const invoiceData = {
+    // payload para SalesInvoice
+    const payload = {
       customer: customerName,
-      alias: this.invoiceForm.get('alias')?.value,
-      estado: 'Factura',
-      total: this.total.toFixed(2),
+      posting_date: this.invoiceForm.get('postingDate')?.value,
       items: this.cartItems.map(it => ({
-        product: it.name || null,      // si es ad-hoc vendrá null
-        description: it.description || it.nombre,
+        item_code: it.name || 'ADHOC',
+        item_name: it.nombre || it.description,
         qty: it.quantity,
         rate: this.round2(it.price),
-        discount_pct: this.round2(it.discount_pct || 0),
-        tax: it.tax || null
+        tax_rate: Number.isFinite(it.tax_value as number)
+          ? (it.tax_value as number)
+          : (it.tax === 'IVA-15' ? 15 : 0)
       })),
-      payments: [{ formas_de_pago: payment?.name }]
+      payment: payment ? { code: payment.codigo, name: payment.name, amount: total } : null,
+      auto_queue: true // 👈 firma+envío por el microservicio
     };
-    console.log('invoiceData', invoiceData);
 
-    this.alertService.confirm('¿Deseas emitir la factura?', 'Esta acción creará un documento legal.').then(result => {
-      if (!result.isConfirmed) return;
+    this.alertService.confirm('¿Deseas emitir la factura?', 'Esta acción creará un documento legal.')
+      .then(result => {
+        if (!result.isConfirmed) return;
 
-      this.spinner.show();
-      this.ordersService.create(invoiceData)
-        .pipe(finalize(() => this.spinner.hide()))
-        .subscribe({
-          next: (res: any) => {
-            const id = res?.data?.name;
-            toast.success(`Factura #${id} creada exitosamente.`);
-            this.clearInvoiceForm();
-          }
-          // 👈 sin error handler; el servicio ya mostró el toast
-        });
-    });
+        this.spinner.show();
+        this.invoicesService.createFromUI(payload)
+          .pipe(finalize(() => this.spinner.hide()))
+          .subscribe({
+            next: (res) => {
+              const inv = res?.message.invoice;
+              toast.success(`Factura ${inv} creada y enviada al SRI.`);
+              this.clearInvoiceForm();
+              // opcional: imprime
+              // this.printInvoice(inv);
+            }
+          });
+      });
   }
 
   private printInvoice(invoiceId: string): void {
@@ -348,7 +343,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   }
 
   private clearInvoiceForm(): void {
-    this.invoiceForm.reset({ paymentMethod: '01', selectedCustomer: null, alias: '', postingDate: this.todayISO() });
+    this.invoiceForm.reset({ paymentMethod: '01', selectedCustomer: null, alias: '', postingDate: this.utilsService.getSoloFechaEcuador() });
     this.cartItems = [];
     this.selectedCustomer = null;
   }

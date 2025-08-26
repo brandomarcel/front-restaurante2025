@@ -1,206 +1,291 @@
-<div class="app-container text-xs">
+<div class="flex flex-col">
+
     <div class="app-card">
         <div class="app-card-body">
             <!-- Header -->
             <div class="app-page-header">
                 <h2 class="app-page-title">Configuración de la Empresa y Secuencias</h2>
-                <button type="button" class="btn btn-primary" (click)="save()">Guardar Configuración</button>
+                <app-button impact="bold" tone="primary" shape="rounded" size="medium" (click)="save()">
+                    Guardar
+                </app-button>
+                <!-- <button type="button" class="btn btn-primary" (click)="save()">Guardar Configuración</button> -->
             </div>
 
-            <form [formGroup]="form" (ngSubmit)="save()" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form [formGroup]="form" (ngSubmit)="save()" class="grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs">
 
-                <!-- Col 1: Empresa -->
-                <div class="space-y-4">
-                    <h3 class="text-sm font-semibold text-gray-700">Datos de la Empresa</h3>
+                <!-- ========== COLUMNA 1: ========== -->
+                <div class="space-y-5">
 
-                    <div>
-                        <label class="block font-medium mb-1">Razón Social</label>
-                        <input type="text" class="input" formControlName="businessname"
-                            [class.border-red-500]="f['businessname'].invalid && submitted" />
-                        <small *ngIf="f['businessname'].invalid && submitted" class="text-red-600">Campo
-                            requerido</small>
-                    </div>
-
-                    <div>
-                        <label class="block font-medium mb-1">RUC</label>
-                        <input appOnlyNumbers type="text" maxlength="13" class="input no-spinner" formControlName="ruc"
-                            [class.border-red-500]="f['ruc'].invalid && submitted" />
-                        <small *ngIf="f['ruc'].errors?.['required'] && submitted" class="text-red-600">Campo
-                            requerido</small>
-                        <small *ngIf="f['ruc'].errors?.['pattern'] && submitted" class="text-red-600">Debe tener 13
-                            dígitos</small>
-                    </div>
-
-                    <div>
-                        <label class="block font-medium mb-1">Dirección</label>
-                        <input type="text" class="input" formControlName="address"
-                            [class.border-red-500]="f['address'].invalid && submitted" />
-                        <small *ngIf="f['address'].invalid && submitted" class="text-red-600">Campo requerido</small>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block font-medium mb-1">Teléfono</label>
-                            <input type="text" class="input" formControlName="phone"
-                                [class.border-red-500]="f['phone'].invalid && submitted" />
-                            <small *ngIf="f['phone'].invalid && submitted" class="text-red-600">Campo requerido</small>
+                    <!-- LOGO -->
+                    <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
+                        <div class="px-4 py-3 border-b">
+                            <h3 class="text-sm font-semibold">Logo de la Empresa</h3>
                         </div>
-                        <div>
-                            <label class="block font-medium mb-1">Email</label>
-                            <input type="email" class="input" formControlName="email"
-                                [class.border-red-500]="f['email'].invalid && submitted" />
-                            <small *ngIf="f['email'].errors?.['required'] && submitted" class="text-red-600">Campo
-                                requerido</small>
-                            <small *ngIf="f['email'].errors?.['email'] && submitted" class="text-red-600">Correo
-                                inválido</small>
-                        </div>
-                    </div>
 
-                    <!-- Logo -->
-                    <div class="space-y-2">
-                        <h3 class="text-sm font-semibold text-gray-700">Logo de la Empresa</h3>
-
-                        <div class="flex flex-wrap items-center gap-2">
-                            <!-- input real oculto -->
+                        <div class="p-4 space-y-3">
+                            <!-- input real -->
                             <input #logoInput type="file" accept="image/*" class="sr-only"
                                 (change)="onLogoSelected($event)" />
 
-                            <!-- botón seleccionar -->
-                            <button type="button" class="btn btn-outline" (click)="logoInput.click()">
-                                Seleccionar logo
-                            </button>
+                            <!-- Área drag & drop -->
+                            <div class="dropzone" [class.dropzone--active]="isDraggingLogo" role="button" tabindex="0"
+                                aria-label="Zona para soltar o seleccionar el logo" (click)="logoInput.click()"
+                                (keydown.enter)="logoInput.click()" (keydown.space)="logoInput.click()"
+                                (dragover)="onLogoDragOver($event)" (dragleave)="onLogoDragLeave($event)"
+                                (drop)="onLogoDrop($event)">
+                                <div class="text-center pointer-events-none">
+                                    <div class="text-[12px] font-medium">Arrastra el logo aquí</div>
+                                    <div class="text-[11px] text-gray-500">o haz clic para seleccionar</div>
+                                </div>
+                            </div>
 
-                            <!-- nombre del archivo -->
-                            <span class="text-gray-600 truncate max-w-[240px]">
-                                {{ logoFileName || 'Ningún archivo seleccionado' }}
-                            </span>
+                            <!-- Fila con nombre + quitar -->
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1">
+                                    <input class="input h-8 text-[11px]"
+                                        [value]="logoFileName || 'Ningún archivo seleccionado'" readonly />
+                                </div>
+                                <button type="button" class="btn btn-ghost btn-sm" (click)="removeLogo()"
+                                    [disabled]="!logoPreview && !logoFileName">Quitar</button>
+                            </div>
 
-                            <!-- quitar -->
-                            <button type="button" class="btn btn-ghost" (click)="removeLogo()"
-                                [disabled]="!logoPreview && !logoFileName">
-                                Quitar logo
-                            </button>
-                        </div>
-
-                        <!-- preview -->
-                        <div *ngIf="logoPreview" class="mt-2">
-                            <div class="text-[11px] text-gray-600 mb-1">Vista previa:</div>
-                            <img [src]="logoPreview" alt="Logo"
-                                class="h-16 w-auto rounded border border-gray-200 bg-white p-1" />
+                            <!-- Preview -->
+                            <div *ngIf="logoPreview" class="mt-2 flex items-center gap-2">
+                                <span class="text-[11px] text-gray-600">Vista previa</span>
+                                <img [src]="logoPreview" alt="Logo" class="logo-preview" />
+                            </div>
                         </div>
                     </div>
+
+
+                    <!-- SRI -->
+                    <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
+                        <div class="px-4 py-3 border-b">
+                            <h3 class="text-sm font-semibold">SRI</h3>
+                        </div>
+
+                        <div class="p-4 space-y-4">
+                            <!-- Switch -->
+                            <label class="inline-flex items-center cursor-pointer relative">
+                                <input type="checkbox" class="sr-only peer" formControlName="ambiente"
+                                    (change)="cambiarAmbiente()" />
+                                <div
+                                    class="w-11 h-6 bg-gray-300 rounded-full peer-checked:bg-green-600 transition-colors">
+                                </div>
+                                <div
+                                    class="absolute w-5 h-5 bg-white rounded-full transform translate-x-1 top-0.5 left-0.5 peer-checked:translate-x-5 transition-transform">
+                                </div>
+                                <span class="ml-3 text-sm font-semibold"
+                                    [ngClass]="ambiente === 'PRODUCCION' ? 'text-green-700' : 'text-yellow-700'">
+                                    Ambiente: {{ ambiente }}
+                                </span>
+                            </label>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block font-medium mb-1">Código Establecimiento</label>
+                                    <input type="text" class="input" formControlName="establishmentcode"
+                                        [class.border-red-500]="f['establishmentcode'].invalid && submitted" />
+                                    <small *ngIf="f['establishmentcode'].errors?.['required'] && submitted"
+                                        class="text-red-600">Campo requerido</small>
+                                    <small *ngIf="f['establishmentcode'].errors?.['pattern'] && submitted"
+                                        class="text-red-600">3 dígitos</small>
+                                </div>
+
+                                <div>
+                                    <label class="block font-medium mb-1">Punto Emisión</label>
+                                    <input type="text" class="input" formControlName="emissionpoint"
+                                        [class.border-red-500]="f['emissionpoint'].invalid && submitted" />
+                                    <small *ngIf="f['emissionpoint'].errors?.['required'] && submitted"
+                                        class="text-red-600">Campo requerido</small>
+                                    <small *ngIf="f['emissionpoint'].errors?.['pattern'] && submitted"
+                                        class="text-red-600">3 dígitos</small>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-700 mt-1">Secuencias</h4>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                                    <div>
+                                        <label class="block font-medium mb-1">Secuencial Factura (PRODUCCIÓN)</label>
+                                        <input type="number" class="input no-spinner" formControlName="invoiceseq_prod"
+                                            [class.border-red-500]="f['invoiceseq_prod'].invalid && submitted" />
+                                        <small *ngIf="f['invoiceseq_prod'].invalid && submitted"
+                                            class="text-red-600">Campo requerido</small>
+                                    </div>
+                                    <div>
+                                        <label class="block font-medium mb-1">Secuencial Factura (PRUEBAS)</label>
+                                        <input type="number" class="input no-spinner"
+                                            formControlName="invoiceseq_pruebas"
+                                            [class.border-red-500]="f['invoiceseq_pruebas'].invalid && submitted" />
+                                        <small *ngIf="f['invoiceseq_pruebas'].invalid && submitted"
+                                            class="text-red-600">Campo requerido</small>
+                                    </div>
+                                    <div>
+                                        <label class="block font-medium mb-1">Secuencia Nota de Crédito
+                                            (PRUEBAS)</label>
+                                        <input type="number" class="input no-spinner" formControlName="salenoteseq"
+                                            [class.border-red-500]="f['salenoteseq'].invalid && submitted" />
+                                        <small *ngIf="f['salenoteseq'].invalid && submitted" class="text-red-600">Campo
+                                            requerido</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
 
                 </div>
 
-                <!-- Col 2: SRI + Secuencias -->
-                <div class="space-y-4">
-                    <h3 class="text-sm font-semibold text-gray-700">SRI</h3>
+                <!-- ========== COLUMNA 2: SRI / SECUENCIAS / FIRMA ========== -->
+                <div class="space-y-5">
 
-                    <!-- Switch ambiente -->
-                    <label class="inline-flex items-center cursor-pointer relative">
-                        <input type="checkbox" class="sr-only peer" formControlName="ambiente"
-                            (change)="cambiarAmbiente()" />
-                        <div class="w-11 h-6 bg-gray-300 rounded-full peer-checked:bg-green-600 transition-colors">
-                        </div>
-                        <div
-                            class="absolute w-5 h-5 bg-white rounded-full transform translate-x-1 top-0.5 left-0.5 peer-checked:translate-x-5 transition-transform">
-                        </div>
-                        <div>
-                            <span class="ml-3 text-sm font-semibold"
-                                [ngClass]="ambiente === 'PRODUCCION' ? 'text-green-700' : 'text-yellow-600'">
-                                Ambiente: {{ ambiente }}
-                            </span>
-                        </div>
-                    </label>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block font-medium mb-1">Código Establecimiento</label>
-                            <input type="text" class="input" formControlName="establishmentcode"
-                                [class.border-red-500]="f['establishmentcode'].invalid && submitted" />
-                            <small *ngIf="f['establishmentcode'].errors?.['required'] && submitted"
-                                class="text-red-600">Campo requerido</small>
-                            <small *ngIf="f['establishmentcode'].errors?.['pattern'] && submitted"
-                                class="text-red-600">3 dígitos</small>
+                    <!-- EMPRESA -->
+                    <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
+                        <div class="flex items-center justify-between px-4 py-3 border-b">
+                            <h3 class="text-sm font-semibold">Datos de la Empresa</h3>
+                            <!-- <button type="submit" class="btn btn-primary btn-sm">Guardar</button> -->
                         </div>
 
-                        <div>
-                            <label class="block font-medium mb-1">Punto Emisión</label>
-                            <input type="text" class="input" formControlName="emissionpoint"
-                                [class.border-red-500]="f['emissionpoint'].invalid && submitted" />
-                            <small *ngIf="f['emissionpoint'].errors?.['required'] && submitted"
-                                class="text-red-600">Campo requerido</small>
-                            <small *ngIf="f['emissionpoint'].errors?.['pattern'] && submitted" class="text-red-600">3
-                                dígitos</small>
-                        </div>
-                    </div>
-
-                    <div class="space-y-2">
-                        <h3 class="text-sm font-semibold text-gray-700">Secuencias</h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="p-4 space-y-4">
                             <div>
-                                <label class="block font-medium mb-1">Secuencial Factura (PRODUCCIÓN)</label>
-                                <input type="number" class="input no-spinner" formControlName="invoiceseq_prod"
-                                    [class.border-red-500]="f['invoiceseq_prod'].invalid && submitted" />
-                                <small *ngIf="f['invoiceseq_prod'].invalid && submitted" class="text-red-600">Campo
+                                <label class="block font-medium mb-1">Razón Social</label>
+                                <input type="text" class="input" formControlName="businessname"
+                                    [class.border-red-500]="f['businessname'].invalid && submitted" />
+                                <small *ngIf="f['businessname'].invalid && submitted" class="text-red-600">Campo
+                                    requerido</small>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block font-medium mb-1">RUC</label>
+                                    <input appOnlyNumbers type="text" maxlength="13" class="input no-spinner"
+                                        formControlName="ruc" [class.border-red-500]="f['ruc'].invalid && submitted" />
+                                    <small *ngIf="f['ruc'].errors?.['required'] && submitted" class="text-red-600">Campo
+                                        requerido</small>
+                                    <small *ngIf="f['ruc'].errors?.['pattern'] && submitted" class="text-red-600">Debe
+                                        tener 13 dígitos</small>
+                                </div>
+
+                                <div>
+                                    <label class="block font-medium mb-1">Teléfono</label>
+                                    <input type="text" class="input" formControlName="phone"
+                                        [class.border-red-500]="f['phone'].invalid && submitted" />
+                                    <small *ngIf="f['phone'].invalid && submitted" class="text-red-600">Campo
+                                        requerido</small>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block font-medium mb-1">Dirección</label>
+                                <input type="text" class="input" formControlName="address"
+                                    [class.border-red-500]="f['address'].invalid && submitted" />
+                                <small *ngIf="f['address'].invalid && submitted" class="text-red-600">Campo
                                     requerido</small>
                             </div>
 
                             <div>
-                                <label class="block font-medium mb-1">Secuencial Factura (PRUEBAS)</label>
-                                <input type="number" class="input no-spinner" formControlName="invoiceseq_pruebas"
-                                    [class.border-red-500]="f['invoiceseq_pruebas'].invalid && submitted" />
-                                <small *ngIf="f['invoiceseq_pruebas'].invalid && submitted" class="text-red-600">Campo
+                                <label class="block font-medium mb-1">Email</label>
+                                <input type="email" class="input" formControlName="email"
+                                    [class.border-red-500]="f['email'].invalid && submitted" />
+                                <small *ngIf="f['email'].errors?.['required'] && submitted" class="text-red-600">Campo
                                     requerido</small>
-                            </div>
-
-                            <div>
-                                <label class="block font-medium mb-1">Secuencia Nota de Credito (PRUEBAS)</label>
-                                <input type="number" class="input no-spinner" formControlName="salenoteseq"
-                                    [class.border-red-500]="f['salenoteseq'].invalid && submitted" />
-                                <small *ngIf="f['salenoteseq'].invalid && submitted" class="text-red-600">Campo
-                                    requerido</small>
+                                <small *ngIf="f['email'].errors?.['email'] && submitted" class="text-red-600">Correo
+                                    inválido</small>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Firma electrónica (.p12) -->
-                    <div class="space-y-2 md:col-span-2">
-                        <h3 class="text-sm font-semibold text-gray-700">Firma electrónica SRI</h3>
+                    <!-- FIRMA ELECTRÓNICA -->
 
-                        <div class="flex flex-wrap items-center gap-2">
+                    <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
+                        <div class="px-4 py-3 border-b flex items-center justify-between">
+                            <h3 class="text-sm font-semibold">Firma electrónica SRI</h3>
+                            <!-- <button type="submit" class="btn btn-primary btn-sm"
+                                [disabled]="!(form.value.clave && (firmaFile || form.value.urlfirma))">
+                                Finalizar
+                            </button> -->
+                        </div>
+
+                        <div class="p-4 space-y-4">
+                            <!-- input real -->
                             <input #firmaInput type="file" accept=".p12" class="sr-only"
                                 (change)="onFirmaSelected($event)" />
-                            <button type="button" class="btn btn-outline" (click)="firmaInput.click()">Seleccionar
-                                .p12</button>
 
-                            <span class="text-gray-600 truncate max-w-[240px]">
-                                {{ firmaFileName || (form.value.urlfirma ? (form.value.urlfirma | slice:
-                                form.value.urlfirma.lastIndexOf('/')+1) : 'Ningún archivo seleccionado') }}
-                            </span>
+                            <!-- Área drag & drop -->
+                            <div class="dropzone" [class.dropzone--active]="isDraggingFirma" role="button" tabindex="0"
+                                aria-label="Zona para soltar o seleccionar archivo .p12" (click)="firmaInput.click()"
+                                (keydown.enter)="firmaInput.click()" (keydown.space)="firmaInput.click()"
+                                (dragover)="onFirmaDragOver($event)" (dragleave)="onFirmaDragLeave($event)"
+                                (drop)="onFirmaDrop($event)">
+                                <div class="text-center pointer-events-none">
+                                    <div class="text-[12px] font-medium">Arrastra tu archivo .p12 aquí</div>
+                                    <div class="text-[11px] text-gray-500">o haz clic para seleccionar</div>
+                                </div>
+                            </div>
 
-                            <button type="button" class="btn btn-ghost" (click)="removeFirma()"
-                                [disabled]="!firmaFileName && !form.value.urlfirma">
-                                Quitar firma
-                            </button>
-                        </div>
+                            <!-- Fila con nombre + quitar -->
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1">
+                                    <input class="input h-8 text-[11px]"
+                                        [value]="firmaFileName || (form.value.urlfirma ? (form.value.urlfirma | slice: form.value.urlfirma.lastIndexOf('/')+1) : 'Ningún archivo seleccionado')"
+                                        readonly />
+                                </div>
+                                <button type="button" class="btn btn-ghost btn-sm" (click)="removeFirma()"
+                                    [disabled]="!firmaFileName && !form.value.urlfirma">Quitar</button>
+                            </div>
 
-                        <div>
-                            <label class="block font-medium mb-1">Clave de la firma</label>
-                            <input type="password" class="input" formControlName="clave"
-                                [class.border-red-500]="f['clave'].invalid && submitted" placeholder="••••••••" />
-                            <small *ngIf="f['clave'].invalid && submitted" class="text-red-600">Campo requerido</small>
+                            <!-- Clave -->
+                            <div class="relative">
+                                <label class="block font-medium mb-1">Clave de la firma</label>
+                                <input [type]="showClave ? 'text' : 'password'" class="input pr-16"
+                                    formControlName="clave" [class.border-red-500]="f['clave'].invalid && submitted"
+                                    placeholder="••••••••" />
+                                <button type="button"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 mt-3 text-[12px] text-indigo-600"
+                                    (click)="showClave = !showClave">
+                                    {{ showClave ? 'Ocultar' : 'Mostrar' }}
+                                </button>
+                                <small *ngIf="f['clave'].invalid && submitted" class="text-red-600">Campo
+                                    requerido</small>
+                            </div>
+
+
+                            <!-- info del certificado (opcional/solo lectura) -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block font-medium mb-1">Emitido a / Nombre</label>
+                                    <input class="input" [value]="certInfo?.subject || ''" readonly
+                                        placeholder="(se llenará al validar)">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Fecha de expiración</label>
+                                    <input class="input" [value]="certInfo?.notAfter || ''" readonly
+                                        placeholder="(se llenará al validar)">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Identidad del Certificado</label>
+                                    <input class="input" [value]="certInfo?.serialNumber || ''" readonly
+                                        placeholder="(se llenará al validar)">
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="block font-medium mb-1">Información adicional</label>
+                                    <textarea class="input min-h-[72px]" [value]="certInfo?.issuer || ''" readonly
+                                        placeholder="(se llenará al validar)"></textarea>
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="block font-medium mb-1">Este certificado está aprobado para estos
+                                        usos</label>
+                                    <input class="input" [value]="certInfo?.keyUsage || ''" readonly
+                                        placeholder="(se llenará al validar)">
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-
-                </div>
-
-                <!-- Botón inferior -->
-                <div class="md:col-span-2 pt-2">
-                    <button type="submit" class="btn btn-primary w-full md:w-auto">Guardar Configuración</button>
                 </div>
             </form>
+
         </div>
     </div>
 </div>

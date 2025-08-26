@@ -6,52 +6,61 @@
 
             <!-- PRODUCTOS -->
             <div class="col-span-2 flex flex-col  overflow-auto">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Columna 1: Cliente -->
-                    <div>
-                        <h2 class="text-lg font-semibold text-primary mb-2">Cliente</h2>
+                <!-- Contenedor Cliente -->
+                <div class="space-y-3">
+                    <!-- Encabezado: Título + Acciones -->
+                    <div class="flex items-center justify-between gap-3">
+                        <h2 class="text-xl font-semibold text-primary">Cliente</h2>
 
-                        <div class="flex items-center gap-2 mb-2">
-                            <input type="text" maxlength="13" appOnlyNumbers [(ngModel)]="identificationCustomer"
-                                placeholder="Ingrese el número de cédula"
-                                class="rounded  px-3 py-1 text-xs disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
-                                [disabled]="customer" />
-
-
-
-                            <button (click)="findByIdentificationCustomer()"
-                                class="bg-primary text-white text-xs px-2 py-1 rounded hover:bg-primary/90 transition"
-                                title="Buscar cliente">
-                                <fa-icon icon="search"></fa-icon>
+                        <!-- Acciones rápidas -->
+                        <div class="flex gap-2">
+                            <button (click)="showCustomerModal = true"
+                                class="bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition"
+                                title="Nuevo cliente">
+                                <fa-icon icon="user-plus"></fa-icon>
                             </button>
 
-                            <button (click)="identificationCustomer = '' ; customer = null"
-                                class="bg-red-500 text-white text-xs px-2 py-1 rounded hover:bg-red-600 transition"
-                                title="Limpiar">
-                                <fa-icon icon="times"></fa-icon>
+                            <button
+                                class="bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition"
+                                (click)="selectFinalConsumer()">
+                                Consumidor Final
                             </button>
-                        </div>
-
-                        <div class="text-xs text-muted-foreground space-y-0.5">
-                            <p>{{ customer?.nombre }} </p>
-                            <p>{{ customer?.correo }}</p>
                         </div>
                     </div>
 
-                    <!-- Columna 2: Acciones rápidas -->
-                    <div class="flex gap-2 items-start md:justify-end">
-                        <button (click)="showCustomerModal = true"
-                            class="bg-primary text-white text-xs px-3 py-1 rounded hover:bg-primary/90 transition"
-                            title="Nuevo cliente">
-                            <fa-icon icon="user-plus"></fa-icon>
+                    <!-- Buscador (input + botones) -->
+                    <div class="flex items-stretch gap-2">
+                        <input type="text" maxlength="13" appOnlyNumbers [(ngModel)]="identificationCustomer"
+                            placeholder="Ingrese el número de cédula"
+                            class="flex-1 min-w-0 rounded px-4 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                            [disabled]="customer" />
+
+                        <button (click)="findByIdentificationCustomer()"
+                            class="bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition"
+                            title="Buscar cliente">
+                            <fa-icon icon="search"></fa-icon>
                         </button>
 
-                        <button class="bg-primary text-white text-xs px-3 py-1 rounded hover:bg-primary/90 transition"
-                            (click)="selectFinalConsumer()">
-                            Consumidor Final
+                        <button (click)="identificationCustomer = '' ; customer = null"
+                            class="bg-red-500 text-white text-sm px-3 py-2 rounded hover:bg-red-600 transition"
+                            title="Limpiar">
+                            <fa-icon icon="times"></fa-icon>
                         </button>
+                    </div>
+
+                    <!-- Tarjeta del cliente -->
+                    <div *ngIf="customer" class="bg-blue-50 rounded-lg p-3 shadow-sm text-sm border border-blue-200">
+                        <h4 class="font-bold text-blue-800 flex items-center gap-2">
+                            <span>👤</span> {{ customer?.nombre || '—' }}
+                        </h4>
+
+                        <div *ngIf="customer?.nombre && customer?.nombre !== 'Consumidor Final'" class="mt-1">
+                            <p class="text-blue-700 text-xs leading-5">{{ customer?.telefono }}</p>
+                            <p class="text-blue-700 text-xs leading-5">{{ customer?.correo }}</p>
+                        </div>
                     </div>
                 </div>
+
 
 
 
@@ -100,6 +109,11 @@
                                 ${{ product.precio | number: '1.2-2' }}
                             </p>
                         </div>
+                        <tr *ngIf="filteredProductList.length === 0">
+                            <td colspan="6" class="text-center py-6 text-gray-500 italic">
+                                No hay ítems para mostrar.
+                            </td>
+                        </tr>
                     </div>
                 </div>
 
@@ -140,6 +154,7 @@
                                 <strong class="ml-2 text-foreground">${{ item.total | number: '1.2-2' }}</strong>
                             </div>
                         </div>
+
                     </div>
 
 
@@ -272,18 +287,19 @@
         <button class="absolute top-4 right-4 text-3xl font-light text-gray-500 hover:text-gray-700"
             (click)="showPaymentModal = false">×</button>
 
-        <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">Finalizar Pedido</h2>
+        <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">Finalizar Pedido</h2>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div class="space-y-6">
                 <div class="bg-blue-50 rounded-lg p-2 shadow-sm text-sm border border-blue-200">
-                    <h4 class="font-bold text-blue-800 ">👤 Consumidor Final</h4>
+                    <h4 class="font-bold text-blue-800 ">👤 {{customer.nombre}}</h4>
                     <div *ngIf="customer.nombre != 'Consumidor Final'">
 
 
-                        <p class="font-medium text-gray-800">{{ customer.nombre }}</p>
+                        <p class="font-medium text-gray-800">{{ customer.num_identificacion }}</p>
+                        <p class="text-blue-600 text-xs">{{ customer.telefono }}</p>
                         <!-- <p class="text-blue-600 text-xs">{{ customer.num_identificacion }}</p>
-                        <p class="text-blue-600 text-xs">{{ customer.telefono }}</p> -->
+                         -->
                         <p class="text-blue-600 text-xs">{{ customer.correo }}</p>
                     </div>
                 </div>
@@ -366,7 +382,7 @@
 
                 <div class="flex space-x-4 mt-8">
                     <div class="flex-grow">
-                        <app-button type="button" (click)="confirmarPago('Nota de venta')" full impact="bold"
+                        <app-button type="button" (click)="confirmarPago('Nota Venta')" full impact="bold"
                             tone="warning" shape="rounded" size="large">Nota de Venta</app-button>
                     </div>
                     <div class="flex-grow">

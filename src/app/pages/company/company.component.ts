@@ -5,12 +5,13 @@ import { OnlyNumbersDirective } from 'src/app/core/directives/only-numbers.direc
 import { CompanyService } from 'src/app/services/company.service';
 import { AlertService } from '../../core/services/alert.service';
 import { UtilsService } from '../../core/services/utils.service';
+import { ButtonComponent } from "src/app/shared/components/button/button.component";
 
 @Component({
   selector: 'app-company',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, OnlyNumbersDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, OnlyNumbersDirective, ButtonComponent],
   templateUrl: './company.component.html',
-  styleUrl: './company.component.css'
+  styleUrl: './company.component.scss'
 })
 export class CompanyComponent implements OnInit {
   form!: FormGroup;
@@ -26,6 +27,16 @@ export class CompanyComponent implements OnInit {
 
   firmaFile: File | null = null;
   firmaFileName: string | null = null;
+  showClave = false;
+
+  certInfo?: {
+  subject?: string;      // "NOMBRE APELLIDO ..."
+  notAfter?: string;     // "2027-02-08 10:02:45"
+  serialNumber?: string; // "123456789..."
+  issuer?: string;       // cadena larga
+  keyUsage?: string;     // "DigitalSignature, NonRepudiation, ..."
+};
+
 
   constructor(
     private fb: FormBuilder,
@@ -68,7 +79,7 @@ export class CompanyComponent implements OnInit {
       this.companyId = company.name;
       // Frappe guarda 'ambiente' como string; para el switch usamos boolean (true = producción)
       const ambienteBool = company.ambiente === 'PRUEBAS' ? false : true;
-      this.form.patchValue({ ...company, ambiente: ambienteBool, logo: company.logo || '',urlfirma: company.urlfirma || '' });
+      this.form.patchValue({ ...company, ambiente: ambienteBool, logo: company.logo || '', urlfirma: company.urlfirma || '' });
 
       this.ambiente = ambienteBool ? 'PRODUCCION' : 'PRUEBAS';
 
@@ -113,72 +124,131 @@ export class CompanyComponent implements OnInit {
     this.form.patchValue({ logo: '' });
   }
 
- save() {
+save() {
   this.submitted = true;
   if (this.form.invalid) return;
 
-  const afterUpload = () => this.doUpdate(); // luego de subir firma
+  const analyzeThenUpdate = () => {
+    // Solo analizamos si hay firma (nueva o ya cargada) y hay clave
+    const clave = (this.form.value?.clave || '').trim();
 
-  // 1) Si hay firma nueva, súbela privada y que Frappe setee urlfirma
+    if (!this.form.value?.urlfirma && !this.firmaFile) {
+      // No hay firma en el doc ni nueva => solo actualiza otros campos
+      return this.doUpdate();
+    }
+
+    if (!clave) {
+      this.alertService.error('Ingresa la clave de la firma para validar el certificado.');
+      return; // detenemos guardado
+    }
+
+    this.service.analyzeFirma(clave, this.companyId, undefined, 0).subscribe({
+      next: (r: any) => {
+        const info = r?.message?.info || r?.info;
+        if (info) {
+          // Poblamos la UI de firma (los campos readonly que mostraste)
+          this.certInfo = {
+            subject: info.common_name,
+            notAfter: info.not_after,
+            serialNumber: info.serial_number_hex,
+            issuer: info.issuer,
+            keyUsage: info.key_usage
+          };
+        }
+        // (Opcional) Warning si RUC no coincide
+        if (r?.message?.info?.ruc_mismatch) {
+          this.alertService.error('El RUC de la compañía no coincide con el del certificado.');
+        }
+        // Ahora sí, guardamos el resto de campos de Company
+        this.doUpdate();
+      },
+      error: () => {
+        this.alertService.error('Clave incorrecta o archivo .p12 inválido.');
+      }
+    });
+  };
+
+  const afterUploadLogoThenAnalyze = () => {
+    // si hay logo nuevo, súbelo; si no, analiza directo
+    if (this.logoFile) {
+      this.service.uploadLogo(this.logoFile, this.companyId).subscribe({
+        next: (res2: any) => {
+          const logoUrl = res2?.message?.file_url || res2?.data?.file_url || res2?.file_url || '';
+          if (logoUrl) this.form.patchValue({ logo: logoUrl });
+          analyzeThenUpdate();
+        },
+        error: () => {
+          this.alertService.error('No se pudo subir el logo');
+          analyzeThenUpdate(); // aún así intenta validar y guardar lo demás
+        }
+      });
+    } else {
+      analyzeThenUpdate();
+    }
+  };
+
+  // 1) Si hay firma nueva, súbela primero (privada)
   if (this.firmaFile) {
+    // Si suben firma nueva pero no pusieron clave, detenemos y pedimos la clave
+    if (!(this.form.value?.clave || '').trim()) {
+      this.alertService.error('Ingresa la clave de la firma antes de guardar.');
+      return;
+    }
+
     this.service.uploadFirma(this.firmaFile, this.companyId).subscribe({
       next: (res: any) => {
         const fileUrl = res?.message?.file_url || res?.data?.file_url || res?.file_url || '';
-        if (fileUrl) {
-          // sincroniza el form; aunque Frappe ya lo puso en el Doc, así evitas sorpresa en la UI
-          this.form.patchValue({ urlfirma: fileUrl });
-        }
-        // 2) si además hay logo, respeta tu flujo existente
-        if (this.logoFile) {
-          this.service.uploadLogo(this.logoFile, this.companyId).subscribe({
-            next: (res2: any) => {
-              const logoUrl = res2?.message?.file_url || res2?.data?.file_url || res2?.file_url || '';
-              if (logoUrl) this.form.patchValue({ logo: logoUrl });
-              afterUpload();
-            },
-            error: () => {
-              this.alertService.error('No se pudo subir el logo');
-              afterUpload(); // aún así intenta guardar lo demás
-            }
-          });
-        } else {
-          afterUpload();
-        }
+        if (fileUrl) this.form.patchValue({ urlfirma: fileUrl });
+        // luego logo (si hay) y después análisis
+        afterUploadLogoThenAnalyze();
       },
       error: () => {
         this.alertService.error('No se pudo subir la firma (.p12)');
-        // Aún puedes permitir guardar otros campos si quieres:
-        // afterUpload();
+        // Si quieres permitir guardar otros campos aunque falle la firma, descomenta:
+        // this.doUpdate();
       }
     });
+
   } else {
-    // Si no hay firma nueva, conserva tu flujo actual para el logo
+    // 2) No hay firma nueva
     if (this.logoFile) {
       this.service.uploadLogo(this.logoFile, this.companyId).subscribe({
         next: (res: any) => {
           const fileUrl = res?.message?.file_url || res?.data?.file_url || res?.file_url || '';
           if (fileUrl) this.form.patchValue({ logo: fileUrl });
-          this.doUpdate();
+
+          // Si ya existía urlfirma y el usuario colocó clave, puedes validar aquí también:
+          if ((this.form.value?.urlfirma || '') && (this.form.value?.clave || '').trim()) {
+            analyzeThenUpdate(); // valida firma existente con la clave dada
+          } else {
+            this.doUpdate();
+          }
         },
         error: () => this.alertService.error('No se pudo subir el logo')
       });
     } else {
-      this.doUpdate();
+      // Sin subidas: si hay firma ya en el doc y el usuario ingresó clave, podemos validar
+      if ((this.form.value?.urlfirma || '') && (this.form.value?.clave || '').trim()) {
+        analyzeThenUpdate();
+      } else {
+        this.doUpdate();
+      }
     }
   }
 }
 
-private doUpdate() {
-  const { ambiente, ...payload } = this.form.value;
 
-  // IMPORTANTE:
-  // - `payload.clave` va en claro; Frappe (Password) lo cifrará al guardar.
-  // - `payload.urlfirma` ya debería tener el file_url (si subiste firma).
-  this.service.update(this.companyId, payload).subscribe({
-    next: () => this.alertService.success('Datos actualizados correctamente'),
-    error: () => this.alertService.error('No se pudieron guardar los cambios')
-  });
-}
+  private doUpdate() {
+    const { ambiente, ...payload } = this.form.value;
+
+    // IMPORTANTE:
+    // - `payload.clave` va en claro; Frappe (Password) lo cifrará al guardar.
+    // - `payload.urlfirma` ya debería tener el file_url (si subiste firma).
+    this.service.update(this.companyId, payload).subscribe({
+      next: () => this.alertService.success('Datos actualizados correctamente'),
+      error: () => this.alertService.error('No se pudieron guardar los cambios')
+    });
+  }
 
   // company.component.ts
   onFirmaSelected(event: Event) {
@@ -204,6 +274,73 @@ private doUpdate() {
     this.form.patchValue({ urlfirma: '' });
   }
 
+// Flags de estado visual
+isDraggingLogo = false;
+isDraggingFirma = false;
+
+// === DRAG & DROP LOGO ===
+onLogoDragOver(evt: DragEvent) {
+  evt.preventDefault();
+  evt.stopPropagation();
+  this.isDraggingLogo = true;
+}
+onLogoDragLeave(evt: DragEvent) {
+  evt.preventDefault();
+  evt.stopPropagation();
+  this.isDraggingLogo = false;
+}
+onLogoDrop(evt: DragEvent) {
+  evt.preventDefault();
+  evt.stopPropagation();
+  this.isDraggingLogo = false;
+
+  const file = evt.dataTransfer?.files?.[0];
+  if (!file) return;
+
+  // Reutiliza tu misma lógica de selección
+  if (!file.type.startsWith('image/')) {
+    this.alertService.error('El archivo debe ser una imagen');
+    return;
+  }
+
+  // Simular el evento de input para reusar onLogoSelected
+  this.logoFile = file;
+  this.logoFileName = file.name;
+
+  const reader = new FileReader();
+  reader.onload = () => (this.logoPreview = reader.result as string);
+  reader.readAsDataURL(file);
+}
+
+// === DRAG & DROP FIRMA ===
+onFirmaDragOver(evt: DragEvent) {
+  evt.preventDefault();
+  evt.stopPropagation();
+  this.isDraggingFirma = true;
+}
+onFirmaDragLeave(evt: DragEvent) {
+  evt.preventDefault();
+  evt.stopPropagation();
+  this.isDraggingFirma = false;
+}
+onFirmaDrop(evt: DragEvent) {
+  evt.preventDefault();
+  evt.stopPropagation();
+  this.isDraggingFirma = false;
+
+  const file = evt.dataTransfer?.files?.[0];
+  if (!file) return;
+
+  const tooBig = file.size > 5 * 1024 * 1024; // 5MB
+  const badExt = !/\.p12$/i.test(file.name);
+  if (tooBig || badExt) {
+    this.alertService.error(badExt ? 'El archivo debe ser .p12' : 'El archivo supera 5MB');
+    return;
+  }
+
+  this.firmaFile = file;
+  this.firmaFileName = file.name;
+}
 
 
 

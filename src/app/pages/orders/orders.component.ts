@@ -8,6 +8,7 @@ import { FormsModule } from '@angular/forms';
 import { PrintService } from 'src/app/services/print.service';
 import { toast } from 'ngx-sonner';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-orders',
@@ -34,13 +35,16 @@ export class OrdersComponent implements OnInit {
   tipoFiltro: '' | 'Factura' | 'Nota de venta' = '';
   anulacionFiltro: '' | 'soloAnuladas' | 'excluirAnuladas' = '';
 
+  private url=environment.URL
   constructor(
     private ordersService: OrdersService,
     public spinner: NgxSpinnerService,
     private printService: PrintService,
   ) {}
 
-  ngOnInit() { this.loadOrders(); }
+  ngOnInit() { this.loadOrders();
+    console.log('THIS.url',this.url);
+   }
 
   loadOrders(): void {
     this.spinner.show();
@@ -49,6 +53,7 @@ export class OrdersComponent implements OnInit {
     this.ordersService.getAll(this.pageSize, offset).subscribe({
       next: (res: any) => {
         this.orders = res.message.data || [];
+        console.log('this.orders', this.orders);
         this.totalOrders = res.message.total || 0;
         this.totalPages = Math.ceil(this.totalOrders / this.pageSize) || 1;
 
@@ -134,13 +139,14 @@ export class OrdersComponent implements OnInit {
   toggleOrderDetail(order: any) {
     this.activeTab = 'info';
     this.orderSelected = order || null;
+    console.log('orderSelected', this.orderSelected);
     this.mostrarModal = true;
   }
 
   cerrarModal() { this.mostrarModal = false; }
 
   getComandaPdf() {
-    const order = 'http://207.180.197.160:1012' + this.printService.getComandaPdf(this.orderSelected.name);
+    const order = this.url + this.printService.getComandaPdf(this.orderSelected.name);
     console.log('order', order);
     const width = 800;
     const height = 800;
@@ -193,7 +199,7 @@ export class OrdersComponent implements OnInit {
   }
 
   getFacturaPdf() {
-    const order = 'http://207.180.197.160:1012' + this.printService.getFacturaPdf(this.orderSelected.name);
+    const order = this.url + this.printService.getFacturaPdf(this.orderSelected.sri.invoice);
     const printWindow = window.open(order, '_blank');
     if (!printWindow) {
       toast.error('No se pudo abrir la ventana de impresión');
@@ -203,7 +209,7 @@ export class OrdersComponent implements OnInit {
 
 
     getNotaVentaPdf() {
-    const order = 'http://207.180.197.160:1012' + this.printService.getNotaVentaPdf(this.orderSelected.name);
+    const order = this.url + this.printService.getNotaVentaPdf(this.orderSelected.name);
     const printWindow = window.open(order, '_blank');
     if (!printWindow) {
       toast.error('No se pudo abrir la ventana de impresión');

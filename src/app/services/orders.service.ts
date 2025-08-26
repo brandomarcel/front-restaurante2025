@@ -47,6 +47,20 @@ export class OrdersService {
   // create(order: any) {
   //   return this.http.post(this.apiUrl, order);
   // }
+
+    create_order(payload: any): Observable<any> {
+    return this.http.post<any>(
+      `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.create_order`,
+      payload,
+      { withCredentials: true }
+    ).pipe(
+      catchError((error) => {
+        const msg = this.frappeErr.handle(error) || 'Error al crear la factura.';
+        toast.error(msg);
+        return EMPTY; // 👈 corta la cadena sin “romper” el flujo
+      })
+    );
+  }
 create(order: any): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/resource/orders`, order).pipe(
       catchError((error) => {

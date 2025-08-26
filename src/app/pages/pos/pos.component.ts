@@ -267,71 +267,55 @@ export class PosComponent implements OnInit {
 
 
   addProduct(product: any) {
-    console.log('Producto agregado:', product);
-    const item = this.cart.find(i => i.name === product.name);
-    const price = parseFloat(product.precio);
-    const tax = product.tax;
+  const existing = this.cart.find(i => i.name === product.name);
 
-    if (item) {
-      item.quantity++;
-      item.total = item.quantity * price;
-    } else {
-      this.cart.push({
-        ...product,
-        price,
-        tax,
-        quantity: 1,
-        total: price
-      });
-    }
+  const price = this.toNumber(product.precio ?? product.price);
+  const taxValue = this.getTaxPercent(product); // 0 o 15
+
+  if (existing) {
+    existing.quantity++;
+    this.recalcItem(existing);
+  } else {
+    const newItem = {
+      ...product,
+      price,
+      quantity: 1,
+      tax_value: taxValue // en porcentaje (0 o 15) para backend
+    };
+    this.recalcItem(newItem);
+    this.cart.push(newItem);
   }
+}
 
+increase(item: any) {
+  item.quantity++;
+  this.recalcItem(item);
+}
 
-  increase(item: any) {
-    item.quantity++;
-    item.total = item.quantity * parseFloat(item.price);
+decrease(item: any) {
+  if (item.quantity > 1) {
+    item.quantity--;
+    this.recalcItem(item);
+  } else {
+    const i = this.cart.indexOf(item);
+    if (i !== -1) this.cart.splice(i, 1);
   }
-
-  decrease(item: any) {
-    if (item.quantity > 1) {
-      item.quantity--;
-      item.total = item.quantity * item.price;
-    } else {
-      const index = this.cart.indexOf(item);
-      if (index !== -1) {
-        this.cart.splice(index, 1);
-      }
-    }
-  }
+}
 
 
 
-  get subtotal(): number {
-    return this.cart.reduce((acc, item) => {
-      const price = Number(item.price);
-      const quantity = Number(item.quantity);
-      return acc + (price * quantity); // precio sin IVA
-    }, 0);
-  }
 
-  get iva(): number {
-    return this.cart.reduce((acc, item) => {
-      const price = Number(item.price);
-      const quantity = Number(item.quantity);
-      let taxRate = 0;
+get subtotal(): number {
+  return this.round2(this.cart.reduce((acc, it) => acc + this.toNumber(it.subtotal), 0));
+}
 
-      if (item.tax === 'IVA-15') {
-        taxRate = 0.15;
-      }
+get iva(): number {
+  return this.round2(this.cart.reduce((acc, it) => acc + this.toNumber(it.iva), 0));
+}
 
-      return acc + (price * quantity * taxRate);
-    }, 0);
-  }
-
-
-  get total(): number {
-    return this.cart.reduce((acc, item) => acc + Number(item.total), 0);
-  }
+get total(): number {
+  return this.round2(this.cart.reduce((acc, it) => acc + this.toNumber(it.total), 0));
+}
 
 
 
@@ -374,8 +358,10 @@ export class PosComponent implements OnInit {
 
   // Método para abrir el modal
   abrirModalPago() {
-    if (!this.identificationCustomer) {
+    if (!this.customer) {
       toast.error('Selecciona un cliente.');
+      this.identificationCustomer = '';
+      
       return;
     }
     if (this.cart.length === 0) {
@@ -432,7 +418,8 @@ export class PosComponent implements OnInit {
       items: this.cart.map(item => ({
         product: item.name, // Asegúrate que sea el código tipo "PROD-0012"
         qty: item.quantity,
-        rate: item.price // o item.precio si ese es el campo
+        rate: item.price, // o item.precio si ese es el campo
+        tax_rate: item.tax_value
       })),
       payments: [
         {
@@ -448,11 +435,11 @@ export class PosComponent implements OnInit {
         if (result.isConfirmed) {
           console.log('Confirmado');
           this.spinner.show();
-          this.ordersService.create(order).pipe(finalize(() => this.spinner.hide()))
+          this.ordersService.create_order(order).pipe(finalize(() => this.spinner.hide()))
             .subscribe({
               next: (res: any) => {
                 console.log('Pedido guardado:', res);
-                const orderId = res.data.name; // Asegúrate de que el ID del pedido se obtenga correctamente
+                const orderId = res.message?.name; // Asegúrate de que el ID del pedido se obtenga correctamente
                 this.spinner.hide();
                 toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
                 setTimeout(() => this.printCombinedTicket(orderId), 500);
@@ -489,7 +476,8 @@ export class PosComponent implements OnInit {
   showReceipt = false;
 
   printCombinedTicket(orderId: string) {
-    const order = 'http://207.180.197.160:1012' + this.printService.getOrderPdf(orderId);
+    // const order = 'http://207.180.197.160:1012' + this.printService.getOrderPdf(orderId);
+    const order = 'http://192.168.100.73:1012' + this.printService.getOrderPdf(orderId);
     console.log('order', order);
     const width = 800;
     const height = 800;
@@ -585,5 +573,34 @@ export class PosComponent implements OnInit {
     }
     return 13; // RUC u otros
   }
+
+  private toNumber(v: any): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+private round2(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+/** Devuelve el % de IVA (0, 15, etc) desde el producto */
+private getTaxPercent(p: any): number {
+  // prioriza tax_value; si no, intenta tax.value; si no, tax
+  const v = Number(p?.tax_value ?? p?.tax?.value ?? p?.tax ?? 0);
+  return Number.isFinite(v) ? v : 0;
+}
+
+/** Recalcula subtotal, iva y total de un ítem del carrito */
+private recalcItem(item: any): void {
+  const qty = this.toNumber(item.quantity);
+  const price = this.toNumber(item.price);
+  const taxRate = this.toNumber(item.tax_value) / 100; // 0.15 si 15%
+  const subtotal = this.round2(qty * price);
+  const iva = this.round2(subtotal * taxRate);
+  item.subtotal = subtotal;
+  item.iva = iva;
+  item.total = this.round2(subtotal + iva);
+}
+
 
 }

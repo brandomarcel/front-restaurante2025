@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
+import { API_ENDPOINT } from '../core/constants/api.constants';
 
 export interface CompanyInfo {
   name?: string;                 // En Frappe suele ser string
@@ -24,9 +25,12 @@ export interface CompanyInfo {
 
 @Injectable({ providedIn: 'root' })
 export class CompanyService {
-  private readonly apiUrl = environment.apiUrl; // p.ej: https://tu-servidor/api
+  private readonly apiUrl = environment.apiUrl; // Cambia si usás otro backend
 
-  constructor(private http: HttpClient) { }
+  private urlBase: string = '';
+  constructor(private http: HttpClient) {
+    this.urlBase = this.apiUrl + API_ENDPOINT.AnalyzeFirma;
+  }
 
   getAll(fields: string[] = ['*']) {
     const params = new HttpParams().set('fields', JSON.stringify(fields)).set('limit_page_length', '0');
@@ -74,4 +78,19 @@ export class CompanyService {
 
     return this.http.post(`${this.apiUrl}/method/upload_file`, form, { withCredentials: true });
   }
+
+  analyzeFirma(password: string, companyId?: string, company_ruc?: string, save_to_company = 0) {
+  const payload: any = { password, save_to_company };
+  if (companyId) payload.company = companyId;
+  if (company_ruc) payload.company_ruc = company_ruc;
+
+  // Ajusta el path al del método Python que te pasé
+  return this.http.post(
+    `${this.urlBase}.analyze_company_firma`,
+    payload,
+    { withCredentials: true }
+  );
+}
+
+  
 }

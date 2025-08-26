@@ -394,3 +394,20 @@ select {
   /* Modal algo más angosto */
   .density-compact .app-modal { @apply max-w-xl; }
 }
+/* company.component.css */
+/* company.component.css */
+.input { @apply w-full h-10 rounded border border-gray-300 px-3 outline-none focus:border-indigo-500; }
+.btn { @apply inline-flex items-center justify-center rounded px-3 py-2; }
+.btn-primary { @apply bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60; }
+.btn-outline { @apply border border-gray-300 hover:bg-gray-50; }
+.btn-ghost { @apply hover:bg-gray-100; }
+
+/* texto del archivo: que no salte */
+.file-name { @apply text-gray-600 truncate max-w-full; }
+
+/* preview del logo: cuadro limpio */
+.logo-preview {
+  width: 48px; height: 48px;
+  border: 1px solid #e5e7eb; border-radius: 6px; background: white;
+  object-fit: contain; padding: 4px;
+}
