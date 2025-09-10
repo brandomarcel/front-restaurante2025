@@ -49,8 +49,11 @@ export class OrdersService {
   // }
 
     create_order(payload: any): Observable<any> {
+      // const  url =`${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.create_order`;
+
+      const  url =`${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.create_order_v2`;
     return this.http.post<any>(
-      `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.create_order`,
+      url,
       payload,
       { withCredentials: true }
     ).pipe(

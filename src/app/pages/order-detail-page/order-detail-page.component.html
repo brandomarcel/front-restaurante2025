@@ -1,0 +1,164 @@
+<!-- HEADER compacto y limpio -->
+<header class="sticky top-0  bg-white/90 backdrop-blur border-b">
+  <div class="max-w-screen-xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <button class="btn btn-ghost px-2 py-1" (click)="goBack()" aria-label="Volver a órdenes">
+        <fa-icon icon="arrow-left"></fa-icon>
+        <span class="hidden sm:inline ml-2">Órdenes</span>
+      </button>
+
+      <div>
+        <div class="flex items-center gap-3">
+          <h1 class="text-xl sm:text-2xl font-semibold">
+            Pedido <span class="text-muted-foreground">#{{ order?.name || '—' }}</span>
+          </h1>
+          <span class="badge"
+                [ngClass]="{
+                  'badge-green': order?.sri?.status === 'AUTORIZADO',
+                  'badge-red': order?.sri?.status === 'Rejected' || order?.sri?.status === 'Error',
+                  'badge-yellow': order?.sri?.status !== 'AUTORIZADO'
+                                    && order?.sri?.status !== 'Rejected'
+                                    && order?.sri?.status !== 'Error'
+                }">
+            {{ sriStatus }}
+          </span>
+        </div>
+
+        <div class="text-sm text-muted-foreground flex gap-3 flex-wrap mt-1">
+          <span>Tipo: <b>{{ order?.type || '—' }}</b></span>
+          <span>Fecha: <b>{{ order?.createdAt | ecuadorTime }}</b></span>
+          <span>Total: <b class="text-green-700">{{ order?.total | currency:'USD':'symbol':'1.2-2' }}</b></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Acciones rápidas (solo desktop) -->
+    <div class="hidden md:flex items-center gap-2">
+      <button class="btn btn-outline" (click)="getComandaPdf()">  <fa-icon [icon]="['fas','print']" class="mr-1"></fa-icon> Comanda</button>
+      <button *ngIf="order?.type !== 'Nota Venta'" class="btn btn-warn" (click)="getFacturaPdf()"> <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Factura</button>
+      <button *ngIf="order?.type === 'Nota Venta'" class="btn btn-warn" (click)="getNotaVentaPdf()"> <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Nota</button>
+    </div>
+  </div>
+</header>
+
+<!-- CONTENIDO: 2 columnas -->
+<main class="max-w-screen-xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Columna principal: Información y Productos -->
+  <section class="lg:col-span-2 space-y-6">
+
+    <!-- Resumen de la Orden -->
+    <div class="app-card p-6">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">🧾 Resumen de la Orden</h3>
+      <div class="grid sm:grid-cols-3 gap-4">
+        <div>
+          <div class="text-sm text-muted-foreground">Subtotal</div>
+          <div class="font-medium text-gray-900">{{ order?.subtotal | currency:'USD':'symbol':'1.2-2' }}</div>
+        </div>
+        <div>
+          <div class="text-sm text-muted-foreground">IVA</div>
+          <div class="font-medium text-gray-900">{{ order?.iva | currency:'USD':'symbol':'1.2-2' }}</div>
+        </div>
+        <div>
+          <div class="text-sm text-muted-foreground">Total</div>
+          <div class="font-semibold text-green-700">{{ order?.total | currency:'USD':'symbol':'1.2-2' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Productos del Pedido -->
+    <div class="app-card p-6">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">📦 Productos del Pedido</h3>
+      <div class="overflow-x-auto max-h-[50vh] overflow-y-auto">
+        <table class="min-w-full table-auto text-sm border border-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="p-3 text-left">Producto</th>
+              <th class="p-3 text-left">Cantidad</th>
+              <th class="p-3 text-left">Precio Unit.</th>
+              <th class="p-3 text-left">IVA</th>
+              <th class="p-3 text-left">Subtotal</th>
+              <th class="p-3 text-left">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of order?.items" class="border-t hover:bg-gray-50">
+              <td class="p-3">{{ item.productName }}</td>
+              <td class="p-3">{{ item.quantity }}</td>
+              <td class="p-3">{{ item.price | currency:'USD':'symbol':'1.2-2' }}</td>
+              <td class="p-3">{{ item.tax_rate }}%</td>
+              <td class="p-3">{{ (item.subtotal ?? (item.quantity * item.price)) | currency:'USD':'symbol':'1.2-2' }}</td>
+              <td class="p-3 font-medium">
+                {{
+                  (item.total ??
+                    ((item.subtotal ?? (item.quantity * item.price)) +
+                     ((item.subtotal ?? (item.quantity * item.price)) * ((item.tax_rate ?? 0)/100)))
+                  ) | currency:'USD':'symbol':'1.2-2'
+                }}
+              </td>
+            </tr>
+            <tr *ngIf="!order?.items?.length">
+              <td colspan="6" class="p-4 text-center text-muted-foreground">No hay productos en este pedido.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Columna lateral: Acciones y Datos Cliente -->
+  <aside class="space-y-6">
+    <!-- Acciones -->
+    <!-- <div class="app-card p-6">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">⚙️ Acciones</h3>
+      <div class="flex flex-col gap-3">
+        <button class="btn btn-outline w-full" (click)="getComandaPdf()">Imprimir Comanda</button>
+        <button *ngIf="order?.type !== 'Nota Venta'" class="btn btn-warn w-full" (click)="getFacturaPdf()">Descargar Factura</button>
+        <button *ngIf="order?.type === 'Nota Venta'" class="btn btn-warn w-full" (click)="getNotaVentaPdf()">Descargar Nota</button>
+        <button *ngIf="order?.type === 'Factura' && order?.sri?.status !== 'AUTORIZADO'"
+                class="btn btn-primary w-full" (click)="reenviarFactura()">Reenviar Factura</button>
+      </div>
+    </div> -->
+
+    <!-- Cliente -->
+    <div class="app-card p-6">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">👤 Información del Cliente</h3>
+      <ul class="text-sm text-gray-700 space-y-2">
+        <li><strong>Nombre:</strong> {{ order?.customer?.fullName || order?.customer?.nombre || '—' }}</li>
+        <li><strong>Cédula/RUC:</strong> {{ order?.customer?.num_identificacion || '—' }}</li>
+        <li><strong>Email:</strong> {{ order?.customer?.correo || '—' }}</li>
+        <li><strong>Teléfono:</strong> {{ order?.customer?.telefono || '—' }}</li>
+        <li><strong>Dirección:</strong> {{ order?.customer?.direccion || '—' }}</li>
+      </ul>
+    </div>
+
+    <!-- SRI -->
+    <div class="app-card p-6">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">📤 Información del SRI</h3>
+      <ul class="text-sm text-gray-700 space-y-2">
+        <li><strong>Estado SRI:</strong>
+          <span class="badge"
+                [ngClass]="{
+                  'badge-green': order?.sri?.status === 'AUTORIZADO',
+                  'badge-red': order?.sri?.status === 'Rejected' || order?.sri?.status === 'Error',
+                  'badge-yellow': order?.sri?.status !== 'AUTORIZADO'
+                                    && order?.sri?.status !== 'Rejected'
+                                    && order?.sri?.status !== 'Error'
+                }">
+            {{ sriStatus }}
+          </span>
+        </li>
+        <li *ngIf="order?.sri?.number"><strong>Número:</strong> {{ order?.sri?.number }}</li>
+        <li *ngIf="order?.sri?.invoice"><strong>Factura:</strong> {{ order?.sri?.invoice }}</li>
+        <li *ngIf="order?.sri?.authorization_datetime"><strong>F. Autorización:</strong> {{ order?.sri?.authorization_datetime }}</li>
+      </ul>
+    </div>
+  </aside>
+</main>
+
+<!-- Barra de acciones móvil (fija en el pie de la página) -->
+<div class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t px-4 py-2 flex gap-2">
+  <button class="btn btn-outline flex-1" (click)="getComandaPdf()">Comanda</button>
+  <button *ngIf="order?.type !== 'Nota Venta'" class="btn btn-warn flex-1" (click)="getFacturaPdf()">Factura</button>
+  <button *ngIf="order?.type === 'Nota Venta'" class="btn btn-warn flex-1" (click)="getNotaVentaPdf()">Nota</button>
+</div>

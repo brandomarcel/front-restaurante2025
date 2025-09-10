@@ -68,26 +68,27 @@ export class Menu {
           label: 'POS',
           route: '/dashboard/pos',
         },
-         {
-          icon: 'assets/icons/heroicons/outline/building-storefront.svg',
-          label: 'Facturación',
-          route: '/dashboard/invoicing',
-        }
+         
         
       ],
     },
 
-    // {
-    //   group: 'Punto de Venta',
-    //   separator: true,
-    //   items: [
-    //     {
-    //       icon: 'assets/icons/heroicons/outline/building-storefront.svg',
-    //       label: 'POS',
-    //       route: '/dashboard/pos',
-    //     }
-    //   ],
-    // },
+    {
+      group: 'Facturación',
+      separator: true,
+      items: [
+       {
+          icon: 'assets/icons/heroicons/outline/building-storefront.svg',
+          label: 'Facturar',
+          route: '/dashboard/invoicing',
+        },
+         {
+          icon: 'assets/icons/heroicons/outline/clipboard-document-list.svg',
+          label: 'Lista de Facturas',
+          route: '/dashboard/invoices',
+        },
+      ],
+    },
 
     {
       group: 'Caja',
@@ -144,6 +145,7 @@ export class Menu {
           label: 'Clientes',
           route: '/dashboard/customers',
         },
+
         {
           icon: 'assets/icons/heroicons/outline/list-bullet.svg',
           label: 'Productos',
@@ -164,6 +166,9 @@ export class Menu {
           label: 'Usuarios',
           route: '/dashboard/users',
         },
+           
+
+        
         // {
         //   icon: 'assets/icons/heroicons/outline/bell.svg',
         //   label: 'Reportes',

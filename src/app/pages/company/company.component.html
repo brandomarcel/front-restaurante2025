@@ -238,17 +238,21 @@
                             <!-- Clave -->
                             <div class="relative">
                                 <label class="block font-medium mb-1">Clave de la firma</label>
-                                <input [type]="showClave ? 'text' : 'password'" class="input pr-16"
+                                <input [type]="showClave ? 'text' : 'password'" id="clave" class="input pr-16"
                                     formControlName="clave" [class.border-red-500]="f['clave'].invalid && submitted"
-                                    placeholder="••••••••" />
+                                    placeholder="••••••••" autocomplete="new-password" />
+
                                 <button type="button"
                                     class="absolute right-2 top-1/2 -translate-y-1/2 mt-3 text-[12px] text-indigo-600"
                                     (click)="showClave = !showClave">
                                     {{ showClave ? 'Ocultar' : 'Mostrar' }}
                                 </button>
-                                <small *ngIf="f['clave'].invalid && submitted" class="text-red-600">Campo
-                                    requerido</small>
+
+                                <small *ngIf="f['clave'].invalid && submitted" class="text-red-600">
+                                    Campo requerido
+                                </small>
                             </div>
+
 
 
                             <!-- info del certificado (opcional/solo lectura) -->
@@ -263,7 +267,7 @@
                                     <input class="input" [value]="certInfo?.notAfter || ''" readonly
                                         placeholder="(se llenará al validar)">
                                 </div>
-                                <div>
+                                <!-- <div>
                                     <label class="block font-medium mb-1">Identidad del Certificado</label>
                                     <input class="input" [value]="certInfo?.serialNumber || ''" readonly
                                         placeholder="(se llenará al validar)">
@@ -278,7 +282,7 @@
                                         usos</label>
                                     <input class="input" [value]="certInfo?.keyUsage || ''" readonly
                                         placeholder="(se llenará al validar)">
-                                </div>
+                                </div> -->
                             </div>
                         </div>
                     </div>

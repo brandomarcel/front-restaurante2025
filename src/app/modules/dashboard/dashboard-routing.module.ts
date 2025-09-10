@@ -11,6 +11,9 @@ import { ReportOrdernesComponent } from 'src/app/pages/reports/report-ordernes/r
 import { CategorysComponent } from 'src/app/pages/categorys/categorys.component';
 import { InvoicingComponent } from 'src/app/pages/invoicing/invoicing.component';
 import { UsersComponent } from 'src/app/pages/users/users.component';
+import { InvoicesComponent } from '../../pages/invoices/invoices.component';
+import { OrderDetailPageComponent } from 'src/app/pages/order-detail-page/order-detail-page.component';
+import { InvoiceDetailPageComponent } from 'src/app/pages/invoice-detail-page/invoice-detail-page.component';
 
 const routes: Routes = [
   {
@@ -24,11 +27,15 @@ const routes: Routes = [
       { path: 'products', component: ProductsComponent },
       { path: 'company', component: CompanyComponent },
       { path: 'orders', component: OrdersComponent },
+      { path: 'orders/:id', component: OrderDetailPageComponent },
+
       { path: 'categories', component: CategorysComponent },
       { path: 'reportes', component: ReportOrdernesComponent },
       { path: 'users', component: UsersComponent },
 
       { path: 'invoicing', component: InvoicingComponent },
+      { path: 'invoices', component: InvoicesComponent },
+      { path: 'invoices/:id', component: InvoiceDetailPageComponent },
 
       { path: '**', redirectTo: 'errors/404' },
     ],

@@ -1,0 +1,294 @@
+<!-- src/app/pages/invoices/invoices.component.html -->
+<div class="flex flex-col">
+
+    <!-- Header -->
+    <div class="app-page-header">
+        <div>
+            <h2 class="app-page-title">Facturas</h2>
+            <div class="app-page-subtle space-x-1">
+                <span># Registros:</span>
+                <span class="text-foreground font-semibold">{{ total }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="toolbar">
+        <div class="flex flex-col sm:flex-row gap-2 w-full">
+            <input class="input" type="text" [(ngModel)]="search"
+                placeholder="Buscar por #factura, clave de acceso, cliente, identificación o estado…" />
+
+            <select class="select" [(ngModel)]="conOrdenFiltro" (ngModelChange)="aplicarFiltros()">
+                <option value="">Todas</option>
+                <option value="con">Con orden</option>
+                <option value="sin">Sin orden</option>
+            </select>
+        </div>
+
+        <div class="flex gap-2">
+            <app-button (click)="limpiarFiltros()" full impact="bold" tone="light" shape="rounded" size="small">
+                Limpiar
+            </app-button>
+        </div>
+    </div>
+
+    <!-- Tabla -->
+    <ng-container *ngIf="invoicesFiltradas.length > 0; else empty">
+        <div class="app-table-wrap">
+            <table class="app-table">
+                <!-- ...tu tabla -->
+                <thead class="app-thead">
+                    <tr>
+                        <th class="app-th">N° Factura</th>
+                        <th class="app-th">Fecha</th>
+                        <th class="app-th">Cliente</th>
+                        <th class="app-th">Total</th>
+                        <th class="app-th">Estado SRI</th>
+                        <th class="app-th">Orden</th>
+                        <th class="app-th last:text-center">Acciones</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    <tr *ngFor="let inv of invoicesFiltradas" class="app-tr text-xs">
+                        <td class="app-td">
+                            <div class="flex flex-col">
+                                <span class="font-semibold">{{ inv.sri?.number || '—' }}</span>
+                                <span class="text-[11px] text-muted-foreground">{{ inv.name }}</span>
+                            </div>
+                        </td>
+
+                        <td class="app-td">{{ inv.createdAt | ecuadorTime }}</td>
+
+                        <td class="app-td">
+                            {{ inv.customer?.fullName || inv.customer?.name || '—' }}
+                        </td>
+
+                        <td class="app-td font-semibold">
+                            {{ inv.total | currency:'USD':'symbol':'1.2-2' }}
+                        </td>
+
+                        <td class="app-td">
+                            <span class="badge" [ngClass]="{
+        'badge-green': inv.sri?.status === 'AUTORIZADO',
+        'badge-red': inv.sri?.status === 'Rejected' || inv.sri?.status === 'Error',
+        'badge-yellow': inv.sri?.status !== 'AUTORIZADO'
+                          && inv.sri?.status !== 'Rejected'
+                          && inv.sri?.status !== 'Error'
+      }">
+                                {{
+                                inv.sri?.status === 'AUTORIZADO' ? 'AUTORIZADO' :
+                                inv.sri?.status === 'Rejected' ? 'Rechazada' :
+                                inv.sri?.status === 'Error' ? 'Error' :
+                                inv.sri?.status === 'Queued' ? 'En cola' :
+                                inv.sri?.status === 'Processing' ? 'En proceso' :
+                                inv.sri?.status === 'Draft' ? 'Borrador' :
+                                (inv.sri?.status || '—')
+                                }}
+                            </span>
+                        </td>
+
+                        <td class="app-td">
+                            <!-- <button *ngIf="inv.order; else noOrder" class="btn btn-outline"
+                                (click)="irAOrden(inv.order)">
+                                Ver orden: {{ inv.order }}
+                                
+                            </button> 
+                            <ng-template #noOrder><span class="text-muted-foreground">—</span></ng-template> -->
+                            {{ inv.order || '—' }}
+
+
+                        </td>
+
+                        <td class="app-td text-center">
+                            <div class="inline-flex gap-2">
+                                <!-- Antes: (click)="openInvoiceDetail(inv)" -->
+                                <button class="btn btn-outline" [routerLink]="['/dashboard/invoices', inv.name]">
+                                    🔎 Abrir
+                                </button>
+                            </div>
+                        </td>
+
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Paginación -->
+            <div class="pager">
+                <button class="pager-btn" (click)="prevPage()" [disabled]="page === 1">« Anterior</button>
+                <span class="text-sm">Página {{ page }} de {{ totalPages }}</span>
+                <button class="pager-btn" (click)="nextPage()" [disabled]="page === totalPages">Siguiente »</button>
+            </div>
+        </div>
+    </ng-container>
+
+    <ng-template #empty>
+        <div class="app-card">
+            <div class="app-card-body text-center text-gray-500">
+                No hay facturas para mostrar.
+            </div>
+        </div>
+    </ng-template>
+
+</div>
+
+
+<!-- Modal Detalle Factura -->
+<div *ngIf="mostrarModal" class="app-modal-backdrop">
+    <div class="app-modal">
+        <button class="app-modal-close" (click)="closeModal()">×</button>
+
+        <div class="app-card-body">
+            <h3 class="text-lg font-semibold mb-4">
+                Detalle de la Factura
+                <span class="text-muted-foreground font-normal">
+                    #{{ invoiceSelected?.sri?.number || invoiceSelected?.name }}
+                </span>
+            </h3>
+
+            <!-- Acciones -->
+            <div class="mb-4 flex flex-wrap gap-2">
+                <button class="btn btn-warn" (click)="getFacturaPdf()" [disabled]="!invoiceSelected?.sri?.invoice">
+                    Descargar Factura
+                </button>
+
+                <button *ngIf="invoiceSelected?.order" class="btn btn-outline"
+                    (click)="irAOrden(invoiceSelected?.order)">
+                    Ver Orden: {{ invoiceSelected?.order }}
+                </button>
+
+                <button *ngIf="invoiceSelected?.sri?.status !== 'AUTORIZADO'" class="btn btn-primary"
+                    (click)="reenviarFactura()">
+                    Reenviar Factura
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab" [ngClass]="{ 'tab-active': activeTab === 'info' }" (click)="activeTab = 'info'">
+                    Información
+                </button>
+
+                <button class="tab" [ngClass]="{ 'tab-active': activeTab === 'sri' }" (click)="activeTab = 'sri'">
+                    SRI
+                </button>
+
+                <button class="tab" [ngClass]="{ 'tab-active': activeTab === 'items' }" (click)="activeTab = 'items'">
+                    Items
+                </button>
+            </div>
+
+            <!-- Tab: Información -->
+            <div *ngIf="activeTab === 'info'">
+                <div class="grid md:grid-cols-2 gap-6 mb-6">
+                    <!-- Info factura -->
+                    <div>
+                        <h4 class="text-base font-semibold text-gray-700 mb-2">🧾 Información</h4>
+                        <ul class="text-sm text-gray-700 space-y-1">
+                            <li><strong>ID:</strong> {{ invoiceSelected?.name }}</li>
+                            <li><strong>N° Factura:</strong> {{ invoiceSelected?.sri?.number || '—' }}</li>
+                            <li><strong>Fecha:</strong> {{ invoiceSelected?.createdAt | ecuadorTime }}</li>
+                            <li><strong>Total:</strong> <span class="text-green-700 font-semibold">
+                                    {{ invoiceSelected?.total | currency:'USD':'symbol':'1.2-2' }}
+                                </span></li>
+                        </ul>
+                    </div>
+
+                    <!-- Cliente -->
+                    <div>
+                        <h4 class="text-base font-semibold text-gray-700 mb-2">👤 Cliente</h4>
+                        <ul class="text-sm text-gray-700 space-y-1">
+                            <li><strong>Nombre:</strong> {{ invoiceSelected?.customer?.fullName || '—' }}</li>
+                            <li><strong>Cédula/RUC:</strong> {{ invoiceSelected?.customer?.num_identificacion || '—' }}
+                            </li>
+                            <li><strong>Email:</strong> {{ invoiceSelected?.customer?.correo || '—' }}</li>
+                            <li><strong>Teléfono:</strong> {{ invoiceSelected?.customer?.telefono || '—' }}</li>
+                            <li><strong>Dirección:</strong> {{ invoiceSelected?.customer?.direccion || '—' }}</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: SRI -->
+            <div *ngIf="activeTab === 'sri'" class="text-sm text-gray-700">
+                <h4 class="text-base font-semibold text-gray-700 mb-2">📤 Información del SRI</h4>
+                <ul class="space-y-1">
+                    <li>
+                        <strong>Estado SRI:</strong>
+                        <span class="badge" [ngClass]="{
+              'badge-green': invoiceSelected?.sri?.status === 'AUTORIZADO',
+              'badge-red': invoiceSelected?.sri?.status === 'Rejected' || invoiceSelected?.sri?.status === 'Error',
+              'badge-yellow': invoiceSelected?.sri?.status !== 'AUTORIZADO'
+                                && invoiceSelected?.sri?.status !== 'Rejected'
+                                && invoiceSelected?.sri?.status !== 'Error'
+            }">
+                            {{
+                            invoiceSelected?.sri?.status === 'AUTORIZADO' ? 'AUTORIZADO' :
+                            invoiceSelected?.sri?.status === 'Rejected' ? 'Rechazada' :
+                            invoiceSelected?.sri?.status === 'Error' ? 'Error' :
+                            invoiceSelected?.sri?.status === 'Queued' ? 'En cola' :
+                            invoiceSelected?.sri?.status === 'Processing' ? 'En proceso' :
+                            invoiceSelected?.sri?.status === 'Draft' ? 'Borrador' :
+                            (invoiceSelected?.sri?.status || '—')
+                            }}
+                        </span>
+                    </li>
+
+                    <li *ngIf="invoiceSelected?.sri?.number"><strong>Número:</strong> {{ invoiceSelected?.sri?.number }}
+                    </li>
+                    <li *ngIf="invoiceSelected?.sri?.invoice"><strong>Factura:</strong> {{ invoiceSelected?.sri?.invoice
+                        }}</li>
+                    <li *ngIf="invoiceSelected?.total !== undefined">
+                        <strong>Total Factura:</strong> {{ invoiceSelected?.total | currency:'USD':'symbol':'1.2-2' }}
+                    </li>
+                    <li *ngIf="invoiceSelected?.sri?.access_key">
+                        <strong>Clave de Acceso:</strong>
+                        <span class="break-all font-mono text-sm text-blue-700">{{ invoiceSelected?.sri?.access_key
+                            }}</span>
+                    </li>
+                    <li *ngIf="invoiceSelected?.sri?.authorization_datetime">
+                        <strong>F. Autorización:</strong> {{ invoiceSelected?.sri?.authorization_datetime }}
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Tab: Items -->
+            <div *ngIf="activeTab === 'items'">
+                <h4 class="text-base font-semibold text-gray-700 mb-2">📦 Items</h4>
+                <div class="overflow-x-auto max-h-[50vh] overflow-y-auto">
+                    <table class="w-full text-sm border border-gray-200 rounded-lg">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="p-2 text-left">Producto</th>
+                                <th class="p-2 text-left">Cantidad</th>
+                                <th class="p-2 text-left">Precio Unitario</th>
+                                <th class="p-2 text-left">IVA</th>
+                                <th class="p-2 text-left">Subtotal</th>
+                                <th class="p-2 text-left">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let it of invoiceSelected?.items" class="border-t hover:bg-gray-50">
+                                <td class="p-2">{{ it.productName }}</td>
+                                <td class="p-2">{{ it.quantity }}</td>
+                                <td class="p-2">{{ it.price | currency:'USD':'symbol':'1.2-2' }}</td>
+                                <td class="p-2"><span class="badge badge-gray">{{ (it.tax_rate ?? 0) }}%</span></td>
+                                <td class="p-2">{{ (it.subtotal ?? (it.quantity * it.price)) |
+                                    currency:'USD':'symbol':'1.2-2' }}</td>
+                                <td class="p-2 font-medium">
+                                    {{
+                                    (it.total ??
+                                    ((it.subtotal ?? (it.quantity * it.price)) +
+                                    ((it.subtotal ?? (it.quantity * it.price)) * ((it.tax_rate ?? 0)/100)))
+                                    ) | currency:'USD':'symbol':'1.2-2'
+                                    }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

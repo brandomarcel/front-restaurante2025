@@ -16,7 +16,14 @@
   class="bg-primary flex items-center justify-center rounded-sm p-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
   [attr.aria-expanded]="menuService.showSideBar ? 'true' : 'false'"
   [attr.aria-controls]="'sidebar-menu'">
-  <img src="./assets/icons/olla_de_barro_icon.png" alt="Inicio" class="h-8 w-8" />
+   <img *ngIf="logoPreview; else defaultLogo" [src]="logoPreview" alt="FA" class="h-8 w-8"
+            loading="lazy" />
+
+
+          <ng-template #defaultLogo>
+            <img src="./assets/images/only_logo_FA.png" alt="FA" class="h-8 w-8"
+              loading="lazy" />
+          </ng-template>
 </button>
         <b class="text-foreground ps-2 ml-1 grow text-sm font-bold">
           {{ appJson.displayName }}

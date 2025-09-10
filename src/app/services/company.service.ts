@@ -68,7 +68,7 @@ export class CompanyService {
   uploadFirma(file: File, companyId: string) {
     const form = new FormData();
     form.append('file', file);
-    form.append('is_private', '1');              // 👈 privado SIEMPRE
+    form.append('is_private', '0');              // 👈 1 privado SIEMPRE
     form.append('doctype', 'Company');
     form.append('docname', String(companyId));
     form.append('fieldname', 'urlfirma');        // 👈 Frappe setea el valor del campo automáticamente
@@ -79,10 +79,11 @@ export class CompanyService {
     return this.http.post(`${this.apiUrl}/method/upload_file`, form, { withCredentials: true });
   }
 
-  analyzeFirma(password: string, companyId?: string, company_ruc?: string, save_to_company = 0) {
+  analyzeFirma(password: string, companyId?: string, company_ruc?: string, file_url?: string, save_to_company = 1) {
   const payload: any = { password, save_to_company };
   if (companyId) payload.company = companyId;
   if (company_ruc) payload.company_ruc = company_ruc;
+  if (file_url) payload.file_url = file_url;
 
   // Ajusta el path al del método Python que te pasé
   return this.http.post(

@@ -62,7 +62,7 @@
             <td class="app-td">{{ order.name }}</td>
             <td class="app-td">{{ order.createdAt | date: 'dd/MM/yyyy' }}</td>
             <td class="app-td">
-              {{ order.customer?.fullName || order.customer?.name || '—' }}
+              {{ order.customer?.fullName || order.customer?.nombre || '—' }}
             </td>
             <td class="app-td">
               {{ order.iva | currency:'USD':'symbol':'1.2-2' }}
@@ -95,9 +95,7 @@
 
             <td class="app-td text-center">
               <div class="inline-flex gap-2">
-                <button class="btn btn-outline" (click)="toggleOrderDetail(order)">
-                  🔍 Detalle
-                </button>
+               <button class="btn btn-outline" [routerLink]="['/dashboard/orders', order.name]">🔎 Abrir</button>
               </div>
             </td>
           </tr>
@@ -120,157 +118,5 @@
       </div>
     </div>
   </ng-template>
-
-  <!-- Modal Detalle -->
-  <div *ngIf="mostrarModal" class="app-modal-backdrop">
-    <div class="app-modal">
-      <button class="app-modal-close" (click)="cerrarModal()">×</button>
-
-      <div class="app-card-body">
-        <h3 class="text-lg font-semibold mb-4">
-          Detalle del Pedido #{{ orderSelected?.name }}
-        </h3>
-
-        <!-- Botones de acción -->
-        <div class="mb-4 flex flex-wrap gap-2">
-          <button class="btn btn-outline" (click)="getComandaPdf()">Imprimir Comanda</button>
-
-          <button *ngIf="orderSelected?.type === 'Nota Venta'" class="btn btn-warn"
-            (click)="getNotaVentaPdf()">Descargar Nota</button>
-
-          <button *ngIf="orderSelected?.type !== 'Nota Venta'" class="btn btn-warn" (click)="getFacturaPdf()">Descargar
-            Factura</button>
-
-          <button *ngIf="orderSelected?.type === 'Factura' && orderSelected?.sri?.status !== 'AUTORIZADO'"
-            class="btn btn-primary" (click)="validarYGenerarFactura()">Reenviar Factura</button>
-        </div>
-
-        <!-- Tabs -->
-        <div class="tabs">
-          <button class="tab" [ngClass]="{ 'tab-active': activeTab === 'info' }" (click)="activeTab = 'info'">
-            Información
-          </button>
-
-          <button *ngIf="orderSelected?.type === 'Factura' && orderSelected?.sri" class="tab"
-            [ngClass]="{ 'tab-active': activeTab === 'sri' }" (click)="activeTab = 'sri'">
-            SRI
-          </button>
-        </div>
-
-        <!-- Tab: Información -->
-        <div *ngIf="activeTab === 'info'">
-          <div class="grid md:grid-cols-2 gap-6 mb-6">
-            <!-- Información del Pedido -->
-            <div>
-              <h4 class="text-base font-semibold text-gray-700 mb-2">🧾 Información del Pedido</h4>
-              <ul class="text-sm text-gray-700 space-y-1">
-                <li><strong>ID:</strong> {{ orderSelected?.name }}</li>
-                <li><strong>Tipo:</strong> {{ orderSelected?.type | titlecase }}</li>
-                <li><strong>Fecha:</strong> {{ orderSelected?.createdAt | ecuadorTime }}</li>
-                <li><strong>Subtotal:</strong> {{ orderSelected?.subtotal | currency:'USD':'symbol':'1.2-2' }}</li>
-                <li><strong>IVA:</strong> {{ orderSelected?.iva | currency:'USD':'symbol':'1.2-2' }}</li>
-                <li><strong>Total:</strong>
-                  <span class="text-green-700 font-semibold">{{ orderSelected?.total | currency:'USD':'symbol':'1.2-2'
-                    }}</span>
-                </li>
-              </ul>
-            </div>
-
-            <!-- Cliente -->
-            <div>
-              <h4 class="text-base font-semibold text-gray-700 mb-2">👤 Cliente</h4>
-              <ul class="text-sm text-gray-700 space-y-1">
-                <li><strong>Nombre:</strong> {{ orderSelected?.customer?.nombre || '—' }}
-                </li>
-                <li><strong>Cédula/RUC:</strong> {{ orderSelected?.customer?.num_identificacion || '—' }}</li>
-                <li><strong>Email:</strong> {{ orderSelected?.customer?.correo || '—' }}</li>
-                <li><strong>Teléfono:</strong> {{ orderSelected?.customer?.telefono || '—' }}</li>
-                <li><strong>Dirección:</strong> {{ orderSelected?.customer?.direccion || '—' }}</li>
-              </ul>
-            </div>
-          </div>
-
-          <!-- Productos del Pedido -->
-          <div>
-            <h4 class="text-base font-semibold text-gray-700 mb-2">📦 Productos del Pedido</h4>
-            <div class="overflow-x-auto max-h-[50vh] overflow-y-auto">
-              <table class="w-full text-sm border border-gray-200 rounded-lg">
-                <thead class="bg-gray-100">
-                  <tr>
-                    <th class="p-2 text-left">Producto</th>
-                    <th class="p-2 text-left">Cantidad</th>
-                    <th class="p-2 text-left">Precio Unitario</th>
-                    <th class="p-2 text-left">IVA</th>
-                    <th class="p-2 text-left">Subtotal</th>
-                    <th class="p-2 text-left">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let item of orderSelected?.items" class="border-t hover:bg-gray-50">
-                    <td class="p-2">{{ item.productName }}</td>
-                    <td class="p-2">{{ item.quantity }}</td>
-                    <td class="p-2">{{ item.price | currency:'USD':'symbol':'1.2-2' }}</td>
-                    <td class="p-2">
-                      <span class="badge badge-gray">{{ (item.tax_rate ?? 0) }}%</span>
-                    </td>
-                    <td class="p-2">{{ (item.subtotal ?? (item.quantity * item.price)) | currency:'USD':'symbol':'1.2-2'
-                      }}</td>
-                    <td class="p-2 font-medium">
-                      {{
-                      (item.total ??
-                      ((item.subtotal ?? (item.quantity * item.price)) + ((item.subtotal ?? (item.quantity *
-                      item.price)) * ((item.tax_rate ?? 0)/100)))
-                      ) | currency:'USD':'symbol':'1.2-2'
-                      }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- Tab: Info SRI -->
-        <div *ngIf="activeTab === 'sri'" class="text-sm text-gray-700">
-          <h4 class="text-base font-semibold text-gray-700 mb-2">📤 Información del SRI</h4>
-          <ul class="space-y-1">
-            <li><strong>Estado SRI:</strong>
-              <span class="badge" [ngClass]="{
-                  'badge-green': orderSelected?.sri?.status === 'AUTORIZADO',
-                  'badge-red': orderSelected?.sri?.status === 'Rejected' || orderSelected?.sri?.status === 'Error',
-                  'badge-yellow': orderSelected?.sri?.status !== 'AUTORIZADO'
-                                   && orderSelected?.sri?.status !== 'Rejected'
-                                   && orderSelected?.sri?.status !== 'Error'
-                }">
-                {{
-                orderSelected?.sri?.status === 'AUTORIZADO' ? 'AUTORIZADO' :
-                orderSelected?.sri?.status === 'Rejected' ? 'Rechazada' :
-                orderSelected?.sri?.status === 'Error' ? 'Error' :
-                orderSelected?.sri?.status === 'Queued' ? 'En cola' :
-                orderSelected?.sri?.status === 'Processing'? 'En proceso' :
-                orderSelected?.sri?.status === 'Draft' ? 'Borrador' :
-                (orderSelected?.sri?.status || 'Sin factura')
-                }}
-              </span>
-            </li>
-
-            <li *ngIf="orderSelected?.sri?.number"><strong>Número:</strong> {{ orderSelected.sri.number }}</li>
-            <li *ngIf="orderSelected?.sri?.invoice"><strong>Factura:</strong> {{ orderSelected.sri.invoice }}</li>
-            <li *ngIf="orderSelected?.sri?.grand_total !== undefined">
-              <strong>Total Factura:</strong> {{ orderSelected.sri.grand_total | currency:'USD':'symbol':'1.2-2' }}
-            </li>
-            <li *ngIf="orderSelected?.sri?.access_key">
-              <strong>Clave de Acceso:</strong>
-              <span class="break-all font-mono text-sm text-blue-700">{{ orderSelected.sri.access_key }}</span>
-            </li>
-            <li *ngIf="orderSelected?.sri?.authorization_datetime">
-              <strong>F. Autorización:</strong> {{ orderSelected.sri.authorization_datetime }}
-            </li>
-          </ul>
-        </div>
-
-      </div>
-    </div>
-  </div>
 
 </div>

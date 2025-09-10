@@ -94,6 +94,7 @@
       }">
                             <h3 class="font-semibold text-foreground">
                                 {{ product.nombre }}
+
                             </h3>
 
                             <!-- Etiqueta 'Agotado' discreta -->
@@ -107,7 +108,10 @@
 
                             <p class="text-muted-foreground text-lg">
                                 ${{ product.precio | number: '1.2-2' }}
+                            <p class="text-yellow-600 text-[10px] italic mb-1">
+                                ({{ product.tax_value }}% IVA)
                             </p>
+
                         </div>
                         <tr *ngIf="filteredProductList.length === 0">
                             <td colspan="6" class="text-center py-6 text-gray-500 italic">

@@ -18,9 +18,18 @@
       <div class="flex items-center justify-start gap-3 sm:order-2 ltr:md:mr-10 rtl:md:ml-10 lg:hidden">
         <a class="bg-primary flex items-center justify-center rounded-sm p-2 focus:outline-hidden focus:ring-1">
           <!-- <svg-icon src="assets/icons/logo.svg"></svg-icon> -->
-          <img src="./assets/icons/olla_de_barro_icon.png" alt="dashboard widget" class="h-10 w-10" />
+            <img *ngIf="logoPreview; else defaultLogo" [src]="logoPreview" alt="FA" class="h-10 w-10"
+            loading="lazy" />
+
+
+          <ng-template #defaultLogo>
+            <img src="./assets/images/only_logo_FA.png" alt="FA" class="mx-auto  h-20 w-auto"
+              loading="lazy" />
+          </ng-template>
+
+          <!-- <img  src="./assets/icons/olla_de_barro_icon.png" alt="dashboard widget" class="h-10 w-10" /> -->
         </a>
-        <b class="text-foreground hidden text-sm font-bold sm:block"> Restaurante </b>
+        <b class="text-foreground hidden text-sm font-bold sm:block"> FacturADA </b>
       </div>
 
       <!-- Desktop Menu -->

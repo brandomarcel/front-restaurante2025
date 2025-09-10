@@ -9,10 +9,13 @@ import { PrintService } from 'src/app/services/print.service';
 import { toast } from 'ngx-sonner';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 import { environment } from 'src/environments/environment';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-orders',
-  imports: [CommonModule, EcuadorTimePipe, NgxPaginationModule, FormsModule,ButtonComponent],
+  imports: [CommonModule, EcuadorTimePipe, NgxPaginationModule, FormsModule,ButtonComponent,
+    RouterModule
+    ],
   templateUrl: './orders.component.html',
   styleUrl: './orders.component.css'
 })
@@ -40,6 +43,7 @@ export class OrdersComponent implements OnInit {
     private ordersService: OrdersService,
     public spinner: NgxSpinnerService,
     private printService: PrintService,
+
   ) {}
 
   ngOnInit() { this.loadOrders();

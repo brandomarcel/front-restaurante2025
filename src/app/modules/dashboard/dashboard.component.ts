@@ -23,6 +23,9 @@ export class DashboardComponent implements OnInit {
       console.log('data', data.data);
       if (data) {
         const company = data.data[0];
+        if (company.logo) {
+          localStorage.setItem('logo', company.logo);
+        }
 
         localStorage.setItem('ambiente', company.ambiente);
         console.log('company', company);
