@@ -6,12 +6,13 @@ import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { RoleKey, UserItem } from 'src/app/core/models/user_item';
 import { UserService } from 'src/app/services/user.service';
+import { ButtonComponent } from "src/app/shared/components/button/button.component";
 
 
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, NgxPaginationModule,FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, NgxPaginationModule, FormsModule, ButtonComponent],
   templateUrl: './users.component.html',
 })
 export class UsersComponent implements OnInit {
@@ -142,7 +143,12 @@ ngOnInit(): void {
         if (maybeToggle) maybeToggle.subscribe({ next: finalize, error: finalize });
         else finalize();
       },
-      error: () => this.spinner.hide()
+      error: (err) => {
+      this.spinner.hide();
+      const msg = this.parseFrappeError(err);
+      toast.error(msg);
+      console.error('register_tenant_open error:', err);
+    }
     });
   }
 
@@ -159,12 +165,38 @@ ngOnInit(): void {
   borrar(u: UserItem) {
     if (!confirm(`¿Eliminar a ${u.email}?`)) return;
     this.usersService.delete(u.email).subscribe({
-      next: () => {
+      next: (res:any) => {
         toast.success('Usuario eliminado');
         this.cargar();
-      }
+      },
+      error: (err) => {
+      this.spinner.hide();
+      const msg = this.parseFrappeError(err);
+      toast.error(msg);
+      console.error('register_tenant_open error:', err);
+    }
     });
   }
 
   trackBy = (_: number, i: UserItem) => i.name || i.email;
+
+
+  /** Extrae un mensaje legible de errores de Frappe */
+private parseFrappeError(err: any): string {
+  try {
+    const server = err?.error?._server_messages;
+    if (server) {
+      const arr = JSON.parse(server);
+      const first = typeof arr[0] === 'string' ? JSON.parse(arr[0]) : arr[0];
+      return first?.message || 'Error en el servidor';
+    }
+    if (err?.error?.message) return err.error.message;
+    if (err?.message) return err.message;
+  } catch {}
+  return 'No se pudo completar el registro. Verifica los datos e inténtalo nuevamente.';
 }
+
+
+}
+
+

@@ -9,7 +9,8 @@
             </div>
         </div>
 
-        <button class="btn btn-primary" (click)="abrirModal()">+ Nuevo Usuario</button>
+        <app-button  impact="bold" tone="primary" shape="rounded" size="medium" (click)="abrirModal()" >+ Nuevo Usuario</app-button>
+        <!-- <button class="btn btn-primary" (click)="abrirModal()">+ Nuevo Usuario</button> -->
     </div>
 
     <!-- Toolbar -->
@@ -42,7 +43,7 @@
                         <td class="app-td">{{ u.phone || '—' }}</td>
                         <td class="app-td capitalize">{{ u.role_key || (u.role_profile_name || '—') }}</td>
                         <td class="app-td text-center">
-                            <button class="btn btn-xs" [class.btn-success]="u.enabled" [class.btn-warn]="!u.enabled"
+                            <button class="btn btn-xs" [class.btn-success]="u.enabled" [class.btn-ghost]="!u.enabled"
                                 (click)="toggleEnabled(u)">
                                 {{ u.enabled ? 'Activo' : 'Inactivo' }}
                             </button>
@@ -50,7 +51,7 @@
                         <td class="app-td text-center">
                             <div class="inline-flex gap-2">
                                 <button class="btn btn-outline" (click)="abrirModal(u)">✏️ Editar</button>
-                                <button class="btn btn-warn" (click)="borrar(u)">🗑️ Eliminar</button>
+                                <button class="btn btn-danger" (click)="borrar(u)">🗑️ Eliminar</button>
                             </div>
                         </td>
                     </tr>

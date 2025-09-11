@@ -19,8 +19,8 @@ export class UserService {
   private readonly apiUrl = environment.apiUrl; // Cambia si usás otro backend
 
   private urlBase: string = '';
-  constructor(private http: HttpClient) { 
-     this.urlBase = this.apiUrl + API_ENDPOINT.Register;
+  constructor(private http: HttpClient) {
+    this.urlBase = this.apiUrl + API_ENDPOINT.Register;
   }
 
   setUser(user: User) {
@@ -47,20 +47,20 @@ export class UserService {
   /** 👥 Obtener lista de usuarios (opcionalmente solo activos o por rol) */
 
 
-/** 👥 Obtener usuarios con sus roles (opcionalmente filtrado) */
-getUsuariosConRoles(usuario?: string, rol?: string) {
-  const params: any = {};
-  if (usuario) params.usuario = usuario;
-  if (rol) params.rol = rol;
+  /** 👥 Obtener usuarios con sus roles (opcionalmente filtrado) */
+  getUsuariosConRoles(usuario?: string, rol?: string) {
+    const params: any = {};
+    if (usuario) params.usuario = usuario;
+    if (rol) params.rol = rol;
 
-  const query = new URLSearchParams(params).toString();
-  const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.api.utils.get_usuarios_con_roles${query ? '?' + query : ''}`;
-  
-  return this.http.get<any>(url, { withCredentials: true });
-}
+    const query = new URLSearchParams(params).toString();
+    const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.api.utils.get_usuarios_con_roles${query ? '?' + query : ''}`;
+
+    return this.http.get<any>(url, { withCredentials: true });
+  }
 
 
- /** Crear/actualizar usuario en la company de la sesión */
+  /** Crear/actualizar usuario en la company de la sesión */
   upsert(payload: {
     email: string;
     password: string; // requerido al crear; al editar si no cambia usar placeholder
@@ -86,8 +86,24 @@ getUsuariosConRoles(usuario?: string, rol?: string) {
   }
   /** Habilitar/Deshabilitar (recomendado en vez de borrar) */
   setEnabled(email: string, enabled: boolean) {
-    return this.http.put<any>(`/api/resource/User/${encodeURIComponent(email)}`, { enabled: enabled ? 1 : 0 });
+    const url = `${this.urlBase}.create_company_user`;
+
+    return this.http.put<any>(url, {
+      user_json: JSON.stringify({ email, enabled: enabled ? 1 : 0 }),
+      role_key: 'cajero', // o el rol que ya tenía; para fast_path da igual
+      add_permission: 0
+    },
+      { withCredentials: true }
+    );
   }
+
+  // setEnabled(email: string, enabled: boolean) {
+  //   const url = `${this.apiUrl}/resource/User/${encodeURIComponent(email)}`;
+
+  //   return this.http.put<any>( url, { enabled: enabled ? 1 : 0 },
+  //     { withCredentials: true } 
+  //   );
+  // }
 
   /** Borrado duro (no recomendado en Frappe para User). */
   delete(email: string) {
@@ -97,7 +113,7 @@ getUsuariosConRoles(usuario?: string, rol?: string) {
   private profileToRoleKey(profile?: string): RoleKey | undefined {
     if (!profile) return undefined;
     const p = profile.toUpperCase().trim();
-    if (p === 'ADMIN COMPANY')  return 'gerente';
+    if (p === 'ADMIN COMPANY') return 'gerente';
     if (p === 'CAJERO COMPANY') return 'cajero';
     return undefined;
   }
@@ -114,13 +130,13 @@ getUsuariosConRoles(usuario?: string, rol?: string) {
       start: args?.start ?? 0,
     };
     return this.http.post<any>(`${this.urlBase}.list_company_users`, body).pipe(
-    map(res => (res.message.data || []) as UserItem[]),
-    map(users => users.map(u => ({
-      ...u,
-      role_key: this.profileToRoleKey(u.role_profile_name)
-    })))
-  );
-}
+      map(res => (res.message.data || []) as UserItem[]),
+      map(users => users.map(u => ({
+        ...u,
+        role_key: this.profileToRoleKey(u.role_profile_name)
+      })))
+    );
+  }
 
 
 

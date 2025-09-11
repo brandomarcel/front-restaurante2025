@@ -9,6 +9,7 @@ import { toast } from 'ngx-sonner';
 import { NgxSpinnerComponent, NgxSpinnerService } from 'ngx-spinner';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
+import { MenuService } from 'src/app/modules/layout/services/menu.service';
 
 
 @Component({
@@ -27,7 +28,8 @@ export class SignInComponent implements OnInit {
     private readonly _router: Router,
     private spinner: NgxSpinnerService,
     private frappeErrorService: FrappeErrorService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private menu: MenuService, private auth: AuthService
   ) { }
   ngOnInit(): void {
 
@@ -64,7 +66,13 @@ export class SignInComponent implements OnInit {
     if (this.form.invalid) return;
     this.spinner.show();
     this.authService.login(this.form.value.email, this.form.value.password).subscribe({
-      next: () => {
+      next: (res:any) => {
+        console.log('res', res);
+        console.log('this.auth.getCurrentUser()', this.auth.getCurrentUser());
+        const role: any = this.auth.getCurrentUser();
+        console.log('role', role);
+        this.menu.setMenuForRole(role.roles[0]) ;
+
         this.spinner.hide();
         this._router.navigate(['/dashboard']); // Ruta protegida del POS
       },

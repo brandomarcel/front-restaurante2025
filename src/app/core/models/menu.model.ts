@@ -4,6 +4,7 @@ export interface MenuItem {
   selected?: boolean;
   active?: boolean;
   items: Array<SubMenuItem>;
+  allowedRoles?: Role[]; // opcional: regla a nivel grupo
 }
 
 export interface SubMenuItem {
@@ -13,4 +14,6 @@ export interface SubMenuItem {
   expanded?: boolean;
   active?: boolean;
   children?: Array<SubMenuItem>;
+  allowedRoles?: Role[]; // opcional: regla a nivel grupo
 }
+export type Role = 'GERENTE' | 'CAJERO';

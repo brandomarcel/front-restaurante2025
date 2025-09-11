@@ -1,16 +1,26 @@
 import { animate, state, style, transition, trigger } from '@angular/animations';
-import { CommonModule, NgClass } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AngularSvgIconModule } from 'angular-svg-icon';
 import { ThemeService } from '../../../../../core/services/theme.service';
 import { ClickOutsideDirective } from '../../../../../shared/directives/click-outside.directive';
+import { AuthService } from 'src/app/services/auth.service';
+
+type Role = 'GERENTE' | 'CAJERO';
+
+interface ProfileItem {
+  title: string;
+  icon: string;
+  link: string;
+  allowedRoles?: Role[]; // si se omite, es visible para todos
+}
 
 @Component({
   selector: 'app-profile-menu',
   templateUrl: './profile-menu.component.html',
   styleUrls: ['./profile-menu.component.css'],
-  imports: [ClickOutsideDirective,CommonModule, RouterLink, AngularSvgIconModule],
+  imports: [ClickOutsideDirective, CommonModule, RouterLink, AngularSvgIconModule],
   animations: [
     trigger('openClose', [
       state(
@@ -33,73 +43,70 @@ import { ClickOutsideDirective } from '../../../../../shared/directives/click-ou
       transition('closed => open', [animate('0.2s')]),
     ]),
   ],
+  standalone: true,
 })
 export class ProfileMenuComponent implements OnInit {
   public isOpen = false;
-  public profileMenu = [
-    // {
-    //   title: 'Your Profile',
-    //   icon: './assets/icons/heroicons/outline/user-circle.svg',
-    //   link: '/profile',
-    // },
+
+  // Ítems del menú de perfil (anotados con allowedRoles)
+  public profileMenu: ProfileItem[] = [
     {
       title: 'Mi empresa',
       icon: './assets/icons/heroicons/outline/cog-6-tooth.svg',
       link: '/dashboard/company',
+      allowedRoles: ['GERENTE'], // solo GERENTE
     },
-    {
-      title: 'Cerrar Sesión',
-      icon: './assets/icons/heroicons/outline/logout.svg',
-      link: '/auth',
-    },
+    // aquí puedes agregar más items y anotar allowedRoles según tu necesidad
   ];
+
+  // Lista filtrada que realmente se muestra en el template
+  public visibleProfileMenu: ProfileItem[] = [];
 
   public themeColors = [
-    {
-      name: 'base',
-      code: '#e11d48',
-    },
-    {
-      name: 'yellow',
-      code: '#f59e0b',
-    },
-    {
-      name: 'green',
-      code: '#22c55e',
-    },
-    {
-      name: 'blue',
-      code: '#3b82f6',
-    },
-    {
-      name: 'orange',
-      code: '#ea580c',
-    },
-    {
-      name: 'red',
-      code: '#cc0022',
-    },
-    {
-      name: 'violet',
-      code: '#6d28d9',
-    },
+    { name: 'base',   code: '#e11d48' },
+    { name: 'yellow', code: '#f59e0b' },
+    { name: 'green',  code: '#22c55e' },
+    { name: 'blue',   code: '#3b82f6' },
+    { name: 'orange', code: '#ea580c' },
+    { name: 'red',    code: '#cc0022' },
+    { name: 'violet', code: '#6d28d9' },
   ];
-
   public themeMode = ['light', 'dark'];
   public themeDirection = ['ltr', 'rtl'];
 
   public user: any = {};
-  constructor(public themeService: ThemeService) {}
+  public roleUpper: Role | null = null; // 'GERENTE' | 'CAJERO' | null
+
+  constructor(public themeService: ThemeService, private authService: AuthService) {}
 
   ngOnInit(): void {
-
     this.user = JSON.parse(localStorage.getItem('user') || '{}');
-    console.log('user', this.user);
 
+    // Normaliza el rol desde varias posibles propiedades
+    const rawRole =
+      this.user?.roles?.[0] ??
+      this.user?.role ??
+      this.user?.rol ??
+      this.user?.tipo ??
+      '';
+
+    const r = String(rawRole).trim().toUpperCase();
+    this.roleUpper = r === 'GERENTE' || r === 'CAJERO' ? (r as Role) : null;
+
+    // Filtra los ítems del menú en base al rol
+    this.visibleProfileMenu = this.profileMenu.filter(item =>
+      !item.allowedRoles || (this.roleUpper && item.allowedRoles.includes(this.roleUpper))
+    );
   }
 
   public toggleMenu(): void {
     this.isOpen = !this.isOpen;
+  }
+
+  public logout() {
+    // cierra el menú y desloguea
+    this.isOpen = false;
+    this.authService.logout().subscribe();
   }
 
   toggleThemeMode() {

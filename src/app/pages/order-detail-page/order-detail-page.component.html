@@ -34,9 +34,9 @@
 
     <!-- Acciones rápidas (solo desktop) -->
     <div class="hidden md:flex items-center gap-2">
-      <button class="btn btn-outline" (click)="getComandaPdf()">  <fa-icon [icon]="['fas','print']" class="mr-1"></fa-icon> Comanda</button>
-      <button *ngIf="order?.type !== 'Nota Venta'" class="btn btn-warn" (click)="getFacturaPdf()"> <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Factura</button>
-      <button *ngIf="order?.type === 'Nota Venta'" class="btn btn-warn" (click)="getNotaVentaPdf()"> <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Nota</button>
+      <button class="btn btn-outline" (click)="getComandaPdf()">  <fa-icon [icon]="['fas','print']" class="mr-1"></fa-icon>Imprimir Comanda</button>
+      <button *ngIf="order?.type === 'Factura'" class="btn btn-warn" (click)="getFacturaPdf()"> <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Descargar Factura</button>
+      <button *ngIf="order?.type === 'Nota Venta'" class="btn btn-warn" (click)="getNotaVentaPdf()"> <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Descargar Nota Venta</button>
     </div>
   </div>
 </header>
@@ -158,7 +158,7 @@
 
 <!-- Barra de acciones móvil (fija en el pie de la página) -->
 <div class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t px-4 py-2 flex gap-2">
-  <button class="btn btn-outline flex-1" (click)="getComandaPdf()">Comanda</button>
-  <button *ngIf="order?.type !== 'Nota Venta'" class="btn btn-warn flex-1" (click)="getFacturaPdf()">Factura</button>
-  <button *ngIf="order?.type === 'Nota Venta'" class="btn btn-warn flex-1" (click)="getNotaVentaPdf()">Nota</button>
+  <button class="btn btn-outline flex-1" (click)="getComandaPdf()">Imprimir Comanda</button>
+  <button *ngIf="order?.type !== 'Nota Venta'" class="btn btn-warn flex-1" (click)="getFacturaPdf()">Descargar Factura</button>
+  <button *ngIf="order?.type === 'Nota Venta'" class="btn btn-warn flex-1" (click)="getNotaVentaPdf()">Imprimir Nota Venta</button>
 </div>

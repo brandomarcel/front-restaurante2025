@@ -14,10 +14,10 @@
           <span class="badge"
                 [ngClass]="{
                   'badge-green': invoice?.sri?.status === 'AUTORIZADO',
-                  'badge-red': invoice?.sri?.status === 'Rejected' || invoice?.sri?.status === 'Error',
+                  'badge-red': invoice?.sri?.status === 'Rejected' || invoice?.sri?.status === 'ERROR',
                   'badge-yellow': invoice?.sri?.status !== 'AUTORIZADO'
                                     && invoice?.sri?.status !== 'Rejected'
-                                    && invoice?.sri?.status !== 'Error'
+                                    && invoice?.sri?.status !== 'ERROR'
                 }">
             {{ sriStatus }}
           </span>
@@ -33,7 +33,9 @@
 
     <!-- Acciones rápidas (solo desktop) -->
     <div class="hidden md:flex items-center gap-2">
-      <button *ngIf="invoice?.type !== 'Nota Venta'" class="btn btn-warn" (click)="getFacturaPdf()">Factura</button>
+      <button *ngIf="invoice?.sri?.status != 'AUTORIZADO'"  class="btn btn-warn" (click)="reenviarFactura()">  <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Reenviar</button>
+      <button *ngIf="invoice?.type !== 'Nota Venta'" class="btn btn-primary" (click)="getFacturaPdf()">  <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Factura</button>
+        
     </div>
   </div>
 </header>
@@ -68,10 +70,10 @@
         <span class="badge"
               [ngClass]="{
                 'badge-green': invoice?.sri?.status === 'AUTORIZADO',
-                'badge-red': invoice?.sri?.status === 'Rejected' || invoice?.sri?.status === 'Error',
+                'badge-red': invoice?.sri?.status === 'Rejected' || invoice?.sri?.status === 'ERROR',
                 'badge-yellow': invoice?.sri?.status !== 'AUTORIZADO'
                                   && invoice?.sri?.status !== 'Rejected'
-                                  && invoice?.sri?.status !== 'Error'
+                                  && invoice?.sri?.status !== 'ERROR'
               }">
           {{ sriStatus }}
         </span>
@@ -89,6 +91,9 @@
           <span>Fecha: <b>{{ invoice?.createdAt | ecuadorTime }}</b></span>
           <span class="mx-2">•</span>
           <span>Total: <b class="text-green-700">{{ invoice?.total | currency:'USD':'symbol':'1.2-2' }}</b></span>
+        </li>
+         <li *ngIf="invoice?.sri?.sri_message" class="sm:col-span-2 ">
+          <strong>MensajeSRI:</strong> {{ invoice?.sri?.sri_message }}
         </li>
       </ul>
     </div>

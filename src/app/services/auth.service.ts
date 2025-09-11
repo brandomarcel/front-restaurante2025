@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, switchMap, tap } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { UserService } from './user.service';
+import { Router } from '@angular/router';
 
 interface LoginResponse {
   access_token: string;
@@ -22,7 +23,8 @@ export class AuthService {
   private apiUrl = environment.apiUrl; // Cambia si es tu entorno de producción
 
   constructor(private http: HttpClient,
-    private userService: UserService
+    private userService: UserService,
+    private router: Router // Agrega el Router aquí
   ) { }
 
 
@@ -79,13 +81,15 @@ export class AuthService {
 
 
   logout() {
-    return this.http.get(`${this.apiUrl}/api/method/logout`, {
+    return this.http.get(`${this.apiUrl}/method/logout`, {
       withCredentials: true
     }).pipe(
       tap(() => {
+        console.log('logout');
         this.userService.clearUser();
         localStorage.removeItem('user');
         localStorage.removeItem('access_token'); // si lo estás usando
+        this.router.navigate(['/auth/sign-in']);
       })
     );
   }

@@ -12,7 +12,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 @Component({
   selector: 'app-invoice-detail-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, EcuadorTimePipe,FontAwesomeModule],
+  imports: [CommonModule, RouterModule, EcuadorTimePipe, FontAwesomeModule],
   templateUrl: './invoice-detail-page.component.html'
 })
 export class InvoiceDetailPageComponent implements OnInit {
@@ -27,7 +27,7 @@ export class InvoiceDetailPageComponent implements OnInit {
     private router: Router,
     private invoicesSvc: InvoicesService,
     private printSvc: PrintService,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id')!;
@@ -38,7 +38,7 @@ export class InvoiceDetailPageComponent implements OnInit {
     this.loading = true; this.error = '';
     this.invoicesSvc.getInvoiceDetail(id).subscribe({
       next: (res: any) => {
-      console.log('Factura cargada:', res);
+        console.log('Factura cargada:', res);
         this.invoice = res?.message?.data || res?.data || null;
         this.loading = false;
         if (!this.invoice) this.error = 'Factura no encontrada';
@@ -56,7 +56,7 @@ export class InvoiceDetailPageComponent implements OnInit {
     else this.router.navigate(['/dashboard/invoices']);
   }
 
-    getFacturaPdf(): void {
+  getFacturaPdf(): void {
     const inv = this.invoice?.sri?.invoice;
     if (!inv) {
       toast.error('Factura no disponible');
@@ -66,13 +66,31 @@ export class InvoiceDetailPageComponent implements OnInit {
     const w = window.open(url, '_blank'); if (!w) toast.error('No se pudo abrir la impresión');
   }
 
+  reenviarFactura() {
+    this.invoicesSvc.emit_existing_invoice_v2(this.invoice.name).subscribe({
+      next: (res: any) => {
+        console.log('emit_existing_invoice_v2:', res);
+        const id = this.route.snapshot.paramMap.get('id')!;
+        this.fetch(id);
+
+        this.loading = false;
+
+      },
+      error: (err) => {
+        this.loading = false;
+        this.error = 'No se pudo cargar la factura';
+        console.error(err);
+      }
+    });
+  }
+
   get sriStatus(): string {
     const st = this.invoice?.sri?.status;
     return st === 'AUTORIZADO' ? 'AUTORIZADO' :
-           st === 'Rejected' ? 'Rechazada' :
-           st === 'Error' ? 'Error' :
-           st === 'Queued' ? 'En cola' :
-           st === 'Processing' ? 'En proceso' :
-           st === 'Draft' ? 'Borrador' : (st || '—');
+      st === 'Rejected' ? 'Rechazada' :
+        st === 'Error' ? 'Error' :
+          st === 'Queued' ? 'En cola' :
+            st === 'Processing' ? 'En proceso' :
+              st === 'Draft' ? 'Borrador' : (st || '—');
   }
 }

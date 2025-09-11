@@ -298,9 +298,11 @@ select {
   .btn { @apply inline-flex items-center justify-center rounded-md px-3.5 py-2 text-xs font-semibold transition; }
   .btn:disabled { @apply opacity-50 cursor-not-allowed; }
   .btn-primary { @apply bg-primary text-primary-foreground hover:opacity-90; }
+  .btn-success { @apply bg-green-500 text-primary-foreground hover:opacity-90; }
   .btn-ghost   { @apply bg-gray-100 text-gray-800 hover:bg-gray-200; }
   .btn-outline { @apply border border-gray-300 text-gray-800 bg-white hover:bg-gray-50; }
-  .btn-warn    { @apply bg-amber-500 text-black hover:bg-amber-600; }
+  .btn-warn    { @apply bg-amber-300 text-black hover:bg-amber-600; }
+  .btn-danger    { @apply bg-red-400 text-black hover:bg-amber-600; }
 
   /* Badges */
   .badge { @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium; }

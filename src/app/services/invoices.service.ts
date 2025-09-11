@@ -29,6 +29,24 @@ export class InvoicesService {
     );
   }
 
+  emit_existing_invoice_v2(invoice_name: string): Observable<any> {
+
+  //  const  url =`${this.api}/method/restaurante_app.facturacion_bmarc.doctype.sales_invoice.sales_invoice.create_from_ui`;
+  const  url =`${this.api}/method/restaurante_app.facturacion_bmarc.einvoice.ui_new.emit_existing_invoice_v2`;
+    return this.http.post<any>(
+      url,
+      {invoice_name:invoice_name},
+      { withCredentials: true }
+    ).pipe(
+      catchError((e) => {
+        const msg = this.err.handle(e) || 'Error al crear la factura.';
+        toast.error(msg);
+        return EMPTY;
+      })
+    );
+  }
+
+
   queue(invoice_name: string): Observable<any> {
     return this.http.post<any>(
       `${this.api}/method/restaurante_app.facturacion_bmarc.doctype.sales_invoice.sales_invoice.queue_einvoice`,
