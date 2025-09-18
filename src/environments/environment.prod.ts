@@ -1,5 +1,5 @@
 export const environment = {
-  apiUrl: 'http://207.180.197.160:1012/api',
-  URL: 'http://207.180.197.160:1012',
+  apiUrl: 'https://ada.bmarc-corp.com/api',
+  URL: 'https://ada.bmarc-corp.com',
   production: true,
 };

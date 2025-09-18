@@ -57,6 +57,8 @@ export class PosComponent implements OnInit {
   clienteForm!: FormGroup;
 
   today: any;
+
+    private url=environment.URL
   constructor(public menuService: MenuService,
     private customersService: CustomersService,
     private productsService: ProductsService,
@@ -477,7 +479,7 @@ get total(): number {
 
   printCombinedTicket(orderId: string) {
     // const order = 'http://207.180.197.160:1012' + this.printService.getOrderPdf(orderId);
-    const order = 'http://192.168.100.73:1012' + this.printService.getOrderPdf(orderId);
+    const order = this.url + this.printService.getOrderPdf(orderId);
     console.log('order', order);
     const width = 800;
     const height = 800;

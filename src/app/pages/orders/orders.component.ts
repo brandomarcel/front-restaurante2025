@@ -8,8 +8,9 @@ import { FormsModule } from '@angular/forms';
 import { PrintService } from 'src/app/services/print.service';
 import { toast } from 'ngx-sonner';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
-import { environment } from 'src/environments/environment';
+
 import { RouterModule } from '@angular/router';
+import { environment } from 'src/environments/environment.prod';
 
 
 @Component({

@@ -11,7 +11,7 @@ export class Menu {
         {
           icon: 'assets/icons/heroicons/outline/chart-pie.svg',
           label: 'Dashboard',
-          route: '/dashboard/nfts',
+          route: '/dashboard/main',
         },
         {
           icon: 'assets/icons/heroicons/outline/building-storefront.svg',

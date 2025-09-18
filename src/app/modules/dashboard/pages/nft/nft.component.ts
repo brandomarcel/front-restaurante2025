@@ -1,10 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { NftAuctionsTableComponent } from '../../components/nft/nft-auctions-table/nft-auctions-table.component';
-import { NftChartCardComponent } from '../../components/nft/nft-chart-card/nft-chart-card.component';
-import { NftDualCardComponent } from '../../components/nft/nft-dual-card/nft-dual-card.component';
-import { NftHeaderComponent } from '../../components/nft/nft-header/nft-header.component';
-import { NftSingleCardComponent } from '../../components/nft/nft-single-card/nft-single-card.component';
-import { Nft } from '../../models/nft';
+
 import { CommonModule } from '@angular/common';
 import { OrdersService } from '../../../../services/orders.service';
 import { RouterModule } from '@angular/router';
