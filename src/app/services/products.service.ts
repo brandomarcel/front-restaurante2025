@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { API_ENDPOINT } from '../core/constants/api.constants';
 import { map } from 'rxjs';
@@ -21,13 +21,18 @@ export class ProductsService {
   //   });
   // }
 
-  getAll() {
-    return this.http.get<any>(`${this.urlBase}.get_productos`, {
-      withCredentials: true
-    }).pipe(
-      map((res: any) => res.message.data) // extrae solo el array
-    );
-  }
+  getAll(isactive?: number) {
+      let params = new HttpParams();
+  
+      if (isactive !== undefined && isactive !== null) {
+        params = params.set('isactive', isactive.toString());
+      }
+  
+      return this.http.get(`${this.urlBase}.get_productos`, {
+        params,
+        withCredentials: true
+      });
+    }
 
 
   getById(id: number) {

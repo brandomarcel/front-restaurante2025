@@ -35,7 +35,7 @@
     <!-- Acciones rápidas (solo desktop) -->
     <div class="hidden md:flex items-center gap-2">
       <button class="btn btn-outline" (click)="getComandaPdf()">  <fa-icon [icon]="['fas','print']" class="mr-1"></fa-icon>Imprimir Comanda</button>
-      <button *ngIf="order?.type === 'Factura'" class="btn btn-warn" (click)="getFacturaPdf()"> <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Descargar Factura</button>
+      <button *ngIf="order?.type === 'Factura' && order?.sri?.status === 'AUTORIZADO'" class="btn btn-warn" (click)="getFacturaPdf()"> <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Descargar Factura</button>
       <button *ngIf="order?.type === 'Nota Venta'" class="btn btn-warn" (click)="getNotaVentaPdf()"> <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Descargar Nota Venta</button>
     </div>
   </div>

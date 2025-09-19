@@ -40,12 +40,14 @@
       <table class="app-table">
         <thead class="app-thead">
           <tr>
+           
             <th class="app-th">Producto</th>
             <th class="app-th">Código</th>
             <th class="app-th">Categoría</th>
             <th class="app-th">Impuesto(IVA)</th>
             <th class="app-th">Precio</th>
             <th class="app-th">Stock</th>
+             <th class="app-th">Estado</th>
             <th class="app-th last:text-center">Acciones</th>
           </tr>
         </thead>
@@ -54,6 +56,7 @@
           <tr
             *ngFor="let p of productosFiltradosList | paginate: { itemsPerPage: pageSize, currentPage: page }; trackBy: trackByName"
             class="app-tr">
+
 
             <td class="app-td">
               <div class="flex flex-col">
@@ -80,6 +83,16 @@
                       'badge-red':    p.is_out_of_stock
                     }">
                 {{ p.is_out_of_stock ? 'Agotado' : 'Disponible' }}
+              </span>
+            </td>
+
+            
+            <td class="app-td">
+              <span class="badge" [ngClass]="{
+                      'badge-green':  p.isactive,
+                      'badge-red':    !p.isactive
+                    }">
+                {{ p.isactive ? 'Activo' : 'Inactivo' }}
               </span>
             </td>
 

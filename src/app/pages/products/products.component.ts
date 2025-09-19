@@ -53,8 +53,9 @@ export class ProductsComponent implements OnInit {
     this.spinner.show();
     this.productsService.getAll().subscribe({
       next: (res: any) => {
-        this.productos = res;
-        this.productosFiltradosList = res; // Inicializar la lista filtrada
+        console.log('res', res);
+        this.productos = res.message.data || [];
+        this.productosFiltradosList = res.message.data; // Inicializar la lista filtrada
         this.productosFiltradosList.sort((a, b) => a.name.localeCompare(b.name));
         console.log('Productos cargados:', this.productos);
       },

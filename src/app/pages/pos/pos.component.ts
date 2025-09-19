@@ -129,16 +129,9 @@ export class PosComponent implements OnInit {
   }
   loadProducts() {
     this.spinner.show();
-    this.productsService.getAll().subscribe((res: any) => {
+    this.productsService.getAll(1).subscribe((res: any) => {
       this.spinner.hide();
-      this.products = res || [];
-      if ((res).length > 0) {
-        console.log('res', res);
-
-        this.products = (res).filter((product: any) => {
-          return product.isactive === 1
-        });
-      }
+      this.products = res.message.data || [];
 
       console.log('Productos cargados:', this.products);
       this.applyFilters(); // 🔥 Actualiza lista filtrada

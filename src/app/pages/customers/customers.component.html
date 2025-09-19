@@ -43,16 +43,25 @@
                 </thead>
 
                 <tbody>
-                    <tr *ngFor="let customer of filteredCustomersList | paginate: { itemsPerPage: pageSize, currentPage: page }; trackBy: trackById"
+                    <tr *ngFor="let c of filteredCustomersList | paginate: { itemsPerPage: pageSize, currentPage: page }; trackBy: trackById"
                         class="app-tr">
-                        <td class="app-td">{{ customer.nombre }}</td>
-                        <td class="app-td">{{ customer.num_identificacion }}</td>
-                        <td class="app-td">{{ customer.telefono || '—' }}</td>
-                        <td class="app-td">{{ customer.correo || '—' }}</td>
+                        <td class="app-td">{{ c.nombre }}</td>
+                        <td class="app-td">{{ c.num_identificacion }}</td>
+                        <td class="app-td">{{ c.telefono || '—' }}</td>
+                        <td class="app-td">{{ c.correo || '—' }}</td>
+                           <td class="app-td">
+              <span class="badge" [ngClass]="{
+                      'badge-green':  c.isactive,
+                      'badge-red':    !c.isactive
+                    }">
+                {{ c.isactive ? 'Activo' : 'Inactivo' }}
+         
+              </span>
+            </td>
                                     <td class="app-td text-center">
               <div class="inline-flex gap-2 ">
-                                <button class="btn btn-outline" (click)="abrirModal(customer)">✏️ Editar</button>
-                                <button class="btn btn-warn" (click)="delete(customer.name)">🗑️ Eliminar</button>
+                                <button class="btn btn-outline" (click)="abrirModal(c)">✏️ Editar</button>
+                                <button class="btn btn-warn" (click)="delete(c.name)">🗑️ Eliminar</button>
                             </div>
                         </td>
                     </tr>

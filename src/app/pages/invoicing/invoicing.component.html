@@ -33,10 +33,13 @@
         <section class="bg-white rounded-md border shadow-sm p-5">
           <div class="flex justify-between items-center mb-2">
             <h3 class="text-[13px] font-semibold text-gray-700">INFORMACIÓN DEL CLIENTE</h3>
-            <button type="button" (click)="showCustomerModal = true"
+            <app-button type="button" tone="info" impact="bold" shape="rounded" (click)="showCustomerModal = true">
+              <fa-icon [icon]="['fas','user-plus']" class="mr-1"></fa-icon> Nuevo
+            </app-button>
+            <!-- <button type="button" (click)="showCustomerModal = true"
               class="bg-blue-600 text-white px-3 py-1.5 rounded-md text-[11px] hover:bg-blue-700">
               <fa-icon [icon]="['fas','user-plus']" class="mr-1"></fa-icon> Nuevo
-            </button>
+            </button> -->
           </div>
 
           <label for="customer-select" class="block text-[11px] font-medium text-gray-600 mb-1">Buscar cliente</label>
@@ -73,9 +76,9 @@
               <label for="product-select" class="block text-xs font-medium text-gray-700 mb-1">
                 Agregar Producto/Servicio
               </label>
-              <ng-select formControlName="selectedProduct" id="product-select" class="ng-select-tailwind" [items]="products" bindLabel="nombre"
-                bindValue="name" placeholder="Busca y agrega un ítem" [searchable]="true"
-                (change)="addProductToCart($event)">
+              <ng-select formControlName="selectedProduct" id="product-select" class="ng-select-tailwind"
+                [items]="products" bindLabel="nombre" bindValue="name" placeholder="Busca y agrega un ítem"
+                [searchable]="true" (change)="addProductToCart($event)">
               </ng-select>
             </div>
           </div>
@@ -84,7 +87,7 @@
           <div class="overflow-x-auto max-h-[360px] overflow-y-auto">
             <!-- 👇 table-auto para que la 1ª columna use todo el espacio disponible -->
             <table class="min-w-full table-auto divide-y divide-gray-200">
-              <thead class="bg-gray-50 sticky top-0 z-10">
+              <thead class="bg-gray-50 sticky top-0 ">
                 <tr>
                   <!-- sin ancho fijo: ocupa todo lo que sobra -->
                   <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wide text-[10px]">
@@ -245,10 +248,16 @@
     <form [formGroup]="customerForm" (ngSubmit)="saveCustomer()" class="space-y-3">
       <div>
         <label class="block text-xs font-medium text-gray-700">Tipo de Identificación</label>
-        <select formControlName="tipo_identificacion" class="w-full border rounded-md px-3 py-2 mt-1 text-gray-900">
-          <option value="05 - Cedula">Cédula</option>
-          <option value="04 - RUC">RUC</option>
+        <select class="select" formControlName="tipo_identificacion">
+          <option *ngFor="let item of identificationTypes" [value]="item.value"> {{ item.label }}
+          </option>
+
         </select>
+
+        <div *ngIf="customerForm.get('tipo_identificacion')?.invalid && submittedCustomerForm"
+          class="text-red-500 text-[11px] mt-1">
+          Seleccione un tipo de identificación.
+        </div>
       </div>
 
       <div>
@@ -269,12 +278,18 @@
       <div>
         <label class="block text-xs font-medium text-gray-700">Nombre / Razón Social</label>
         <input type="text" formControlName="nombre" class="w-full border rounded-md px-3 py-2 mt-1 text-gray-900"
-          (input)="toUpper($event)" />
+          oninput="this.value = this.value.toUpperCase()" />
+        <div *ngIf="customerForm.get('nombre')?.invalid && submittedCustomerForm" class="text-red-500 text-[11px] mt-1">
+          Campo requerido.
+        </div>
       </div>
 
       <div>
         <label class="block text-xs font-medium text-gray-700">Email</label>
         <input type="email" formControlName="correo" class="w-full border rounded-md px-3 py-2 mt-1 text-gray-900" />
+        <div *ngIf="customerForm.get('correo')?.invalid && submittedCustomerForm" class="text-red-500 text-[11px] mt-1">
+          Email inválido.
+        </div>
       </div>
 
       <div class="grid grid-cols-2 gap-3">
@@ -282,18 +297,29 @@
           <label class="block text-xs font-medium text-gray-700">Teléfono</label>
           <input maxlength="10" type="text" formControlName="telefono"
             class="w-full border rounded-md px-3 py-2 mt-1 text-gray-900" />
+          <div *ngIf="customerForm.get('telefono')?.invalid && submittedCustomerForm"
+            class="text-red-500 text-[11px] mt-1">
+            Teléfono inválido.
+          </div>
+
         </div>
         <div>
           <label class="block text-xs font-medium text-gray-700">Dirección</label>
           <input type="text" formControlName="direccion"
             class="w-full border rounded-md px-3 py-2 mt-1 text-gray-900" />
+          <div *ngIf="customerForm.get('direccion')?.invalid && submittedCustomerForm"
+            class="text-red-500 text-[11px] mt-1">
+            Dirección inválida.
+          </div>
         </div>
       </div>
 
       <div class="flex justify-end gap-3 pt-2">
-        <button type="button" (click)="closeCustomerModal()"
-          class="px-4 py-2 rounded-md border text-gray-700">Cancelar</button>
-        <button type="submit" class="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">Guardar</button>
+
+        <app-button type="button" impact="bold" (click)="closeCustomerModal()" tone="light"
+          shape="rounded">Cancelar</app-button>
+        <app-button type="submit" impact="bold" tone="success" shape="rounded">Guardar</app-button>
+
       </div>
     </form>
   </div>

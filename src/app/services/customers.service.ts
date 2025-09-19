@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { catchError, EMPTY, Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { API_ENDPOINT } from '../core/constants/api.constants';
@@ -51,11 +51,19 @@ export class CustomersService {
   // }
 
 
-  getAll() {
+getAll(isactive?: number) {
+    let params = new HttpParams();
+
+    if (isactive !== undefined && isactive !== null) {
+      params = params.set('isactive', isactive.toString());
+    }
+
     return this.http.get(`${this.urlBase}.get_clientes`, {
+      params,
       withCredentials: true
     });
   }
+
 
 
 

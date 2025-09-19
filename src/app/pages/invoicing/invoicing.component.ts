@@ -18,6 +18,7 @@ import { Product } from '../../core/models/product';
 import { InvoicesService } from 'src/app/services/invoices.service';
 import { UtilsService } from '../../core/services/utils.service';
 import { Customer } from 'src/app/core/models/customer';
+import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
 
 type Payment = { name: string; codigo: string; nombre: string; };
 type CartItem = {
@@ -34,6 +35,8 @@ type CartItem = {
   styleUrls: ['./invoicing.component.css']
 })
 export class InvoicingComponent implements OnInit, OnDestroy {
+    identificationTypes = VARIABLE_CONSTANTS.IDENTIFICATION_TYPE; // Lista de estados para el dropdown
+  
   // --- Formularios ---
   invoiceForm!: FormGroup;
   customerForm!: FormGroup;
@@ -114,7 +117,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   // ------------------ Carga de datos ------------------
   loadCustomers(): void {
     this.spinner.show();
-    this.customersService.getAll().subscribe({
+    this.customersService.getAll(1).subscribe({
       next: (res: any) => this.customers = (res?.message.data || []) as Customer[],
       error: () => toast.error('Error al cargar la lista de clientes.'),
       complete: () => this.spinner.hide()
@@ -123,9 +126,9 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
   loadProducts(): void {
     this.spinner.show();
-    this.productsService.getAll().subscribe({
+    this.productsService.getAll(1).subscribe({
       next: (res: any) => {
-        const all = (res || []) as Product[];
+        const all = (res.message.data || []) as Product[];
         this.products = all.filter(p => Number((p as any).isactive) === 1);
         console.log('Productos cargados:', this.products);
       },
@@ -180,7 +183,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   closeCustomerModal(): void {
     this.showCustomerModal = false;
     this.submittedCustomerForm = false;
-    this.customerForm.reset({ tipo_identificacion: '05 - Cédula' });
+    this.customerForm.reset({ tipo_identificacion: '05 - Cedula' });
   }
 
   // ------------------ Carrito ------------------
