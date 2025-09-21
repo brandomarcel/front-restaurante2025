@@ -70,7 +70,7 @@ export class ProductsComponent implements OnInit {
     this.spinner.show();
     this.categoryService.getAll().subscribe((res: any) => {
       this.spinner.hide();
-      this.categories = res.data || [];
+      this.categories = res.message.data || [];
       console.log(' this.categories', this.categories);
     });
   }
