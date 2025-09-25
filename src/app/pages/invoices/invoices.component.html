@@ -18,11 +18,11 @@
             <input class="input" type="text" [(ngModel)]="search"
                 placeholder="Buscar por #factura, clave de acceso, cliente, identificación o estado…" />
 
-            <select class="select" [(ngModel)]="conOrdenFiltro" (ngModelChange)="aplicarFiltros()">
+            <!-- <select class="select" [(ngModel)]="conOrdenFiltro" (ngModelChange)="aplicarFiltros()">
                 <option value="">Todas</option>
                 <option value="con">Con orden</option>
                 <option value="sin">Sin orden</option>
-            </select>
+            </select> -->
         </div>
 
         <div class="flex gap-2">
@@ -44,7 +44,7 @@
                         <th class="app-th">Cliente</th>
                         <th class="app-th">Total</th>
                         <th class="app-th">Estado SRI</th>
-                        <th class="app-th">Orden</th>
+                       
                         <th class="app-th last:text-center">Acciones</th>
                     </tr>
                 </thead>
@@ -70,35 +70,35 @@
 
                         <td class="app-td">
                             <span class="badge" [ngClass]="{
-        'badge-green': inv.sri?.status === 'AUTORIZADO',
-        'badge-red': inv.sri?.status === 'Rejected' || inv.sri?.status === 'Error',
-        'badge-yellow': inv.sri?.status !== 'AUTORIZADO'
-                          && inv.sri?.status !== 'Rejected'
-                          && inv.sri?.status !== 'Error'
+        'badge-green': inv.status === 'AUTORIZADO',
+        'badge-red': inv.status === 'Rejected' || inv.status === 'Error' || inv.status === 'ANULADA',
+        'badge-yellow': inv.status !== 'AUTORIZADO'
+                          && inv.status !== 'Rejected'
+                          && inv.status !== 'Error'
       }">
                                 {{
-                                inv.sri?.status === 'AUTORIZADO' ? 'AUTORIZADO' :
-                                inv.sri?.status === 'Rejected' ? 'Rechazada' :
-                                inv.sri?.status === 'Error' ? 'Error' :
-                                inv.sri?.status === 'Queued' ? 'En cola' :
-                                inv.sri?.status === 'Processing' ? 'En proceso' :
-                                inv.sri?.status === 'Draft' ? 'Borrador' :
-                                (inv.sri?.status || '—')
+                                inv.status === 'AUTORIZADO' ? 'AUTORIZADO' :
+                                inv.status === 'Rejected' ? 'Rechazada' :
+                                inv.status === 'Error' ? 'Error' :
+                                inv.status === 'Queued' ? 'En cola' :
+                                inv.status === 'Processing' ? 'En proceso' :
+                                inv.status === 'Draft' ? 'Borrador' :
+                                (inv.status || '—')
                                 }}
                             </span>
                         </td>
 
-                        <td class="app-td">
-                            <!-- <button *ngIf="inv.order; else noOrder" class="btn btn-outline"
+                        <!-- <td class="app-td">
+                            <button *ngIf="inv.order; else noOrder" class="btn btn-outline"
                                 (click)="irAOrden(inv.order)">
                                 Ver orden: {{ inv.order }}
                                 
                             </button> 
-                            <ng-template #noOrder><span class="text-muted-foreground">—</span></ng-template> -->
+                            <ng-template #noOrder><span class="text-muted-foreground">—</span></ng-template>
                             {{ inv.order || '—' }}
 
 
-                        </td>
+                        </td> -->
 
                         <td class="app-td text-center">
                             <div class="inline-flex gap-2">

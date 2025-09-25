@@ -8,22 +8,22 @@ import { toast } from 'ngx-sonner';
 import { PrintService } from 'src/app/services/print.service';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { UtilsGlobalService } from 'src/app/services/utils-global.service';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, lastValueFrom } from 'rxjs';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { CreditNoteService } from 'src/app/services/credit-note.service';
+import { NgxSpinnerComponent, NgxSpinnerService } from 'ngx-spinner';
 
 @Component({
   selector: 'app-invoice-detail-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, EcuadorTimePipe, FontAwesomeModule,ReactiveFormsModule],
+  imports: [CommonModule, RouterModule, EcuadorTimePipe, FontAwesomeModule, ReactiveFormsModule, NgxSpinnerComponent],
   templateUrl: './invoice-detail-page.component.html'
 })
 export class InvoiceDetailPageComponent implements OnInit {
   invoice: any = null;
-  loading = true;
-  error = '';
   motivosAnulacion: any[] = [];
-showMotivoModal = false;
+  showMotivoModal = false;
   motivoForm: FormGroup;
 
   private baseUrl = environment.URL;
@@ -35,11 +35,15 @@ showMotivoModal = false;
     private printSvc: PrintService,
     private utilsGlobalSvc: UtilsGlobalService,
     private alertSvc: AlertService,
-    private fb: FormBuilder
-  ) { this.motivoForm = this.fb.group({
+    private fb: FormBuilder,
+    private creditNoteSvc: CreditNoteService,
+    private spinner: NgxSpinnerService,
+  ) {
+    this.motivoForm = this.fb.group({
       motivo: ['', Validators.required],
       otroTexto: [''] // se valida dinámicamente si elige "Otro"
-    });}
+    });
+  }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id')!;
@@ -49,33 +53,31 @@ showMotivoModal = false;
   }
 
   fetch(id: string) {
-    this.loading = true; this.error = '';
+    this.spinner.show();
     this.invoicesSvc.getInvoiceDetail(id).subscribe({
       next: (res: any) => {
         console.log('Factura cargada:', res);
         this.invoice = res?.message?.data || res?.data || null;
-        this.loading = false;
-        if (!this.invoice) this.error = 'Factura no encontrada';
+        this.spinner.hide();
       },
       error: (err) => {
-        this.loading = false;
-        this.error = 'No se pudo cargar la factura';
+this.spinner.hide();
         console.error(err);
       }
     });
   }
 
   getMotivosAnulacion() {
-    this.loading = true; this.error = '';
+
     this.utilsGlobalSvc.getMotivosAnulacion().subscribe({
       next: (res: any) => {
         console.log('Motivos cargada:', res);
         this.motivosAnulacion = res?.message || null;
-        this.loading = false;
+
       },
       error: (err) => {
-        this.loading = false;
-        this.error = 'No se pudo cargar los Motivos';
+
+
         console.error(err);
       }
     });
@@ -103,21 +105,17 @@ showMotivoModal = false;
         const id = this.route.snapshot.paramMap.get('id')!;
         this.fetch(id);
 
-        this.loading = false;
-
+        this.spinner.hide();
       },
       error: (err) => {
-        this.loading = false;
-        this.error = 'No se pudo cargar la factura';
+        this.spinner.hide();
+
         console.error(err);
       }
     });
   }
 
-  anularFactura() {
-    
 
-  }
 
   // abrir/cerrar
   openMotivo() {
@@ -152,17 +150,40 @@ showMotivoModal = false;
     console.log('Motivo seleccionado:', motivoSeleccionado);
     console.log('Otro texto:', otroTexto);
 
-    // EJEMPLO: continúa con tu flujo aquí (emitir factura, guardar, etc.)
-    // const payload = { ...lo_que_tengas, motivo: motivoSeleccionado };
-    // this.invoicesService.createFromUI(payload) ...
+    this.anularFactura(motivoSeleccionado);
 
-    this.closeMotivo();
+  }
+
+
+  async anularFactura(motivo: string) {
+    this.spinner.show();
+
+    try {
+      const res: any = await lastValueFrom(
+        this.creditNoteSvc.emit_credit_note_v2(this.invoice.name, motivo)
+      );
+
+      console.log('emit_credit_note_v2:', res);
+
+      toast.success('Nota de crédito creada');
+
+      const id = this.route.snapshot.paramMap.get('id')!;
+      this.fetch(id);
+      this.closeMotivo();
+
+    } catch (err: any) {
+      toast.error(err || 'Error al anular factura');
+      this.closeMotivo();
+
+    } finally {
+      this.spinner.hide(); // siempre se ejecuta, éxito o error
+    }
   }
 
   // Cerrar con ESC
   @HostListener('document:keydown.escape')
   onEsc() { if (this.showMotivoModal) this.closeMotivo(); }
-  
+
   get sriStatus(): string {
     const st = this.invoice?.sri?.status;
     return st === 'AUTORIZADO' ? 'AUTORIZADO' :

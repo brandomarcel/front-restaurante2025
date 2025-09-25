@@ -1,3 +1,6 @@
+<ngx-spinner bdColor="rgba(0, 0, 0, 0.8)" size="large" color="#001c71" type="ball-scale-multiple" [fullScreen]="true">
+  <p style="color: #f5ae1c"> Cargando... </p>
+</ngx-spinner>
 <header class="sticky top-0 bg-white/90 backdrop-blur border-b">
   <div class="max-w-screen-xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
     <div class="flex items-center gap-3">
@@ -11,15 +14,14 @@
           <h1 class="text-xl sm:text-2xl font-semibold">
             Factura <span class="text-muted-foreground">#{{ invoice?.sri?.number || '—' }}</span>
           </h1>
-          <span class="badge"
-                [ngClass]="{
-                  'badge-green': invoice?.sri?.status === 'AUTORIZADO',
-                  'badge-red': invoice?.sri?.status === 'Rejected' || invoice?.sri?.status === 'ERROR',
-                  'badge-yellow': invoice?.sri?.status !== 'AUTORIZADO'
-                                    && invoice?.sri?.status !== 'Rejected'
-                                    && invoice?.sri?.status !== 'ERROR'
+          <span class="badge" [ngClass]="{
+                  'badge-green': invoice?.status === 'AUTORIZADO',
+                  'badge-red': invoice?.status === 'Rejected' || invoice?.status === 'ERROR' || invoice?.status === 'ANULADA',
+                  'badge-yellow': invoice?.status !== 'AUTORIZADO'
+                                    && invoice?.status !== 'Rejected'
+                                    && invoice?.status !== 'ERROR'
                 }">
-            {{ sriStatus }}
+            {{ invoice?.status }}
           </span>
         </div>
 
@@ -33,10 +35,15 @@
 
     <!-- Acciones rápidas (solo desktop) -->
     <div class="hidden md:flex items-center gap-2">
-      <button *ngIf="invoice?.sri?.status === 'AUTORIZADO'"  class="btn btn-warn" (click)="openMotivo()"> Anular</button>
-      <button *ngIf="invoice?.sri?.status != 'AUTORIZADO'"  class="btn btn-warn" (click)="reenviarFactura()">  Reenviar</button>
-      <button *ngIf="invoice?.type !== 'Nota Venta'" class="btn btn-primary" (click)="getFacturaPdf()">  <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Descargar Factura</button>
-        
+      <button class="btn btn-warn" (click)="openMotivo()" [disabled]="invoice?.status !== 'AUTORIZADO'"
+        [title]="invoice?.status !== 'AUTORIZADO' ? 'Solo puedes anular facturas autorizadas' : ''">
+        Anular
+      </button>
+      <button *ngIf="invoice?.sri?.status != 'AUTORIZADO'" class="btn btn-warn" (click)="reenviarFactura()">
+        Reenviar</button>
+      <button *ngIf="invoice?.type !== 'Nota Venta'" class="btn btn-primary" (click)="getFacturaPdf()"> <fa-icon
+          [icon]="['fas','download']" class="mr-1"></fa-icon>Descargar Factura</button>
+
     </div>
   </div>
 </header>
@@ -68,8 +75,7 @@
     <div class="app-card p-6">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-semibold text-gray-700">📤 Información del SRI</h3>
-        <span class="badge"
-              [ngClass]="{
+        <span class="badge" [ngClass]="{
                 'badge-green': invoice?.sri?.status === 'AUTORIZADO',
                 'badge-red': invoice?.sri?.status === 'Rejected' || invoice?.sri?.status === 'ERROR',
                 'badge-yellow': invoice?.sri?.status !== 'AUTORIZADO'
@@ -93,7 +99,7 @@
           <span class="mx-2">•</span>
           <span>Total: <b class="text-green-700">{{ invoice?.total | currency:'USD':'symbol':'1.2-2' }}</b></span>
         </li> -->
-         <li *ngIf="invoice?.sri?.sri_message" class="sm:col-span-2 ">
+        <li *ngIf="invoice?.sri?.sri_message" class="sm:col-span-2 ">
           <strong>Mensaje SRI:</strong> {{ invoice?.sri?.sri_message }}
         </li>
       </ul>
@@ -157,10 +163,10 @@
               </td>
               <td class="p-3 font-medium">
                 {{
-                  (item.total ??
-                    ((item.subtotal ?? (item.quantity * item.price)) +
-                     ((item.subtotal ?? (item.quantity * item.price)) * ((item.tax_rate ?? 0)/100)))
-                  ) | currency:'USD':'symbol':'1.2-2'
+                (item.total ??
+                ((item.subtotal ?? (item.quantity * item.price)) +
+                ((item.subtotal ?? (item.quantity * item.price)) * ((item.tax_rate ?? 0)/100)))
+                ) | currency:'USD':'symbol':'1.2-2'
                 }}
               </td>
             </tr>
@@ -180,9 +186,12 @@
 </main>
 
 <!-- Barra de acciones móvil (fija en el pie de la página) -->
-<div class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t px-4 py-2 flex gap-2 text-center text-flex align-items-center justify-center">
-   <button *ngIf="invoice?.sri?.status != 'AUTORIZADO'"  class="btn btn-warn" (click)="reenviarFactura()">  Reenviar</button>
-      <button *ngIf="invoice?.type !== 'Nota Venta'" class="btn btn-primary" (click)="getFacturaPdf()">  <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Factura</button>
+<div
+  class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t px-4 py-2 flex gap-2 text-center text-flex align-items-center justify-center">
+  <button *ngIf="invoice?.sri?.status != 'AUTORIZADO'" class="btn btn-warn" (click)="reenviarFactura()">
+    Reenviar</button>
+  <button *ngIf="invoice?.type !== 'Nota Venta'" class="btn btn-primary" (click)="getFacturaPdf()"> <fa-icon
+      [icon]="['fas','download']" class="mr-1"></fa-icon>Factura</button>
 </div>
 
 
@@ -200,15 +209,13 @@
       <!-- Select de motivos -->
       <div>
         <label class="block text-sm font-medium mb-1">Motivo</label>
-        <select formControlName="motivo"
-                (change)="onMotivoChange()"
-                class="w-full border rounded px-3 py-2 text-sm
+        <select formControlName="motivo" (change)="onMotivoChange()" class="w-full border rounded px-3 py-2 text-sm
                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
           <option value="" disabled selected>Elige una opción</option>
           <option *ngFor="let m of motivosAnulacion" [value]="m">{{ m }}</option>
         </select>
         <div *ngIf="motivoForm.get('motivo')?.invalid && motivoForm.get('motivo')?.touched"
-             class="text-red-500 text-xs mt-1">
+          class="text-red-500 text-xs mt-1">
           Debes elegir un motivo.
         </div>
       </div>
@@ -216,25 +223,22 @@
       <!-- Input cuando elige "Otro" -->
       <div *ngIf="motivoForm.value.motivo === 'Otro'">
         <label class="block text-sm font-medium mb-1">Especifica el motivo</label>
-        <input type="text" formControlName="otroTexto"
-               class="w-full border rounded px-3 py-2 text-sm
+        <input type="text" formControlName="otroTexto" class="w-full border rounded px-3 py-2 text-sm
                       focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-               placeholder="Escribe aquí…" />
+          placeholder="Escribe aquí…" />
         <div *ngIf="motivoForm.get('otroTexto')?.invalid && motivoForm.get('otroTexto')?.touched"
-             class="text-red-500 text-xs mt-1">
+          class="text-red-500 text-xs mt-1">
           Escribe al menos 2 caracteres.
         </div>
       </div>
 
       <!-- Acciones -->
       <div class="pt-2 flex items-center justify-center gap-2">
-        <button type="submit"
-                class="bg-primary text-white px-4 py-2 rounded hover:opacity-90">
+        <button type="submit" class="bg-primary text-white px-4 py-2 rounded hover:opacity-90">
           Aceptar
         </button>
-        <button type="button"
-                class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                (click)="closeMotivo()">
+        <button type="button" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+          (click)="closeMotivo()">
           Cancelar
         </button>
       </div>

@@ -10,7 +10,6 @@ import { finalize, Subscription } from 'rxjs';
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
 import { AlertService } from '../../core/services/alert.service';
 import { CustomersService } from 'src/app/services/customers.service';
-import { OrdersService } from 'src/app/services/orders.service';
 import { PaymentsService } from 'src/app/services/payments.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { PrintService } from 'src/app/services/print.service';
@@ -35,8 +34,8 @@ type CartItem = {
   styleUrls: ['./invoicing.component.css']
 })
 export class InvoicingComponent implements OnInit, OnDestroy {
-    identificationTypes = VARIABLE_CONSTANTS.IDENTIFICATION_TYPE; // Lista de estados para el dropdown
-  
+  identificationTypes = VARIABLE_CONSTANTS.IDENTIFICATION_TYPE; // Lista de estados para el dropdown
+
   // --- Formularios ---
   invoiceForm!: FormGroup;
   customerForm!: FormGroup;
@@ -60,7 +59,6 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     private customersService: CustomersService,
     private productsService: ProductsService,
     private paymentsService: PaymentsService,
-    private ordersService: OrdersService,
     private printService: PrintService,
     private spinner: NgxSpinnerService,
     private alertService: AlertService,
@@ -150,7 +148,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   onCustomerSelected(value: string | null) {
     if (!value) { this.selectedCustomer = null; return; }
     console.log('Valor seleccionado del cliente:', value);
-    this.selectedCustomer = this.customers.find((c:any) => c === value) || null;
+    this.selectedCustomer = this.customers.find((c: any) => c === value) || null;
     console.log('Cliente seleccionado:', this.selectedCustomer);
   }
 
@@ -333,7 +331,11 @@ export class InvoicingComponent implements OnInit, OnDestroy {
               toast.success(`Factura ${inv} creada y enviada al SRI.`);
               this.clearInvoiceForm();
               // opcional: imprime
-              // this.printInvoice(inv);
+              this.alertService.confirm(`Factura ${inv} creada y enviada al SRI.`, '¿Deseas imprimir la factura?','success')
+                .then(result => {
+                  if (result.isConfirmed) this.printInvoice(inv);
+                });
+
             }
           });
       });
@@ -341,7 +343,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
   private printInvoice(invoiceId: string): void {
     if (!invoiceId) return;
-    const invoiceUrl = this.printService.getOrderPdf(invoiceId);
+    const invoiceUrl = this.printService.getFacturaPdf(invoiceId);
     window.open(invoiceUrl, '_blank', 'noopener=yes,noreferrer=yes');
   }
 

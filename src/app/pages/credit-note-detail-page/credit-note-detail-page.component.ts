@@ -67,23 +67,23 @@ export class CreditNoteDetailPageComponent implements OnInit {
     const w = window.open(url, '_blank'); if (!w) toast.error('No se pudo abrir la impresión');
   }
 
-  reenviarFactura() {
-    this.invoicesSvc.emit_existing_invoice_v2(this.invoice.name).subscribe({
-      next: (res: any) => {
-        console.log('emit_existing_invoice_v2:', res);
-        const id = this.route.snapshot.paramMap.get('id')!;
-        this.fetch(id);
+  // reenviarFactura() {
+  //   this.invoicesSvc.emit_existing_invoice_v2(this.invoice.name).subscribe({
+  //     next: (res: any) => {
+  //       console.log('emit_existing_invoice_v2:', res);
+  //       const id = this.route.snapshot.paramMap.get('id')!;
+  //       this.fetch(id);
 
-        this.loading = false;
+  //       this.loading = false;
 
-      },
-      error: (err) => {
-        this.loading = false;
-        this.error = 'No se pudo cargar la factura';
-        console.error(err);
-      }
-    });
-  }
+  //     },
+  //     error: (err) => {
+  //       this.loading = false;
+  //       this.error = 'No se pudo cargar la factura';
+  //       console.error(err);
+  //     }
+  //   });
+  // }
 
   get sriStatus(): string {
     const st = this.invoice?.sri?.status;

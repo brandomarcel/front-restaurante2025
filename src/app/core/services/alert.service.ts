@@ -36,11 +36,11 @@ export class AlertService {
     Swal.fire('Error', message, 'error');
   }
 
-  confirm(message: string, title = '¿Estás seguro?'): Promise<SweetAlertResult> {
+  confirm(message: string, title = '¿Estás seguro?' , icon: 'warning' | 'success' | 'error' = 'warning'): Promise<SweetAlertResult> {
     return Swal.fire({
       title,
       text: message,
-      icon: 'warning',
+      icon: icon,
       showCancelButton: true,
       confirmButtonText: 'Sí',
       cancelButtonText: 'Cancelar'

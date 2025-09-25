@@ -182,8 +182,8 @@
 <!-- Barra de acciones móvil (fija en el pie de la página) -->
 <div
     class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t px-4 py-2 flex gap-2 text-center text-flex align-items-center justify-center">
-    <button *ngIf="invoice?.sri?.status != 'AUTORIZADO'" class="btn btn-warn" (click)="reenviarFactura()">
-        Reenviar</button>
+    <!-- <button *ngIf="invoice?.sri?.status != 'AUTORIZADO'" class="btn btn-warn" (click)="reenviarFactura()">
+        Reenviar</button> -->
     <button *ngIf="invoice?.type !== 'Nota Venta'" class="btn btn-primary" (click)="getFacturaPdf()"> <fa-icon
             [icon]="['fas','download']" class="mr-1"></fa-icon>Factura</button>
 </div>
