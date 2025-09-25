@@ -12,7 +12,7 @@ import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
 
 @Component({
   selector: 'app-customers',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule,ButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule, ButtonComponent],
   templateUrl: './customers.component.html',
   styleUrl: './customers.component.css'
 })
@@ -22,7 +22,7 @@ export class CustomersComponent implements OnInit {
   customers: any[] = [];
   filteredCustomersList: any[] = [];
 
-   _searchTerm = '';
+  _searchTerm = '';
   get searchTerm() { return this._searchTerm; }
   set searchTerm(v: string) { this._searchTerm = v || ''; this.filtrarClientes(); }
 
@@ -40,7 +40,7 @@ export class CustomersComponent implements OnInit {
     private spinner: NgxSpinnerService,
     private frappeErrorService: FrappeErrorService,
     private alertService: AlertService
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.cargarClientes();
@@ -175,19 +175,29 @@ export class CustomersComponent implements OnInit {
   }
 
   delete(id: string) {
-    if (confirm('¿Eliminar este cliente?')) {
-      this.customersService.delete(id).subscribe({
-        next: () => {
-          toast.success('Cliente eliminado');
-          this.cargarClientes();
-        },
-        error: (err) => {
-          const mensaje: any = this.frappeErrorService.handle(err);
-          console.error('Error al eliminar cliente', err);
-          this.alertService.error(mensaje);
-        }
-      });
-    }
+
+    this.alertService.confirm('Estás seguro de eliminar este cliente?', 'Confirmar').then((result) => {
+      if (result.isConfirmed) {
+        this.spinner.show();
+        this.customersService.delete(id).subscribe({
+          next: () => {
+            toast.success('Cliente eliminado');
+            this.cargarClientes();
+            this.spinner.hide();
+          },
+          error: (err) => {
+            this.spinner.hide();
+            const mensaje: any = this.frappeErrorService.handle(err);
+            console.error('Error al eliminar cliente', err);
+            this.alertService.error(mensaje);
+
+          },
+
+
+        });
+      }
+    })
+
   }
 
   // ===== Validadores / helpers =====

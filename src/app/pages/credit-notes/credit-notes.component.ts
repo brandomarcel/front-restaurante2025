@@ -6,19 +6,19 @@ import { NgxSpinnerService } from 'ngx-spinner';
 import { EcuadorTimePipe } from '../../core/pipes/ecuador-time-pipe.pipe';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 import { Router, RouterModule } from '@angular/router';
-import { InvoicesService } from 'src/app/services/invoices.service';
 import { PrintService } from 'src/app/services/print.service';
 import { environment } from 'src/environments/environment';
 import { toast } from 'ngx-sonner';
+import { CreditNoteService } from 'src/app/services/credit-note.service';
 
 @Component({
-  selector: 'app-invoices',
+  selector: 'app-credit-notes',
   standalone: true,
   imports: [CommonModule, FormsModule, NgxPaginationModule, EcuadorTimePipe, ButtonComponent,RouterModule],
-  templateUrl: './invoices.component.html',
-  styleUrls: ['./invoices.component.css']
+  templateUrl: './credit-notes.component.html',
+  styleUrl: './credit-notes.component.css'
 })
-export class InvoicesComponent implements OnInit {
+export class CreditNotesComponent implements OnInit {
   invoices: any[] = [];
   invoicesFiltradas: any[] = [];
   page = 1;
@@ -36,7 +36,7 @@ export class InvoicesComponent implements OnInit {
   private url = environment.URL; // si usas URL (como en orders); si usas apiUrl para imprimir, ajusta
 
   constructor(
-    private svc: InvoicesService,           // o InvoicesService
+    private svc: CreditNoteService,           // o InvoicesService
     private spinner: NgxSpinnerService,
     private router: Router,
     private printService: PrintService
@@ -48,7 +48,7 @@ export class InvoicesComponent implements OnInit {
   loadInvoices(): void {
     this.spinner.show();
     const offset = (this.page - 1) * this.pageSize;
-    this.svc.getAllInvoices(this.pageSize, offset).subscribe({
+    this.svc.getAllCreditNotes(this.pageSize, offset).subscribe({
       next: (res: any) => {
         const msg = res.message || res; // depende de tu proxy
         this.invoices = msg.data || [];

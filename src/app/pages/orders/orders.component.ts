@@ -97,8 +97,8 @@ export class OrdersComponent implements OnInit {
     if (!term) return true;
     const hay = [
       o?.name,
-      o?.customer?.fullName,
-      o?.customer?.identification,
+      o?.customer?.nombre,
+      o?.customer?.num_identificacion,
       o?.type,
       o?.estado_sri || o?.sri?.estado_sri
     ]

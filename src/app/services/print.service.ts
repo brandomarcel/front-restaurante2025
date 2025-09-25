@@ -26,5 +26,10 @@ export class PrintService {
     return url;
   }
 
+    getCreditNotePdf(factId: string) {
+    const url = `/api/method/frappe.utils.print_format.download_pdf?doctype=Credit Note&name=${factId}&trigger_print=1&format=Credit Note&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
+    return url;
+  }
+
   
 }

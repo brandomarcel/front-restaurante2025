@@ -102,7 +102,7 @@ export class PosComponent implements OnInit {
       direccion: ['', [Validators.required]],
     });
 
-    this.toggleSidebar();
+    //this.toggleSidebar();
 
     this.loadProducts();
     this.loadCategory();
@@ -400,10 +400,10 @@ get total(): number {
     }
 
 
-    if (this.paymentMethod === '01' && (this.amountReceived === null || this.change < 0)) {
-      toast.warning('Monto recibido insuficiente.');
-      return;
-    }
+    // if (this.paymentMethod === '01' && (this.amountReceived === null || this.change < 0)) {
+    //   toast.warning('Monto recibido insuficiente.');
+    //   return;
+    // }
 
     const order = {
       customer: this.customer?.name,

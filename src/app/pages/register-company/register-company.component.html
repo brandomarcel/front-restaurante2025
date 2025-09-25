@@ -228,11 +228,19 @@
                             </div>
 
                             <div>
-                                <label class="block mb-1 font-medium">Secuencia Nota de Credito</label>
-                                <input type="number" class="input no-spinner" formControlName="salenoteseq" />
-                                <small *ngIf="submitted && f['salenoteseq'].invalid" class="text-red-600">Campo
+                                <label class="block mb-1 font-medium">Secuencia Nota de Credito ((PRODUCCIÓN))</label>
+                                <input type="number" class="input no-spinner" formControlName="ncseq_prod" />
+                                <small *ngIf="submitted && f['ncseq_prod'].invalid" class="text-red-600">Campo
                                     requerido</small>
                             </div>
+
+                            <div>
+                                <label class="block mb-1 font-medium">Secuencia Nota de Credito (PRUEBAS)</label>
+                                <input type="number" class="input no-spinner" formControlName="ncseq_pruebas" />
+                                <small *ngIf="submitted && f['ncseq_pruebas'].invalid" class="text-red-600">Campo
+                                    requerido</small>
+                            </div>
+
                         </div>
                     </div>
 
@@ -262,9 +270,10 @@
                                 <div><strong>Ambiente:</strong> {{ ambiente }}</div>
                                 <div><strong>Estab:</strong> {{ form.value.establishmentcode }} — <strong>Pto
                                         Emisión:</strong> {{ form.value.emissionpoint }}</div>
-                                <div><strong>Sec. Factura (PROD):</strong> {{ form.value.invoiceseq_prod }}</div>
+                                <div><strong>Sec. Factura (PRODUCCIÓN):</strong> {{ form.value.invoiceseq_prod }}</div>
                                 <div><strong>Sec. Factura (PRUEBAS):</strong> {{ form.value.invoiceseq_pruebas }}</div>
-                                <div><strong>Sec. Nota de venta:</strong> {{ form.value.salenoteseq }}</div>
+                                <div><strong>Sec. Nota de Credito (PRODUCCIÓN) :</strong> {{ form.value.ncseq_prod }}</div>
+                                 <div><strong>Sec. Nota de Credito (PRUEBAS) :</strong> {{ form.value.ncseq_pruebas }}</div>
                             </div>
                         </div>
                     </div>

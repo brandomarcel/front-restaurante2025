@@ -55,7 +55,8 @@ export class RegisterCompanyComponent {
         emissionpoint: ['001', [Validators.required, Validators.pattern(/^\d{3}$/)]],
         invoiceseq_prod: [1, Validators.required],
         invoiceseq_pruebas: [1, Validators.required],
-        salenoteseq: [1, Validators.required],
+        ncseq_pruebas: [1, Validators.required],
+        ncseq_prod: [1, Validators.required],
       },
       { validators: this.passwordMatchValidator }
     );
@@ -87,7 +88,7 @@ export class RegisterCompanyComponent {
     const controlsByStep: Record<number, string[]> = {
       1: ['full_name', 'email', 'password', 'confirm_password', 'accept_terms'],
       2: ['businessname', 'ruc', 'address', 'company_phone', 'company_email'],
-      3: ['establishmentcode', 'emissionpoint', 'invoiceseq_prod', 'invoiceseq_pruebas', 'salenoteseq'],
+      3: ['establishmentcode', 'emissionpoint', 'invoiceseq_prod', 'invoiceseq_pruebas', 'ncseq_pruebas', 'ncseq_prod'],
       4: [] // revisión
     };
     const keys = controlsByStep[this.step] || [];
@@ -158,7 +159,8 @@ submit() {
     emissionpoint: this.form.value.emissionpoint,
     invoiceseq_prod: this.form.value.invoiceseq_prod,
     invoiceseq_pruebas: this.form.value.invoiceseq_pruebas,
-    salenoteseq: this.form.value.salenoteseq
+    ncseq_pruebas: this.form.value.ncseq_pruebas,
+    ncseq_prod: this.form.value.ncseq_prod,
   };
 
   // Logo payload (opcional). Usamos la dataURL ya generada en la vista previa.

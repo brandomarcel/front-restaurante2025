@@ -64,7 +64,8 @@ export class CompanyComponent implements OnInit {
       emissionpoint: ['', [Validators.required, Validators.pattern(/^\d{3}$/)]],
       invoiceseq_prod: ['', Validators.required],
       invoiceseq_pruebas: ['', Validators.required],
-      salenoteseq: ['', Validators.required],
+      ncseq_pruebas: ['', Validators.required],
+      ncseq_prod: ['', Validators.required],
       logo: [''], // URL del archivo en Frappe
       urlfirma: [''],             // se llenará con el file_url retornado por Frappe
       clave: [null, Validators.required] // Password para la firma

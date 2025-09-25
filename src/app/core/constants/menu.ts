@@ -37,6 +37,11 @@ export class Menu {
           label: 'Lista de Facturas',
           route: '/dashboard/invoices',
         },
+        {
+          icon: 'assets/icons/heroicons/outline/clipboard-document-list.svg',
+          label: 'Lista de Notas de Crédito',
+          route: '/dashboard/credit-notes',
+        },
       ],
     },
 

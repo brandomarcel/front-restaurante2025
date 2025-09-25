@@ -122,13 +122,23 @@
                                             class="text-red-600">Campo requerido</small>
                                     </div>
                                     <div>
-                                        <label class="block font-medium mb-1">Secuencia Nota de Crédito
+                                        <label class="block font-medium mb-1">Secuencia Nota de Crédito (PRODUCCIÓN)
                                             (PRUEBAS)</label>
-                                        <input type="number" class="input no-spinner" formControlName="salenoteseq"
-                                            [class.border-red-500]="f['salenoteseq'].invalid && submitted" />
-                                        <small *ngIf="f['salenoteseq'].invalid && submitted" class="text-red-600">Campo
+                                        <input type="number" class="input no-spinner" formControlName="ncseq_prod"
+                                            [class.border-red-500]="f['ncseq_prod'].invalid && submitted" />
+                                        <small *ngIf="f['ncseq_prod'].invalid && submitted" class="text-red-600">Campo
                                             requerido</small>
                                     </div>
+
+                                    <div>
+                                        <label class="block font-medium mb-1">Secuencia Nota de Crédito (PRUEBAS)
+                                            (PRUEBAS)</label>
+                                        <input type="number" class="input no-spinner" formControlName="ncseq_pruebas"
+                                            [class.border-red-500]="f['ncseq_pruebas'].invalid && submitted" />
+                                        <small *ngIf="f['ncseq_pruebas'].invalid && submitted" class="text-red-600">Campo
+                                            requerido</small>
+                                    </div>
+
                                 </div>
                             </div>
                         </div>

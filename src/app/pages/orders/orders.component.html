@@ -26,11 +26,11 @@
       </select>
 
       <!-- Anulación -->
-      <select class="select" [(ngModel)]="anulacionFiltro" (ngModelChange)="actualizarOrdenesFiltradas()">
+      <!-- <select class="select" [(ngModel)]="anulacionFiltro" (ngModelChange)="actualizarOrdenesFiltradas()">
         <option value="">Todas (incluye anuladas)</option>
         <option value="soloAnuladas">Solo anuladas</option>
         <option value="excluirAnuladas">Excluir anuladas</option>
-      </select>
+      </select> -->
     </div>
 
     <div class="flex gap-2">
@@ -60,7 +60,7 @@
         <tbody>
           <tr *ngFor="let order of ordersFiltradosList" class="app-tr text-xs">
             <td class="app-td">{{ order.name }}</td>
-            <td class="app-td">{{ order.createdAt | date: 'dd/MM/yyyy' }}</td>
+            <td class="app-td">{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
             <td class="app-td">
               {{ order.customer?.fullName || order.customer?.nombre || '—' }}
             </td>

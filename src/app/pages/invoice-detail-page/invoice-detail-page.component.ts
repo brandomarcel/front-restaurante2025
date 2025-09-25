@@ -1,6 +1,5 @@
-// src/app/pages/invoice-detail-page/invoice-detail-page.component.ts
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { EcuadorTimePipe } from 'src/app/core/pipes/ecuador-time-pipe.pipe';
 import { InvoicesService } from 'src/app/services/invoices.service';
@@ -8,17 +7,24 @@ import { environment } from 'src/environments/environment';
 import { toast } from 'ngx-sonner';
 import { PrintService } from 'src/app/services/print.service';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { UtilsGlobalService } from 'src/app/services/utils-global.service';
+import { firstValueFrom } from 'rxjs';
+import { AlertService } from 'src/app/core/services/alert.service';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 @Component({
   selector: 'app-invoice-detail-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, EcuadorTimePipe, FontAwesomeModule],
+  imports: [CommonModule, RouterModule, EcuadorTimePipe, FontAwesomeModule,ReactiveFormsModule],
   templateUrl: './invoice-detail-page.component.html'
 })
 export class InvoiceDetailPageComponent implements OnInit {
   invoice: any = null;
   loading = true;
   error = '';
+  motivosAnulacion: any[] = [];
+showMotivoModal = false;
+  motivoForm: FormGroup;
 
   private baseUrl = environment.URL;
 
@@ -27,11 +33,19 @@ export class InvoiceDetailPageComponent implements OnInit {
     private router: Router,
     private invoicesSvc: InvoicesService,
     private printSvc: PrintService,
-  ) { }
+    private utilsGlobalSvc: UtilsGlobalService,
+    private alertSvc: AlertService,
+    private fb: FormBuilder
+  ) { this.motivoForm = this.fb.group({
+      motivo: ['', Validators.required],
+      otroTexto: [''] // se valida dinámicamente si elige "Otro"
+    });}
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id')!;
     this.fetch(id);
+    this.getMotivosAnulacion();
+
   }
 
   fetch(id: string) {
@@ -46,6 +60,22 @@ export class InvoiceDetailPageComponent implements OnInit {
       error: (err) => {
         this.loading = false;
         this.error = 'No se pudo cargar la factura';
+        console.error(err);
+      }
+    });
+  }
+
+  getMotivosAnulacion() {
+    this.loading = true; this.error = '';
+    this.utilsGlobalSvc.getMotivosAnulacion().subscribe({
+      next: (res: any) => {
+        console.log('Motivos cargada:', res);
+        this.motivosAnulacion = res?.message || null;
+        this.loading = false;
+      },
+      error: (err) => {
+        this.loading = false;
+        this.error = 'No se pudo cargar los Motivos';
         console.error(err);
       }
     });
@@ -84,6 +114,55 @@ export class InvoiceDetailPageComponent implements OnInit {
     });
   }
 
+  anularFactura() {
+    
+
+  }
+
+  // abrir/cerrar
+  openMotivo() {
+    this.showMotivoModal = true;
+    // reset limpio cada vez que se abre
+    this.motivoForm.reset({ motivo: '', otroTexto: '' });
+  }
+  closeMotivo() { this.showMotivoModal = false; }
+
+  // si cambia selección, activa/desactiva validación del campo "otro"
+  onMotivoChange() {
+    const otroCtrl = this.motivoForm.get('otroTexto')!;
+    if (this.motivoForm.value.motivo === 'Otro') {
+      otroCtrl.addValidators([Validators.required, Validators.minLength(2)]);
+    } else {
+      otroCtrl.clearValidators();
+      otroCtrl.setValue('');
+    }
+    otroCtrl.updateValueAndValidity({ emitEvent: false });
+  }
+
+  // Confirmar
+  onConfirmMotivo() {
+    if (this.motivoForm.invalid) {
+      this.motivoForm.markAllAsTouched();
+      return;
+    }
+
+    const { motivo, otroTexto } = this.motivoForm.value;
+    // Úsalo como necesites en tu payload:
+    const motivoSeleccionado = motivo === 'Otro' ? (otroTexto || '').trim() : motivo;
+    console.log('Motivo seleccionado:', motivoSeleccionado);
+    console.log('Otro texto:', otroTexto);
+
+    // EJEMPLO: continúa con tu flujo aquí (emitir factura, guardar, etc.)
+    // const payload = { ...lo_que_tengas, motivo: motivoSeleccionado };
+    // this.invoicesService.createFromUI(payload) ...
+
+    this.closeMotivo();
+  }
+
+  // Cerrar con ESC
+  @HostListener('document:keydown.escape')
+  onEsc() { if (this.showMotivoModal) this.closeMotivo(); }
+  
   get sriStatus(): string {
     const st = this.invoice?.sri?.status;
     return st === 'AUTORIZADO' ? 'AUTORIZADO' :

@@ -17,7 +17,9 @@ export interface CompanyInfo {
   emissionpoint?: string;
   invoiceseq_prod?: number;
   invoiceseq_pruebas?: number;
-  salenoteseq?: number;
+
+  ncseq_pruebas?: number;
+  ncseq_prod?: number;
   logo?: string;                 // file_url en Frappe
   urlfirma?: string;   // file_url del .p12
   clave?: string;      // Password (Frappe lo cifra en el servidor)

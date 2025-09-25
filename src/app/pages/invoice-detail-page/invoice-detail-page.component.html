@@ -3,7 +3,7 @@
     <div class="flex items-center gap-3">
       <button class="btn btn-ghost px-2 py-1" (click)="goBack()" aria-label="Volver a Facturas">
         <fa-icon icon="arrow-left"></fa-icon>
-        <span class="hidden sm:inline ml-2">Facturas</span>
+        <span class="hidden sm:inline ml-2">Atrás</span>
       </button>
 
       <div>
@@ -23,18 +23,19 @@
           </span>
         </div>
 
-        <div class="text-sm text-muted-foreground flex gap-3 flex-wrap mt-1">
-          <span>Tipo: <b>{{ invoice?.type || '—' }}</b></span>
+        <!-- <div class="text-sm text-muted-foreground flex gap-3 flex-wrap mt-1">
+         
           <span>Fecha: <b>{{ invoice?.createdAt | ecuadorTime }}</b></span>
           <span>Total: <b class="text-green-700">{{ invoice?.total | currency:'USD':'symbol':'1.2-2' }}</b></span>
-        </div>
+        </div> -->
       </div>
     </div>
 
     <!-- Acciones rápidas (solo desktop) -->
     <div class="hidden md:flex items-center gap-2">
-      <button *ngIf="invoice?.sri?.status != 'AUTORIZADO'"  class="btn btn-warn" (click)="reenviarFactura()">  <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Reenviar</button>
-      <button *ngIf="invoice?.type !== 'Nota Venta'" class="btn btn-primary" (click)="getFacturaPdf()">  <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Factura</button>
+      <button *ngIf="invoice?.sri?.status === 'AUTORIZADO'"  class="btn btn-warn" (click)="openMotivo()"> Anular</button>
+      <button *ngIf="invoice?.sri?.status != 'AUTORIZADO'"  class="btn btn-warn" (click)="reenviarFactura()">  Reenviar</button>
+      <button *ngIf="invoice?.type !== 'Nota Venta'" class="btn btn-primary" (click)="getFacturaPdf()">  <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Descargar Factura</button>
         
     </div>
   </div>
@@ -80,20 +81,20 @@
       </div>
       <ul class="text-sm text-gray-700 grid sm:grid-cols-2 gap-y-2 gap-x-6">
         <li><strong>Estado SRI:</strong> {{ sriStatus }}</li>
-        <li *ngIf="invoice?.sri?.number"><strong>Número:</strong> {{ invoice?.sri?.number }}</li>
+        <li *ngIf="invoice?.sri?.number"><strong>N°:</strong> {{ invoice?.sri?.number }}</li>
         <li *ngIf="invoice?.sri?.invoice"><strong>Factura:</strong> {{ invoice?.sri?.invoice }}</li>
         <li *ngIf="invoice?.sri?.authorization_datetime" class="sm:col-span-2">
-          <strong>F. Autorización:</strong> {{ invoice?.sri?.authorization_datetime }}
+          <strong>Fecha Autorización:</strong> {{ invoice?.sri?.authorization_datetime }}
         </li>
-        <li class="sm:col-span-2 text-muted-foreground">
-          <span>Tipo: <b>{{ invoice?.type || '—' }}</b></span>
+        <!-- <li class="sm:col-span-2 text-muted-foreground">
+         
           <span class="mx-2">•</span>
           <span>Fecha: <b>{{ invoice?.createdAt | ecuadorTime }}</b></span>
           <span class="mx-2">•</span>
           <span>Total: <b class="text-green-700">{{ invoice?.total | currency:'USD':'symbol':'1.2-2' }}</b></span>
-        </li>
+        </li> -->
          <li *ngIf="invoice?.sri?.sri_message" class="sm:col-span-2 ">
-          <strong>MensajeSRI:</strong> {{ invoice?.sri?.sri_message }}
+          <strong>Mensaje SRI:</strong> {{ invoice?.sri?.sri_message }}
         </li>
       </ul>
     </div>
@@ -179,6 +180,64 @@
 </main>
 
 <!-- Barra de acciones móvil (fija en el pie de la página) -->
-<div class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t px-4 py-2 flex gap-2">
-  <button class="btn btn-outline flex-1" (click)="getFacturaPdf()">Factura</button>
+<div class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t px-4 py-2 flex gap-2 text-center text-flex align-items-center justify-center">
+   <button *ngIf="invoice?.sri?.status != 'AUTORIZADO'"  class="btn btn-warn" (click)="reenviarFactura()">  Reenviar</button>
+      <button *ngIf="invoice?.type !== 'Nota Venta'" class="btn btn-primary" (click)="getFacturaPdf()">  <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Factura</button>
+</div>
+
+
+<!-- ===== MODAL DE MOTIVO (igual estilo que tu modal de cliente) ===== -->
+<div *ngIf="showMotivoModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+  <div class="bg-white w-full max-w-md rounded shadow-lg p-4 text-xs relative">
+    <button class="absolute top-2 right-3 text-lg" (click)="closeMotivo()">×</button>
+
+    <h3 class="text-base font-semibold mb-1 text-center">Motivo de la factura</h3>
+    <p class="text-gray-500 text-sm text-center mb-3">
+      Elige un motivo o especifica uno nuevo
+    </p>
+
+    <form [formGroup]="motivoForm" (ngSubmit)="onConfirmMotivo()" class="space-y-4">
+      <!-- Select de motivos -->
+      <div>
+        <label class="block text-sm font-medium mb-1">Motivo</label>
+        <select formControlName="motivo"
+                (change)="onMotivoChange()"
+                class="w-full border rounded px-3 py-2 text-sm
+                       focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+          <option value="" disabled selected>Elige una opción</option>
+          <option *ngFor="let m of motivosAnulacion" [value]="m">{{ m }}</option>
+        </select>
+        <div *ngIf="motivoForm.get('motivo')?.invalid && motivoForm.get('motivo')?.touched"
+             class="text-red-500 text-xs mt-1">
+          Debes elegir un motivo.
+        </div>
+      </div>
+
+      <!-- Input cuando elige "Otro" -->
+      <div *ngIf="motivoForm.value.motivo === 'Otro'">
+        <label class="block text-sm font-medium mb-1">Especifica el motivo</label>
+        <input type="text" formControlName="otroTexto"
+               class="w-full border rounded px-3 py-2 text-sm
+                      focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+               placeholder="Escribe aquí…" />
+        <div *ngIf="motivoForm.get('otroTexto')?.invalid && motivoForm.get('otroTexto')?.touched"
+             class="text-red-500 text-xs mt-1">
+          Escribe al menos 2 caracteres.
+        </div>
+      </div>
+
+      <!-- Acciones -->
+      <div class="pt-2 flex items-center justify-center gap-2">
+        <button type="submit"
+                class="bg-primary text-white px-4 py-2 rounded hover:opacity-90">
+          Aceptar
+        </button>
+        <button type="button"
+                class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                (click)="closeMotivo()">
+          Cancelar
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
