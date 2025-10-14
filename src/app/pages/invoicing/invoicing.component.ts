@@ -5,7 +5,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
-import { finalize, Subscription } from 'rxjs';
+import { finalize, firstValueFrom, Subscription } from 'rxjs';
 
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
 import { AlertService } from '../../core/services/alert.service';
@@ -18,6 +18,7 @@ import { InvoicesService } from 'src/app/services/invoices.service';
 import { UtilsService } from '../../core/services/utils.service';
 import { Customer } from 'src/app/core/models/customer';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
+import { ActivatedRoute } from '@angular/router';
 
 type Payment = { name: string; codigo: string; nombre: string; };
 type CartItem = {
@@ -54,6 +55,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   submittedCustomerForm = false;
   ambiente: string = '';
   private subscriptions: Subscription[] = [];
+  order: any | null = null;
 
   constructor(
     private customersService: CustomersService,
@@ -65,6 +67,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private invoicesService: InvoicesService,
     private utilsService: UtilsService,
+    private route: ActivatedRoute,
 
   ) { }
 
@@ -74,11 +77,88 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     this.ambiente = ambienteGuardado ?? '----------';
     this.initializeForms();
     this.loadInitialData();
+
+    const orderName = this.route.snapshot.paramMap.get('order_name');
+    console.log('📦orderName', orderName);
+
+    if (orderName) {
+      this.getOrderDetail(orderName);
+
+    }
+
   }
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
   }
+
+  async getOrderDetail(orderName: string) {
+
+    try {
+      const response: any = await firstValueFrom(this.invoicesService.getOrderDetail(orderName));
+
+      this.order = response?.message?.data || response?.data;
+      console.log('📦order', this.order);
+      this.loadOrderData(this.order);
+
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  private loadOrderData(order: any): void {
+    console.log('loadOrderData', order);
+    if (!order) return;
+
+    // 🧾 Cargar datos del cliente
+    const c = order.customer || {};
+    console.log('c', c);
+
+    this.customerForm.patchValue({
+      nombre: c.fullName || c.nombre || '',
+      num_identificacion: c.num_identificacion || '',
+      tipo_identificacion: this.detectarTipoIdentificacion(c.num_identificacion),
+      correo: c.correo || '',
+      telefono: c.telefono || '',
+      direccion: c.direccion || '',
+    }, { emitEvent: false });
+
+    this.selectedCustomer = this.customerForm.getRawValue();
+    console.log('this.selectedCustomer', this.selectedCustomer);
+
+    // 💳 Cargar datos de la factura
+    this.invoiceForm.patchValue({
+      selectedCustomer: c.name || null,
+      alias: order.name || '',
+      postingDate: this.utilsService.getSoloFechaEcuador(),
+      paymentMethod: '01' // efectivo por defecto
+    });
+
+    // 🛒 Cargar productos en una variable local (para renderizar en la tabla)
+    this.cartItems = order.items.map((it: any) => ({
+      name: it.productId,                  // clave del producto en Frappe
+      nombre: it.productName,              // nombre legible
+      codigo: it.productId,                // si manejas código interno
+      price: it.price,
+      quantity: it.quantity,
+      discount_pct: 0,                     // si no aplica descuento
+      tax: null,                           // no necesitas el ID, ya viene el valor
+      tax_value: it.tax_rate ?? 0,         // porcentaje IVA
+      subtotal: it.subtotal,
+      iva: it.iva,
+      total: it.total
+    }));
+
+    this.updateCartTotals();
+  }
+  private detectarTipoIdentificacion(id: string): string {
+    if (!id) return '05 - Cedula';
+    if (id === '9999999999999') return '07 - Consumidor Final';
+    if (id.length === 10) return '05 - Cedula';
+    if (id.length === 13) return '04 - RUC';
+    return '05 - Cedula';
+  }
+
 
   // ------------------ Inicialización ------------------
   private initializeForms(): void {
@@ -138,11 +218,21 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   loadPaymentMethods(): void {
     this.spinner.show();
     this.paymentsService.getAll().subscribe({
-      next: (res: any) => this.payments = (res || []) as Payment[],
+      next: (res: any) => 
+        {this.payments = (res || []) as Payment[]; console.log('Metodos de pago cargados:', this.payments);},
       error: () => toast.error('Error al cargar métodos de pago.'),
       complete: () => this.spinner.hide()
     });
+    
   }
+customSearchFn(term: string, item: any) {
+  term = term.toLowerCase();
+
+  return (
+    item.nombre?.toLowerCase().includes(term) ||
+    item.num_identificacion?.toLowerCase().includes(term)
+  );
+}
 
   // ------------------ Cliente ------------------
   onCustomerSelected(value: string | null) {
@@ -279,6 +369,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
   // ------------------ Factura ------------------
   finalizeInvoice(): void {
+    console.log('selectedCustomer', this.selectedCustomer);
     if (this.invoiceForm.invalid) {
       toast.error('Selecciona un cliente y verifica los campos.');
       return;
@@ -304,6 +395,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     // payload para SalesInvoice
     const payload = {
       customer: customerName,
+      total: total,
       posting_date: this.invoiceForm.get('postingDate')?.value,
       items: this.cartItems.map(it => ({
         item_code: it.name || 'ADHOC',
@@ -331,7 +423,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
               toast.success(`Factura ${inv} creada y enviada al SRI.`);
               this.clearInvoiceForm();
               // opcional: imprime
-              this.alertService.confirm(`Factura ${inv} creada y enviada al SRI.`, '¿Deseas imprimir la factura?','success')
+              this.alertService.confirm(`Factura ${inv} creada y enviada al SRI.`, '¿Deseas imprimir la factura?', 'success')
                 .then(result => {
                   if (result.isConfirmed) this.printInvoice(inv);
                 });

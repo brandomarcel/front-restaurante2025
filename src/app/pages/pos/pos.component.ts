@@ -47,7 +47,9 @@ export class PosComponent implements OnInit {
   searchTerm: string = '';
   selectedCategory = '';
   //categories = ['Entrada', 'Sopas', 'Adicionales', 'Bebidas', 'Postres', 'Platos_Fuertes', 'Burguers'];
-
+  orderType: 'Servirse' | 'Llevar' | 'Domicilio' = 'Servirse';
+  deliveryAddress: string = '';
+  deliveryPhone: string = '';
 
   paymentMethod: string = '01';
 
@@ -58,7 +60,7 @@ export class PosComponent implements OnInit {
 
   today: any;
 
-    private url=environment.URL
+  private url = environment.URL
   constructor(public menuService: MenuService,
     private customersService: CustomersService,
     private productsService: ProductsService,
@@ -120,12 +122,21 @@ export class PosComponent implements OnInit {
     ]);
 
   }
+  setItemType(item: any, tipo: 'Servirse' | 'Llevar') {
+    item.tipo = tipo;
+    // si tienes recargos (empaque o delivery por ítem), actualiza aquí:
+    // item.fee = tipo === 'Llevar' ? this.packagingFeePerItem : tipo === 'Domicilio' ? this.deliveryFeePerItem : 0;
 
+  }
   public toggleSidebar() {
     this.menuService.toggleSidebar();
   }
   get f() {
     return this.clienteForm.controls;
+  }
+
+  setOrderType(tipo: 'Servirse' | 'Llevar' | 'Domicilio') {
+    this.orderType = tipo;
   }
   loadProducts() {
     this.spinner.show();
@@ -262,55 +273,55 @@ export class PosComponent implements OnInit {
 
 
   addProduct(product: any) {
-  const existing = this.cart.find(i => i.name === product.name);
+    const existing = this.cart.find(i => i.name === product.name);
 
-  const price = this.toNumber(product.precio ?? product.price);
-  const taxValue = this.getTaxPercent(product); // 0 o 15
+    const price = this.toNumber(product.precio ?? product.price);
+    const taxValue = this.getTaxPercent(product); // 0 o 15
 
-  if (existing) {
-    existing.quantity++;
-    this.recalcItem(existing);
-  } else {
-    const newItem = {
-      ...product,
-      price,
-      quantity: 1,
-      tax_value: taxValue // en porcentaje (0 o 15) para backend
-    };
-    this.recalcItem(newItem);
-    this.cart.push(newItem);
+    if (existing) {
+      existing.quantity++;
+      this.recalcItem(existing);
+    } else {
+      const newItem = {
+        ...product,
+        price,
+        quantity: 1,
+        tax_value: taxValue // en porcentaje (0 o 15) para backend
+      };
+      this.recalcItem(newItem);
+      this.cart.push(newItem);
+    }
   }
-}
 
-increase(item: any) {
-  item.quantity++;
-  this.recalcItem(item);
-}
-
-decrease(item: any) {
-  if (item.quantity > 1) {
-    item.quantity--;
+  increase(item: any) {
+    item.quantity++;
     this.recalcItem(item);
-  } else {
-    const i = this.cart.indexOf(item);
-    if (i !== -1) this.cart.splice(i, 1);
   }
-}
+
+  decrease(item: any) {
+    if (item.quantity > 1) {
+      item.quantity--;
+      this.recalcItem(item);
+    } else {
+      const i = this.cart.indexOf(item);
+      if (i !== -1) this.cart.splice(i, 1);
+    }
+  }
 
 
 
 
-get subtotal(): number {
-  return this.round2(this.cart.reduce((acc, it) => acc + this.toNumber(it.subtotal), 0));
-}
+  get subtotal(): number {
+    return this.round2(this.cart.reduce((acc, it) => acc + this.toNumber(it.subtotal), 0));
+  }
 
-get iva(): number {
-  return this.round2(this.cart.reduce((acc, it) => acc + this.toNumber(it.iva), 0));
-}
+  get iva(): number {
+    return this.round2(this.cart.reduce((acc, it) => acc + this.toNumber(it.iva), 0));
+  }
 
-get total(): number {
-  return this.round2(this.cart.reduce((acc, it) => acc + this.toNumber(it.total), 0));
-}
+  get total(): number {
+    return this.round2(this.cart.reduce((acc, it) => acc + this.toNumber(it.total), 0));
+  }
 
 
 
@@ -356,7 +367,7 @@ get total(): number {
     if (!this.customer) {
       toast.error('Selecciona un cliente.');
       this.identificationCustomer = '';
-      
+
       return;
     }
     if (this.cart.length === 0) {
@@ -410,6 +421,10 @@ get total(): number {
       alias: this.alias, // o this.customer?.id si estás usando el ID
       estado: typePago,
       total: this.total.toFixed(2),
+      type_orden: this.orderType,
+      delivery_address: this.deliveryAddress,
+      delivery_phone: this.deliveryPhone,
+      fecha: this.today,
       items: this.cart.map(item => ({
         product: item.name, // Asegúrate que sea el código tipo "PROD-0012"
         qty: item.quantity,
@@ -430,7 +445,7 @@ get total(): number {
         if (result.isConfirmed) {
           console.log('Confirmado');
           this.spinner.show();
-          this.ordersService.create_order(order).pipe(finalize(() => this.spinner.hide()))
+          this.ordersService.create_order_v2(order).pipe(finalize(() => this.spinner.hide()))
             .subscribe({
               next: (res: any) => {
                 console.log('Pedido guardado:', res);
@@ -438,8 +453,14 @@ get total(): number {
                 this.spinner.hide();
                 toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
                 setTimeout(() => this.printCombinedTicket(orderId), 500);
+              },
+              error: (err) => {
+                this.spinner.hide()
+
               }
-            });
+            }
+
+            );
         } else {
           console.log('Cancelado');
         }
@@ -455,8 +476,6 @@ get total(): number {
         this.spinner.hide();
         toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
         setTimeout(() => this.printCombinedTicket(orderId), 500);
-
-
       },
       error: () => {
         this.spinner.hide();
@@ -537,6 +556,9 @@ get total(): number {
     this.showPaymentModal = false;
     this.showReceipt = false;
     this.showKitchenTicket = false;
+    this.orderType = 'Servirse';
+    this.deliveryAddress = '';
+    this.deliveryPhone = '';
   }
 
   identificacionLengthValidator(): ValidatorFn {
@@ -557,8 +579,6 @@ get total(): number {
 
       return null; // válido
     };
-
-
   }
 
   getMaxLength(): number {
@@ -570,32 +590,32 @@ get total(): number {
   }
 
   private toNumber(v: any): number {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-}
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
 
-private round2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
-}
+  private round2(n: number): number {
+    return Math.round((n + Number.EPSILON) * 100) / 100;
+  }
 
-/** Devuelve el % de IVA (0, 15, etc) desde el producto */
-private getTaxPercent(p: any): number {
-  // prioriza tax_value; si no, intenta tax.value; si no, tax
-  const v = Number(p?.tax_value ?? p?.tax?.value ?? p?.tax ?? 0);
-  return Number.isFinite(v) ? v : 0;
-}
+  /** Devuelve el % de IVA (0, 15, etc) desde el producto */
+  private getTaxPercent(p: any): number {
+    // prioriza tax_value; si no, intenta tax.value; si no, tax
+    const v = Number(p?.tax_value ?? p?.tax?.value ?? p?.tax ?? 0);
+    return Number.isFinite(v) ? v : 0;
+  }
 
-/** Recalcula subtotal, iva y total de un ítem del carrito */
-private recalcItem(item: any): void {
-  const qty = this.toNumber(item.quantity);
-  const price = this.toNumber(item.price);
-  const taxRate = this.toNumber(item.tax_value) / 100; // 0.15 si 15%
-  const subtotal = this.round2(qty * price);
-  const iva = this.round2(subtotal * taxRate);
-  item.subtotal = subtotal;
-  item.iva = iva;
-  item.total = this.round2(subtotal + iva);
-}
+  /** Recalcula subtotal, iva y total de un ítem del carrito */
+  private recalcItem(item: any): void {
+    const qty = this.toNumber(item.quantity);
+    const price = this.toNumber(item.price);
+    const taxRate = this.toNumber(item.tax_value) / 100; // 0.15 si 15%
+    const subtotal = this.round2(qty * price);
+    const iva = this.round2(subtotal * taxRate);
+    item.subtotal = subtotal;
+    item.iva = iva;
+    item.total = this.round2(subtotal + iva);
+  }
 
 
 }

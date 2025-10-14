@@ -34,13 +34,15 @@ const routes: Routes = [
       { path: 'categories', component: CategorysComponent },
       { path: 'reportes', component: ReportOrdernesComponent },
       { path: 'users', component: UsersComponent },
+      
+      { path: 'invoicing',component: InvoicingComponent},
+      { path: 'invoicing/:order_name',component: InvoicingComponent},
 
-      { path: 'invoicing', component: InvoicingComponent },
       { path: 'invoices', component: InvoicesComponent },
       { path: 'invoices/:id', component: InvoiceDetailPageComponent },
 
-       { path: 'credit-notes', component: CreditNotesComponent },
-       { path: 'credit-note/:id', component: CreditNoteDetailPageComponent },
+      { path: 'credit-notes', component: CreditNotesComponent },
+      { path: 'credit-note/:id', component: CreditNoteDetailPageComponent },
 
       { path: '**', redirectTo: 'errors/404' },
     ],
@@ -51,4 +53,4 @@ const routes: Routes = [
   imports: [RouterModule.forChild(routes)],
   exports: [RouterModule],
 })
-export class DashboardRoutingModule {}
+export class DashboardRoutingModule { }

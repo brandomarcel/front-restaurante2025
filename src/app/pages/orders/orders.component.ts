@@ -187,22 +187,22 @@ export class OrdersComponent implements OnInit {
 
   }
 
-  validarYGenerarFactura() {
-    this.spinner.show();
-    this.ordersService.validar_y_generar_factura(this.orderSelected.name).subscribe({
-      next: (res: any) => {
-        console.log('res', res);
-        this.spinner.hide();
-        toast.success('Factura regenerada con éxito');
-        this.loadOrders();
-        this.cerrarModal();
-      },
-      error: (err) => {
-        this.spinner.hide();
-        console.error('Error al cargar los pedidos:', err);
-      }
-    });
-  }
+  // validarYGenerarFactura() {
+  //   this.spinner.show();
+  //   this.ordersService.validar_y_generar_factura(this.orderSelected.name).subscribe({
+  //     next: (res: any) => {
+  //       console.log('res', res);
+  //       this.spinner.hide();
+  //       toast.success('Factura regenerada con éxito');
+  //       this.loadOrders();
+  //       this.cerrarModal();
+  //     },
+  //     error: (err) => {
+  //       this.spinner.hide();
+  //       console.error('Error al cargar los pedidos:', err);
+  //     }
+  //   });
+  // }
 
   getFacturaPdf() {
     const order = this.url + this.printService.getFacturaPdf(this.orderSelected.sri.invoice);

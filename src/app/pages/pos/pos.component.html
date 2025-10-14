@@ -127,11 +127,35 @@
             <!-- RESUMEN DEL PEDIDO -->
             <div class="flex flex-col  h-full overflow-auto text-xs">
                 <!-- Texto del ambiente -->
-                <div>
-                    <span class="text-lg font-semibold"
+                <div class="hidden sm:flex items-center justify-center gap-2 text-lg font-semibold">
+                    <span class="text-[15px] text-gray-600">Ambiente</span>
+                    <div class="px-2 py-1 rounded-md border bg-gray-50 text-[15px] font-semibold"
                         [ngClass]="ambiente === 'PRODUCCION' ? 'text-green-700' : 'text-yellow-600'">
-                        Ambiente: {{ ambiente }}
-                    </span>
+                        {{ ambiente || '—' }}
+                    </div>
+                </div>
+                <!-- Tipo de Orden -->
+                <div class="mt-2">
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Tipo de orden</label>
+                    <div class="inline-flex rounded-md border overflow-hidden">
+                        <button type="button" class="px-3 py-1 text-xs"
+                            [ngClass]="orderType === 'Servirse' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                            (click)="setOrderType('Servirse')">🍽️ Servirse</button>
+                        <button type="button" class="px-3 py-1 text-xs border-l"
+                            [ngClass]="orderType === 'Llevar' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                            (click)="setOrderType('Llevar')">🥡 Llevar</button>
+                        <button type="button" class="px-3 py-1 text-xs border-l"
+                            [ngClass]="orderType === 'Domicilio' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                            (click)="setOrderType('Domicilio')">🛵 Domicilio</button>
+                    </div>
+
+                    <!-- Campos condicionales para Domicilio -->
+                    <div *ngIf="orderType === 'Domicilio'" class="mt-2 space-y-2">
+                        <input type="text" [(ngModel)]="deliveryAddress" maxlength="120"
+                            class="w-full border rounded px-3 py-2 text-xs" placeholder="Dirección de entrega" />
+                        <input type="text" [(ngModel)]="deliveryPhone" maxlength="10"
+                            class="w-full border rounded px-3 py-2 text-xs" placeholder="Teléfono de contacto" />
+                    </div>
                 </div>
                 <h2 class="text-lg font-semibold text-primary">Resumen</h2>
 
@@ -157,6 +181,17 @@
 
                                 <strong class="ml-2 text-foreground">${{ item.total | number: '1.2-2' }}</strong>
                             </div>
+
+                            <!-- Selector por ítem -->
+                            <!-- <div class="inline-flex rounded border overflow-hidden mt-1 text-[11px]">
+                                    <button type="button" class="px-2 py-0.5"
+                                        [ngClass]="item.tipo === 'Servirse' ? 'bg-primary text-white' : 'bg-white'"
+                                        (click)="setItemType(item, 'Servirse')">🍽️ Servirse</button>
+                                    <button type="button" class="px-2 py-0.5 border-l"
+                                        [ngClass]="item.tipo === 'Llevar' ? 'bg-primary text-white' : 'bg-white'"
+                                        (click)="setItemType(item, 'Llevar')">🥡 Llevar</button>
+                                </div> -->
+
                         </div>
 
                     </div>
@@ -319,6 +354,16 @@
                             <p class="text-blue-600 text-xs break-all">{{ customer?.correo }}</p>
                         </div>
                     </div>
+                    <div class="mt-2 text-xs">
+                        <span class="text-gray-600">Tipo de orden:</span>
+                        <span class="font-semibold">{{ orderType }}</span>
+                        <div *ngIf="orderType === 'Domicilio' && (deliveryAddress || deliveryPhone)"
+                            class="mt-1 space-y-0.5 text-blue-700">
+                            <p>📍 {{ deliveryAddress || '—' }}</p>
+                            <p>📞 {{ deliveryPhone || '—' }}</p>
+                        </div>
+                    </div>
+
 
                     <div class="bg-gray-50 rounded-md p-3 md:p-4 border max-h-[55vh] md:max-h-[60vh] overflow-y-auto">
                         <h3 class="text-base md:text-lg font-semibold text-gray-700 mb-2">🧾 Detalle del Pedido</h3>

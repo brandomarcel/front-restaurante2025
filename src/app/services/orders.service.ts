@@ -37,20 +37,8 @@ export class OrdersService {
     });
   }
 
-  validar_y_generar_factura(docname: string) {
-    return this.http.post(`${environment.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.validar_y_generar_factura`, {
-      docname: docname,
-      withCredentials: true
-    });
-  }
 
-  // create(order: any) {
-  //   return this.http.post(this.apiUrl, order);
-  // }
-
-    create_order(payload: any): Observable<any> {
-      // const  url =`${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.create_order`;
-
+    create_order_v2(payload: any): Observable<any> {
       const  url =`${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.orders.orders.create_order_v2`;
     return this.http.post<any>(
       url,
@@ -60,7 +48,7 @@ export class OrdersService {
       catchError((error) => {
         const msg = this.frappeErr.handle(error) || 'Error al crear la factura.';
         toast.error(msg);
-        return EMPTY; // 👈 corta la cadena sin “romper” el flujo
+        return EMPTY;
       })
     );
   }
@@ -69,7 +57,7 @@ create(order: any): Observable<any> {
       catchError((error) => {
         const msg = this.frappeErr.handle(error) || 'Error al crear la factura.';
         toast.error(msg);
-        return EMPTY; // 👈 corta la cadena sin “romper” el flujo
+        return EMPTY; 
       })
     );
   }

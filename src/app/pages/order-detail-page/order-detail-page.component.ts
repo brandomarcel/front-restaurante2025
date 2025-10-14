@@ -1,4 +1,3 @@
-// src/app/pages/order-detail-page/order-detail-page.component.ts
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -100,5 +99,13 @@ goToInvoice(invName?: string) {
   if (!invName) return;
   this.router.navigate(['/invoices', invName]);
 }
+
+
+facturarDesdeOrden(order:any){
+  console.log('facturarDesdeOrden', order);
+this.router.navigate(['/dashboard/invoicing', order.name]);
+
+}
+
 
 }

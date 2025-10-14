@@ -12,8 +12,7 @@
           <h1 class="text-xl sm:text-2xl font-semibold">
             Pedido <span class="text-muted-foreground">#{{ order?.name || '—' }}</span>
           </h1>
-          <span class="badge"
-                [ngClass]="{
+          <span class="badge" [ngClass]="{
                   'badge-green': order?.sri?.status === 'AUTORIZADO',
                   'badge-red': order?.sri?.status === 'Rejected' || order?.sri?.status === 'Error',
                   'badge-yellow': order?.sri?.status !== 'AUTORIZADO'
@@ -34,9 +33,17 @@
 
     <!-- Acciones rápidas (solo desktop) -->
     <div class="hidden md:flex items-center gap-2">
-      <button class="btn btn-outline" (click)="getComandaPdf()">  <fa-icon [icon]="['fas','print']" class="mr-1"></fa-icon>Imprimir Comanda</button>
-      <button *ngIf="order?.type === 'Factura' && order?.sri?.status === 'AUTORIZADO'" class="btn btn-warn" (click)="getFacturaPdf()"> <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Descargar Factura</button>
-      <button *ngIf="order?.type === 'Nota Venta'" class="btn btn-warn" (click)="getNotaVentaPdf()"> <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Descargar Nota Venta</button>
+      <button class="btn btn-primary" *ngIf="order?.type === 'Nota Venta'" (click)="facturarDesdeOrden(order)">
+        <fa-icon icon="file-invoice" class="mr-1"></fa-icon> Generar Factura
+      </button>
+
+      <button class="btn btn-outline" (click)="getComandaPdf()"> <fa-icon [icon]="['fas','print']"
+          class="mr-1"></fa-icon>Imprimir Comanda</button>
+      <button *ngIf="order?.type === 'Factura' && order?.sri?.status === 'AUTORIZADO'" class="btn btn-warn"
+        (click)="getFacturaPdf()"> <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Descargar
+        Factura</button>
+      <button *ngIf="order?.type === 'Nota Venta'" class="btn btn-warn" (click)="getNotaVentaPdf()"> <fa-icon
+          [icon]="['fas','download']" class="mr-1"></fa-icon>Descargar Nota Venta</button>
     </div>
   </div>
 </header>
@@ -87,13 +94,14 @@
               <td class="p-3">{{ item.quantity }}</td>
               <td class="p-3">{{ item.price | currency:'USD':'symbol':'1.2-2' }}</td>
               <td class="p-3">{{ item.tax_rate }}%</td>
-              <td class="p-3">{{ (item.subtotal ?? (item.quantity * item.price)) | currency:'USD':'symbol':'1.2-2' }}</td>
+              <td class="p-3">{{ (item.subtotal ?? (item.quantity * item.price)) | currency:'USD':'symbol':'1.2-2' }}
+              </td>
               <td class="p-3 font-medium">
                 {{
-                  (item.total ??
-                    ((item.subtotal ?? (item.quantity * item.price)) +
-                     ((item.subtotal ?? (item.quantity * item.price)) * ((item.tax_rate ?? 0)/100)))
-                  ) | currency:'USD':'symbol':'1.2-2'
+                (item.total ??
+                ((item.subtotal ?? (item.quantity * item.price)) +
+                ((item.subtotal ?? (item.quantity * item.price)) * ((item.tax_rate ?? 0)/100)))
+                ) | currency:'USD':'symbol':'1.2-2'
                 }}
               </td>
             </tr>
@@ -137,8 +145,7 @@
       <h3 class="text-lg font-semibold text-gray-700 mb-4">📤 Información del SRI</h3>
       <ul class="text-sm text-gray-700 space-y-2">
         <li><strong>Estado SRI:</strong>
-          <span class="badge"
-                [ngClass]="{
+          <span class="badge" [ngClass]="{
                   'badge-green': order?.sri?.status === 'AUTORIZADO',
                   'badge-red': order?.sri?.status === 'Rejected' || order?.sri?.status === 'Error',
                   'badge-yellow': order?.sri?.status !== 'AUTORIZADO'
@@ -150,7 +157,8 @@
         </li>
         <li *ngIf="order?.sri?.number"><strong>Número:</strong> {{ order?.sri?.number }}</li>
         <li *ngIf="order?.sri?.invoice"><strong>Factura:</strong> {{ order?.sri?.invoice }}</li>
-        <li *ngIf="order?.sri?.authorization_datetime"><strong>F. Autorización:</strong> {{ order?.sri?.authorization_datetime }}</li>
+        <li *ngIf="order?.sri?.authorization_datetime"><strong>F. Autorización:</strong> {{
+          order?.sri?.authorization_datetime }}</li>
       </ul>
     </div>
   </aside>
@@ -159,6 +167,8 @@
 <!-- Barra de acciones móvil (fija en el pie de la página) -->
 <div class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t px-4 py-2 flex gap-2">
   <button class="btn btn-outline flex-1" (click)="getComandaPdf()">Imprimir Comanda</button>
-  <button *ngIf="order?.type !== 'Nota Venta'" class="btn btn-warn flex-1" (click)="getFacturaPdf()">Descargar Factura</button>
-  <button *ngIf="order?.type === 'Nota Venta'" class="btn btn-warn flex-1" (click)="getNotaVentaPdf()">Imprimir Nota Venta</button>
+  <button *ngIf="order?.type !== 'Nota Venta'" class="btn btn-warn flex-1" (click)="getFacturaPdf()">Descargar
+    Factura</button>
+  <button *ngIf="order?.type === 'Nota Venta'" class="btn btn-warn flex-1" (click)="getNotaVentaPdf()">Imprimir Nota
+    Venta</button>
 </div>
