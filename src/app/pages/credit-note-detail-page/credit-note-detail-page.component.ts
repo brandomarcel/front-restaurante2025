@@ -11,7 +11,10 @@ import { CreditNoteService } from 'src/app/services/credit-note.service';
 @Component({
   selector: 'app-credit-note-detail-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, EcuadorTimePipe, FontAwesomeModule],
+  imports: [CommonModule,
+    RouterModule,
+    // EcuadorTimePipe,
+    FontAwesomeModule],
   templateUrl: './credit-note-detail-page.component.html',
   styleUrl: './credit-note-detail-page.component.css'
 })

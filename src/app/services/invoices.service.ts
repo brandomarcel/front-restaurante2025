@@ -12,7 +12,7 @@ export class InvoicesService {
 
   constructor(private http: HttpClient, private err: FrappeErrorService) {}
 
-  createFromUI(payload: any): Observable<any> {
+  create_and_emit_from_ui_v2(payload: any): Observable<any> {
 
   //  const  url =`${this.api}/method/restaurante_app.facturacion_bmarc.doctype.sales_invoice.sales_invoice.create_from_ui`;
   const  url =`${this.api}/method/restaurante_app.facturacion_bmarc.einvoice.ui_new.create_and_emit_from_ui_v2`;

@@ -15,9 +15,12 @@ import { environment } from 'src/environments/environment.prod';
 
 @Component({
   selector: 'app-orders',
-  imports: [CommonModule, EcuadorTimePipe, NgxPaginationModule, FormsModule,ButtonComponent,
+  imports: [CommonModule,
+    // EcuadorTimePipe,
+    NgxPaginationModule,
+    FormsModule, ButtonComponent,
     RouterModule
-    ],
+  ],
   templateUrl: './orders.component.html',
   styleUrl: './orders.component.css'
 })
@@ -40,17 +43,18 @@ export class OrdersComponent implements OnInit {
   tipoFiltro: '' | 'Factura' | 'Nota de venta' = '';
   anulacionFiltro: '' | 'soloAnuladas' | 'excluirAnuladas' = '';
 
-  private url=environment.URL
+  private url = environment.URL
   constructor(
     private ordersService: OrdersService,
     public spinner: NgxSpinnerService,
     private printService: PrintService,
 
-  ) {}
+  ) { }
 
-  ngOnInit() { this.loadOrders();
-    console.log('THIS.url',this.url);
-   }
+  ngOnInit() {
+    this.loadOrders();
+    console.log('THIS.url', this.url);
+  }
 
   loadOrders(): void {
     this.spinner.show();
@@ -214,7 +218,7 @@ export class OrdersComponent implements OnInit {
   }
 
 
-    getNotaVentaPdf() {
+  getNotaVentaPdf() {
     const order = this.url + this.printService.getNotaVentaPdf(this.orderSelected.name);
     const printWindow = window.open(order, '_blank');
     if (!printWindow) {

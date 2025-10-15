@@ -97,7 +97,7 @@ export class Menu {
         },
         {
           icon: 'assets/icons/tablericons/shopping-bag.svg',
-          label: 'Ordenes',
+          label: 'Lista de Órdenes',
           route: '/dashboard/orders',
         },
         {

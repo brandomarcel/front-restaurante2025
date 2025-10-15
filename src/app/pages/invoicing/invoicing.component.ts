@@ -18,7 +18,7 @@ import { InvoicesService } from 'src/app/services/invoices.service';
 import { UtilsService } from '../../core/services/utils.service';
 import { Customer } from 'src/app/core/models/customer';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 type Payment = { name: string; codigo: string; nombre: string; };
 type CartItem = {
@@ -68,16 +68,17 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     private invoicesService: InvoicesService,
     private utilsService: UtilsService,
     private route: ActivatedRoute,
+    private router: Router
 
   ) { }
 
   ngOnInit(): void {
+
     const ambienteGuardado = localStorage.getItem('ambiente');
     console.log('📦ambienteGuardado', ambienteGuardado);
     this.ambiente = ambienteGuardado ?? '----------';
     this.initializeForms();
     this.loadInitialData();
-
     const orderName = this.route.snapshot.paramMap.get('order_name');
     console.log('📦orderName', orderName);
 
@@ -218,21 +219,20 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   loadPaymentMethods(): void {
     this.spinner.show();
     this.paymentsService.getAll().subscribe({
-      next: (res: any) => 
-        {this.payments = (res || []) as Payment[]; console.log('Metodos de pago cargados:', this.payments);},
+      next: (res: any) => { this.payments = (res || []) as Payment[]; console.log('Metodos de pago cargados:', this.payments); },
       error: () => toast.error('Error al cargar métodos de pago.'),
       complete: () => this.spinner.hide()
     });
-    
-  }
-customSearchFn(term: string, item: any) {
-  term = term.toLowerCase();
 
-  return (
-    item.nombre?.toLowerCase().includes(term) ||
-    item.num_identificacion?.toLowerCase().includes(term)
-  );
-}
+  }
+  customSearchFn(term: string, item: any) {
+    term = term.toLowerCase();
+
+    return (
+      item.nombre?.toLowerCase().includes(term) ||
+      item.num_identificacion?.toLowerCase().includes(term)
+    );
+  }
 
   // ------------------ Cliente ------------------
   onCustomerSelected(value: string | null) {
@@ -407,15 +407,18 @@ customSearchFn(term: string, item: any) {
           : (it.tax === 'IVA-15' ? 15 : 0)
       })),
       payment: payment ? { code: payment.codigo, name: payment.name, amount: total } : null,
-      auto_queue: true // 👈 firma+envío por el microservicio
+      auto_queue: true, // 👈 firma+envío por el microservicio
+      order_name: this.order?.name
     };
+
+    console.log('payload', payload);
 
     this.alertService.confirm('¿Deseas emitir la factura?', 'Esta acción creará un documento legal.')
       .then(result => {
         if (!result.isConfirmed) return;
 
         this.spinner.show();
-        this.invoicesService.createFromUI(payload)
+        this.invoicesService.create_and_emit_from_ui_v2(payload)
           .pipe(finalize(() => this.spinner.hide()))
           .subscribe({
             next: (res) => {
@@ -426,6 +429,9 @@ customSearchFn(term: string, item: any) {
               this.alertService.confirm(`Factura ${inv} creada y enviada al SRI.`, '¿Deseas imprimir la factura?', 'success')
                 .then(result => {
                   if (result.isConfirmed) this.printInvoice(inv);
+                  if (this.order) {
+                    this.router.navigate(['/dashboard/invoicing']);
+                  }
                 });
 
             }

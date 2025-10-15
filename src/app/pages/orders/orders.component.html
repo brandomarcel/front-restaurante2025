@@ -52,7 +52,7 @@
             <th class="app-th">IVA</th>
             <th class="app-th">Total</th>
             <th class="app-th">Tipo</th>
-            <th class="app-th last:text-center">Estado SRI</th>
+            <!-- <th class="app-th last:text-center">Estado SRI</th> -->
             <th class="app-th last:text-center">Acciones</th>
           </tr>
         </thead>
@@ -73,7 +73,7 @@
             <td class="app-td">
               <span class="badge badge-gray">{{ order.type }}</span>
             </td>
-            <td class="app-td text-center">
+            <!-- <td class="app-td text-center">
               <span class="badge" [ngClass]="{
                   'badge-green': order.sri?.status === 'AUTORIZADO',
                   'badge-red': order.sri?.status === 'Rejected' || order.sri?.status === 'Error',
@@ -91,7 +91,7 @@
                 (order.sri?.status || 'Sin factura')
                 }}
               </span>
-            </td>
+            </td> -->
 
             <td class="app-td text-center">
               <div class="inline-flex gap-2">
