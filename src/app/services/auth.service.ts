@@ -94,6 +94,13 @@ export class AuthService {
     );
   }
 
+  goLogin() {
+    this.userService.clearUser();
+        localStorage.removeItem('user');
+        localStorage.removeItem('access_token'); // si lo estás usando
+        this.router.navigate(['/auth/sign-in']);
+  }
+
 
 
 }

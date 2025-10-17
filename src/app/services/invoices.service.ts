@@ -14,7 +14,6 @@ export class InvoicesService {
 
   create_and_emit_from_ui_v2(payload: any): Observable<any> {
 
-  //  const  url =`${this.api}/method/restaurante_app.facturacion_bmarc.doctype.sales_invoice.sales_invoice.create_from_ui`;
   const  url =`${this.api}/method/restaurante_app.facturacion_bmarc.einvoice.ui_new.create_and_emit_from_ui_v2`;
     return this.http.post<any>(
       url,
@@ -31,7 +30,6 @@ export class InvoicesService {
 
   emit_existing_invoice_v2(invoice_name: string): Observable<any> {
 
-  //  const  url =`${this.api}/method/restaurante_app.facturacion_bmarc.doctype.sales_invoice.sales_invoice.create_from_ui`;
   const  url =`${this.api}/method/restaurante_app.facturacion_bmarc.einvoice.ui_new.emit_existing_invoice_v2`;
     return this.http.post<any>(
       url,

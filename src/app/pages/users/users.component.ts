@@ -5,8 +5,11 @@ import { NgxPaginationModule } from 'ngx-pagination';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { RoleKey, UserItem } from 'src/app/core/models/user_item';
+import { AlertService } from 'src/app/core/services/alert.service';
 import { UserService } from 'src/app/services/user.service';
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
+import { state } from '@angular/animations';
+import { AuthService } from '../../services/auth.service';
 
 
 @Component({
@@ -27,6 +30,8 @@ export class UsersComponent implements OnInit {
   submitted = false;
   form!: FormGroup;
 
+  userLoged: any;
+
   // filtro rápido
   private _search = '';
   get search() { return this._search; }
@@ -34,18 +39,22 @@ export class UsersComponent implements OnInit {
 
   roles: { value: RoleKey; label: string }[] = [
     { value: 'gerente', label: 'Gerente' },
-    { value: 'cajero',  label: 'Cajero'  },
+    { value: 'cajero', label: 'Cajero' },
   ];
 
   constructor(
     private usersService: UserService,
     private fb: FormBuilder,
     private spinner: NgxSpinnerService,
-  ) {}
+    private alertService: AlertService,
+    private authService: AuthService
+  ) { }
 
-ngOnInit(): void {
+  ngOnInit(): void {
     this.cargar();
     this.initForm();
+    this.userLoged = JSON.parse(localStorage.getItem('user') || '{}');
+    console.log('userLoged', this.userLoged.email);
   }
 
   initForm() {
@@ -144,37 +153,54 @@ ngOnInit(): void {
         else finalize();
       },
       error: (err) => {
-      this.spinner.hide();
-      const msg = this.parseFrappeError(err);
-      toast.error(msg);
-      console.error('register_tenant_open error:', err);
-    }
+        this.spinner.hide();
+        const msg = this.parseFrappeError(err);
+        toast.error(msg);
+        console.error('register_tenant_open error:', err);
+      }
     });
   }
 
-  toggleEnabled(u: UserItem) {
-    const desired = !(u.enabled ?? 1);
-    this.usersService.setEnabled(u.email, desired).subscribe({
-      next: () => {
-        u.enabled = desired ? 1 : 0;
-        toast.success(desired ? 'Usuario habilitado' : 'Usuario deshabilitado');
+  async toggleEnabled(u: UserItem) {
+
+    console.log('toggleEnabled', u);
+    const estado = u.enabled ? 'deshabilitar' : 'habilitar';
+    this.alertService.confirm(`¿Desea ${estado} al usuario ${u.email}?`).then(res => {
+      console.log('res', res);
+      if (res.isConfirmed) {
+
+        const desired = !(u.enabled ?? 1);
+        this.usersService.setEnabled(u.email, desired).subscribe({
+          next: (response) => {
+            console.log('response', response);
+            const res = response?.message ;
+            u.enabled = desired ? 1 : 0;
+            toast.success(desired ? 'Usuario habilitado' : 'Usuario deshabilitado');
+            if (!res.enabled && this.userLoged.email === res.user) {
+              console.log('logout');
+              this.authService.goLogin();
+            }
+          }
+        });
       }
+
     });
+
   }
 
   borrar(u: UserItem) {
     if (!confirm(`¿Eliminar a ${u.email}?`)) return;
     this.usersService.delete(u.email).subscribe({
-      next: (res:any) => {
+      next: (res: any) => {
         toast.success('Usuario eliminado');
         this.cargar();
       },
       error: (err) => {
-      this.spinner.hide();
-      const msg = this.parseFrappeError(err);
-      toast.error(msg);
-      console.error('register_tenant_open error:', err);
-    }
+        this.spinner.hide();
+        const msg = this.parseFrappeError(err);
+        toast.error(msg);
+        console.error('register_tenant_open error:', err);
+      }
     });
   }
 
@@ -182,19 +208,19 @@ ngOnInit(): void {
 
 
   /** Extrae un mensaje legible de errores de Frappe */
-private parseFrappeError(err: any): string {
-  try {
-    const server = err?.error?._server_messages;
-    if (server) {
-      const arr = JSON.parse(server);
-      const first = typeof arr[0] === 'string' ? JSON.parse(arr[0]) : arr[0];
-      return first?.message || 'Error en el servidor';
-    }
-    if (err?.error?.message) return err.error.message;
-    if (err?.message) return err.message;
-  } catch {}
-  return 'No se pudo completar el registro. Verifica los datos e inténtalo nuevamente.';
-}
+  private parseFrappeError(err: any): string {
+    try {
+      const server = err?.error?._server_messages;
+      if (server) {
+        const arr = JSON.parse(server);
+        const first = typeof arr[0] === 'string' ? JSON.parse(arr[0]) : arr[0];
+        return first?.message || 'Error en el servidor';
+      }
+      if (err?.error?.message) return err.error.message;
+      if (err?.message) return err.message;
+    } catch { }
+    return 'No se pudo completar el registro. Verifica los datos e inténtalo nuevamente.';
+  }
 
 
 }

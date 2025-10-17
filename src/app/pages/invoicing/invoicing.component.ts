@@ -425,7 +425,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
               const inv = res?.message.invoice;
               toast.success(`Factura ${inv} creada y enviada al SRI.`);
               this.clearInvoiceForm();
-              // opcional: imprime
+
               this.alertService.confirm(`Factura ${inv} creada y enviada al SRI.`, '¿Deseas imprimir la factura?', 'success')
                 .then(result => {
                   if (result.isConfirmed) this.printInvoice(inv);

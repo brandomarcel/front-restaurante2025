@@ -71,7 +71,12 @@
               {{ order.total | currency:'USD':'symbol':'1.2-2' }}
             </td>
             <td class="app-td">
-              <span class="badge badge-gray">{{ order.type }}</span>
+              <span class="badge" [ngClass]="{
+                  'badge-green': order.type === 'Factura',
+                  'badge-yellow': order.type == 'Nota Venta'
+                }">
+                {{ order.type }}
+              </span>
             </td>
             <!-- <td class="app-td text-center">
               <span class="badge" [ngClass]="{
@@ -95,7 +100,7 @@
 
             <td class="app-td text-center">
               <div class="inline-flex gap-2">
-               <button class="btn btn-outline" [routerLink]="['/dashboard/orders', order.name]">🔎 Abrir</button>
+                <button class="btn btn-outline" [routerLink]="['/dashboard/orders', order.name]">🔎 Abrir</button>
               </div>
             </td>
           </tr>
