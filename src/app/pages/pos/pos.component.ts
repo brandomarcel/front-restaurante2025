@@ -55,6 +55,10 @@ export class PosComponent implements OnInit {
 
   showCustomerModal = false;
 
+  showPrintModal = false;
+  printOption: 'comanda' | 'factura' | 'ambas' = 'ambas';
+  private pendingOrderId: string | null = null;
+
   submitted = false;
   clienteForm!: FormGroup;
 
@@ -264,12 +268,33 @@ export class PosComponent implements OnInit {
 
 
 
-  applyFilters() {
-    this.filteredProductList = this.products.filter((product: any) =>
-      (!this.selectedCategory || product.categoria === this.selectedCategory) &&
-      (!this.searchTerm || product.name.toLowerCase().includes(this.searchTerm.toLowerCase()))
-    );
-  }
+applyFilters() {
+  const term = this.normalize(this.searchTerm);
+  const selectedCat = this.normalize(this.selectedCategory);
+  console.log('selectedCat', selectedCat);
+
+  console.log('term', term);
+
+  this.filteredProductList = (this.products || []).filter((product: any) => {
+    // categoría del producto (tolerante a distintas formas)
+    const prodCat = this.normalize(this.getProductCategoryName(product));
+    const okCat = !selectedCat || prodCat === selectedCat;
+
+    if (!term) return okCat;
+
+    // nombres/desc posibles (name/nombre, description/descripcion)
+    const name = this.normalize(product?.nombre);
+    console.log('name', name);
+    console.log('term', term);
+
+    const desc = this.normalize(product?.description ?? product?.descripcion);
+console.log('desc', desc);
+    const okText = name.includes(term) || desc.includes(term);
+    return okCat && okText;
+  });
+  console.log('filteredProductList', this.filteredProductList);
+}
+
 
 
   addProduct(product: any) {
@@ -380,14 +405,17 @@ export class PosComponent implements OnInit {
     this.showPaymentModal = true;
   }
 
-  calcularCambio() {
-    if (this.paymentMethod === '01') {
-      const recibido = Number(this.amountReceived);
-      if (!isNaN(recibido)) {
-        this.change = recibido - this.total;
-      }
+calcularCambio() {
+  if (this.paymentMethod === '01') {
+    const recibido = Number(this.amountReceived);
+    if (Number.isFinite(recibido)) {
+      this.change = recibido - this.total;
+    } else {
+      this.change = 0;
     }
   }
+}
+
 
   confirmarPago(typePago: string) {
     console.log('this.paymentMethod', this.paymentMethod);
@@ -450,17 +478,23 @@ export class PosComponent implements OnInit {
               next: (res: any) => {
                 console.log('Pedido guardado:', res);
                 const orderId = res.message?.name; // Asegúrate de que el ID del pedido se obtenga correctamente
+                this.pendingOrderId = orderId;
                 this.spinner.hide();
+                console.log('orderId', orderId);
                 toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
-                setTimeout(() => this.printCombinedTicket(orderId), 500);
+                // setTimeout(() => this.printCombinedTicket(orderId), 500);
+                this.openPrintModal(orderId);
               },
               error: (err) => {
                 this.spinner.hide()
 
+              },
+              complete: () => {
+                this.spinner.hide();
               }
             }
-
             );
+
         } else {
           console.log('Cancelado');
         }
@@ -473,9 +507,12 @@ export class PosComponent implements OnInit {
       next: (res) => {
         console.log('Pedido guardado:', res);
         const orderId = res.data.name; // Asegúrate de que el ID del pedido se obtenga correctamente
+         this.pendingOrderId = orderId;
+         console.log('orderId', orderId);
         this.spinner.hide();
         toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
-        setTimeout(() => this.printCombinedTicket(orderId), 500);
+        // setTimeout(() => this.printCombinedTicket(orderId), 500);
+        this.openPrintModal(orderId);
       },
       error: () => {
         this.spinner.hide();
@@ -528,7 +565,83 @@ export class PosComponent implements OnInit {
     this.clearPage();
   }
 
+  printComanda(orderId: string) {
+    // const order = 'http://207.180.197.160:1012' + this.printService.getOrderPdf(orderId);
+    const order = this.url + this.printService.getComandaPdf(orderId);
+    console.log('order', order);
+    const width = 800;
+    const height = 800;
 
+    const left = window.screenX + (window.innerWidth - width) / 2;
+    const top = window.screenY + (window.innerHeight - height) / 2;
+
+    const features = [
+      `width=${width}`,
+      `height=${height}`,
+      `left=${left}`,
+      `top=${top}`,
+      'toolbar=no',
+      'location=no',
+      'directories=no',
+      'status=no',
+      'menubar=no',
+      'scrollbars=yes',
+      'resizable=yes',
+    ];
+
+    const printWindow = window.open(order, '_blank', features.join(','));
+
+    if (!printWindow) {
+      toast.error('No se pudo abrir la ventana de impresión');
+      return;
+    }
+
+
+    // printWindow.document.open();
+    // printWindow.document.close();
+
+    // Limpieza final del estado del POS
+    this.clearPage();
+  }
+
+  printFactura(orderId: string) {
+    // const order = 'http://207.180.197.160:1012' + this.printService.getOrderPdf(orderId);
+    const order = this.url + this.printService.getFacturaPdf(orderId);
+    console.log('order', order);
+    const width = 800;
+    const height = 800;
+
+    const left = window.screenX + (window.innerWidth - width) / 2;
+    const top = window.screenY + (window.innerHeight - height) / 2;
+
+    const features = [
+      `width=${width}`,
+      `height=${height}`,
+      `left=${left}`,
+      `top=${top}`,
+      'toolbar=no',
+      'location=no',
+      'directories=no',
+      'status=no',
+      'menubar=no',
+      'scrollbars=yes',
+      'resizable=yes',
+    ];
+
+    const printWindow = window.open(order, '_blank', features.join(','));
+
+    if (!printWindow) {
+      toast.error('No se pudo abrir la ventana de impresión');
+      return;
+    }
+
+
+    // printWindow.document.open();
+    // printWindow.document.close();
+
+    // Limpieza final del estado del POS
+    this.clearPage();
+  }
 
   onCategorySelected(category: string) {
     this.selectedCategory = category;
@@ -559,6 +672,8 @@ export class PosComponent implements OnInit {
     this.orderType = 'Servirse';
     this.deliveryAddress = '';
     this.deliveryPhone = '';
+    this.searchTerm = '';
+    this.onCategorySelected('');
   }
 
   identificacionLengthValidator(): ValidatorFn {
@@ -616,6 +731,58 @@ export class PosComponent implements OnInit {
     item.iva = iva;
     item.total = this.round2(subtotal + iva);
   }
+
+  // Abre el modal después de crear el pedido
+  openPrintModal(orderId: string) {
+    this.pendingOrderId = orderId;
+    this.printOption = 'ambas'; // valor por defecto
+    this.showPrintModal = true;
+  }
+
+handlePrintSelection(option: 'comanda' | 'factura' | 'ambas') {
+  if (!this.pendingOrderId) return;
+
+  switch (option) {
+    case 'comanda':
+      this.printComanda(this.pendingOrderId);
+      break;
+    case 'factura':
+      this.printFactura(this.pendingOrderId);
+      break;
+    case 'ambas':
+      this.printCombinedTicket(this.pendingOrderId);
+      break;
+  }
+
+  this.showPrintModal = false;
+  this.pendingOrderId = null;
+}
+
+
+closePrintModal() {
+  this.showPrintModal = false;
+  this.pendingOrderId = null;
+  this.clearPage();
+}
+/** Normaliza texto: sin tildes, en minúsculas y trim */
+private normalize(txt: any = ''): string {
+  return String(txt ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+/** Obtiene el nombre de categoría del producto, tolerando distintas estructuras */
+private getProductCategoryName(p: any): string {
+  return (
+    p?.categoria ||
+    p?.category?.name ||
+    p?.category?.nombre ||
+    ''
+  );
+}
+trackByProductId = (_: number, p: any) => p?.id || p?._id || p?.codigo || p?.name || p?.nombre;
 
 
 }

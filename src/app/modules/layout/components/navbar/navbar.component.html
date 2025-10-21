@@ -1,48 +1,60 @@
 <div class="bg-background relative">
-  <div class="mx-auto px-5">
-    <div class="flex items-center justify-between py-3.5 md:justify-start">
-      <!-- Mobile Navigation Menu Button-->
-      <div class="sm:order-1 md:hidden">
+  <div class="mx-auto px-3 md:px-5">
+    <!-- HEADER: una sola barra que se adapta -->
+    <div class="flex items-center gap-2 md:gap-4 py-2.5 md:py-3.5">
+      
+      <!-- Botón menú móvil (solo mobile) -->
+      <div class="md:hidden">
         <button
           (click)="toggleMobileMenu()"
           type="button"
-          class="bg-muted text-muted-foreground focus:ring-primary hover:bg-muted-foreground hover:text-muted inline-flex items-center justify-center rounded-md p-2 focus:outline-hidden focus:ring-2 focus:ring-inset"
-          aria-expanded="false">
-          <span class="sr-only">Open menu</span>
-          <!-- Heroicon name: outline/menu -->
-          <svg-icon src="assets/icons/heroicons/outline/menu.svg" [svgClass]="'h-6 w-6'"> </svg-icon>
+          class="bg-muted text-muted-foreground hover:bg-muted-foreground hover:text-muted inline-flex items-center justify-center rounded-md p-2 focus:outline-hidden focus:ring-2 focus:ring-inset focus:ring-primary min-h-[44px] min-w-[44px]"
+          aria-expanded="false"
+          aria-label="Abrir menú">
+          <svg-icon src="assets/icons/heroicons/outline/menu.svg" [svgClass]="'h-6 w-6'"></svg-icon>
         </button>
       </div>
 
-      <!-- Logo -->
-      <div class="flex items-center justify-start gap-3 sm:order-2 ltr:md:mr-10 rtl:md:ml-10 lg:hidden">
-        <a class="bg-primary flex items-center justify-center rounded-sm p-2 focus:outline-hidden focus:ring-1">
-          <!-- <svg-icon src="assets/icons/logo.svg"></svg-icon> -->
-            <img *ngIf="logoPreview; else defaultLogo" [src]="logoPreview" alt="FA" class="mx-auto  h-20 w-auto"
-            loading="lazy" />
+      <!-- Logo + marca (visible en mobile y desktop) -->
+  <div class="flex items-center gap-2 ltr:md:mr-10 rtl:md:ml-10 md:hidden">
+  <a
+    class="bg-primary/90 hover:bg-primary transition flex items-center justify-center rounded-sm p-1.5 focus:outline-hidden focus:ring-1 focus:ring-primary/60"
+    aria-label="Inicio">
+    <img *ngIf="logoPreview; else defaultLogo"
+         [src]="logoPreview"
+         alt="FA"
+         class="mx-auto h-8 w-auto sm:h-10 object-contain"
+         loading="lazy" />
+    <ng-template #defaultLogo>
+      <img src="./assets/images/only_logo_FA.png"
+           alt="FA"
+           class="mx-auto h-8 w-auto sm:h-10 object-contain"
+           loading="lazy" />
+    </ng-template>
+  </a>
+  <b class="text-foreground text-sm font-bold">FacturADA</b>
+</div>
 
 
-          <ng-template #defaultLogo>
-            <img src="./assets/images/only_logo_FA.png" alt="FA" class="mx-auto  h-20 w-auto"
-              loading="lazy" />
-          </ng-template>
-
-          <!-- <img  src="./assets/icons/olla_de_barro_icon.png" alt="dashboard widget" class="h-10 w-10" /> -->
-        </a>
-        <b class="text-foreground hidden text-sm font-bold sm:block"> FacturADA </b>
-      </div>
-
-      <!-- Desktop Menu -->
-      <div class="hidden space-x-10 sm:order-3 md:flex">
+      <!-- NAVBAR DESKTOP (solo md+) -->
+      <div class="hidden md:flex md:ml-6 lg:ml-10 space-x-6 lg:space-x-10">
         <app-navbar-menu></app-navbar-menu>
       </div>
 
-      <!-- Profile menu -->
-      <div class="items-center justify-end sm:order-4 md:flex md:flex-1 lg:w-0">
+      <!-- separador flexible para empujar el perfil a la derecha en desktop -->
+      <div class="hidden md:block flex-1"></div>
+
+      <!-- Perfil (en mobile se queda a la derecha del logo; en desktop al extremo derecho) -->
+      <div class="ml-auto md:ml-0">
         <app-profile-menu></app-profile-menu>
       </div>
     </div>
   </div>
-  <!-- Mobile menu -->
-  <app-navbar-mobile></app-navbar-mobile>
+
+  <!-- Mobile menu (solo visible en mobile, oculto en md+) -->
+  <div class="md:hidden">
+    <app-navbar-mobile></app-navbar-mobile>
+  </div>
 </div>
+
+

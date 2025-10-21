@@ -1,27 +1,26 @@
 <!-- CONTENEDOR PRINCIPAL -->
-<div class=" bg-background flex flex-col">
-    <div class="container mx-auto px-4 py-4 flex-grow flex flex-col">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-grow">
-
+<div class="bg-background flex flex-col ">
+    <div class="container mx-auto px-3 sm:px-4 py-3 sm:py-4 flex-grow flex flex-col">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 flex-grow">
 
             <!-- PRODUCTOS -->
-            <div class="col-span-2 flex flex-col  overflow-auto">
+            <div class="col-span-2 flex flex-col overflow-hidden">
                 <!-- Contenedor Cliente -->
                 <div class="space-y-3">
                     <!-- Encabezado: Título + Acciones -->
                     <div class="flex items-center justify-between gap-3">
-                        <h2 class="text-xl font-semibold text-primary">Cliente</h2>
+                        <h2 class="text-lg sm:text-xl font-semibold text-primary">Cliente</h2>
 
                         <!-- Acciones rápidas -->
                         <div class="flex gap-2">
                             <button (click)="showCustomerModal = true"
-                                class="bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition"
-                                title="Nuevo cliente">
+                                class="bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition min-h-[44px] flex items-center justify-center"
+                                title="Nuevo cliente" aria-label="Nuevo cliente">
                                 <fa-icon icon="user-plus"></fa-icon>
                             </button>
 
                             <button
-                                class="bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition"
+                                class="bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition min-h-[44px]"
                                 (click)="selectFinalConsumer()">
                                 Consumidor Final
                             </button>
@@ -32,72 +31,78 @@
                     <div class="flex items-stretch gap-2">
                         <input type="text" maxlength="13" appOnlyNumbers [(ngModel)]="identificationCustomer"
                             placeholder="Ingrese el número de cédula"
-                            class="flex-1 min-w-0 rounded px-4 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
-                            [disabled]="customer" />
+                            class="flex-1 min-w-0 rounded px-3 sm:px-4 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                            [disabled]="customer" aria-label="Número de identificación del cliente" />
 
                         <button (click)="findByIdentificationCustomer()"
-                            class="bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition"
-                            title="Buscar cliente">
+                            class="bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition min-h-[44px] flex items-center justify-center"
+                            title="Buscar cliente" aria-label="Buscar cliente">
                             <fa-icon icon="search"></fa-icon>
                         </button>
 
                         <button (click)="identificationCustomer = '' ; customer = null"
-                            class="bg-red-500 text-white text-sm px-3 py-2 rounded hover:bg-red-600 transition"
-                            title="Limpiar">
+                            class="bg-red-500 text-white text-sm px-3 py-2 rounded hover:bg-red-600 transition min-h-[44px] flex items-center justify-center"
+                            title="Limpiar" aria-label="Limpiar">
                             <fa-icon icon="times"></fa-icon>
                         </button>
                     </div>
 
                     <!-- Tarjeta del cliente -->
-                    <div *ngIf="customer" class="bg-blue-50 rounded-lg p-3 shadow-sm text-sm border border-blue-200">
+                    <div *ngIf="customer"
+                        class="bg-blue-50 rounded-lg p-3 shadow-sm border border-blue-200 text-[13px] sm:text-sm">
                         <h4 class="font-bold text-blue-800 flex items-center gap-2">
                             <span>👤</span> {{ customer?.nombre || '—' }}
                         </h4>
 
                         <div *ngIf="customer?.nombre && customer?.nombre !== 'Consumidor Final'" class="mt-1">
-                            <p class="text-blue-700 text-xs leading-5">{{ customer?.telefono }}</p>
-                            <p class="text-blue-700 text-xs leading-5">{{ customer?.correo }}</p>
+                            <p class="text-blue-700 text-xs leading-5 break-words">{{ customer?.telefono }}</p>
+                            <p class="text-blue-700 text-xs leading-5 break-all">{{ customer?.correo }}</p>
                         </div>
                     </div>
                 </div>
 
-
-
-
-                <!-- <input type="text" placeholder="Buscar productos..." [(ngModel)]="searchTerm"
-                    class="w-1/2 rounded border px-3 py-1 text-xs" /> -->
+                <!-- Categorías -->
                 <div class="overflow-x-auto whitespace-nowrap py-2">
-                    <h2 class="text-lg font-semibold text-primary">Productos</h2>
+                    <h2 class="text-base sm:text-lg font-semibold text-primary">Productos</h2>
+                    <!-- Buscador (responsivo) -->
+                    <div class="flex items-stretch gap-2">
+                        <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()"
+                            placeholder="Buscar productos por nombre o descripción…"
+                            class="flex-1 min-w-0 rounded px-3 sm:px-4 py-2 text-sm" aria-label="Buscar productos" />
 
-                    <div class="inline-flex gap-2">
+                        <button (click)="searchTerm=''; applyFilters()"
+                            class="bg-gray-200 text-gray-800 text-sm px-3 py-2 rounded hover:bg-gray-300 transition"
+                            title="Limpiar búsqueda" aria-label="Limpiar búsqueda">
+                            Limpiar
+                        </button>
+                    </div>
+
+                    <div class="mt-2 inline-flex gap-2">
                         <button (click)="onCategorySelected('')" [class.bg-primary]="selectedCategory === ''"
-                            class="text-xs px-3 py-1 border rounded hover:bg-primary hover:text-white transition shrink-0">
+                            class="text-[12px] sm:text-xs px-3 py-2 border rounded hover:bg-primary hover:text-white transition shrink-0 min-h-[38px]">
                             Todos
                         </button>
                         <button *ngFor="let category of categories" (click)="onCategorySelected(category.name)"
                             [class.bg-primary]="selectedCategory === category.name"
-                            class="text-xs px-3 py-1 border rounded hover:bg-primary hover:text-white transition shrink-0">
+                            class="text-[12px] sm:text-xs px-3 py-2 border rounded hover:bg-primary hover:text-white transition shrink-0 min-h-[38px]">
                             {{ category.nombre }}
                         </button>
-
                     </div>
                 </div>
 
-
-
-                <div class="max-h-[50vh] overflow-y-auto">
-                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 pb-5">
-                        <div *ngFor="let product of filteredProductList" (click)="addProduct(product)" [ngClass]="{
-        'cursor-pointer rounded border p-2 shadow-sm transition text-xs': true,
-        'hover:bg-muted': !product.is_out_of_stock,
-        'border-red-500 bg-red-50': product.is_out_of_stock
-      }">
-                            <h3 class="font-semibold text-foreground">
+                <!-- Grid de productos (scrollable) -->
+                <div class="max-h-[48vh] sm:max-h-[50vh] overflow-y-auto pr-1">
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-3 pb-5">
+                        <div *ngFor="let product of filteredProductList ;trackBy: trackByProductId" (click)="addProduct(product)" [ngClass]="{
+                'cursor-pointer rounded border p-2 shadow-sm transition text-[12px] sm:text-xs': true,
+                'hover:bg-muted': !product.is_out_of_stock,
+                'border-red-500 bg-red-50': product.is_out_of_stock
+              }">
+                            <h3 class="font-semibold text-foreground leading-snug">
                                 {{ product.nombre }}
-
                             </h3>
 
-                            <!-- Etiqueta 'Agotado' discreta -->
+                            <!-- Etiqueta 'Agotado' -->
                             <p *ngIf="product.is_out_of_stock" class="text-red-600 text-[10px] italic mb-1">
                                 (Agotado)
                             </p>
@@ -106,13 +111,14 @@
                                 <span *ngIf="product.descripcion">({{ product.descripcion }})</span>
                             </p>
 
-                            <p class="text-muted-foreground text-lg">
+                            <p class="text-muted-foreground text-base sm:text-lg">
                                 ${{ product.precio | number: '1.2-2' }}
+                            </p>
                             <p class="text-yellow-600 text-[10px] italic mb-1">
                                 ({{ product.tax_value }}% IVA)
                             </p>
-
                         </div>
+
                         <tr *ngIf="filteredProductList.length === 0">
                             <td colspan="6" class="text-center py-6 text-gray-500 italic">
                                 No hay ítems para mostrar.
@@ -120,12 +126,11 @@
                         </tr>
                     </div>
                 </div>
-
-
             </div>
 
             <!-- RESUMEN DEL PEDIDO -->
-            <div class="flex flex-col  h-full overflow-auto text-xs">
+            <div class="flex flex-col min-h-0 text-xs">
+
                 <!-- Texto del ambiente -->
                 <div class="hidden sm:flex items-center justify-center gap-2 text-lg font-semibold">
                     <span class="text-[15px] text-gray-600">Ambiente</span>
@@ -134,106 +139,102 @@
                         {{ ambiente || '—' }}
                     </div>
                 </div>
+
                 <!-- Tipo de Orden -->
                 <div class="mt-2">
                     <label class="block text-xs font-semibold text-gray-700 mb-1">Tipo de orden</label>
-                    <div class="inline-flex rounded-md border overflow-hidden">
-                        <button type="button" class="px-3 py-1 text-xs"
+                    <div class="inline-flex rounded-md border overflow-hidden w-full sm:w-auto">
+                        <button type="button" class="px-3 py-2 text-[13px] sm:text-xs flex-1 sm:flex-none min-h-[44px]"
                             [ngClass]="orderType === 'Servirse' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
-                            (click)="setOrderType('Servirse')">🍽️ Servirse</button>
-                        <button type="button" class="px-3 py-1 text-xs border-l"
+                            (click)="setOrderType('Servirse')">
+                            🍽️ Servirse
+                        </button>
+                        <button type="button"
+                            class="px-3 py-2 text-[13px] sm:text-xs border-l flex-1 sm:flex-none min-h-[44px]"
                             [ngClass]="orderType === 'Llevar' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
-                            (click)="setOrderType('Llevar')">🥡 Llevar</button>
-                        <button type="button" class="px-3 py-1 text-xs border-l"
+                            (click)="setOrderType('Llevar')">
+                            🥡 Llevar
+                        </button>
+                        <button type="button"
+                            class="px-3 py-2 text-[13px] sm:text-xs border-l flex-1 sm:flex-none min-h-[44px]"
                             [ngClass]="orderType === 'Domicilio' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
-                            (click)="setOrderType('Domicilio')">🛵 Domicilio</button>
+                            (click)="setOrderType('Domicilio')">
+                            🛵 Domicilio
+                        </button>
                     </div>
 
                     <!-- Campos condicionales para Domicilio -->
                     <div *ngIf="orderType === 'Domicilio'" class="mt-2 space-y-2">
                         <input type="text" [(ngModel)]="deliveryAddress" maxlength="120"
-                            class="w-full border rounded px-3 py-2 text-xs" placeholder="Dirección de entrega" />
+                            class="w-full border rounded px-3 py-2 text-[13px] sm:text-xs"
+                            placeholder="Dirección de entrega" />
                         <input type="text" [(ngModel)]="deliveryPhone" maxlength="10"
-                            class="w-full border rounded px-3 py-2 text-xs" placeholder="Teléfono de contacto" />
+                            class="w-full border rounded px-3 py-2 text-[13px] sm:text-xs"
+                            placeholder="Teléfono de contacto" />
                     </div>
                 </div>
-                <h2 class="text-lg font-semibold text-primary">Resumen</h2>
+
+                <h2 class="text-base sm:text-lg font-semibold text-primary mt-2">Resumen</h2>
 
                 <ng-container *ngIf="cart.length > 0; else emptyCart">
-                    <div class="flex-grow overflow-auto space-y-1 max-h-[50vh] overflow-y-auto">
-                        <div *ngFor="let item of cart" class="flex justify-between items-center border-b py-1 ">
+                    <div class="flex-grow overflow-auto space-y-1 max-h-[42vh] sm:max-h-[50vh] pr-1">
+                        <div *ngFor="let item of cart" class="flex justify-between items-center border-b py-2">
                             <span class="font-medium text-foreground">
-                                {{ item.nombre }} {{ item.descripcion ? '(' + item.descripcion + ')' : '' }} <span
-                                    class="text-foreground font-normal">x{{ item.quantity }}</span>
+                                {{ item.nombre }} {{ item.descripcion ? '(' + item.descripcion + ')' : '' }}
+                                <span class="text-foreground font-normal">x{{ item.quantity }}</span>
                             </span>
                             <div class="flex items-center gap-2">
                                 <button (click)="decrease(item)"
-                                    class="w-6 h-6 rounded-full border text-foreground hover:bg-gray-100 flex items-center justify-center"
-                                    title="Disminuir cantidad">
+                                    class="w-8 h-8 rounded-full border text-foreground hover:bg-gray-100 flex items-center justify-center"
+                                    title="Disminuir cantidad" aria-label="Disminuir cantidad">
                                     <fa-icon icon="minus"></fa-icon>
                                 </button>
-                                <span class="w-5 text-center font-semibold">{{ item.quantity }}</span>
+                                <span class="w-6 text-center font-semibold">{{ item.quantity }}</span>
                                 <button (click)="increase(item)"
-                                    class="w-6 h-6 rounded-full border text-foreground hover:bg-gray-100 flex items-center justify-center"
-                                    title="Aumentar cantidad">
+                                    class="w-8 h-8 rounded-full border text-foreground hover:bg-gray-100 flex items-center justify-center"
+                                    title="Aumentar cantidad" aria-label="Aumentar cantidad">
                                     <fa-icon icon="plus"></fa-icon>
                                 </button>
 
                                 <strong class="ml-2 text-foreground">${{ item.total | number: '1.2-2' }}</strong>
                             </div>
-
-                            <!-- Selector por ítem -->
-                            <!-- <div class="inline-flex rounded border overflow-hidden mt-1 text-[11px]">
-                                    <button type="button" class="px-2 py-0.5"
-                                        [ngClass]="item.tipo === 'Servirse' ? 'bg-primary text-white' : 'bg-white'"
-                                        (click)="setItemType(item, 'Servirse')">🍽️ Servirse</button>
-                                    <button type="button" class="px-2 py-0.5 border-l"
-                                        [ngClass]="item.tipo === 'Llevar' ? 'bg-primary text-white' : 'bg-white'"
-                                        (click)="setItemType(item, 'Llevar')">🥡 Llevar</button>
-                                </div> -->
-
                         </div>
-
                     </div>
 
-
                     <!-- TOTALES -->
-                    <div class=" pt-4 space-y-1 text-xs text-foreground">
+                    <div class="pt-3 space-y-1 text-[13px] sm:text-xs text-foreground">
                         <p>Subtotal: ${{ subtotal | number: '1.2-2' }}</p>
                         <p>IVA (15%): ${{ iva | number: '1.2-2' }}</p>
                         <p class="text-base font-bold">Total: ${{ total | number: '1.2-2' }}</p>
                     </div>
 
-
                     <!-- BOTONES -->
                     <div class="space-y-2">
-                        <button (click)="abrirModalPago()"
-                            class="w-full rounded bg-primary px-4 py-2 text-white font-semibold hover:bg-primary/90 text-sm">
+                        <button (click)="abrirModalPago()
+              " class="w-full rounded bg-primary px-4 py-3 text-white font-semibold hover:bg-primary/90 text-sm min-h-[44px]">
                             Crear Orden
                         </button>
                     </div>
-
                 </ng-container>
 
                 <ng-template #emptyCart>
-                    <p class="text-xs text-muted-foreground">Aún no hay productos en la venta.</p>
+                    <p class="text-[13px] sm:text-xs text-muted-foreground">Aún no hay productos en la venta.</p>
                 </ng-template>
-
             </div>
-
         </div>
     </div>
 </div>
 
 <!-- MODAL DE NUEVO CLIENTE -->
-<div *ngIf="showCustomerModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-    <div class="bg-white w-full max-w-md rounded shadow-lg p-4 text-xs relative">
-        <button class="absolute top-2 right-3 text-lg" (click)="showCustomerModal = false">×</button>
+<div *ngIf="showCustomerModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-3" role="dialog"
+    aria-modal="true">
+    <div
+        class="bg-white w-full max-w-md rounded shadow-lg p-4 text-[13px] sm:text-xs relative max-h-[90dvh] overflow-y-auto">
+        <button class="absolute top-2 right-3 text-lg" (click)="showCustomerModal = false"
+            aria-label="Cerrar">×</button>
         <h3 class="text-base font-semibold mb-2">Nuevo Cliente</h3>
 
         <form [formGroup]="clienteForm" (ngSubmit)="guardarCliente()" class="space-y-4">
-
-
             <!-- Tipo -->
             <div>
                 <label class="block text-sm font-medium">Tipo de Identificación</label>
@@ -252,8 +253,7 @@
                 <label class="block text-sm font-medium">Identificación</label>
                 <input [attr.maxlength]="getMaxLength()" type="text" formControlName="num_identificacion"
                     class="w-full border rounded px-3 py-2 text-sm" />
-                <div *ngIf="f['num_identificacion'].invalid && submitted" class="text-red-500 text-sm">
-                    Campo requerido.
+                <div *ngIf="f['num_identificacion'].invalid && submitted" class="text-red-500 text-sm">Campo requerido.
                 </div>
 
                 <div *ngIf="f['num_identificacion'].errors?.['cedulaInvalida'] && submitted"
@@ -265,25 +265,19 @@
                 </div>
             </div>
 
-
-
             <!-- Nombre / Razón Social -->
             <div>
                 <label class="block text-sm font-medium">Nombre / Razón Social</label>
                 <input type="text" formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm"
                     oninput="this.value = this.value.toUpperCase()" />
-                <div *ngIf="f['nombre'].invalid && submitted" class="text-red-500 text-sm">
-                    Campo requerido.
-                </div>
+                <div *ngIf="f['nombre'].invalid && submitted" class="text-red-500 text-sm">Campo requerido.</div>
             </div>
 
             <!-- Email -->
             <div>
                 <label class="block text-sm font-medium">Email</label>
                 <input type="email" formControlName="correo" class="w-full border rounded px-3 py-2 text-sm" />
-                <div *ngIf="f['correo'].invalid && submitted" class="text-red-500 text-sm">
-                    Email inválido.
-                </div>
+                <div *ngIf="f['correo'].invalid && submitted" class="text-red-500 text-sm">Email inválido.</div>
             </div>
 
             <!-- Teléfono -->
@@ -291,37 +285,31 @@
                 <label class="block text-sm font-medium">Teléfono</label>
                 <input maxlength="10" type="text" formControlName="telefono"
                     class="w-full border rounded px-3 py-2 text-sm" />
-                <div *ngIf="f['telefono'].invalid && submitted" class="text-red-500 text-sm">
-                    Teléfono inválido.
-                </div>
+                <div *ngIf="f['telefono'].invalid && submitted" class="text-red-500 text-sm">Teléfono inválido.</div>
             </div>
 
             <!-- Dirección -->
             <div>
                 <label class="block text-sm font-medium">Dirección</label>
                 <input type="text" formControlName="direccion" class="w-full border rounded px-3 py-2 text-sm" />
-                <div *ngIf="f['direccion'].invalid && submitted" class="text-red-500 text-sm">
-                    Dirección inválido.
-                </div>
+                <div *ngIf="f['direccion'].invalid && submitted" class="text-red-500 text-sm">Dirección inválido.</div>
             </div>
 
             <!-- Botón -->
             <div class="pt-2">
-                <button type="submit" class="bg-primary text-white px-4 py-2 rounded w-full disabled:opacity-50">
+                <button type="submit"
+                    class="bg-primary text-white px-4 py-3 rounded w-full disabled:opacity-50 min-h-[44px]">
                     Guardar
                 </button>
             </div>
         </form>
-
-
     </div>
 </div>
 
-
 <!-- MODAL DE PAGO -->
-<div *ngIf="showPaymentModal" class="fixed inset-0 z-50">
+<div *ngIf="showPaymentModal" class="fixed inset-0 z-50" role="dialog" aria-modal="true">
     <!-- backdrop -->
-    <div class="absolute inset-0 bg-black/40"></div>
+    <div class="absolute inset-0 bg-black/40" (click)="showPaymentModal = false" aria-hidden="true"></div>
 
     <!-- contenedor -->
     <div class="relative mx-auto w-full h-dvh md:h-auto md:max-h-[90dvh] max-w-5xl
@@ -337,13 +325,14 @@
             </div>
             <button
                 class="absolute right-3 top-2 md:right-4 md:top-4 text-2xl md:text-3xl font-light text-gray-500 hover:text-gray-700"
-                (click)="showPaymentModal = false" [attr.aria-label]="'Cerrar modal'">×</button>
+                (click)="showPaymentModal = false" [attr.aria-label]="'Cerrar modal'">
+                ×
+            </button>
         </div>
 
         <!-- Contenido desplazable -->
         <div class="flex-1 overflow-y-auto px-4 md:px-0">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 py-4">
-
                 <!-- Columna izquierda -->
                 <div class="space-y-4 md:space-y-6">
                     <div class="bg-blue-50 rounded-lg p-3 md:p-4 shadow-sm text-sm border border-blue-200">
@@ -363,7 +352,6 @@
                             <p>📞 {{ deliveryPhone || '—' }}</p>
                         </div>
                     </div>
-
 
                     <div class="bg-gray-50 rounded-md p-3 md:p-4 border max-h-[55vh] md:max-h-[60vh] overflow-y-auto">
                         <h3 class="text-base md:text-lg font-semibold text-gray-700 mb-2">🧾 Detalle del Pedido</h3>
@@ -450,11 +438,7 @@
         <!-- Footer (sticky) -->
         <footer class="w-full">
             <div class="sticky bottom-0 z-10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-t">
-                <div class="px-4 py-3 md:px-0 md:py-4 flex flex-col md:flex-row md:justify-end gap-3 md:gap-4">
-                    <!-- <app-button type="button" (click)="confirmarPago('Nota Venta')" full impact="bold" tone="light"
-                        shape="rounded" size="large">
-                        Crear Orden
-                    </app-button> -->
+                <div class="px-4 py-3 md:px-0 md:py-4 flex flex-col md:flex-row md:justify-end gap-2 md:gap-4">
                     <app-button type="button" (click)="confirmarPago('Nota Venta')" full impact="bold" tone="warning"
                         shape="rounded" size="large">
                         Nota de Venta
@@ -466,7 +450,41 @@
                 </div>
             </div>
         </footer>
+    </div>
+</div>
 
+<!-- MODAL: ELECCIÓN DE IMPRESIÓN -->
+<div *ngIf="showPrintModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-3"
+    (click)="showPrintModal=false " role="dialog" aria-modal="true">
+    <div class="bg-white w-full max-w-md rounded shadow-lg p-5 sm:p-6 text-center relative"
+        (click)="$event.stopPropagation()">
+        <button class="absolute top-2 right-3 text-lg" (click)="closePrintModal()" aria-label="Cerrar">×</button>
 
+        <h3 class="text-base sm:text-lg font-semibold mb-3 sm:mb-4">¿Qué deseas imprimir?</h3>
+        <p class="text-gray-600 text-sm mb-5 sm:mb-6">Selecciona una opción para continuar.</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+            <button
+                class="bg-blue-500 hover:bg-blue-600 text-white py-3 sm:py-4 rounded-lg text-base font-medium active:scale-95 transition min-h-[44px]"
+                (click)="handlePrintSelection('comanda')">
+                Comanda
+            </button>
+
+            <button
+                class="bg-green-500 hover:bg-green-600 text-white py-3 sm:py-4 rounded-lg text-base font-medium active:scale-95 transition min-h-[44px]"
+                (click)="handlePrintSelection('factura')">
+                Factura
+            </button>
+
+            <button
+                class="bg-purple-500 hover:bg-purple-600 text-white py-3 sm:py-4 rounded-lg text-base font-medium active:scale-95 transition min-h-[44px]"
+                (click)="handlePrintSelection('ambas')">
+                Ambas
+            </button>
+        </div>
+
+        <div class="pt-5 sm:pt-6">
+            <button class="text-gray-500 text-sm underline min-h-[40px]" (click)="closePrintModal()">Cancelar</button>
+        </div>
     </div>
 </div>
