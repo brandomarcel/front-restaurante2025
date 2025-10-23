@@ -82,6 +82,7 @@ export class ProfileMenuComponent implements OnInit {
   ngOnInit(): void {
     this.user = JSON.parse(localStorage.getItem('user') || '{}');
 
+    console.log('user', this.user);
     // Normaliza el rol desde varias posibles propiedades
     const rawRole =
       this.user?.roles?.[0] ??
@@ -97,6 +98,7 @@ export class ProfileMenuComponent implements OnInit {
     this.visibleProfileMenu = this.profileMenu.filter(item =>
       !item.allowedRoles || (this.roleUpper && item.allowedRoles.includes(this.roleUpper))
     );
+    console.log('this.profileMenu', this.profileMenu);
   }
 
   public toggleMenu(): void {

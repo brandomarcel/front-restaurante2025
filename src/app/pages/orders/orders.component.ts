@@ -62,6 +62,7 @@ export class OrdersComponent implements OnInit {
 
     this.ordersService.getAll(this.pageSize, offset).subscribe({
       next: (res: any) => {
+        console.log('res', res);
         this.orders = res.message.data || [];
         console.log('this.orders', this.orders);
         this.totalOrders = res.message.total || 0;
@@ -156,7 +157,7 @@ export class OrdersComponent implements OnInit {
   cerrarModal() { this.mostrarModal = false; }
 
   getComandaPdf() {
-    const order = this.url + this.printService.getComandaPdf(this.orderSelected.name);
+    const order = this.url + this.printService.getComanda(this.orderSelected.name);
     console.log('order', order);
     const width = 800;
     const height = 800;

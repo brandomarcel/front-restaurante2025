@@ -503,10 +503,10 @@ calcularCambio() {
       return
     }
     this.spinner.show();
-    this.ordersService.create(order).subscribe({
+    this.ordersService.create_order_v2(order).subscribe({
       next: (res) => {
         console.log('Pedido guardado:', res);
-        const orderId = res.data.name; // Asegúrate de que el ID del pedido se obtenga correctamente
+        const orderId = res.message?.name; // Asegúrate de que el ID del pedido se obtenga correctamente
          this.pendingOrderId = orderId;
          console.log('orderId', orderId);
         this.spinner.hide();
@@ -567,7 +567,7 @@ calcularCambio() {
 
   printComanda(orderId: string) {
     // const order = 'http://207.180.197.160:1012' + this.printService.getOrderPdf(orderId);
-    const order = this.url + this.printService.getComandaPdf(orderId);
+    const order = this.url + this.printService.getComanda(orderId);
     console.log('order', order);
     const width = 800;
     const height = 800;
@@ -604,9 +604,9 @@ calcularCambio() {
     this.clearPage();
   }
 
-  printFactura(orderId: string) {
+  printOrden(orderId: string) {
     // const order = 'http://207.180.197.160:1012' + this.printService.getOrderPdf(orderId);
-    const order = this.url + this.printService.getFacturaPdf(orderId);
+    const order = this.url + this.printService.getRecibo(orderId);
     console.log('order', order);
     const width = 800;
     const height = 800;
@@ -739,15 +739,15 @@ calcularCambio() {
     this.showPrintModal = true;
   }
 
-handlePrintSelection(option: 'comanda' | 'factura' | 'ambas') {
+handlePrintSelection(option: 'comanda' | 'recibo' | 'ambas') {
   if (!this.pendingOrderId) return;
 
   switch (option) {
     case 'comanda':
       this.printComanda(this.pendingOrderId);
       break;
-    case 'factura':
-      this.printFactura(this.pendingOrderId);
+    case 'recibo':
+      this.printOrden(this.pendingOrderId);
       break;
     case 'ambas':
       this.printCombinedTicket(this.pendingOrderId);

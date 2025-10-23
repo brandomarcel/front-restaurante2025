@@ -6,7 +6,7 @@ export class Menu {
     {
       group: 'Principal',
       separator: false,
-      allowedRoles: ['GERENTE','CAJERO'],
+      allowedRoles: ['GERENTE', 'CAJERO'],
       items: [
         {
           icon: 'assets/icons/tablericons/chart-donut-3.svg',
@@ -21,11 +21,11 @@ export class Menu {
       ],
     },
 
-    
+
     {
       group: 'Facturación',
       separator: true,
-      allowedRoles: ['GERENTE', 'CAJERO'],
+      allowedRoles: ['GERENTE'],
       items: [
         {
           icon: 'assets/icons/tablericons/cash-register.svg',
@@ -74,7 +74,7 @@ export class Menu {
           route: '/report',
           children: [
             { label: 'Productos Mas Vendidos', route: '/report/ventasproducto' },
-            { label: 'Cierres de Caja', route: '/report/report-cierre-caja'},
+            { label: 'Cierres de Caja', route: '/report/report-cierre-caja' },
           ],
         },
       ],
@@ -110,6 +110,22 @@ export class Menu {
           label: 'Usuarios',
           route: '/dashboard/users',
         },
+      ],
+    },
+
+    {
+      group: 'Configuracion',
+      separator: false,
+      allowedRoles: ['CAJERO'],
+      items: [
+
+        {
+          allowedRoles: ['CAJERO'],
+          icon: 'assets/icons/tablericons/shopping-bag.svg',
+          label: 'Lista de Órdenes',
+          route: '/dashboard/orders',
+        },
+
       ],
     },
   ];

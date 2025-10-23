@@ -196,14 +196,14 @@
             <fa-icon [icon]="['fas','print']" class="mr-1"></fa-icon> Imprimir Comanda
           </app-button>
 
-          <app-button type="button" tone="warning" impact="light" shape="rounded"
+          <!-- <app-button type="button" tone="warning" impact="light" shape="rounded"
             *ngIf="order?.type === 'Factura' && order?.sri?.status === 'AUTORIZADO'" (click)="getFacturaPdf()" full>
             <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon> Descargar Factura
-          </app-button>
+          </app-button> -->
 
-          <app-button type="button" tone="warning" impact="light" shape="rounded" *ngIf="order?.type === 'Nota Venta'"
-            (click)="getNotaVentaPdf()" full>
-            <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon> Descargar Nota Venta
+          <app-button type="button" tone="warning" impact="light" shape="rounded" 
+            (click)="getRecibo()" full>
+            <fa-icon [icon]="['fas','print']" class="mr-1"></fa-icon> Imprimir Recibo
           </app-button>
         </div>
       </section>

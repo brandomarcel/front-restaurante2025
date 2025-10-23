@@ -5,6 +5,7 @@ import { Observable, switchMap, tap } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { UserService } from './user.service';
 import { Router } from '@angular/router';
+import { FrappeSocketService } from './frappe-socket.service';
 
 interface LoginResponse {
   access_token: string;
@@ -24,7 +25,8 @@ export class AuthService {
 
   constructor(private http: HttpClient,
     private userService: UserService,
-    private router: Router // Agrega el Router aquí
+    private router: Router, // Agrega el Router aquí
+    private socket: FrappeSocketService
   ) { }
 
 
@@ -48,15 +50,30 @@ export class AuthService {
 
   /////////////////////////////////////////////////////////////
 
-  login(username: string, password: string) {
-    const body = { usr: username, pwd: password };
+login(username: string, password: string) {
+  const body = new URLSearchParams();
+  body.set('usr', username);
+  body.set('pwd', password);
 
-    return this.http.post(`${this.apiUrl}/method/login`, body, {
-      withCredentials: true
-    }).pipe(
-      switchMap(() => this.getUserInfo())
-    );
-  }
+  return this.http.post(
+    `${this.apiUrl}/method/login`,   // 👈 OJO: incluye /api
+    body.toString(),
+    {
+      withCredentials: true,             // 👈 imprescindible para cookie `sid`
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      observe: 'response'
+    }
+  ).pipe(
+    tap((res) => {
+      // Verifica rápido en devtools si se setea la cookie
+      // console.log('Set-Cookie?', res.headers.get('set-cookie')); // algunos navegadores ocultan este header
+      // Si el dominio es cruzado, revisa SameSite/Secure más abajo
+      this.socket.connect();             // 👈 abrir WS SOLO después del login OK
+    }),
+    switchMap(() => this.getUserInfo())
+  );
+}
+
 
   getUserInfo() {
     return this.http.get<any>(`${this.apiUrl}/method/restaurante_app.restaurante_bmarc.api.user.get_user_roles_and_doctype_permissions`, {

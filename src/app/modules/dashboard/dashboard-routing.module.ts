@@ -16,6 +16,7 @@ import { OrderDetailPageComponent } from 'src/app/pages/order-detail-page/order-
 import { InvoiceDetailPageComponent } from 'src/app/pages/invoice-detail-page/invoice-detail-page.component';
 import { CreditNotesComponent } from 'src/app/pages/credit-notes/credit-notes.component';
 import { CreditNoteDetailPageComponent } from 'src/app/pages/credit-note-detail-page/credit-note-detail-page.component';
+import { OrdersRealtimeComponent } from 'src/app/pages/orders-realtime/orders-realtime.component';
 
 const routes: Routes = [
   {
@@ -43,6 +44,8 @@ const routes: Routes = [
 
       { path: 'credit-notes', component: CreditNotesComponent },
       { path: 'credit-note/:id', component: CreditNoteDetailPageComponent },
+
+      { path: 'orders-realtime', component: OrdersRealtimeComponent },
 
       { path: '**', redirectTo: 'errors/404' },
     ],

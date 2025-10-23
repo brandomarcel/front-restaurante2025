@@ -135,15 +135,15 @@ export class OrderDetailPageComponent implements OnInit {
       toast.error('Orden inválida');
       return
     }
-    const url = this.baseUrl + this.printSvc.getComandaPdf(this.order.name);
+    const url = this.baseUrl + this.printSvc.getComanda(this.order.name);
     const w = window.open(url, '_blank'); if (!w) toast.error('No se pudo abrir la impresión');
   }
-  getNotaVentaPdf() {
+  getRecibo() {
     if (!this.order?.name) {
       toast.error('Orden inválida');
       return
     }
-    const url = this.baseUrl + this.printSvc.getNotaVentaPdf(this.order.name);
+    const url = this.baseUrl + this.printSvc.getRecibo(this.order.name);
     const w = window.open(url, '_blank'); if (!w) toast.error('No se pudo abrir la impresión');
   }
   getFacturaPdf(): void {
