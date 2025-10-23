@@ -64,8 +64,8 @@
                 }
               ],
               "outputHashing": "all",
-              "baseHref": "/poses/",
-              "deployUrl": "/poses/"
+              "baseHref": "/pos/",
+              "deployUrl": "/pos/"
             },
             "development": {
               "optimization": false,
