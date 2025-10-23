@@ -41,6 +41,8 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 2222
+
           script: |
             set -e
             BASE=/home/frappe/frappe-bench/pos
