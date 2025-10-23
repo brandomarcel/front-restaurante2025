@@ -1,6 +1,3 @@
-<p align="center">
-    <img src="src/assets/preview/logo.png" width="150">
-</p>
 
 <p align="center">
     <a href="https://github.com/luciano-work/angular-tailwind/stargazers">
