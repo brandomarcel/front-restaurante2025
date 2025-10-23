@@ -1,4 +1,4 @@
-name: Build & Deploy to Contabo (/pos)
+name: Build & Deploy flat to /pos
 on:
   push:
     branches: [ "main" ]
@@ -7,54 +7,76 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Use Node 20
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Restore Angular build cache
+        uses: actions/cache@v4
+        with:
+          path: .angular/cache
+          key: ${{ runner.os }}-ngcache-${{ hashFiles('package-lock.json','angular.json','tsconfig*.json','src/**/*.ts','src/**/*.html','src/**/*.css') }}
+          restore-keys: |
+            ${{ runner.os }}-ngcache-
 
       - name: Install deps
         run: npm ci
 
-      - name: Build (production with /pos)
+      - name: Build (production, con /pos)
         run: npx ng build
+        env:
+          NG_PERSISTENT_BUILD_CACHE: '1'
 
-      # Empaqueta exactamente dist/angular/browser
+      # empaquetamos dist/angular/browser
       - name: Package artifact
         run: tar -czf dist.tgz -C dist/angular/browser .
 
-      - name: Copy to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USER }}     # normalmente 'frappe'
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 2222
-          source: "dist.tgz"
-          target: "/home/frappe/frappe-bench/pos/"
-
-      - name: Activate release (atomic swap)
+      - name: Test SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 2222
+          script: "echo Connected && uname -a"
 
+      - name: Upload dist.tgz
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 2222
+          source: "dist.tgz"
+          target: "/home/frappe/frappe-bench/pos/"
+
+      # <<< DESCOMPRIME DIRECTO EN pos/ Y LIMPIA LO ANTERIOR >>>
+      - name: Deploy flat into /home/frappe/frappe-bench/pos
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 2222
           script: |
             set -e
             BASE=/home/frappe/frappe-bench/pos
-            TS=$(date +%Y%m%d%H%M%S)
-            REL=$BASE/releases/$TS
-            mkdir -p "$REL"
-            tar -xzf $BASE/dist.tgz -C "$REL"
+            TMP=$BASE/__new
+            mkdir -p "$BASE" "$TMP"
+            # descomprimir en tmp
+            tar -xzf $BASE/dist.tgz -C "$TMP"
             rm -f $BASE/dist.tgz
-            ln -sfn "$REL" $BASE/current
-            # Mantener solo 5 releases
-            ls -1dt $BASE/releases/* | tail -n +6 | xargs -r rm -rf
-            echo "Deployed $REL"
-            if command -v nginx >/dev/null 2>&1; then
-              sudo nginx -t && sudo systemctl reload nginx || true
-            fi
+            # (opcional) backup rápido de index.html anterior
+            if [ -f "$BASE/index.html" ]; then cp -f "$BASE/index.html" "$BASE/index.html.bak"; fi
+            # limpiar todo lo viejo (excepto carpetas especiales si tuvieras)
+            find "$BASE" -mindepth 1 -maxdepth 1 ! -name '__new' ! -name '.well-known' -exec rm -rf {} +
+            # mover nuevo build al BASE
+            shopt -s dotglob; mv "$TMP"/* "$BASE"/
+            rmdir "$TMP"
+            echo "Deploy OK en $BASE"
+            # opcional: recargar nginx si aplica
+            if command -v nginx >/dev/null 2>&1; then sudo nginx -t && sudo systemctl reload nginx || true; fi
