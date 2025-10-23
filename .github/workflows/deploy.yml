@@ -31,6 +31,7 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USER }}     # normalmente 'frappe'
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 2222
           source: "dist.tgz"
           target: "/home/frappe/frappe-bench/pos/"
 
