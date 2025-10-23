@@ -1,0 +1,246 @@
+<!-- HEADER (igual estilo que invoicing) -->
+<div class="flex items-center justify-between bg-white rounded-md border px-4 py-3 mb-3 shadow-sm">
+  <h2 class="text-base font-semibold tracking-wide">
+    N°: {{ order?.name || '—' }} — {{ order?.type || '—' }}
+  </h2>
+
+  <div class="flex items-center gap-3">
+    <div class="hidden sm:flex items-center gap-2">
+      <span class="text-[11px] text-gray-600">Estado SRI</span>
+      <div class="px-2 py-1 rounded-md border bg-gray-50 text-[11px] font-semibold" [ngClass]="{
+             'text-green-700': order?.sri?.status === 'AUTORIZADO',
+             'text-red-700': order?.sri?.status === 'Rejected' || order?.sri?.status === 'Error',
+             'text-yellow-700': !order?.sri?.status || (order?.sri?.status !== 'AUTORIZADO' && order?.sri?.status !== 'Rejected' && order?.sri?.status !== 'Error')
+           }">
+        {{ sriStatus || '—' }}
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <span class="text-[11px] text-gray-600">Fecha</span>
+      <div class="px-2 py-1 rounded-md border bg-gray-50 text-[11px] font-semibold">
+        {{ order?.createdAt | ecuadorTime }}
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Aviso -->
+<div *ngIf="order" class="mb-3 px-3 py-2 text-xs rounded border" [ngClass]="isLocked
+        ? 'bg-green-50 text-gray-700 border-green-300'
+        : 'bg-amber-50 text-amber-800 border-amber-300'">
+  <ng-container *ngIf="!isLocked; else bloqueado">
+    Estás editando la orden <strong>{{ order.name }}</strong>. Puedes agregar productos, cambiar cantidades y
+    precios.
+    Luego podrás <strong>Generar Factura</strong> desde esta misma orden.
+  </ng-container>
+  <ng-template #bloqueado>
+    Ítems bloqueados porque la orden ya fue <strong>facturada</strong>
+    <ng-container *ngIf="order?.sri?.invoice as inv">
+      (<a [routerLink]="['/dashboard/invoices', inv]" class="text-blue-600 underline hover:no-underline"
+        title="Ver factura {{ inv }}">{{ inv }}</a>)
+    </ng-container>.
+    No es posible modificar cantidades, precios ni productos.
+  </ng-template>
+
+</div>
+<!-- GRID principal (2 columnas) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+  <!-- Columna izquierda (principal) -->
+  <div class="md:col-span-2 space-y-6">
+
+    <!-- Cliente -->
+    <section class="bg-white rounded-md border shadow-sm p-5">
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="text-[13px] font-semibold text-gray-700">INFORMACIÓN DEL CLIENTE</h3>
+        <!-- <app-button type="button" tone="info" impact="bold" shape="rounded"
+          (click)="showCustomerModal = true && !isLocked" [disabled]="isLocked">
+          <fa-icon [icon]="['fas','user-pen']" class="mr-1"></fa-icon> Cambiar
+        </app-button> -->
+      </div>
+
+      <div class="mt-1 p-3 bg-gray-50 rounded-lg border text-[11px] grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div><span class="text-gray-500">Nombre:</span> {{ order?.customer?.fullName || '—' }}</div>
+        <div><span class="text-gray-500">Identificación:</span> {{ order?.customer?.num_identificacion || '—' }}</div>
+        <div><span class="text-gray-500">Teléfono:</span> {{ order?.customer?.telefono || '—' }}</div>
+        <div class="sm:col-span-2"><span class="text-gray-500">Email:</span> {{ order?.customer?.correo || '—' }}</div>
+        <div class="sm:col-span-3"><span class="text-gray-500">Dirección:</span> {{ order?.customer?.direccion || '—' }}
+        </div>
+      </div>
+    </section>
+
+
+
+
+
+
+    <!-- Ítems -->
+    <section class="bg-white rounded-lg shadow-sm p-6">
+      <h2 class="text-lg font-semibold text-gray-700 mb-4">Detalle del Pedido</h2>
+
+      <!-- Agregar producto -->
+      <div *ngIf="!isLocked" class="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 mb-3">
+        <div class="flex-grow">
+          <label for="order-product-select" class="block text-xs font-medium text-gray-700 mb-1">
+            Agregar Producto/Servicio
+          </label>
+          <ng-select id="order-product-select" class="ng-select-tailwind" [items]="products" bindLabel="nombre"
+            bindValue="name" placeholder="Busca y agrega un ítem" [searchable]="true"
+            (change)="addProductToOrder($event)">
+          </ng-select>
+        </div>
+      </div>
+
+      <!-- Tabla -->
+      <div class="overflow-x-auto max-h-[360px] overflow-y-auto">
+        <table class="min-w-full table-auto divide-y divide-gray-200">
+          <thead class="bg-gray-50 sticky top-0">
+            <tr>
+              <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wide text-[10px]">Ítem /
+                Descripción</th>
+              <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wide text-[10px] w-24">
+                Cantidad</th>
+              <th class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide text-[10px] w-28">Precio
+              </th>
+              <th class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide text-[10px] w-20">IVA %
+              </th>
+              <th class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide text-[10px] w-28">Total
+              </th>
+              <th class="px-2 py-2 w-10"></th>
+            </tr>
+          </thead>
+
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr *ngFor="let item of orderItems; let i = index; trackBy: trackByIndex" class="align-top"
+              [ngClass]="{'opacity-60': isLocked}">
+              <td class="px-3 py-2 text-gray-900 whitespace-normal break-words">
+                <div class="font-medium leading-5">{{ item.productName || item.description }}</div>
+                <div class="text-gray-500 text-[10px]" *ngIf="item.productId">{{ item.productId }}</div>
+              </td>
+
+              <td class="px-3 py-2">
+                <div class="flex items-center gap-1">
+                  <button type="button" class="w-7 h-7 grid place-items-center border rounded"
+                    (click)="decrementOrderQty(i)" [disabled]="isLocked">−</button>
+
+                  <input type="number" class="no-spinner w-16 h-7 text-center border-gray-300 rounded-md" min="1"
+                    step="1" [ngModelOptions]="{standalone: true}" [(ngModel)]="item.quantity"
+                    (ngModelChange)="recalculateOrder()" [readOnly]="isLocked" [attr.tabindex]="isLocked ? -1 : 0">
+
+                  <button type="button" class="w-7 h-7 grid place-items-center border rounded"
+                    (click)="incrementOrderQty(i)" [disabled]="isLocked">+</button>
+                </div>
+              </td>
+
+              <td class="px-3 py-2 text-right">
+                <input type="number" class="no-spinner w-24 h-7 text-center border-gray-300 rounded-md" min="0"
+                  step="0.01" [ngModelOptions]="{standalone: true}" [(ngModel)]="item.price"
+                  (ngModelChange)="recalculateOrder()" [readOnly]="isLocked" [attr.tabindex]="isLocked ? -1 : 0">
+              </td>
+
+              <td class="px-3 py-2 font-semibold text-gray-800 text-right">
+                {{ item.tax_value ?? (item.tax === 'IVA-15' ? 15 : 0) }}
+              </td>
+
+              <td class="px-3 py-2 font-semibold text-gray-800 text-right">
+                ${{ (item.total ?? 0) | number:'1.2-2' }}
+              </td>
+
+              <td class="px-2 py-2 text-right">
+                <button type="button" (click)="removeProductFromOrder(i)" class="text-red-600 hover:text-red-900"
+                  title="Eliminar" [disabled]="isLocked">
+                  <fa-icon [icon]="['fas', 'trash']" class="text-[12px]"></fa-icon>
+                </button>
+              </td>
+            </tr>
+
+            <tr *ngIf="!orderItems?.length">
+              <td colspan="6" class="text-center py-6 text-gray-500 italic">No hay ítems en el pedido.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Columna derecha (resumen + acciones) -->
+  <aside class="md:col-span-1">
+    <div class="space-y-4 md:sticky md:top-6">
+      <section class="bg-white rounded-md border shadow-sm p-5">
+        <h3 class="text-[13px] font-semibold text-gray-700 mb-2">RESUMEN</h3>
+        <div class="space-y-1 text-gray-700">
+          <div class="flex justify-between"><span class="text-xs">Subtotal:</span><span class="font-medium">${{
+              orderSubtotal | number:'1.2-2' }}</span></div>
+          <div class="flex justify-between"><span class="text-xs">IVA (15%):</span><span class="font-medium">${{
+              orderIva | number:'1.2-2' }}</span></div>
+          <div class="flex justify-between items-center font-bold text-base pt-2 border-t mt-2">
+            <span>Total:</span><span>${{ orderTotal | number:'1.2-2' }}</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-white rounded-md border shadow-sm p-5">
+        <div class="flex flex-col gap-2">
+          <app-button type="button" tone="primary" impact="bold" shape="rounded" (click)="saveOrderChanges()" full
+            [disabled]="isLocked">
+            Guardar Cambios
+          </app-button>
+
+          <app-button type="button" tone="info" impact="bold" shape="rounded" *ngIf="order?.type === 'Nota Venta'"
+            (click)="facturarDesdeOrden(order)" full [disabled]="isLocked">
+            <fa-icon [icon]="['fas','file-invoice']" class="mr-1"></fa-icon> Crear Factura
+          </app-button>
+
+          <app-button type="button" tone="warning" impact="light" shape="rounded" (click)="getComandaPdf()" full>
+            <fa-icon [icon]="['fas','print']" class="mr-1"></fa-icon> Imprimir Comanda
+          </app-button>
+
+          <!-- <app-button type="button" tone="warning" impact="light" shape="rounded"
+            *ngIf="order?.type === 'Factura' && order?.sri?.status === 'AUTORIZADO'" (click)="getFacturaPdf()" full>
+            <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon> Descargar Factura
+          </app-button> -->
+
+          <app-button type="button" tone="warning" impact="light" shape="rounded" 
+            (click)="getRecibo()" full>
+            <fa-icon [icon]="['fas','print']" class="mr-1"></fa-icon> Imprimir Recibo
+          </app-button>
+        </div>
+      </section>
+    </div>
+  </aside>
+</div>
+
+<!-- Barra inferior móvil -->
+<div class="fixed inset-x-0 bottom-0 bg-white border-t shadow-sm p-3 md:hidden" *ngIf="orderItems.length > 0">
+  <div class="flex items-center justify-between">
+    <div class="text-xs">
+      <div class="text-gray-500">Total</div>
+      <div class="text-lg font-bold">${{ orderTotal | number:'1.2-2' }}</div>
+    </div>
+    <div class="flex gap-2">
+      <app-button type="button" tone="light" shape="rounded" (click)="getComandaPdf()">Comanda</app-button>
+      <app-button type="button" tone="primary" shape="rounded" (click)="saveOrderChanges()"
+        [disabled]="isLocked">Guardar</app-button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Cliente (opcional) -->
+<div *ngIf="showCustomerModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+  <div class="bg-white w-full max-w-md rounded-lg shadow-xl p-6 text-sm relative">
+    <button class="absolute top-3 right-4 text-gray-400 hover:text-gray-700 text-2xl font-light"
+      (click)="closeCustomerModal()" aria-label="Cerrar">×</button>
+    <h3 class="text-base font-semibold text-gray-800 mb-4">Cambiar Cliente</h3>
+
+    <form [formGroup]="customerForm" (ngSubmit)="saveCustomerForOrder()" class="space-y-3">
+      <!-- …campos opcionales… -->
+      <div class="flex justify-end gap-3 pt-2">
+        <app-button type="button" impact="bold" (click)="closeCustomerModal()" tone="light"
+          shape="rounded">Cancelar</app-button>
+        <app-button type="submit" impact="bold" tone="success" shape="rounded"
+          [disabled]="isLocked">Guardar</app-button>
+      </div>
+    </form>
+  </div>
+</div>

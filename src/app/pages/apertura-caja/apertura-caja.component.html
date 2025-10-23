@@ -1,0 +1,53 @@
+<div class="max-w-md mx-auto my-10 p-6 border rounded shadow-sm bg-white">
+  <div class="text-center mb-6">
+    <h2 class="text-3xl font-semibold text-foreground">Apertura de Caja</h2>
+    <p class="text-sm text-muted-foreground">Registra el inicio del turno con el monto inicial</p>
+  </div>
+
+  <!-- Caja activa -->
+  <div *ngIf="cajaActiva" class="text-red-600 text-center font-medium bg-red-50 border border-red-300 rounded p-3 mb-4">
+    Ya tienes una caja abierta actualmente. No puedes abrir otra hasta cerrarla.
+  </div>
+
+  <!-- Formulario de apertura -->
+  <form *ngIf="!cajaActiva" class="space-y-4">
+    <!-- Monto de apertura -->
+    <div>
+      <label class="block text-sm text-muted-foreground mb-1" for="monto_apertura">Monto de apertura</label>
+      <input
+        type="number"
+        id="monto_apertura"
+        name="monto_apertura"
+        [(ngModel)]="apertura.monto_apertura"
+        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-primary"
+        placeholder="Ej: 100.00"
+      />
+    </div>
+
+    <!-- Observaciones -->
+    <div>
+      <label class="block text-sm text-muted-foreground mb-1" for="observacion">Observaciones</label>
+      <textarea
+        id="observacion"
+        name="observacion"
+        [(ngModel)]="apertura.observacion"
+        rows="3"
+        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-primary"
+        placeholder="Comentarios opcionales..."
+      ></textarea>
+    </div>
+
+    <!-- Botón -->
+    <div class="text-center pt-4">
+      <app-button
+        impact="bold"
+        tone="primary"
+        shape="rounded"
+        size="medium"
+        (click)="abrirCaja()"
+      >
+        Abrir Caja
+      </app-button>
+    </div>
+  </form>
+</div>

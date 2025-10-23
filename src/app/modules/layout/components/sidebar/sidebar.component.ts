@@ -13,11 +13,16 @@ import { SidebarMenuComponent } from './sidebar-menu/sidebar-menu.component';
 })
 export class SidebarComponent implements OnInit {
   public appJson: any = packageJson;
+  logoPreview: string | null = null;
+  constructor(public menuService: MenuService) { }
 
-  constructor(public menuService: MenuService) {}
-
-  ngOnInit(): void {}
-
+  ngOnInit(): void {
+    const logo = localStorage.getItem('logo');
+    console.log('Logo cargado:', logo);
+    if (logo) {
+      this.logoPreview = logo;
+    }
+  }
   public toggleSidebar() {
     this.menuService.toggleSidebar();
   }

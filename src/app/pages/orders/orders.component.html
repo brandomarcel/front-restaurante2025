@@ -1,121 +1,127 @@
-<div class="bg-primary-foreground overflow-x-auto rounded-lg shadow-md p-3">
-  <div class="inline-block">
-    <h2 class="text-2xl font-semibold text-primary">Ordenes</h2>
-    <div class="text-muted-foreground space-x-1 text-xs font-medium">
-      <a href="" class="hover:text-primary"># Registros:</a>
-      <span class="text-foreground">{{ orders.length }}</span>
+<div class="flex flex-col">
+
+  <!-- Header -->
+  <div class="app-page-header">
+    <div>
+      <h2 class="app-page-title">Órdenes</h2>
+      <div class="app-page-subtle space-x-1">
+        <span># Registros:</span>
+        <span class="text-foreground font-semibold">{{ totalOrders }}</span>
+      </div>
     </div>
   </div>
 
-  <ng-container *ngIf="orders.length > 0; else emptyOrders">
-    <table class="min-w-full divide-y divide-gray-200 bg-white text-sm">
-      <thead class="bg-gray-100 sticky top-0 ">
-        <tr>
-          <th class="p-3 text-left font-medium text-gray-700">Cliente</th>
-          <th class="p-3 text-left font-medium text-gray-700">Subtotal</th>
-          <th class="p-3 text-left font-medium text-gray-700">IVA</th>
-          <th class="p-3 text-left font-medium text-gray-700">Total</th>
-          <th class="p-3 text-left font-medium text-gray-700">Estado</th>
-          <th class="p-3 text-left font-medium text-gray-700">Acciones</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-100">
-        <tr *ngFor="let order of orders" class="hover:bg-gray-50 transition">
-          <!-- Fila principal del pedido -->
-          <td class="p-3 text-gray-800">{{ order.customer.fullName }}</td>
-          <td class="p-3 text-gray-800">${{ order.subtotal }}</td>
-          <td class="p-3 text-gray-800">${{ order.iva }}</td>
-          <td class="p-3 text-gray-800 font-semibold">${{ order.total }}</td>
-          <td class="p-3">
-            <span class="text-xs font-medium px-2 py-1 rounded" [ngClass]="{
-                'bg-yellow-100 text-yellow-800': order.status === 'open',
-                'bg-green-100 text-green-800': order.status === 'closed',
-                'bg-blue-100 text-blue-800': order.status === 'invoiced'
-              }">
-              {{ order.status | titlecase }}
-            </span>
-          </td>
-          <td class="p-3">
-            <button class="text-blue-600 hover:text-blue-800 font-medium transition" (click)="toggleOrderDetail(order)">
-              🔍 Ver Detalle
-            </button>
-          </td>
-        </tr>
+  <!-- Filtros -->
+  <div class="toolbar">
+    <div class="flex flex-col sm:flex-row gap-2 w-full">
+      <!-- Texto: N° orden / cliente / cédula / tipo / estado -->
+      <input class="input" type="text" [(ngModel)]="searchTerm" (ngModelChange)="actualizarOrdenesFiltradas()"
+        placeholder="Buscar por #orden, cliente, cédula, tipo o estado SRI..." />
 
-      </tbody>
-    </table>
+      <!-- Tipo -->
+      <select class="select" [(ngModel)]="tipoFiltro" (ngModelChange)="actualizarOrdenesFiltradas()">
+        <option value="">Todos los tipos</option>
+        <option value="Factura">Factura</option>
+        <option value="Nota Venta">Nota de venta</option>
+      </select>
+
+      <!-- Anulación -->
+      <!-- <select class="select" [(ngModel)]="anulacionFiltro" (ngModelChange)="actualizarOrdenesFiltradas()">
+        <option value="">Todas (incluye anuladas)</option>
+        <option value="soloAnuladas">Solo anuladas</option>
+        <option value="excluirAnuladas">Excluir anuladas</option>
+      </select> -->
+    </div>
+
+    <div class="flex gap-2">
+      <app-button (click)="limpiarFiltros()" full impact="bold" tone="light" shape="rounded" size="small">
+        Limpiar
+      </app-button>
+    </div>
+  </div>
+
+  <!-- Tabla de órdenes -->
+  <ng-container *ngIf="ordersFiltradosList.length > 0; else emptyOrders">
+    <div class="app-table-wrap">
+      <table class="app-table">
+        <thead class="app-thead">
+          <tr>
+            <th class="app-th">N° Orden</th>
+            <th class="app-th">Fecha</th>
+            <th class="app-th">Cliente</th>
+            <th class="app-th">IVA</th>
+            <th class="app-th">Total</th>
+            <th class="app-th">Tipo</th>
+            <!-- <th class="app-th last:text-center">Estado SRI</th> -->
+            <th class="app-th last:text-center">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let order of ordersFiltradosList" class="app-tr text-xs">
+            <td class="app-td">{{ order.name }}</td>
+            <td class="app-td">{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+            <td class="app-td">
+              {{ order.customer?.fullName || order.customer?.nombre || '—' }}
+            </td>
+            <td class="app-td">
+              {{ order.iva | currency:'USD':'symbol':'1.2-2' }}
+            </td>
+            <td class="app-td font-semibold">
+              {{ order.total | currency:'USD':'symbol':'1.2-2' }}
+            </td>
+            <td class="app-td">
+              <span class="badge" [ngClass]="{
+                  'badge-green': order.type === 'Factura',
+                  'badge-yellow': order.type == 'Nota Venta'
+                }">
+                {{ order.type }}
+              </span>
+            </td>
+            <!-- <td class="app-td text-center">
+              <span class="badge" [ngClass]="{
+                  'badge-green': order.sri?.status === 'AUTORIZADO',
+                  'badge-red': order.sri?.status === 'Rejected' || order.sri?.status === 'Error',
+                  'badge-yellow': order.sri?.status !== 'AUTORIZADO'
+                                   && order.sri?.status !== 'Rejected'
+                                   && order.sri?.status !== 'Error'
+                }">
+                {{
+                order.sri?.status === 'AUTORIZADO' ? 'AUTORIZADO' :
+                order.sri?.status === 'Rejected' ? 'Rechazada' :
+                order.sri?.status === 'Error' ? 'Error' :
+                order.sri?.status === 'Queued' ? 'En cola' :
+                order.sri?.status === 'Processing'? 'En proceso' :
+                order.sri?.status === 'Draft' ? 'Borrador' :
+                (order.sri?.status || 'Sin factura')
+                }}
+              </span>
+            </td> -->
+
+            <td class="app-td text-center">
+              <div class="inline-flex gap-2">
+                <button class="btn btn-outline" [routerLink]="['/dashboard/orders', order.name]">🔎 Abrir</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Paginación -->
+      <div class="pager">
+        <button class="pager-btn" (click)="prevPage()" [disabled]="page === 1">« Anterior</button>
+        <span class="text-sm">Página {{ page }} de {{ totalPages }}</span>
+        <button class="pager-btn" (click)="nextPage()" [disabled]="page === totalPages">Siguiente »</button>
+      </div>
+    </div>
   </ng-container>
+
   <ng-template #emptyOrders>
-    <p class="text-center text-gray-500">No hay datos para mostrar</p>
+    <div class="app-card">
+      <div class="app-card-body text-center text-gray-500">
+        No hay órdenes para mostrar.
+      </div>
+    </div>
   </ng-template>
 
-
-
-</div>
-
-
-<!-- MODAL CREAR / EDITAR -->
-<div *ngIf="mostrarModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-  <div class="bg-white w-full max-w-2xl rounded-lg shadow-xl p-6 relative overflow-y-auto max-h-[90vh]">
-    <!-- Botón cerrar -->
-    <button class="absolute top-3 right-4 text-xl text-gray-500 hover:text-gray-800" (click)="cerrarModal()">×</button>
-
-    <!-- Encabezado -->
-    <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">
-      Detalle del Pedido #{{ orderSelected.id }}
-    </h2>
-
-    <!-- Info General y Cliente -->
-    <div class="grid md:grid-cols-2 gap-6 mb-6">
-      <div>
-        <h3 class="text-lg font-semibold text-gray-700 mb-2">🧾 Información del Pedido</h3>
-        <ul class="text-sm text-gray-700 space-y-1">
-          <li><strong>ID:</strong> {{ orderSelected.id }}</li>
-          <li><strong>Tipo:</strong> {{ orderSelected.type | titlecase }}</li>
-          <li><strong>Estado:</strong> {{ orderSelected.status | titlecase }}</li>
-          <li><strong>Fecha:</strong> {{ orderSelected.createdAt | ecuadorTime }}</li>
-          <li><strong>Subtotal:</strong> ${{ orderSelected.subtotal }}</li>
-          <li><strong>IVA:</strong> ${{ orderSelected.iva }}</li>
-          <li><strong>Total:</strong> <span class="text-green-700 font-semibold">${{ orderSelected.total }}</span></li>
-        </ul>
-      </div>
-
-      <div>
-        <h3 class="text-lg font-semibold text-gray-700 mb-2">👤 Cliente</h3>
-        <ul class="text-sm text-gray-700 space-y-1">
-          <li><strong>Nombre:</strong> {{ orderSelected.customer.fullName }}</li>
-          <li><strong>Cédula/RUC:</strong> {{ orderSelected.customer.identification }}</li>
-          <li><strong>Tipo ID:</strong> {{ orderSelected.customer.identificationType }}</li>
-          <li><strong>Email:</strong> {{ orderSelected.customer.email }}</li>
-          <li><strong>Teléfono:</strong> {{ orderSelected.customer.phone }}</li>
-          <li><strong>Dirección:</strong> {{ orderSelected.customer.address }}</li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- Tabla de productos -->
-    <div>
-      <h3 class="text-lg font-semibold text-gray-700 mb-2">📦 Productos del Pedido</h3>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm text-gray-800 border border-gray-200 rounded-lg">
-          <thead class="bg-gray-100">
-            <tr>
-              <th class="p-2 text-left">Producto</th>
-              <th class="p-2 text-left">Cantidad</th>
-              <th class="p-2 text-left">Precio Unitario</th>
-              <th class="p-2 text-left">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of orderSelected.items" class="border-t hover:bg-gray-50">
-              <td class="p-2">{{ item.productName }}</td>
-              <td class="p-2">{{ item.quantity }}</td>
-              <td class="p-2">${{ item.price }}</td>
-              <td class="p-2 font-medium">${{ item.total }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
 </div>

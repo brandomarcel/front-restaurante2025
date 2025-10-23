@@ -1,7 +1,10 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { catchError, EMPTY, Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
+import { API_ENDPOINT } from '../core/constants/api.constants';
+import { toast } from 'ngx-sonner';
+import { FrappeErrorService } from '../core/services/frappe-error.service';
 export interface Customer {
   id: number;
   fullName: string;
@@ -12,37 +15,96 @@ export interface Customer {
 }
 @Injectable({ providedIn: 'root' })
 export class CustomersService {
-  private readonly apiUrl = environment.apiUrl + 'customers'; // Cambia si usás otro backend
+  private readonly apiUrl = environment.apiUrl; // Cambia si usás otro backend
 
-  constructor(private http: HttpClient) {}
+  private urlBase: string = '';
+
+
+
+  constructor(private http: HttpClient,
+    private frappeErr: FrappeErrorService
+  ) {
+
+    this.urlBase = this.apiUrl + API_ENDPOINT.Cliente;
+  }
 
   // Obtener todos
-  findAll(): Observable<any[]> {
-    return this.http.get<any[]>(this.apiUrl);
-  }
+  // findAll(): Observable<any[]> {
+  //   return this.http.get<any[]>(this.apiUrl);
+  // }
 
   // Buscar por ID
   findOne(id: number): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/${id}`);
   }
 
-  // Buscar por identificación
-  findByIdentification(identification: string): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/identification/${identification}`);
+
+
+  ////////////////////////////////////////////////////
+  // Obtener todos  
+  // getAll() {
+  //   const campos = ["name","nombre","num_identificacion","telefono","correo","direccion","tipo_identificacion","isactive"];
+
+  //   return this.http.get(`${this.apiUrl}/resource/Cliente?fields=${JSON.stringify(campos)}`, {
+  //     withCredentials: true
+  //   });
+  // }
+
+
+getAll(isactive?: number) {
+    let params = new HttpParams();
+
+    if (isactive !== undefined && isactive !== null) {
+      params = params.set('isactive', isactive.toString());
+    }
+
+    return this.http.get(`${this.urlBase}.get_clientes`, {
+      params,
+      withCredentials: true
+    });
   }
+
+
+
 
   // Crear
-  create(data: Omit<any, 'id'>): Observable<any> {
-    return this.http.post<any>(this.apiUrl, data);
+  // create(data: Omit<any, 'id'>): Observable<any> {
+  //   return this.http.post<any>(`${this.apiUrl}/resource/Cliente`, data);
+  // }
+
+  create(data: Omit<any, 'name'>): Observable<any> {
+    return this.http.post<any>(`${this.urlBase}.create_cliente`, data).pipe(
+          catchError((error) => {
+            const msg = this.frappeErr.handle(error) || 'Error al crear el cliente.';
+            toast.error(msg);
+            return EMPTY;
+          })
+        );
+      }
+  update(data: any) {
+    return this.http.put(`${this.urlBase}.update_cliente`, data, {
+      withCredentials: true
+    });
   }
 
-  // Actualizar
-  update(id: number, data: Partial<any>): Observable<any> {
-    return this.http.patch<any>(`${this.apiUrl}/${id}`, data);
+
+
+  // update(name: string, data: any) {
+  //   return this.http.put(`${this.apiUrl}/resource/Cliente/${name}`, data, {
+  //     withCredentials: true
+  //   });
+  // }
+
+  delete(name: string) {
+    return this.http.delete(`${this.apiUrl}/resource/Cliente/${name}`, {
+      withCredentials: true
+    });
   }
 
-  // Eliminar
-  delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+
+  get_cliente_by_identificacion(identification: string): Observable<any> {
+    return this.http.get<any>(`${this.urlBase}.get_cliente_by_identificacion?num_identificacion=${identification}`);
   }
+
+
 }

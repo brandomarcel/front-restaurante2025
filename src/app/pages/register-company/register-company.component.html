@@ -1,0 +1,305 @@
+<!-- Spinner global -->
+<ngx-spinner bdColor="rgba(0,0,0,0.75)" size="large" color="#001c71" type="ball-scale-multiple" [fullScreen]="true">
+    <p style="color:#f5ae1c">Cargando...</p>
+</ngx-spinner>
+<!-- Fondo a pantalla completa -->
+<div class="min-h-screen relative bg-gradient-to-br from-primary/10 via-background to-background">
+    <!-- Header con volver -->
+    <header class="container mx-auto flex items-center justify-between px-4 py-4 text-xs">
+        <a routerLink="/" class="flex items-center gap-2 font-semibold text-foreground">
+            <span
+                class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">FA</span>
+            FacturADA
+        </a>
+
+        <a routerLink="/auth/login"
+            class="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 hover:bg-foreground/5 transition">
+            ← Volver al login
+        </a>
+    </header>
+
+    <!-- Card central SOLO con el formulario -->
+    <div class="container mx-auto px-4 pb-10">
+        <main class="mx-auto w-full max-w-7xl overflow-hidden rounded-2xl border border-black/5 bg-white shadow-2xl">
+            <div class="p-5 md:p-8">
+
+                <!-- Título -->
+                <div class="mb-4">
+                    <h2 class="text-lg font-semibold text-primary">Crear cuenta y empresa</h2>
+                    <p class="text-muted-foreground text-[11px]">Configura tu usuario, la compañía y SRI</p>
+                </div>
+
+                <!-- Stepper full width -->
+                <ol class="mb-5 grid grid-cols-2 gap-3 text-[11px] sm:grid-cols-4">
+                    <li class="flex items-center gap-2">
+                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full"
+                            [ngClass]="step>=1 ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-600'">1</span>
+                        <span [class.text-gray-400]="step!==1">Cuenta</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full"
+                            [ngClass]="step>=2 ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-600'">2</span>
+                        <span [class.text-gray-400]="step!==2">Compañía</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full"
+                            [ngClass]="step>=3 ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-600'">3</span>
+                        <span [class.text-gray-400]="step!==3">SRI y Secuencias</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full"
+                            [ngClass]="step>=4 ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-600'">4</span>
+                        <span [class.text-gray-400]="step!==4">Revisión</span>
+                    </li>
+                </ol>
+
+
+
+                <!-- FORM (tus mismos controles) -->
+                <form [formGroup]="form" (ngSubmit)="submit()">
+
+                    <!-- PASO 1 -->
+                    <div *ngIf="step===1" class="grid gap-3 md:grid-cols-2">
+                        <div class="md:col-span-2">
+                            <h3 class="text-sm font-semibold text-gray-700">Cuenta del administrador</h3>
+                        </div>
+
+                        <div>
+                            <label class="block mb-1 font-medium">Nombre completo</label>
+                            <input class="input" formControlName="full_name" />
+                            <small *ngIf="submitted && f['full_name'].invalid" class="text-red-600">Campo
+                                requerido</small>
+                        </div>
+
+                        <div>
+                            <label class="block mb-1 font-medium">Email</label>
+                            <input type="email" class="input" formControlName="email" />
+                            <small *ngIf="submitted && f['email'].errors?.['required']" class="text-red-600">Campo
+                                requerido</small>
+                            <small *ngIf="submitted && f['email'].errors?.['email']" class="text-red-600">Email
+                                inválido</small>
+                        </div>
+
+                        <div>
+                            <label class="block mb-1 font-medium">Contraseña</label>
+                            <input autocomplete="new-password" [type]="showPass ? 'text':'password'" class="input" formControlName="password" />
+                            <small *ngIf="submitted && f['password'].invalid" class="text-red-600">Mínimo 8
+                                caracteres</small>
+                        </div>
+
+                        <div>
+                            <label class="block mb-1 font-medium">Confirmar contraseña</label>
+                            <input [type]="showPass ? 'text':'password'" class="input"
+                                formControlName="confirm_password" />
+                            <small *ngIf="submitted && form.errors?.['passwordMismatch']" class="text-red-600">No
+                                coinciden</small>
+                        </div>
+
+                        <div>
+                            <label class="block mb-1 font-medium">Teléfono</label>
+                            <input class="input no-spinner" type="text" maxlength="10" formControlName="phone" appOnlyNumbers />
+                        </div>
+
+                        <div class="md:col-span-2 flex items-center gap-2">
+                            <input id="terms" type="checkbox" formControlName="accept_terms" />
+                            <label for="terms">Acepto términos y condiciones</label>
+                        </div>
+                    </div>
+
+                    <!-- PASO 2 -->
+                    <div *ngIf="step===2" class="grid gap-3 md:grid-cols-2">
+                        <div class="md:col-span-2">
+                            <h3 class="text-sm font-semibold text-gray-700">Datos de la empresa</h3>
+                        </div>
+
+                        <div>
+                            <label class="block mb-1 font-medium">Razón social</label>
+                            <input class="input" formControlName="businessname" />
+                            <small *ngIf="submitted && f['businessname'].invalid" class="text-red-600">Campo
+                                requerido</small>
+                        </div>
+
+                        <div>
+                            <label class="block mb-1 font-medium">RUC</label>
+                            <input class="input no-spinner" formControlName="ruc" maxlength="13" />
+                            <small *ngIf="submitted && f['ruc'].errors?.['required']" class="text-red-600">Campo
+                                requerido</small>
+                            <small *ngIf="submitted && f['ruc'].errors?.['pattern']" class="text-red-600">Debe tener 13
+                                dígitos</small>
+                        </div>
+
+                        <div>
+                            <label class="block mb-1 font-medium">Dirección</label>
+                            <input class="input" formControlName="address" />
+                            <small *ngIf="submitted && f['address'].invalid" class="text-red-600">Campo
+                                requerido</small>
+                        </div>
+
+                        <div>
+                            <label class="block mb-1 font-medium">Teléfono</label>
+                            <input class="input" formControlName="company_phone" />
+                            <small *ngIf="submitted && f['company_phone'].invalid" class="text-red-600">Campo
+                                requerido</small>
+                        </div>
+
+                        <div>
+                            <label class="block mb-1 font-medium">Email de empresa</label>
+                            <input type="email" class="input" formControlName="company_email" />
+                            <small *ngIf="submitted && f['company_email'].errors?.['required']"
+                                class="text-red-600">Campo requerido</small>
+                            <small *ngIf="submitted && f['company_email'].errors?.['email']" class="text-red-600">Email
+                                inválido</small>
+                        </div>
+
+                        <!-- Logo -->
+                        <div class="md:col-span-2 space-y-2">
+                            <h4 class="text-xs font-semibold text-gray-700">Logo</h4>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <input #logoInput type="file" accept="image/*" class="sr-only"
+                                    (change)="onLogoSelected($event)" />
+                                <button type="button" class="rounded-md border px-3 py-1.5 hover:bg-gray-50"
+                                    (click)="logoInput.click()">Seleccionar logo</button>
+                                <span class="text-gray-600 truncate max-w-[240px]">
+                                    {{ logoFileName || 'Ningún archivo seleccionado' }}
+                                </span>
+                                <button type="button" class="rounded-md px-3 py-1.5 hover:bg-gray-50"
+                                    (click)="removeLogo()" [disabled]="!logoPreview && !logoFileName">
+                                    Quitar logo
+                                </button>
+                            </div>
+                            <div *ngIf="logoPreview" class="mt-1">
+                                <img [src]="logoPreview" class="h-16 w-auto rounded border border-gray-200 bg-white p-1"
+                                    alt="Logo" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PASO 3 -->
+                    <div *ngIf="step===3" class="space-y-3">
+                        <h3 class="text-sm font-semibold text-gray-700">SRI y Secuencias</h3>
+
+                        <label class="inline-flex items-center cursor-pointer relative">
+                            <input type="checkbox" class="sr-only peer" formControlName="ambiente_bool"
+                                (change)="syncAmbiente()" />
+                            <div class="w-11 h-6 bg-gray-300 rounded-full peer-checked:bg-green-600 transition-colors">
+                            </div>
+                            <div
+                                class="absolute w-5 h-5 bg-white rounded-full transform translate-x-1 top-0.5 left-0.5 peer-checked:translate-x-5 transition-transform">
+                            </div>
+                            <div>
+                                <span class="ml-3 text-sm font-semibold"
+                                    [ngClass]="ambiente==='PRODUCCION' ? 'text-green-700':'text-yellow-600'">
+                                    Ambiente: {{ ambiente }}
+                                </span>
+                            </div>
+                        </label>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block mb-1 font-medium">Código Establecimiento</label>
+                                <input class="input" formControlName="establishmentcode" />
+                                <small *ngIf="submitted && f['establishmentcode'].errors?.['required']"
+                                    class="text-red-600">Campo requerido</small>
+                                <small *ngIf="submitted && f['establishmentcode'].errors?.['pattern']"
+                                    class="text-red-600">3 dígitos</small>
+                            </div>
+
+                            <div>
+                                <label class="block mb-1 font-medium">Punto Emisión</label>
+                                <input class="input" formControlName="emissionpoint" />
+                                <small *ngIf="submitted && f['emissionpoint'].errors?.['required']"
+                                    class="text-red-600">Campo requerido</small>
+                                <small *ngIf="submitted && f['emissionpoint'].errors?.['pattern']"
+                                    class="text-red-600">3 dígitos</small>
+                            </div>
+
+                            <div>
+                                <label class="block mb-1 font-medium">Secuencial Factura (PRODUCCIÓN)</label>
+                                <input type="number" class="input no-spinner" formControlName="invoiceseq_prod" />
+                                <small *ngIf="submitted && f['invoiceseq_prod'].invalid" class="text-red-600">Campo
+                                    requerido</small>
+                            </div>
+
+                            <div>
+                                <label class="block mb-1 font-medium">Secuencial Factura (PRUEBAS)</label>
+                                <input type="number" class="input no-spinner" formControlName="invoiceseq_pruebas" />
+                                <small *ngIf="submitted && f['invoiceseq_pruebas'].invalid" class="text-red-600">Campo
+                                    requerido</small>
+                            </div>
+
+                            <div>
+                                <label class="block mb-1 font-medium">Secuencia Nota de Credito ((PRODUCCIÓN))</label>
+                                <input type="number" class="input no-spinner" formControlName="ncseq_prod" />
+                                <small *ngIf="submitted && f['ncseq_prod'].invalid" class="text-red-600">Campo
+                                    requerido</small>
+                            </div>
+
+                            <div>
+                                <label class="block mb-1 font-medium">Secuencia Nota de Credito (PRUEBAS)</label>
+                                <input type="number" class="input no-spinner" formControlName="ncseq_pruebas" />
+                                <small *ngIf="submitted && f['ncseq_pruebas'].invalid" class="text-red-600">Campo
+                                    requerido</small>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- PASO 4 -->
+                    <div *ngIf="step===4" class="space-y-3">
+                        <h3 class="text-sm font-semibold text-gray-700">Revisión</h3>
+
+                        <div class="grid md:grid-cols-2 gap-3">
+                            <div class="rounded-lg border p-4">
+                                <h4 class="font-semibold mb-2">Cuenta</h4>
+                                <div><strong>Nombre:</strong> {{ form.value.full_name }}</div>
+                                <div><strong>Email:</strong> {{ form.value.email }}</div>
+                                <div><strong>Teléfono:</strong> {{ form.value.phone || '—' }}</div>
+                            </div>
+
+                            <div class="rounded-lg border p-4">
+                                <h4 class="font-semibold mb-2">Compañía</h4>
+                                <div><strong>Razón social:</strong> {{ form.value.businessname }}</div>
+                                <div><strong>RUC:</strong> {{ form.value.ruc }}</div>
+                                <div><strong>Dirección:</strong> {{ form.value.address }}</div>
+                                <div><strong>Teléfono:</strong> {{ form.value.company_phone }}</div>
+                                <div><strong>Email:</strong> {{ form.value.company_email }}</div>
+                            </div>
+
+                            <div class="rounded-lg border p-4 md:col-span-2">
+                                <h4 class="font-semibold mb-2">SRI</h4>
+                                <div><strong>Ambiente:</strong> {{ ambiente }}</div>
+                                <div><strong>Estab:</strong> {{ form.value.establishmentcode }} — <strong>Pto
+                                        Emisión:</strong> {{ form.value.emissionpoint }}</div>
+                                <div><strong>Sec. Factura (PRODUCCIÓN):</strong> {{ form.value.invoiceseq_prod }}</div>
+                                <div><strong>Sec. Factura (PRUEBAS):</strong> {{ form.value.invoiceseq_pruebas }}</div>
+                                <div><strong>Sec. Nota de Credito (PRODUCCIÓN) :</strong> {{ form.value.ncseq_prod }}</div>
+                                 <div><strong>Sec. Nota de Credito (PRUEBAS) :</strong> {{ form.value.ncseq_pruebas }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Controles -->
+                    <div class="mt-5 flex items-center justify-between">
+                        <button type="button" class="rounded-md px-3 py-1.5 hover:bg-gray-50 border"
+                            (click)="prevStep()" [disabled]="step===1">
+                            Atrás
+                        </button>
+
+                        <div class="flex gap-2">
+                            <a routerLink="/auth/login"
+                                class="rounded-md px-3 py-1.5 hover:bg-gray-50 border">Cancelar</a>
+                            <button *ngIf="step<4" type="button"
+                                class="rounded-md px-3 py-1.5 text-white bg-primary hover:opacity-90"
+                                (click)="nextStep()">Siguiente</button>
+                            <button *ngIf="step===4" type="submit"
+                                class="rounded-md px-3 py-1.5 text-white bg-primary hover:opacity-90">
+                                Crear cuenta y empresa
+                            </button>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+        </main>
+    </div>
+</div>

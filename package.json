@@ -1,7 +1,7 @@
 {
   "name": "angular-tailwind",
-  "displayName": "Olla de Barro",
-  "version": "0.10.1",
+  "displayName": "FacturADA",
+  "version": "2.0.1",
   "description": "Angular & Tailwind CSS Admin Dashboard Starter Kit, Free and Open Source",
   "homepage": "https://github.com/lannodev/angular-tailwind#readme",
   "repository": {
@@ -58,6 +58,8 @@
     "ngx-sonner": "^3.1.0",
     "ngx-spinner": "^19.0.0",
     "rxjs": "~7.4.0",
+    "socket.io-client": "^4.8.1",
+    "sweetalert2": "^11.22.0",
     "tslib": "^2.3.0",
     "xlsx": "^0.18.5",
     "zone.js": "~0.15.0"

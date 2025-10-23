@@ -1,0 +1,23 @@
+.dropzone {
+  border: 2px dashed #d1d5db;        /* gray-300 */
+  border-radius: 10px;
+  padding: 18px;
+  background: #fafafa;
+  transition: all .15s ease;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 72px;
+}
+.dropzone:hover { background: #f5f5f5; }
+.dropzone--active {
+  border-color: #6366f1;             /* indigo-500 */
+  background: #eef2ff;               /* indigo-50 */
+}
+
+/* ya los tienes, por si acaso */
+.logo-preview {
+  width: 150px; height: 150px;
+  justify-content: center;
+  border: 1px solid #e5e7eb; border-radius: 6px; background: white;
+  object-fit: contain; padding: 4px;
+}

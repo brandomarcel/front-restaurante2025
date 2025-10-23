@@ -1,0 +1,84 @@
+<div class="max-w-md mx-auto my-10 p-6 border rounded shadow-sm bg-white">
+  <div class="text-center mb-6">
+    <h2 class="text-3xl font-semibold text-foreground">Cierre de Caja</h2>
+    <p class="text-sm text-muted-foreground">Finaliza el turno registrando el efectivo contado</p>
+  </div>
+
+  <!-- Si no hay apertura activa -->
+  <div *ngIf="sinApertura" class="text-red-600 text-center font-medium bg-red-50 border border-red-300 rounded p-3 mb-4">
+    No puedes realizar un cierre sin una apertura de caja activa.
+  </div>
+
+  <!-- Formulario de cierre -->
+  <form *ngIf="!sinApertura" class="space-y-4">
+    <!-- Monto apertura -->
+    <div>
+      <p class="text-sm text-muted-foreground">Monto de apertura:</p>
+      <p class="text-lg font-semibold text-gray-800">${{ cierre.monto_apertura }}</p>
+    </div>
+
+    <!-- Ventas en efectivo -->
+    <div>
+      <p class="text-sm text-muted-foreground">Ventas en efectivo:</p>
+      <p class="text-lg font-semibold text-gray-800">${{ cierre.efectivo_sistema }}</p>
+    </div>
+
+    <!-- Total retiros -->
+    <div>
+      <p class="text-sm text-muted-foreground">Retiros del turno:</p>
+      <p class="text-lg font-semibold text-gray-800">${{ cierre.total_retiros }}</p>
+    </div>
+
+    <!-- Efectivo contado -->
+    <div>
+      <label class="block text-sm text-muted-foreground mb-1" for="efectivo_real">Efectivo contado</label>
+      <input
+        type="number"
+        id="efectivo_real"
+        name="efectivo_real"
+        [(ngModel)]="cierre.efectivo_real"
+        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+        placeholder="Ej: 150.00"
+        (input)="onEfectivoRealChange(cierre.efectivo_real)"
+      />
+    </div>
+
+    <!-- Diferencia -->
+    <div>
+      <p class="text-sm text-muted-foreground">Diferencia:</p>
+      <p
+        class="text-lg font-semibold"
+        [class.text-green-600]="cierre.diferencia >= 0"
+        [class.text-red-600]="cierre.diferencia < 0"
+      >
+        ${{ cierre.diferencia }}
+      </p>
+    </div>
+
+    <!-- Observaciones -->
+    <div>
+      <label class="block text-sm text-muted-foreground mb-1" for="observaciones">Observaciones</label>
+      <textarea
+        id="observaciones"
+        name="observaciones"
+        [(ngModel)]="cierre.observaciones"
+        rows="3"
+        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+        placeholder="Notas adicionales..."
+      ></textarea>
+    </div>
+
+    <!-- Botón -->
+    <div class="text-center pt-4">
+      <app-button
+        impact="bold"
+        tone="primary"
+        shape="rounded"
+        size="medium"
+        (click)="guardarCierre()"
+      >
+        Guardar Cierre
+      </app-button>
+    </div>
+  </form>
+</div>

@@ -20,9 +20,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": {
-              "base": "dist/angular-tailwind"
-            },
+            "outputPath": "dist/angular",
             "index": "src/index.html",
             "polyfills": [
               "src/polyfills.ts"
@@ -65,7 +63,9 @@
                   "with": "src/environments/environment.prod.ts"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "baseHref": "/pos/",
+              "deployUrl": "/pos/"
             },
             "development": {
               "optimization": false,
@@ -83,7 +83,8 @@
               "buildTarget": "angular-tailwind:build:production"
             },
             "development": {
-              "buildTarget": "angular-tailwind:build:development"
+              "buildTarget": "angular-tailwind:build:development",
+              "proxyConfig": "src/proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"

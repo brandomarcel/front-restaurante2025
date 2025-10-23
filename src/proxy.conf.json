@@ -1,0 +1,9 @@
+{
+  "/api": {
+    "target": "http://192.168.100.73:1012",
+    "secure": false,
+    "changeOrigin": true,
+    "cookieDomainRewrite": "localhost",
+    "logLevel": "debug"
+  }
+}

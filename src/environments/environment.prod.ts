@@ -1,5 +1,6 @@
 export const environment = {
-  apiUrl: 'https://orders-0130.onrender.com/',
-  //apiUrl: 'http://localhost:3000',
+  apiUrl: 'https://ada.bmarc-corp.com/api',
+  URL: 'https://ada.bmarc-corp.com',
+  frappeSiteNamespace: 'restaurante_bmarc',
   production: true,
 };

@@ -1,6 +1,3 @@
-<p align="center">
-    <img src="src/assets/preview/logo.png" width="150">
-</p>
 
 <p align="center">
     <a href="https://github.com/luciano-work/angular-tailwind/stargazers">
@@ -96,4 +93,4 @@ Check out our awesome sponsors!
 The Tailwind name and logos are trademarks of Tailwind Labs Inc.
 The Angular name and logos are trademarks of Google.
 
-Cambios
+CAMBIOS

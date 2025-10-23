@@ -1,0 +1,150 @@
+<div class="flex flex-col">
+    <!-- Header -->
+    <div class="app-page-header">
+        <div>
+            <h2 class="app-page-title">Usuarios</h2>
+            <div class="app-page-subtle space-x-1">
+                <span># Registros:</span>
+                <span class="text-foreground font-semibold">{{ filtered.length }}</span>
+            </div>
+        </div>
+
+        <app-button  impact="bold" tone="primary" shape="rounded" size="medium" (click)="abrirModal()" >+ Nuevo Usuario</app-button>
+        <!-- <button class="btn btn-primary" (click)="abrirModal()">+ Nuevo Usuario</button> -->
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <input class="input" type="text" [(ngModel)]="search" placeholder="Buscar por nombre o email..." />
+        <div class="flex gap-2">
+            <button class="btn btn-outline" (click)="search=''; filtrar()">Limpiar</button>
+        </div>
+    </div>
+
+    <!-- Tabla -->
+    <ng-container *ngIf="filtered.length; else emptyState">
+        <div class="app-table-wrap">
+            <table class="app-table">
+                <thead class="app-thead">
+                    <tr>
+                        <th class="app-th">Email</th>
+                        <th class="app-th">Nombre</th>
+                        <th class="app-th">Teléfono</th>
+                        <th class="app-th">Rol</th>
+                        <th class="app-th text-center">Estado</th>
+                        <th class="app-th last:text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let u of filtered | paginate: { itemsPerPage: pageSize, currentPage: page }; trackBy: trackBy"
+                        class="app-tr">
+                        <td class="app-td">{{ u.email }}</td>
+                        <td class="app-td">{{ (u.first_name || '') + ' ' + (u.last_name || '') }}</td>
+                        <td class="app-td">{{ u.phone || '—' }}</td>
+                        <td class="app-td capitalize">{{ u.role_key || (u.role_profile_name || '—') }}</td>
+                        <td class="app-td text-center">
+                            <button class="btn btn-xs" [class.btn-success]="u.enabled" [class.btn-ghost]="!u.enabled"
+                                (click)="toggleEnabled(u)">
+                                {{ u.enabled ? 'Activo' : 'Inactivo' }}
+                            </button>
+                        </td>
+                        <td class="app-td text-center">
+                            <div class="inline-flex gap-2">
+                                <button class="btn btn-outline" (click)="abrirModal(u)">✏️ Editar</button>
+                                <!-- <button class="btn btn-danger" (click)="borrar(u)">🗑️ Eliminar</button> -->
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Paginación -->
+            <div class="pager">
+                <button class="pager-btn" (click)="page = page - 1" [disabled]="page === 1">« Anterior</button>
+                <span class="text-sm">Página {{ page }}</span>
+                <button class="pager-btn" (click)="page = page + 1"
+                    [disabled]="(filtered.length || 0) <= (page * pageSize)">
+                    Siguiente »
+                </button>
+            </div>
+        </div>
+    </ng-container>
+
+    <ng-template #emptyState>
+        <div class="app-card">
+            <div class="app-card-body text-center text-gray-500">No hay usuarios</div>
+        </div>
+    </ng-template>
+
+    <!-- MODAL -->
+    <div *ngIf="mostrarModal" class="app-modal-backdrop">
+        <div class="app-modal">
+            <button class="app-modal-close" (click)="cerrarModal()">×</button>
+
+            <div class="app-card-body">
+                <h3 class="text-lg font-semibold mb-4">
+                    {{ editando ? 'Editar Usuario' : 'Nuevo Usuario' }}
+                </h3>
+
+                <form [formGroup]="form" (ngSubmit)="guardar()" class="grid gap-4 text-sm">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block mb-1 font-medium">Email</label>
+                            <input class="input" type="email" formControlName="email" [readonly]="!!editando" />
+                            <div *ngIf="submitted && form.get('email')?.invalid" class="text-red-600 text-xs mt-1">Email
+                                inválido.</div>
+                        </div>
+
+                        <div>
+                            <label class="block mb-1 font-medium">Contraseña
+                                <span *ngIf="!editando" class="text-red-600">*</span>
+                            </label>
+                            <input autocomplete="new-password" class="input" type="password"
+                                placeholder="{{ editando ? '(dejar vacío para no cambiar)' : '' }}"
+                                formControlName="password" />
+                            <div *ngIf="submitted && !editando && !form.value.password"
+                                class="text-red-600 text-xs mt-1">
+                                Contraseña requerida al crear.
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block mb-1 font-medium">Nombres</label>
+                            <input class="input" type="text" formControlName="first_name" />
+                        </div>
+
+                        <div>
+                            <label class="block mb-1 font-medium">Apellidos</label>
+                            <input class="input" type="text" formControlName="last_name" />
+                        </div>
+
+                        <div>
+                            <label class="block mb-1 font-medium">Teléfono</label>
+                            <input class="input no-spinner" type="tel" maxlength="10" formControlName="phone" />
+                        </div>
+
+                        <div>
+                            <label class="block mb-1 font-medium">Rol</label>
+                            <select class="select" formControlName="role_key">
+                                <option value="gerente">Gerente</option>
+                                <option value="cajero">Cajero</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <input id="enabled" type="checkbox" formControlName="enabled" />
+                        <label for="enabled">Activo</label>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" class="btn btn-outline" (click)="cerrarModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+
+            </div>
+
+        </div>
+    </div>
+</div>

@@ -3,7 +3,10 @@
 // The list of file replacements can be found in `angular.json`.
 
 export const environment = {
-  apiUrl: 'http://localhost:3000/',
+  //apiUrl: 'http://192.168.100.73:1012/api',
+  apiUrl: '/api', // con proxy
+  URL: 'http://192.168.100.73:1012',
+  frappeSiteNamespace: 'restaurante_bmarc',
   // apiUrl: 'https://orders-production-1b49.up.railway.app/',
   //apiUrl: 'https://orders-0130.onrender.com/',
   production: false,

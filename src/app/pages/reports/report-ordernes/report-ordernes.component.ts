@@ -24,8 +24,8 @@ export class ReportOrdernesComponent implements OnInit {
     status: '',
     type: '',
     customerId: null,
-    startDate: this.utilsService.getFechaEcuador(),
-    endDate: this.utilsService.getFechaEcuador(),
+    startDate: this.utilsService.getFechaHoraEcuador(),
+    endDate: this.utilsService.getFechaHoraEcuador(),
     limit: 10,
     offset: 0,
   };
@@ -37,7 +37,7 @@ export class ReportOrdernesComponent implements OnInit {
   ) { }
 
   ngOnInit() {
-    console.log('ngOnInit',this.utilsService.getFechaEcuador());
+    console.log('ngOnInit',this.utilsService.getFechaHoraEcuador());
     this.fetchOrders();
   }
   fetchOrders() {

@@ -26,7 +26,7 @@
           for="email"
           [ngClass]="{ 'peer-focus:text-destructive!': submitted && f['email'].errors }"
           class="bg-background text-muted-foreground peer-focus:text-primary absolute top-2 z-10 origin-[0] -translate-y-4 scale-95 transform px-2 text-sm duration-300 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-95 peer-focus:px-2 ltr:left-1 rtl:right-1">
-          Correo
+          Usuario o Correo
         </label>
       </div>
       <div *ngIf="submitted && f['email'].errors" class="is__invalid-error">
@@ -38,6 +38,7 @@
     <div class="form__group">
       <div class="relative">
         <input
+        
           [type]="passwordTextType ? 'text' : 'password'"
           id="password"
           [ngClass]="{ 'is__invalid-input': submitted && f['password'].errors }"
@@ -84,12 +85,11 @@
   <div>
     <app-button full impact="bold" tone="primary" shape="rounded" size="medium">Iniciar sesión</app-button>
   </div>
-
   <!-- Sign-up -->
-  <!-- <div class="text-muted-foreground flex items-center text-sm">
-    Not a Member yet?
-    <app-button routerLink="/auth/sign-up" impact="none" tone="primary" shape="rounded" size="small">
-      Sign up
+  <div class="text-muted-foreground flex items-center text-sm">
+    ¿No tienes una cuenta?
+    <app-button type="button" routerLink="/register-company" impact="none" tone="primary" shape="rounded" size="small">
+      Registrate
     </app-button>
-  </div> -->
+  </div>
 </form>

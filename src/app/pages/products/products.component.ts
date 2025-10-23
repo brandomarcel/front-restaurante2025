@@ -8,17 +8,25 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NgxPaginationModule } from 'ngx-pagination';
 import { CategoryService } from 'src/app/services/category.service';
+import { TaxesService } from 'src/app/services/taxes.service';
+import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
+import { AlertService } from 'src/app/core/services/alert.service';
+import { ButtonComponent } from "src/app/shared/components/button/button.component";
 
 @Component({
   selector: 'app-products',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule, ButtonComponent],
   templateUrl: './products.component.html',
   styleUrl: './products.component.css'
 })
 export class ProductsComponent implements OnInit {
   productos: any[] = [];
+  productosFiltradosList: any[] = [];
+
   categories: any[] = [];
-  searchTerm = '';
+
+  taxes: any[] = [];
+  private _searchTerm: string = '';
   mostrarModal = false;
   productoEditando: any = null;
   productoForm!: FormGroup;
@@ -27,38 +35,77 @@ export class ProductsComponent implements OnInit {
 
   constructor(
     private productsService: ProductsService,
-    private categoriesService: CategoryService,
+    private categoryService: CategoryService,
+    private taxesService: TaxesService,
     public spinner: NgxSpinnerService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private frappeErrorService: FrappeErrorService,
+    private alertService: AlertService
   ) { }
 
   ngOnInit() {
     this.cargarProductos();
-    this.cargarCategorias();
+    this.loadCategory();
+    this.loadTaxes();
   }
 
   cargarProductos() {
     this.spinner.show();
     this.productsService.getAll().subscribe({
-      next: (res) => this.productos = res,
-      error: (err) => console.error('Error al cargar productos', err),
-      complete: () => this.spinner.hide()
+      next: (res: any) => {
+        console.log('res', res);
+        this.productos = res.message.data || [];
+        this.productosFiltradosList = res.message.data; // Inicializar la lista filtrada
+        this.productosFiltradosList.sort((a, b) => a.name.localeCompare(b.name));
+        console.log('Productos cargados:', this.productos);
+      },
+      error: (error: any) => {
+        const mensaje: any = this.frappeErrorService.handle(error);
+        this.alertService.error(mensaje);
+      }
     });
   }
 
-  cargarCategorias() {
-    this.categoriesService.getAll().subscribe({
-      next: (res) => this.categories = res,
-      error: (err) => console.error('Error al cargar categorías', err)
+  loadCategory() {
+    this.spinner.show();
+    this.categoryService.getAll().subscribe((res: any) => {
+      this.spinner.hide();
+      this.categories = res.message.data || [];
+      console.log(' this.categories', this.categories);
+    });
+  }
+  loadTaxes() {
+    this.spinner.show();
+    this.taxesService.getAll().subscribe((res: any) => {
+      this.spinner.hide();
+      this.taxes = res.data || [];
+      console.log(' this.taxes', this.taxes);
     });
   }
 
-  productosFiltrados() {
-    return this.productos.filter(p =>
-      p.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-      (p.barcode && p.barcode.includes(this.searchTerm))
-    );
+  get searchTerm(): string {
+    return this._searchTerm;
   }
+
+  set searchTerm(value: string) {
+    this._searchTerm = value;
+    this.actualizarProductosFiltrados(); // se actualiza cada vez que el usuario escribe
+  }
+
+  actualizarProductosFiltrados() {
+    const term = (this._searchTerm || '').toLowerCase();
+    const cat = this.categoriaFiltro || '';
+
+    this.productosFiltradosList = (this.productos || []).filter(p => {
+      const nombre = (p.nombre || '').toLowerCase();
+      const estadoStock = (p.is_out_of_stock ? 'agotado' : 'disponible');
+      const byText = nombre.includes(term) || estadoStock.includes(term);
+      const byCat = !cat || p.categoria === cat;
+      return byText && byCat;
+    }).sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+  }
+
+
 
   abrirModal(producto: any = null) {
     this.mostrarModal = true;
@@ -100,12 +147,13 @@ export class ProductsComponent implements OnInit {
         toast.success('Producto creado con éxito');
         this.cargarProductos();
         this.cerrarModal();
+        this.spinner.hide();
       },
-      error: (err) => {
-        toast.error('Error al crear el producto');
-        console.error(err);
-      },
-      complete: () => this.spinner.hide()
+      error: (error: any) => {
+        const mensaje: any = this.frappeErrorService.handle(error);
+        this.alertService.error(mensaje);
+        this.spinner.hide();
+      }
     });
   }
 
@@ -113,51 +161,72 @@ export class ProductsComponent implements OnInit {
     this.spinner.show();
     const data = this.productoForm.value;
     console.log('data', data);
-    this.productsService.update(this.productoEditando.id, data).subscribe({
+    console.log('productoEditando', this.productoEditando);
+    this.productsService.update(this.productoEditando.name, data).subscribe({
       next: () => {
         toast.success('Producto actualizado con éxito');
         this.cerrarModal();
         this.cargarProductos();
+        this.spinner.hide();
       },
       error: (err) => {
         toast.error('Error al actualizar el producto');
         console.error(err);
-      },
-      complete: () => this.spinner.hide()
+        const mensaje: any = this.frappeErrorService.handle(err);
+        this.alertService.error(mensaje);
+        this.spinner.hide();
+      }
     });
   }
 
-  eliminar(id: number) {
+  eliminar(id: string) {
     if (confirm('¿Eliminar este producto?')) {
       this.spinner.show();
       this.productsService.delete(id).subscribe({
         next: () => {
           toast.success('Producto eliminado con éxito');
           this.cargarProductos();
+          this.spinner.hide();
         },
         error: (err) => {
-          toast.error('Error al eliminar el producto');
-          console.error(err);
-        },
-        complete: () => this.spinner.hide()
+          const mensaje: any = this.frappeErrorService.handle(err);
+          this.alertService.error(mensaje);
+          this.spinner.hide();
+        }
       });
     }
   }
 
   resetForm() {
     return this.productoForm = this.fb.group({
-      name: ['', Validators.required],
-      description: [''],
-      price: [null, [Validators.required, Validators.min(0)]],
-      tax: ['0.00', Validators.required],
-      categoryId: ['', Validators.required], // ahora es categoryId
-      code: [''],
-      barcode: [''],
-      isActive: [true]
+      nombre: ['', Validators.required],
+      descripcion: [''],
+      precio: [null, [Validators.required, Validators.min(0)]],
+      tax: [null, Validators.required],
+      categoria: ['', Validators.required], // ahora es categoryId
+      codigo: [''],
+      isactive: [true],
+      is_out_of_stock: [false]
     });
   }
 
   get f() {
     return this.productoForm.controls;
   }
+
+
+  getNameCategory(categoryId: string): string {
+    const document = this.categories.find(d => d.name === categoryId);
+    return document ? document.nombre : 'No disponible';
+  }
+
+  // Filtro por texto + categoría (respeta tu API de datos)
+  categoriaFiltro: string = '';
+
+
+
+  // trackBy para rendimiento al paginar
+  trackByName = (_: number, item: any) => item?.name || item?.codigo || item?.nombre;
+
+
 }

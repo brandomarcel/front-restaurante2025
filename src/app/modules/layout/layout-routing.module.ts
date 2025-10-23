@@ -13,9 +13,24 @@ const routes: Routes = [
     component: LayoutComponent,
     loadChildren: () => import('../uikit/uikit.module').then((m) => m.UikitModule),
   },
+
+{
+  path: 'caja',
+  component: LayoutComponent,
+  loadChildren: () => import('../caja/caja.module').then((m) => m.CajaModule),
+},
+
+{
+  path: 'report',
+  component: LayoutComponent,
+  loadChildren: () => import('../report/report.module').then((m) => m.ReportModule),
+},
+
+
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: '**', redirectTo: 'error/404' },
 ];
+
 
 @NgModule({
   imports: [RouterModule.forChild(routes)],

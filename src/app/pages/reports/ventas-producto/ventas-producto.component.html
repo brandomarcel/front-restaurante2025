@@ -1,0 +1,99 @@
+<div class="app-container">
+
+  <!-- Header -->
+  <div class="app-page-header">
+    <div>
+      <h2 class="app-page-title">Productos Más Vendidos</h2>
+      <div class="app-page-subtle">Filtrado por fecha</div>
+    </div>
+
+
+    <app-button (click)="exportarExcel()" full impact="bold" tone="success" shape="rounded" size="small">
+      Descargar Excel
+    </app-button>
+  </div>
+
+  <!-- Filtros -->
+  <div class="toolbar">
+    <div class="flex flex-col md:flex-row gap-3 md:items-end w-full">
+      <div>
+        <label class="block mb-1 font-medium">Desde</label>
+        <input type="date" [(ngModel)]="fromDate" class="input" />
+      </div>
+
+      <div>
+        <label class="block mb-1 font-medium">Hasta</label>
+        <input type="date" [(ngModel)]="toDate" class="input" />
+      </div>
+
+      <div class="pt-1 md:pt-0">
+        <button (click)="cargarDatos()" class="btn btn-primary">
+          Buscar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cargando -->
+  <div *ngIf="loading" class="app-page-subtle mb-2">
+    Cargando...
+  </div>
+
+  <!-- Tabla -->
+  <ng-container *ngIf="!loading && data.length > 0; else emptyData">
+    <!-- Controles de página -->
+    <div class="mb-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-gray-700">Mostrar:</span>
+
+        <button *ngFor="let size of [10, 50, 100]" (click)="setPageSize(size)" class="btn"
+          [ngClass]="pageSize === size ? 'btn-primary' : 'btn-outline'">
+          {{ size }}
+        </button>
+
+        <button (click)="setPageSize(data.length)" class="btn"
+          [ngClass]="pageSize === data.length ? 'btn-primary' : 'btn-outline'">
+          Todos
+        </button>
+      </div>
+
+      <div class="text-gray-600">
+        Página <strong>{{ page }}</strong> de <strong>{{ totalPages }}</strong>
+      </div>
+    </div>
+
+    <!-- Tabla con scroll -->
+    <div class="app-table-wrap">
+      <table class="app-table text-xs">
+        <thead class="app-thead">
+          <tr>
+            <th *ngFor="let col of columns" class="app-th whitespace-nowrap">
+              {{ col.label }}
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let row of data | paginate: { itemsPerPage: pageSize, currentPage: page }" class="app-tr">
+            <td *ngFor="let col of columns" class="app-td whitespace-nowrap">
+              {{ row[col.fieldname] }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Paginación (ngx-pagination) -->
+      <pagination-controls (pageChange)="page = $event" class="mt-4 flex justify-center">
+      </pagination-controls>
+    </div>
+  </ng-container>
+
+  <!-- Sin datos -->
+  <ng-template #emptyData>
+    <div class="app-card">
+      <div class="app-card-body text-center text-gray-500">
+        No se encontraron datos.
+      </div>
+    </div>
+  </ng-template>
+</div>

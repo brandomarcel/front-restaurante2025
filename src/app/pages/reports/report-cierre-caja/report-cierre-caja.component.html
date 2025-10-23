@@ -1,0 +1,111 @@
+<div class="flex flex-col">
+  <!-- Header -->
+  <div class="app-page-header">
+    <h2 class="app-page-title">Reporte de Cierres de Caja</h2>
+
+    <!-- Botón de exportación -->
+    <div class="flex justify-end mt-2">
+      <app-button impact="bold" tone="success" shape="rounded" size="medium" (click)="exportarExcel()">
+        Exportar a Excel
+      </app-button>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="toolbar">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-2 w-full">
+      <!-- Usuario -->
+      <ng-select class="ng-select-tailwind" [(ngModel)]="filters.usuario" placeholder="Usuario" [items]="usuarios"
+        bindLabel="email" bindValue="email" (change)="buscar()">
+      </ng-select>
+
+      <!-- Desde -->
+      <input type="date" class="input" [(ngModel)]="filters.desde" />
+
+      <!-- Hasta -->
+      <input type="date" class="input" [(ngModel)]="filters.hasta" [max]="today" />
+
+      <!-- Buscar -->
+      <div class="flex md:justify-start">
+        <button class="btn btn-primary w-full md:w-auto" (click)="buscar()">
+          Buscar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla de cierres -->
+  <ng-container *ngIf="cierres.length > 0; else noData">
+    <div class="app-table-wrap">
+      <table class="app-table text-xs">
+        <thead class="app-thead">
+          <tr>
+            <th class="app-th">#</th>
+            <th class="app-th">Fecha</th>
+            <th class="app-th">Usuario</th>
+            <th class="app-th">Apertura</th>
+            <th class="app-th">Sistema</th>
+            <th class="app-th">Real</th>
+            <th class="app-th">Retiros</th>
+            <th class="app-th">Apertura $</th>
+            <th class="app-th">Diferencia</th>
+            <th class="app-th">Estado</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <ng-container *ngFor="let cierre of cierres; let i = index">
+            <!-- Fila principal -->
+            <tr class="app-tr cursor-pointer select-none"
+              (click)="cierreSeleccionado = cierreSeleccionado === cierre.name ? null : cierre.name">
+              <td class="app-td">
+                <span class="inline-flex items-center gap-1">
+                  {{ i + 1 }}
+                  <span class="text-gray-500">{{ cierreSeleccionado === cierre.name ? '▴' : '▾' }}</span>
+                </span>
+              </td>
+              <td class="app-td">{{ cierre.fecha_hora | date: 'yyyy-MM-dd' }}</td>
+              <td class="app-td">{{ cierre.usuario }}</td>
+              <td class="app-td">{{ cierre.apertura }}</td>
+              <td class="app-td">${{ cierre.efectivo_sistema | number: '1.2-2' }}</td>
+              <td class="app-td">${{ cierre.efectivo_real | number: '1.2-2' }}</td>
+              <td class="app-td">${{ cierre.total_retiros | number: '1.2-2' }}</td>
+              <td class="app-td">${{ cierre.monto_apertura | number: '1.2-2' }}</td>
+              <td class="app-td">
+                <span [ngClass]="{ 'text-red-600': cierre.diferencia < 0, 'text-green-600': cierre.diferencia >= 0 }">
+                  ${{ cierre.diferencia | number: '1.2-2' }}
+                </span>
+              </td>
+              <td class="app-td">
+                <span class="badge"
+                  [ngClass]="{ 'badge-green': cierre.estado === 'CERRADO', 'badge-yellow': cierre.estado !== 'CERRADO' }">
+                  {{ cierre.estado }}
+                </span>
+              </td>
+            </tr>
+
+            <!-- Fila de detalle -->
+            <tr *ngIf="cierreSeleccionado === cierre.name && cierre.detalle?.length > 0" class="bg-gray-50">
+              <td colspan="10" class="app-td">
+                <strong class="text-gray-700">Detalle de pagos:</strong>
+                <ul class="list-disc list-inside text-gray-600 mt-1">
+                  <li *ngFor="let pago of cierre.detalle">
+                    {{ pago.metodo_pago }}: ${{ pago.monto | number: '1.2-2' }}
+                  </li>
+                </ul>
+              </td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+
+  <ng-template #noData>
+    <div class="app-card">
+      <div class="app-card-body text-center text-gray-500">
+        No hay cierres registrados en el rango seleccionado.
+      </div>
+    </div>
+  </ng-template>
+</div>
