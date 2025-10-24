@@ -23,8 +23,7 @@
             "outputPath": "dist/angular",
             "index": "src/index.html",
             "polyfills": [
-              "src/polyfills.ts",
-              "src/polyfills.prod.ts"
+              "src/polyfills.ts"
             ],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "css",
