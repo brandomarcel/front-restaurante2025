@@ -1,21 +1,26 @@
 <div class="relative ml-3" clickOutside (clickOutside)="isOpen = false">
   <div class="flex items-center gap-2">
     <!-- Badge: Gerente -->
-    <span *ngIf="roleUpper === 'GERENTE'"
+    <!-- <span *ngIf="roleUpper === 'GERENTE'"
           class="rounded px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700">
       Gerente
+    </span> -->
+
+    <span 
+          class="rounded px-2 py-0.5 text-[10px] font-semibold bg-sky-100 text-sky-700">
+      {{user.email}}
     </span>
 
     <!-- Badge: Cajero -->
-    <span *ngIf="roleUpper === 'CAJERO'"
+    <!-- <span *ngIf="roleUpper === 'CAJERO'"
           class="rounded px-2 py-0.5 text-[10px] font-semibold bg-sky-100 text-sky-700">
       Cajero
-    </span>
+    </span> -->
 
     <!-- Botón de perfil -->
     <button (click)="toggleMenu()" class="bg-card relative flex rounded-full text-sm" type="button">
       <span class="sr-only">Abrir menú de usuario</span>
-      <img class="size-9 shrink-0 rounded-md" src="https://avatars.githubusercontent.com/u/12519008?v=4"
+      <img class="size-9 shrink-0 rounded-md" src="assets/images/userLogo.png"
            alt="Avatar de usuario" />
     </button>
   </div>
@@ -27,7 +32,7 @@
     <!-- Header del dropdown -->
     <div class="flex-row flex items-center px-4 pb-4">
       <div class="w-10 shrink-0">
-        <img class="rounded-md" src="https://avatars.githubusercontent.com/u/12519008?v=4" alt="Avatar de usuario" />
+        <img class="rounded-md" src="assets/images/userLogo.png" alt="Avatar de usuario" />
       </div>
       <div class="text-foreground overflow-hidden px-2 text-sm">
         <span class="font-semibold truncate">{{ user.fullName }}</span>
