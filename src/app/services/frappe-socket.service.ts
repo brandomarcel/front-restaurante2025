@@ -20,8 +20,10 @@ export class FrappeSocketService {
   connect(): void {
     if (this.socket?.connected) return;
 
-    //const nsUrl = `${environment.URL}`; 
-    const nsUrl = `${environment.URL}/${environment.frappeSiteNamespace}`; // 👈 conecta al namespace
+    // dentro de connect()
+    const base = environment.production ? environment.URL : ''; // '' en dev para usar el proxy
+    const nsUrl = `${base}/${environment.frappeSiteNamespace}`; // -> "/restaurante_bmarc" en dev
+
     //const nsUrl = `${environment.apiUrl.replace(/^http/, 'ws')}/${environment.frappeSiteNamespace}`;
     console.log('[frappe-socket] connecting to', nsUrl);
     this.socket = io(nsUrl, {

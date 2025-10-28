@@ -1,6 +1,6 @@
 // src/app/services/realtime-orders.service.ts
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject, debounceTime } from 'rxjs';
 import { OrdersService, OrderDTO, OrdersListResponse } from './orders.service';
 import { FrappeSocketService } from './frappe-socket.service';
 
@@ -11,65 +11,66 @@ export interface OrderVM {
   subtotal?: number;
   iva?: number;
   total?: number;
-  customer?: { nombre?: string } | string;
+  customer?: string | { nombre?: string };
   sri?: { status?: string };
   usuario?: string;
   items?: any[];
   _flash?: boolean;
+  _ts?: number; // timestamp interno para ordenar y anti desincronización
+  _flashType?: 'insert' | 'update' | 'delete'; // 👈 nuevo
+  status?: string;
 }
 
 @Injectable({ providedIn: 'root' })
 export class RealtimeOrdersService {
-  private readonly DT_LC = 'Orders';
+  private readonly DT_LC = 'orders'; // 👈 importante: minúsculas
 
   private orders$ = new BehaviorSubject<OrderVM[]>([]);
   private newCount$ = new BehaviorSubject<number>(0);
   private total$ = new BehaviorSubject<number>(0);
   private firstLoadDone = false;
 
+  private refetchTrigger = new Subject<void>();
+
   constructor(
     private api: OrdersService,
     private sock: FrappeSocketService
   ) {
-    // Conexión + suscripción al room correcto
+    // 1️⃣ Conectar y suscribirse al canal correcto
     this.sock.connect();
     this.sock.subscribe(`doctype:${this.DT_LC}`);
 
-    // Evento estándar: list_update
-    this.sock.on<any>('list_update', (evt) => {
-      // if (evt?.doctype !== 'Orders') return;
-      // debería loguearse aquí cuando hagas la prueba del paso 1
-      console.log('[list_update]', evt);
-      if (evt._action === 'delete') this.remove(evt.name);
-      else this.refreshOne(evt.name, this.firstLoadDone);
-    });
-
-    // Evento estándar: list_update
-    this.sock.on<any>('debug_broadcast', (evt) => {
-      // if (evt?.doctype !== 'Orders') return;
-      // debería loguearse aquí cuando hagas la prueba del paso 1
-      console.log('[debug_broadcast]', evt);
-      // if (evt._action === 'delete') this.remove(evt.name);
-      // else this.refreshOne(evt.name, this.firstLoadDone);
-    });
-
+    // 2️⃣ Escuchar tu evento personalizado desde Frappe
     this.sock.on<any>('brando_conect', (evt) => {
-      // if (evt?.doctype !== 'Orders') return;
-      // debería loguearse aquí cuando hagas la prueba del paso 1
-      console.log('[brando_conect]', evt);
-      // if (evt._action === 'delete') this.remove(evt.name);
-      // else this.refreshOne(evt.name, this.firstLoadDone);
+  if (!evt?.name) return;
+  const action = (evt._action || '').toLowerCase() as 'insert' | 'update' | 'delete';
+
+  if (action === 'delete') {
+    // pinta como delete un instante antes de quitarlo (opcional)
+    this.upsert({ name: evt.name, _flash: true, _flashType: 'delete' }, true, false);
+    setTimeout(() => this.remove(evt.name), 300);
+    this.refetchTrigger.next();
+  } else {
+    this.refreshOne(evt.name, this.firstLoadDone, action); // 👈 pasa el tipo
+  }
+});
+
+
+    // 3️⃣ Reconciliación (re-fetch después de un pequeño delay)
+    this.refetchTrigger.pipe(debounceTime(600)).subscribe(() => {
+      this.api.getAll(20, 0).subscribe((res: OrdersListResponse) => {
+        const list = this.mapList(res);
+        this.orders$.next(list);
+        this.total$.next(res.message?.total ?? list.length);
+      });
     });
-
-
-    // (Opcional) Evento custom con doc completo: order_created
-    // Actívalo si lo publicas en el backend
-    // this.sock.on<OrderDTO>('order_created', (order) => this.upsertFromServer(order, true));
   }
 
-  /** Carga inicial usando tu getAll(limit, offset) */
-  loadInitial(limit = 20, offset = 0) {
-    this.api.getAll(limit, offset).subscribe((res: OrdersListResponse) => {
+  /** ===== API pública para la UI ===== */
+
+  /** Carga inicial desde tu backend */
+  loadInitial(limit = 20, offset = 0 , createdFrom?: any, createdTo?: any) {
+    this.api.getAll(limit, offset, createdFrom, createdTo).subscribe((res: OrdersListResponse) => {
       const list = this.mapList(res);
       this.orders$.next(list);
       this.total$.next(res.message?.total ?? list.length);
@@ -78,58 +79,104 @@ export class RealtimeOrdersService {
     return this.orders$;
   }
 
-  // Streams públicos para la UI
   streamOrders() { return this.orders$.asObservable(); }
   streamNewCount() { return this.newCount$.asObservable(); }
   streamTotal() { return this.total$.asObservable(); }
   markNewSeen() { this.newCount$.next(0); }
 
-  /** ===== Helpers ===== */
+  /** ===== Helpers internos ===== */
 
-  /** Refresca una orden específica desde la API (por name) y hace upsert */
-  private refreshOne(name: string, flash = false) {
-    this.api.getById(name).subscribe({
-      next: (r) => {
-        const doc = (r as any)?.data || (r as any)?.message || r; // tolerante
-        const vm = this.mapOne(doc as OrderDTO);
-        if (vm) this.upsert(vm, flash);
-      },
-      error: () => {
-        // fallback: placeholder para mostrar "llegó algo"
-        this.upsert({ name, _flash: flash }, flash);
-      }
-    });
-  }
-
-  /** Si recibes el doc completo desde el socket (order_created), úsalo directo */
-  upsertFromServer(doc: OrderDTO, flash = true) {
-    const vm = this.mapOne(doc);
-    this.upsert(vm, flash);
-  }
-
-  /** Inserta o actualiza en memoria */
-  private upsert(row: OrderVM, flash = false) {
-    const list = [...this.orders$.value];
-    const i = list.findIndex(x => x.name === row.name);
-
-    if (i >= 0) {
-      list[i] = { ...list[i], ...row, _flash: flash };
-    } else {
-      list.unshift({ ...row, _flash: flash });
-      if (flash) this.newCount$.next(this.newCount$.value + 1);
-      this.total$.next(this.total$.value + 1);
+  /** Obtiene una orden específica y la actualiza localmente */
+private refreshOne(name: string, flash = false, flashType: 'insert' | 'update' = 'update') {
+  this.api.getById(name).subscribe({
+    next: (r) => {
+      const doc = (r as any)?.data || (r as any)?.message || r;
+      const vm = this.mapOne(doc as OrderDTO);
+      if (vm) this.upsert({ ...vm, _flashType: flashType }, flash, flashType === 'insert');
+    },
+    error: () => {
+      this.upsert({ name, _flash: flash, _flashType: flashType }, flash, flashType === 'insert');
     }
+  });
+}
 
-    this.orders$.next(list);
 
-    // Quita efecto flash luego de 1.5s
-    if (flash) setTimeout(() => {
-      const cur = [...this.orders$.value];
-      const idx = cur.findIndex(x => x.name === row.name);
-      if (idx >= 0) { delete cur[idx]._flash; this.orders$.next(cur); }
-    }, 1500);
+  /** Inserta o actualiza una orden en memoria */
+// orden lógico de estados: primero lo más “activo”
+STATUS_ORDER: Record<string, number> = {
+  'Ingresada': 0,
+  'Preparación': 1,
+  'Cerrada': 2
+};
+
+private upsert(row: OrderVM, flash = false, isNew = false) {
+  const list = [...this.orders$.value];
+  const i = list.findIndex(x => x.name === row.name);
+
+  // normaliza fecha y timestamp
+  if (row.createdAt) row.createdAt = this.toIsoLike(row.createdAt);
+  let ts = row.createdAt ? new Date(row.createdAt).getTime() : undefined;
+
+  if (i >= 0) {
+    const prev = list[i];
+
+    // si no vino fecha, conserva la anterior
+    if (!ts) ts = prev._ts ?? Date.now();
+    row._ts = ts;
+
+    // evita sobrescribir con algo más viejo
+    if (prev._ts && row._ts && row._ts < prev._ts) return;
+
+    // detectar cambio de estado
+    const prevStatus = (prev.status || prev.type) as string | undefined;
+    const nextStatus = (row.status || row.type) as string | undefined;
+    const statusChanged = !!prevStatus && !!nextStatus && prevStatus !== nextStatus;
+
+    // si solo cambió de estado y no pediste flash explícito, flashea como update
+    const nextFlash = flash || statusChanged;
+    const nextFlashType = (row._flashType ?? (statusChanged ? 'update' : prev._flashType)) as OrderVM['_flashType'];
+
+    list[i] = { ...prev, ...row, _flash: nextFlash, _flashType: nextFlashType };
+  } else {
+    // nuevo registro
+    if (!ts) ts = Date.now();
+    row._ts = ts;
+
+    list.unshift({ ...row, _flash: flash, _flashType: row._flashType ?? 'insert' });
+
+    if (isNew) this.newCount$.next(this.newCount$.value + 1);
+    this.total$.next(this.total$.value + 1);
   }
 
+  // ordenar por status y luego por fecha desc
+  list.sort((a, b) => {
+    const ra = this.STATUS_ORDER[(a.status || a.type || '')] ?? 99;
+    const rb = this.STATUS_ORDER[(b.status || b.type || '')] ?? 99;
+    if (ra !== rb) return ra - rb;
+    return (b._ts ?? 0) - (a._ts ?? 0);
+  });
+
+  this.orders$.next(list);
+
+  // limpiar flash luego de un ratito
+  // const flashedName = row.name;
+  // const shouldClear = flash || (i >= 0 && ((list[i]?._flash) || row._flash));
+  // if (shouldClear) {
+  //   setTimeout(() => {
+  //     const cur = [...this.orders$.value];
+  //     const idx = cur.findIndex(x => x.name === flashedName);
+  //     if (idx >= 0) {
+  //       delete cur[idx]._flash;
+  //       delete cur[idx]._flashType;
+  //       this.orders$.next(cur);
+  //     }
+  //   }, 1500);
+  // }
+}
+
+
+
+  /** Elimina una orden localmente */
   private remove(name: string) {
     const filtered = this.orders$.value.filter(x => x.name !== name);
     if (filtered.length !== this.orders$.value.length) {
@@ -138,23 +185,32 @@ export class RealtimeOrdersService {
     this.orders$.next(filtered);
   }
 
-  /** Mapea tu respuesta paginada -> VM */
+  /** Convierte respuesta paginada del backend a VM */
   private mapList(res: OrdersListResponse): OrderVM[] {
-    const arr = res?.message?.data ?? [];   // 👈 tu payload real
+    const arr = res?.message?.data ?? [];
     return arr.map(this.mapOne);
   }
 
-  /** Mapea una OrderDTO -> VM que usa la UI */
-  private mapOne = (o: OrderDTO): OrderVM => ({
-    name: o.name,
-    type: o.type,
-    createdAt: o.createdAt,
-    subtotal: o.subtotal,
-    iva: o.iva,
-    total: o.total,
-    customer: o.customer?.nombre || o.customer, // para UI simple
-    sri: o.sri ? { status: o.sri.status } : undefined,
-    usuario: o.usuario,
-    items: o.items
-  });
+  /** Convierte un OrderDTO a ViewModel */
+private mapOne = (o: OrderDTO): OrderVM => ({
+  name: o.name,
+  status: (o as any).status || (o as any).estado || o.type, // 👈 preferimos status
+  type: o.type, // opcional, puedes eliminarlo si ya usas 'status' en la UI
+  createdAt: this.toIsoLike((o as any).createdAtISO || o.createdAt),
+  subtotal: o.subtotal,
+  iva: o.iva,
+  total: o.total,
+  customer: typeof o.customer === 'string' ? o.customer : o.customer?.nombre || '—',
+  sri: o.sri ? { status: o.sri.status } : undefined,
+  usuario: o.usuario,
+  items: o.items,
+  _ts: o.createdAt ? new Date(o.createdAt).getTime() : Date.now()
+});
+
+
+  /** Convierte "YYYY-MM-DD hh:mm:ss" → "YYYY-MM-DDThh:mm:ss" para DatePipe */
+  private toIsoLike(s?: string): string | undefined {
+    if (!s) return s;
+    return s.includes('T') ? s : s.replace(' ', 'T');
+  }
 }

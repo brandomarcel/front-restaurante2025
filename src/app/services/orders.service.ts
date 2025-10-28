@@ -26,6 +26,7 @@ export interface OrderDTO {
   subtotal: number;
   iva: number;
   total: number;
+  status: string;              // "Pendiente" | "Enviado" | "Cancelado"
   customer: {
     nombre: string;
     num_identificacion: string;
@@ -46,12 +47,12 @@ export interface OrderDTO {
 }
 
 export interface OrdersListResponse {
-  message?:{
-  data: OrderDTO[];
-  total: number;
-  limit: number;
-  offset: number;
-  filters?: any;
+  message?: {
+    data: OrderDTO[];
+    total: number;
+    limit: number;
+    offset: number;
+    filters?: any;
   }
 }
 
@@ -68,10 +69,20 @@ export class OrdersService {
   }
 
   /** Lista paginada tal cual devuelve tu backend */
-  getAll(limit: number = 10, offset: number = 0): Observable<OrdersListResponse> {
-    const params = new HttpParams()
+  getAll(
+    limit: number = 10,
+    offset: number = 0,
+    createdFrom?: string,
+    createdTo?: string,
+    order: 'asc' | 'desc' = 'desc'
+  ): Observable<OrdersListResponse> {
+    let params = new HttpParams()
       .set('limit', String(limit))
-      .set('offset', String(offset));
+      .set('offset', String(offset))
+      .set('order', order);
+
+    if (createdFrom) params = params.set('created_from', createdFrom);
+    if (createdTo) params = params.set('created_to', createdTo);
 
     return this.http.get<OrdersListResponse>(`${this.urlBase}.get_all_orders`, {
       withCredentials: true,
@@ -87,7 +98,7 @@ export class OrdersService {
 
   /** 🔧 Bugfix: el name es string tipo "ORD-00884" y faltaba "=" en la URL */
   getById(name: string) {
-    return this.http.get<{ data?: OrderDTO; message?: OrderDTO; [k: string]: any }>(
+    return this.http.get<{ data?: OrderDTO; message?: OrderDTO;[k: string]: any }>(
       `${this.urlBase}.get_order_with_details?order_name=${encodeURIComponent(name)}`,
       { withCredentials: true }
     );
@@ -145,4 +156,16 @@ export class OrdersService {
     const params = new HttpParams({ fromObject: filters });
     return this.http.get(`${this.apiUrl}/filter`, { params });
   }
+
+  // src/app/services/orders.service.ts
+updateStatus(name: string, status: 'Ingresada' | 'Preparación' | 'Cerrada') {
+  const body = new FormData();
+  body.set('name', name);
+  body.set('status', status);
+  // o HttpParams si prefieres GET/qs
+  return this.http.post<any>(`${this.urlBase}.set_order_status`, body, { withCredentials: true });
+}
+
+
+
 }
