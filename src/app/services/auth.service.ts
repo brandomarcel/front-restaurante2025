@@ -85,13 +85,15 @@ login(username: string, password: string) {
           email: res.message.user,
           fullName: res.message.user_data.full_name,
           roles: res.message.roles,
-          user_data: res.message.user_data
+          user_data: res.message.user_data,
+          companyId: res.message.user_permissions[0]?.value || null
         };
         // Guardar en memoria
         this.userService.setUser(user);
 
         // Guardar en localStorage para persistencia
         localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('companyId', user.companyId);
       })
     );
   }
