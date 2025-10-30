@@ -46,10 +46,11 @@ export class RealtimeOrdersService {
     this.sock.connect();
 
     // 👇 suscríbete al room que coincide con el backend
-    this.sock.subscribe('doctype:orders'); // ✅ room permitido
+    // this.sock.subscribe('doctype:orders'); // ✅ room permitido
 
     // 2️⃣ Escuchar tu evento personalizado desde Frappe
-    this.sock.on<any>('brando_conect', (evt) => {
+    
+    this.sock.on<any>(`brando_conect:company:${companyId}`, (evt) => {
       console.log('[ws] brando_conect event received:', evt);
       if (!evt?.name) return;
       if ((evt.company || 'DEFAULT') !== companyId) return; // filtra multiempresa
