@@ -16,8 +16,11 @@ import { ProductsService } from 'src/app/services/products.service';
 import { environment } from '../../../environments/environment';
 import { UtilsService } from '../../core/services/utils.service';
 import { AlertService } from '../../core/services/alert.service';
-import { filter, finalize } from 'rxjs';
+import { finalize } from 'rxjs';
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
+import { AuthService } from 'src/app/services/auth.service';
+
+type RoleName = 'Cajero' | 'Mesero' | 'Gerente' | 'Desconocido';
 
 @Component({
   selector: 'app-pos',
@@ -25,11 +28,8 @@ import { ButtonComponent } from "src/app/shared/components/button/button.compone
   templateUrl: './pos.component.html',
   styleUrl: './pos.component.css'
 })
-
 export class PosComponent implements OnInit {
   ambiente: string = '';
-
-  private apiUrl = environment.apiUrl; // Reemplaza con tu URL de API real
   showPaymentModal: boolean = false;
   amountReceived: number | null = null;
   change: number = 0;
@@ -46,7 +46,6 @@ export class PosComponent implements OnInit {
   cart: any[] = [];
   searchTerm: string = '';
   selectedCategory = '';
-  //categories = ['Entrada', 'Sopas', 'Adicionales', 'Bebidas', 'Postres', 'Platos_Fuertes', 'Burguers'];
   orderType: 'Servirse' | 'Llevar' | 'Domicilio' = 'Servirse';
   deliveryAddress: string = '';
   deliveryPhone: string = '';
@@ -56,7 +55,7 @@ export class PosComponent implements OnInit {
   showCustomerModal = false;
 
   showPrintModal = false;
-  printOption: 'comanda' | 'factura' | 'ambas' = 'ambas';
+  printOption: 'comanda' | 'recibo' | 'ambas' = 'ambas';
   private pendingOrderId: string | null = null;
 
   submitted = false;
@@ -64,8 +63,20 @@ export class PosComponent implements OnInit {
 
   today: any;
 
-  private url = environment.URL
-  constructor(public menuService: MenuService,
+  private url = environment.URL;
+
+  // ===== Roles y Permisos =====
+  roleName: RoleName = 'Desconocido';
+  permissions = {
+    canSeeMoney: true,        // Ver precios/totales
+    canCharge: true,          // Cobrar / abrir modal de pago
+    canPrintReceipt: true,    // Imprimir recibo/factura
+    canSelectCustomer: true,  // Seleccionar/crear cliente
+    canSendToKitchen: true    // Enviar a cocina (comanda)
+  };
+
+  constructor(
+    public menuService: MenuService,
     private customersService: CustomersService,
     private productsService: ProductsService,
     private categoryService: CategoryService,
@@ -75,20 +86,27 @@ export class PosComponent implements OnInit {
     private spinner: NgxSpinnerService,
     private printService: PrintService,
     private utilsService: UtilsService,
-    private alertService: AlertService
-  ) { }
+    private alertService: AlertService,
+    private auth: AuthService
+  ) {
+
+  }
 
   ngOnInit(): void {
-
-
+    // === Rol actual (único por ahora) ===
+    const me: any = this.auth.getCurrentUser();
+    const rawRole: string | undefined = me?.roles?.[0];
+    // Normaliza el nombre del rol a nuestras etiquetas
+    // this.roleName = 'Gerente';
+    this.roleName = this.mapRawRole(rawRole);
+    console.log('📦rawRole', rawRole);
+    this.permissions = this.getPermissionsFromRole(this.roleName);
+    console.log('📦roleName', this.roleName, '📦permissions', this.permissions);
 
     const ambienteGuardado = localStorage.getItem('ambiente');
     console.log('📦ambienteGuardado', ambienteGuardado);
     this.ambiente = ambienteGuardado ?? '----------';
-    // this.utilsService.ambiente$.subscribe(valor => {
-    //   this.ambiente = valor;
-    //   console.log('Ambiente actualizado:', valor);
-    // });
+
     const fechaEcuador = new Date(
       new Date().toLocaleString('en-US', { timeZone: 'America/Guayaquil' })
     );
@@ -97,8 +115,6 @@ export class PosComponent implements OnInit {
     this.today = fechaEcuador.toISOString();
     console.log('📦this.today', this.today);
 
-
-    console.log('entro');
     this.clienteForm = this.fb.group({
       nombre: ['', [Validators.required]],
       num_identificacion: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(13)]],
@@ -108,30 +124,71 @@ export class PosComponent implements OnInit {
       direccion: ['', [Validators.required]],
     });
 
-    //this.toggleSidebar();
-
     this.loadProducts();
     this.loadCategory();
     this.loadMethodPayment();
 
-    // Agrega la validación personalizada
+    // Validación dinámica por tipo de identificación
     this.clienteForm.get('tipo_identificacion')?.valueChanges.subscribe(() => {
       this.clienteForm.patchValue({ num_identificacion: null });
       this.clienteForm.get('num_identificacion')?.updateValueAndValidity();
     });
-
     this.clienteForm.get('num_identificacion')?.setValidators([
       Validators.required,
       this.identificacionLengthValidator()
     ]);
-
   }
-  setItemType(item: any, tipo: 'Servirse' | 'Llevar') {
-    item.tipo = tipo;
-    // si tienes recargos (empaque o delivery por ítem), actualiza aquí:
-    // item.fee = tipo === 'Llevar' ? this.packagingFeePerItem : tipo === 'Domicilio' ? this.deliveryFeePerItem : 0;
 
+  // ======= Mapeo de roles y permisos =======
+  private mapRawRole(raw?: string): RoleName {
+    if (!raw) return 'Desconocido';
+    const r = raw.toLowerCase();
+    if (r.includes('mesero')) return 'Mesero';
+    if (r.includes('cajero')) return 'Cajero';
+    if (r.includes('gerente') || r.includes('admin')) return 'Gerente';
+    return 'Desconocido';
   }
+
+  private getPermissionsFromRole(role: RoleName) {
+    console.log('📦role', role);
+    switch (role) {
+      case 'Mesero':
+        return {
+          canSeeMoney: false,
+          canCharge: false,
+          canPrintReceipt: false,
+          canSelectCustomer: false,
+          canSendToKitchen: true
+        };
+      case 'Cajero':
+        return {
+          canSeeMoney: true,
+          canCharge: true,
+          canPrintReceipt: true,
+          canSelectCustomer: true,
+          canSendToKitchen: true
+        };
+      case 'Gerente':
+        return {
+          canSeeMoney: true,
+          canCharge: true,
+          canPrintReceipt: true,
+          canSelectCustomer: true,
+          canSendToKitchen: true
+        };
+      default:
+        // Por defecto conservador (similar a Cajero para no romper flujos)
+        return {
+          canSeeMoney: true,
+          canCharge: true,
+          canPrintReceipt: true,
+          canSelectCustomer: true,
+          canSendToKitchen: true
+        };
+    }
+  }
+
+  // ======= UI helpers =======
   public toggleSidebar() {
     this.menuService.toggleSidebar();
   }
@@ -142,14 +199,19 @@ export class PosComponent implements OnInit {
   setOrderType(tipo: 'Servirse' | 'Llevar' | 'Domicilio') {
     this.orderType = tipo;
   }
+
+  // Si planeas marcar ítems "Llevar" por separado:
+  setItemType(item: any, tipo: 'Servirse' | 'Llevar') {
+    item.tipo = tipo;
+  }
+
+  // ======= Data loading =======
   loadProducts() {
     this.spinner.show();
     this.productsService.getAll(1).subscribe((res: any) => {
       this.spinner.hide();
       this.products = res.message.data || [];
-
-      console.log('Productos cargados:', this.products);
-      this.applyFilters(); // 🔥 Actualiza lista filtrada
+      this.applyFilters();
     });
   }
 
@@ -158,7 +220,6 @@ export class PosComponent implements OnInit {
     this.categoryService.getAll().subscribe((res: any) => {
       this.spinner.hide();
       this.categories = res.message.data || [];
-      console.log(' this.categories', this.categories);
     });
   }
 
@@ -167,13 +228,12 @@ export class PosComponent implements OnInit {
     this.paymentsService.getAll().subscribe((res: any) => {
       this.spinner.hide();
       this.payments = res || [];
-      console.log(' this.payments', this.payments);
     });
   }
 
+  // ======= Cliente =======
   findByIdentificationCustomer(): void {
     const identification = this.identificationCustomer?.trim();
-    console.log('identification', this.identificationCustomer);
 
     if (!identification || (identification.length !== 10 && identification.length !== 13)) {
       toast.warning('La identificación debe tener 10 o 13 digitos.');
@@ -184,7 +244,6 @@ export class PosComponent implements OnInit {
     this.customersService.get_cliente_by_identificacion(identification).subscribe({
       next: (res) => {
         this.customer = res.message;
-        console.log('Cliente encontrado:', res);
       },
       error: (err) => {
         console.error('Error al buscar cliente:', err);
@@ -194,11 +253,8 @@ export class PosComponent implements OnInit {
           tipo_identificacion = '05 - Cedula';
         } else if (this.identificationCustomer.length === 13) {
           tipo_identificacion = '04 - RUC';
-
-
         }
         this.clienteForm.patchValue({ identification: this.identificationCustomer, tipo_identificacion: tipo_identificacion });
-        //this.identificationCustomer = '';
         this.showCustomerModal = true;
         this.clienteForm.patchValue({
           num_identificacion: this.identificationCustomer,
@@ -212,38 +268,29 @@ export class PosComponent implements OnInit {
     });
   }
 
-
   selectFinalConsumer() {
     this.identificationCustomer = '9999999999999';
-
-    console.log('this.identificationCustomer', this.identificationCustomer);
     this.findByIdentificationCustomer();
-
   }
+
   guardarCliente() {
     this.submitted = true;
-    console.log('this.clienteForm', this.clienteForm);
-
-    if (this.clienteForm.invalid) {
-      return;
-    }
+    if (this.clienteForm.invalid) return;
 
     this.customersService.create(this.clienteForm.getRawValue()).subscribe({
       next: (res) => {
-        console.log('Cliente creado:', res);
         toast.success('Cliente creado exitosamente');
         this.cerrarModal();
         this.customer = res.message.data;
         this.identificationCustomer = this.customer.num_identificacion;
       },
       error: (err) => {
-        // Manejo de error específico de Frappe
         if (err.error && err.error._server_messages) {
           try {
             const messages = JSON.parse(err.error._server_messages);
             const mensaje = JSON.parse(messages[0]);
             const mensajeLimpio = this.stripHtml(mensaje.message);
-            toast.error('Error: ' + mensajeLimpio); // Mostrar mensaje sin HTML
+            toast.error('Error: ' + mensajeLimpio);
           } catch (e) {
             toast.error('Ocurrió un error al procesar la respuesta del servidor.');
             console.error('Error al parsear mensaje del servidor:', e);
@@ -253,53 +300,36 @@ export class PosComponent implements OnInit {
         } else {
           toast.error('Error desconocido al crear el cliente.');
         }
-
         console.error('Error al crear cliente:', err);
       }
     });
   }
 
-  // Función para eliminar etiquetas HTML del mensaje
   stripHtml(html: string): string {
     const div = document.createElement('div');
     div.innerHTML = html;
     return div.textContent || div.innerText || '';
   }
 
+  // ======= Productos / Carrito =======
+  applyFilters() {
+    const term = this.normalize(this.searchTerm);
+    const selectedCat = this.normalize(this.selectedCategory);
 
+    this.filteredProductList = (this.products || []).filter((product: any) => {
+      const prodCat = this.normalize(this.getProductCategoryName(product));
+      const okCat = !selectedCat || prodCat === selectedCat;
+      if (!term) return okCat;
 
-applyFilters() {
-  const term = this.normalize(this.searchTerm);
-  const selectedCat = this.normalize(this.selectedCategory);
-  console.log('selectedCat', selectedCat);
-
-  console.log('term', term);
-
-  this.filteredProductList = (this.products || []).filter((product: any) => {
-    // categoría del producto (tolerante a distintas formas)
-    const prodCat = this.normalize(this.getProductCategoryName(product));
-    const okCat = !selectedCat || prodCat === selectedCat;
-
-    if (!term) return okCat;
-
-    // nombres/desc posibles (name/nombre, description/descripcion)
-    const name = this.normalize(product?.nombre);
-    console.log('name', name);
-    console.log('term', term);
-
-    const desc = this.normalize(product?.description ?? product?.descripcion);
-console.log('desc', desc);
-    const okText = name.includes(term) || desc.includes(term);
-    return okCat && okText;
-  });
-  console.log('filteredProductList', this.filteredProductList);
-}
-
-
+      const name = this.normalize(product?.nombre ?? product?.name);
+      const desc = this.normalize(product?.description ?? product?.descripcion);
+      const okText = name.includes(term) || desc.includes(term);
+      return okCat && okText;
+    });
+  }
 
   addProduct(product: any) {
-    const existing = this.cart.find(i => i.name === product.name);
-
+    const existing = this.cart.find(i => (i.name ?? i.nombre) === (product.name ?? product.nombre));
     const price = this.toNumber(product.precio ?? product.price);
     const taxValue = this.getTaxPercent(product); // 0 o 15
 
@@ -309,9 +339,10 @@ console.log('desc', desc);
     } else {
       const newItem = {
         ...product,
+        nombre: product?.nombre ?? product?.name,
         price,
         quantity: 1,
-        tax_value: taxValue // en porcentaje (0 o 15) para backend
+        tax_value: taxValue
       };
       this.recalcItem(newItem);
       this.cart.push(newItem);
@@ -333,66 +364,26 @@ console.log('desc', desc);
     }
   }
 
-
-
-
   get subtotal(): number {
     return this.round2(this.cart.reduce((acc, it) => acc + this.toNumber(it.subtotal), 0));
   }
-
   get iva(): number {
     return this.round2(this.cart.reduce((acc, it) => acc + this.toNumber(it.iva), 0));
   }
-
   get total(): number {
     return this.round2(this.cart.reduce((acc, it) => acc + this.toNumber(it.total), 0));
   }
 
-
-
-  // finalizarVenta() {
-  //   if (!this.identificationCustomer || this.cart.length === 0) {
-  //     alert('Selecciona un cliente y agrega productos al carrito.');
-  //     return;
-  //   }
-
-  //   const order = {
-  //     customerId: this.customer.id,
-  //     items: this.cart.map(item => ({
-  //       productId: item.id,
-  //       quantity: item.quantity
-  //     })),
-  //     type: 'nota', // Solo guardamos como "nota"
-  //     createdAt: this.today
-  //   };
-
-  //   console.log('order', order);
-
-  //   this.ordersService.create(order).subscribe(() => {
-
-  //   });
-
-  //   this.ordersService.create(order).subscribe({
-  //     next: (res) => {
-  //       alert('Pedido guardado exitosamente. Puedes facturarlo más tarde.');
-  //       this.customer = null;
-  //       this.identificationCustomer = '';
-  //       this.cart = [];
-  //     },
-  //     error: (err) => {
-  //       console.error(err);
-  //       alert('Ocurrió un error al guardar el pedido.');
-  //     }
-  //   });
-  // }
-
-
-  // Método para abrir el modal
+  // ======= Pago (solo Cajero/Gerente) =======
   abrirModalPago() {
+    if (!this.permissions.canCharge) {
+      toast.warning('Este rol no puede cobrar. Envía la comanda a cocina.');
+      return;
+    }
+
     if (!this.customer) {
       toast.error('Selecciona un cliente.');
       this.identificationCustomer = '';
-
       return;
     }
     if (this.cart.length === 0) {
@@ -405,48 +396,38 @@ console.log('desc', desc);
     this.showPaymentModal = true;
   }
 
-calcularCambio() {
-  if (this.paymentMethod === '01') {
-    const recibido = Number(this.amountReceived);
-    if (Number.isFinite(recibido)) {
-      this.change = recibido - this.total;
-    } else {
-      this.change = 0;
+  calcularCambio() {
+    if (this.paymentMethod === '01') {
+      const recibido = Number(this.amountReceived);
+      if (Number.isFinite(recibido)) {
+        this.change = recibido - this.total;
+      } else {
+        this.change = 0;
+      }
     }
   }
-}
-
 
   confirmarPago(typePago: string) {
-    console.log('this.paymentMethod', this.paymentMethod);
-    console.log('this.amountReceived', this.amountReceived);
-    console.log('this.change', this.change);
-    console.log('this.cart', this.cart);
-    const payment = this.payments.find((p: any) => p.codigo === this.paymentMethod);
-    console.log('paymentCode', payment);
-    console.log('this.client', this.customer);
+    if (!this.permissions.canCharge) {
+      toast.warning('Este rol no puede cobrar.');
+      return;
+    }
 
+    const payment = this.payments.find((p: any) => p.codigo === this.paymentMethod);
     const TYPE_IDENTIFICATION_RUC = "07 - Consumidor Final";
     const UMBRAL = 50;
 
     const isConsumidorFinal = this.customer?.tipo_identificacion === TYPE_IDENTIFICATION_RUC;
-    const total = Number(this.total); // asegúrate que es número
+    const totalN = Number(this.total);
 
-
-    if (isConsumidorFinal && typePago === 'Factura' && total >= UMBRAL) {
+    if (isConsumidorFinal && typePago === 'Factura' && totalN >= UMBRAL) {
       toast.error(`El consumidor final no puede facturar por un monto mayor o igual a $${UMBRAL}.`);
       return;
     }
 
-
-    // if (this.paymentMethod === '01' && (this.amountReceived === null || this.change < 0)) {
-    //   toast.warning('Monto recibido insuficiente.');
-    //   return;
-    // }
-
     const order = {
       customer: this.customer?.name,
-      alias: this.alias, // o this.customer?.id si estás usando el ID
+      alias: this.alias,
       estado: typePago,
       total: this.total.toFixed(2),
       type_orden: this.orderType,
@@ -454,195 +435,203 @@ calcularCambio() {
       delivery_phone: this.deliveryPhone,
       fecha: this.today,
       items: this.cart.map(item => ({
-        product: item.name, // Asegúrate que sea el código tipo "PROD-0012"
+        product: item.name ?? item.nombre, // asegúrate que sea el código correcto
         qty: item.quantity,
-        rate: item.price, // o item.precio si ese es el campo
+        rate: item.price,
         tax_rate: item.tax_value
       })),
       payments: [
         {
-          formas_de_pago: payment?.name, // Esto es importante
+          formas_de_pago: payment?.name,
         }
       ]
     };
 
-
-
     if (typePago === 'Factura') {
       this.alertService.confirm('¿Deseas continuar con la factura?', 'Esta acción no se puede deshacer.').then((result) => {
         if (result.isConfirmed) {
-          console.log('Confirmado');
           this.spinner.show();
           this.ordersService.create_order_v2(order).pipe(finalize(() => this.spinner.hide()))
             .subscribe({
               next: (res: any) => {
-                console.log('Pedido guardado:', res);
-                const orderId = res.message?.name; // Asegúrate de que el ID del pedido se obtenga correctamente
+                const orderId = res.message?.name;
                 this.pendingOrderId = orderId;
-                this.spinner.hide();
-                console.log('orderId', orderId);
                 toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
-                // setTimeout(() => this.printCombinedTicket(orderId), 500);
                 this.openPrintModal(orderId);
               },
-              error: (err) => {
-                this.spinner.hide()
-
-              },
-              complete: () => {
-                this.spinner.hide();
-              }
-            }
-            );
-
-        } else {
-          console.log('Cancelado');
+              error: () => { },
+              complete: () => { }
+            });
         }
       });
-
-      return
+      return;
     }
+
     this.spinner.show();
     this.ordersService.create_order_v2(order).subscribe({
       next: (res) => {
-        console.log('Pedido guardado:', res);
-        const orderId = res.message?.name; // Asegúrate de que el ID del pedido se obtenga correctamente
-         this.pendingOrderId = orderId;
-         console.log('orderId', orderId);
-        this.spinner.hide();
+        const orderId = res.message?.name;
+        this.pendingOrderId = orderId;
         toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
-        // setTimeout(() => this.printCombinedTicket(orderId), 500);
         this.openPrintModal(orderId);
       },
       error: () => {
-        this.spinner.hide();
         toast.error('Error al guardar el pedido.');
-      }
+      },
+      complete: () => this.spinner.hide()
     });
+  }
 
-  };
+  // ======= Flujo Mesero (enviar a cocina) =======
+  enviarAComanda() {
+    if (!this.permissions.canSendToKitchen) {
+      toast.warning('Este rol no puede enviar a cocina.');
+      return;
+    }
+    if (this.cart.length === 0) {
+      toast.error('Agrega productos al carrito.');
+      return;
+    }
 
+    const order = {
+      // Para mesero no exigimos cliente
+      alias: this.alias,
+      estado: 'Nota Venta', // etiqueta para tu backend
+      total: this.total.toFixed(2), // puede no ser usado para cocina
+      type_orden: this.orderType,
+      delivery_address: this.deliveryAddress,
+      delivery_phone: this.deliveryPhone,
+      fecha: this.today,
+      items: this.cart.map(item => ({
+        product: item.name ?? item.nombre,
+        qty: item.quantity,
+        rate: item.price,
+        tax_rate: item.tax_value
+      })),
+      // sin payments
+    };
 
+    this.spinner.show();
+    this.ordersService.create_order_v2(order).subscribe({
+      next: (res: any) => {
+        const orderId = res.message?.name;
+        this.pendingOrderId = orderId;
+        toast.success('Comanda enviada a cocina.');
+        // Para mesero, por defecto solo comanda
+        this.printComanda(orderId);
+      },
+      error: () => {
+        toast.error('Error al enviar la comanda.');
+      },
+      complete: () => this.spinner.hide()
+    });
+  }
+
+  // ======= Impresiones =======
   showKitchenTicket = false;
   showReceipt = false;
 
   printCombinedTicket(orderId: string) {
-    // const order = 'http://207.180.197.160:1012' + this.printService.getOrderPdf(orderId);
     const order = this.url + this.printService.getOrderPdf(orderId);
-    console.log('order', order);
     const width = 800;
     const height = 800;
-
     const left = window.screenX + (window.innerWidth - width) / 2;
     const top = window.screenY + (window.innerHeight - height) / 2;
-
     const features = [
-      `width=${width}`,
-      `height=${height}`,
-      `left=${left}`,
-      `top=${top}`,
-      'toolbar=no',
-      'location=no',
-      'directories=no',
-      'status=no',
-      'menubar=no',
-      'scrollbars=yes',
-      'resizable=yes',
+      `width=${width}`, `height=${height}`, `left=${left}`, `top=${top}`,
+      'toolbar=no', 'location=no', 'directories=no', 'status=no',
+      'menubar=no', 'scrollbars=yes', 'resizable=yes',
     ];
-
     const printWindow = window.open(order, '_blank', features.join(','));
-
     if (!printWindow) {
       toast.error('No se pudo abrir la ventana de impresión');
       return;
     }
-
-
-    // printWindow.document.open();
-    // printWindow.document.close();
-
-    // Limpieza final del estado del POS
     this.clearPage();
   }
 
   printComanda(orderId: string) {
-    // const order = 'http://207.180.197.160:1012' + this.printService.getOrderPdf(orderId);
     const order = this.url + this.printService.getComanda(orderId);
-    console.log('order', order);
     const width = 800;
     const height = 800;
-
     const left = window.screenX + (window.innerWidth - width) / 2;
     const top = window.screenY + (window.innerHeight - height) / 2;
-
     const features = [
-      `width=${width}`,
-      `height=${height}`,
-      `left=${left}`,
-      `top=${top}`,
-      'toolbar=no',
-      'location=no',
-      'directories=no',
-      'status=no',
-      'menubar=no',
-      'scrollbars=yes',
-      'resizable=yes',
+      `width=${width}`, `height=${height}`, `left=${left}`, `top=${top}`,
+      'toolbar=no', 'location=no', 'directories=no', 'status=no',
+      'menubar=no', 'scrollbars=yes', 'resizable=yes',
     ];
-
     const printWindow = window.open(order, '_blank', features.join(','));
-
     if (!printWindow) {
       toast.error('No se pudo abrir la ventana de impresión');
       return;
     }
-
-
-    // printWindow.document.open();
-    // printWindow.document.close();
-
-    // Limpieza final del estado del POS
     this.clearPage();
   }
 
   printOrden(orderId: string) {
-    // const order = 'http://207.180.197.160:1012' + this.printService.getOrderPdf(orderId);
     const order = this.url + this.printService.getRecibo(orderId);
-    console.log('order', order);
     const width = 800;
     const height = 800;
-
     const left = window.screenX + (window.innerWidth - width) / 2;
     const top = window.screenY + (window.innerHeight - height) / 2;
-
     const features = [
-      `width=${width}`,
-      `height=${height}`,
-      `left=${left}`,
-      `top=${top}`,
-      'toolbar=no',
-      'location=no',
-      'directories=no',
-      'status=no',
-      'menubar=no',
-      'scrollbars=yes',
-      'resizable=yes',
+      `width=${width}`, `height=${height}`, `left=${left}`, `top=${top}`,
+      'toolbar=no', 'location=no', 'directories=no', 'status=no',
+      'menubar=no', 'scrollbars=yes', 'resizable=yes',
     ];
-
     const printWindow = window.open(order, '_blank', features.join(','));
-
     if (!printWindow) {
       toast.error('No se pudo abrir la ventana de impresión');
       return;
     }
-
-
-    // printWindow.document.open();
-    // printWindow.document.close();
-
-    // Limpieza final del estado del POS
     this.clearPage();
   }
 
+  // Abre el modal después de crear el pedido
+  openPrintModal(orderId: string) {
+    this.pendingOrderId = orderId;
+    // Para cajero deja 'ambas' por defecto; para mesero mostramos/forzamos comanda
+    this.printOption = this.roleName === 'Mesero' ? 'comanda' : 'ambas';
+    this.showPrintModal = true;
+  }
+
+  handlePrintSelection(option: 'comanda' | 'recibo' | 'ambas') {
+    if (!this.pendingOrderId) return;
+
+    // Mesero no puede imprimir recibo
+    if (this.roleName === 'Mesero' && option === 'recibo') {
+      toast.warning('El rol Mesero no puede imprimir recibo.');
+      return;
+    }
+    if (this.roleName === 'Mesero' && option === 'ambas') {
+      // En mesero "ambas" no aplica; fuerza comanda
+      option = 'comanda';
+    }
+
+    switch (option) {
+      case 'comanda':
+        this.printComanda(this.pendingOrderId);
+        break;
+      case 'recibo':
+        this.printOrden(this.pendingOrderId);
+        break;
+      case 'ambas':
+        this.printCombinedTicket(this.pendingOrderId);
+        break;
+    }
+
+    //this.showPrintModal = false;
+    //this.pendingOrderId = null;
+  }
+
+  closePrintModal() {
+    this.showPrintModal = false;
+    this.pendingOrderId = null;
+    this.clearPage();
+  }
+
+  // ======= Categorías / búsqueda =======
   onCategorySelected(category: string) {
     this.selectedCategory = category;
     this.applyFilters();
@@ -653,6 +642,7 @@ calcularCambio() {
     this.applyFilters();
   }
 
+  // ======= Modales / helpers =======
   cerrarModal() {
     this.showCustomerModal = false;
     this.submitted = false;
@@ -676,55 +666,46 @@ calcularCambio() {
     this.onCategorySelected('');
   }
 
+  // ======= Validaciones / utilidades =======
   identificacionLengthValidator(): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
       const tipo = this.clienteForm?.get('tipo_identificacion')?.value;
       const valor = control.value;
-      console.log('tipo', tipo);
-      console.log('valor', valor);
 
       if (!valor) return null;
-      if (tipo.slice(0, 2) === '05' && valor?.length !== 10) {
+      if (String(tipo).slice(0, 2) === '05' && valor?.length !== 10) {
         return { cedulaInvalida: true };
       }
-
-      if (tipo.slice(0, 2) === '04' && valor?.length !== 13) {
+      if (String(tipo).slice(0, 2) === '04' && valor?.length !== 13) {
         return { rucInvalido: true };
       }
-
-      return null; // válido
+      return null;
     };
   }
 
   getMaxLength(): number {
     const tipo = this.clienteForm?.get('tipo_identificacion')?.value;
-    if (tipo?.slice(0, 2) === '05') {
-      return 10; // cédula
-    }
-    return 13; // RUC u otros
+    if (String(tipo)?.slice(0, 2) === '05') return 10;
+    return 13;
   }
 
   private toNumber(v: any): number {
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
   }
-
   private round2(n: number): number {
     return Math.round((n + Number.EPSILON) * 100) / 100;
   }
-
-  /** Devuelve el % de IVA (0, 15, etc) desde el producto */
+  /** % IVA desde el producto */
   private getTaxPercent(p: any): number {
-    // prioriza tax_value; si no, intenta tax.value; si no, tax
     const v = Number(p?.tax_value ?? p?.tax?.value ?? p?.tax ?? 0);
     return Number.isFinite(v) ? v : 0;
   }
-
-  /** Recalcula subtotal, iva y total de un ítem del carrito */
+  /** Recalcula item */
   private recalcItem(item: any): void {
     const qty = this.toNumber(item.quantity);
     const price = this.toNumber(item.price);
-    const taxRate = this.toNumber(item.tax_value) / 100; // 0.15 si 15%
+    const taxRate = this.toNumber(item.tax_value) / 100;
     const subtotal = this.round2(qty * price);
     const iva = this.round2(subtotal * taxRate);
     item.subtotal = subtotal;
@@ -732,57 +713,24 @@ calcularCambio() {
     item.total = this.round2(subtotal + iva);
   }
 
-  // Abre el modal después de crear el pedido
-  openPrintModal(orderId: string) {
-    this.pendingOrderId = orderId;
-    this.printOption = 'ambas'; // valor por defecto
-    this.showPrintModal = true;
+  /** Normaliza texto */
+  private normalize(txt: any = ''): string {
+    return String(txt ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
   }
 
-handlePrintSelection(option: 'comanda' | 'recibo' | 'ambas') {
-  if (!this.pendingOrderId) return;
-
-  switch (option) {
-    case 'comanda':
-      this.printComanda(this.pendingOrderId);
-      break;
-    case 'recibo':
-      this.printOrden(this.pendingOrderId);
-      break;
-    case 'ambas':
-      this.printCombinedTicket(this.pendingOrderId);
-      break;
+  /** Nombre de categoría del producto */
+  private getProductCategoryName(p: any): string {
+    return (
+      p?.categoria ||
+      p?.category?.name ||
+      p?.category?.nombre ||
+      ''
+    );
   }
 
-  this.showPrintModal = false;
-  this.pendingOrderId = null;
-}
-
-
-closePrintModal() {
-  this.showPrintModal = false;
-  this.pendingOrderId = null;
-  this.clearPage();
-}
-/** Normaliza texto: sin tildes, en minúsculas y trim */
-private normalize(txt: any = ''): string {
-  return String(txt ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
-}
-
-/** Obtiene el nombre de categoría del producto, tolerando distintas estructuras */
-private getProductCategoryName(p: any): string {
-  return (
-    p?.categoria ||
-    p?.category?.name ||
-    p?.category?.nombre ||
-    ''
-  );
-}
-trackByProductId = (_: number, p: any) => p?.id || p?._id || p?.codigo || p?.name || p?.nombre;
-
-
+  trackByProductId = (_: number, p: any) => p?.id || p?._id || p?.codigo || p?.name || p?.nombre;
 }

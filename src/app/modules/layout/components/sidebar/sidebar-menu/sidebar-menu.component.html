@@ -1,8 +1,12 @@
-<div
+
+<!-- OCULTAR O EXPANDIR -->
+<!-- <div
   (mouseenter)="menuService.showSideBar = true"
   (mouseleave)="menuService.showSideBar = false"
   [ngClass]="{ expanded: menuService.showSideBar }"
->
+> -->
+<div (mouseenter)="menuService.showSideBar = true"
+[ngClass]="{ expanded: menuService.showSideBar }">
 <div *ngFor="let menu of menuService.pagesMenu">
   <!-- Grupo -->
   <div *ngIf="menuService.showSideBar" class="mx-2 flex items-center justify-between py-2">

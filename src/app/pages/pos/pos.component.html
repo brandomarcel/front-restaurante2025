@@ -5,58 +5,67 @@
 
             <!-- PRODUCTOS -->
             <div class="col-span-2 flex flex-col overflow-hidden">
-                <!-- Contenedor Cliente -->
+                <!-- Encabezado según rol -->
                 <div class="space-y-3">
-                    <!-- Encabezado: Título + Acciones -->
-                    <div class="flex items-center justify-between gap-3">
-                        <h2 class="text-lg sm:text-xl font-semibold text-primary">Cliente</h2>
+                    <!-- Encabezado Mesero -->
+                    <div *ngIf="roleName==='Mesero'" class="space-y-2">
+                        <h2 class="text-lg sm:text-xl font-semibold text-primary">Toma de pedido (Mesero)</h2>
+                        <input type="text" [(ngModel)]="alias" oninput="this.value = this.value.toUpperCase()" maxlength="20"
+                            class="w-full border rounded px-3 py-2 text-sm"
+                            placeholder="Alias / nombre para la mesa o entrega (opcional)" />
+                    </div>
 
-                        <!-- Acciones rápidas -->
-                        <div class="flex gap-2">
-                            <button (click)="showCustomerModal = true"
+                    <!-- Encabezado Caja/Gerente (cliente fiscal) -->
+                    <div *ngIf="roleName!=='Mesero' && permissions?.canSelectCustomer">
+                        <div class="flex items-center justify-between gap-3">
+                            <h2 class="text-lg sm:text-xl font-semibold text-primary">Cliente</h2>
+
+                            <div class="flex gap-2">
+                                <button (click)="showCustomerModal = true"
+                                    class="bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition min-h-[44px] flex items-center justify-center"
+                                    title="Nuevo cliente" aria-label="Nuevo cliente">
+                                    <fa-icon icon="user-plus"></fa-icon>
+                                </button>
+
+                                <button
+                                    class="bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition min-h-[44px]"
+                                    (click)="selectFinalConsumer()">
+                                    Consumidor Final
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Buscador (input + botones) -->
+                        <div class="flex items-stretch gap-2 mt-2">
+                            <input type="text" maxlength="13" appOnlyNumbers [(ngModel)]="identificationCustomer"
+                                placeholder="Ingrese el número de cédula o RUC"
+                                class="flex-1 min-w-0 rounded px-3 sm:px-4 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                                [disabled]="customer" aria-label="Número de identificación del cliente" />
+
+                            <button (click)="findByIdentificationCustomer()"
                                 class="bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition min-h-[44px] flex items-center justify-center"
-                                title="Nuevo cliente" aria-label="Nuevo cliente">
-                                <fa-icon icon="user-plus"></fa-icon>
+                                title="Buscar cliente" aria-label="Buscar cliente">
+                                <fa-icon icon="search"></fa-icon>
                             </button>
 
-                            <button
-                                class="bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition min-h-[44px]"
-                                (click)="selectFinalConsumer()">
-                                Consumidor Final
+                            <button (click)="identificationCustomer = '' ; customer = null"
+                                class="bg-red-500 text-white text-sm px-3 py-2 rounded hover:bg-red-600 transition min-h-[44px] flex items-center justify-center"
+                                title="Limpiar" aria-label="Limpiar">
+                                <fa-icon icon="times"></fa-icon>
                             </button>
                         </div>
-                    </div>
 
-                    <!-- Buscador (input + botones) -->
-                    <div class="flex items-stretch gap-2">
-                        <input type="text" maxlength="13" appOnlyNumbers [(ngModel)]="identificationCustomer"
-                            placeholder="Ingrese el número de cédula"
-                            class="flex-1 min-w-0 rounded px-3 sm:px-4 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
-                            [disabled]="customer" aria-label="Número de identificación del cliente" />
+                        <!-- Tarjeta del cliente -->
+                        <div *ngIf="customer"
+                            class="bg-blue-50 rounded-lg p-3 shadow-sm border border-blue-200 text-[13px] sm:text-sm mt-2">
+                            <h4 class="font-bold text-blue-800 flex items-center gap-2">
+                                <span>👤</span> {{ customer?.nombre || '—' }}
+                            </h4>
 
-                        <button (click)="findByIdentificationCustomer()"
-                            class="bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition min-h-[44px] flex items-center justify-center"
-                            title="Buscar cliente" aria-label="Buscar cliente">
-                            <fa-icon icon="search"></fa-icon>
-                        </button>
-
-                        <button (click)="identificationCustomer = '' ; customer = null"
-                            class="bg-red-500 text-white text-sm px-3 py-2 rounded hover:bg-red-600 transition min-h-[44px] flex items-center justify-center"
-                            title="Limpiar" aria-label="Limpiar">
-                            <fa-icon icon="times"></fa-icon>
-                        </button>
-                    </div>
-
-                    <!-- Tarjeta del cliente -->
-                    <div *ngIf="customer"
-                        class="bg-blue-50 rounded-lg p-3 shadow-sm border border-blue-200 text-[13px] sm:text-sm">
-                        <h4 class="font-bold text-blue-800 flex items-center gap-2">
-                            <span>👤</span> {{ customer?.nombre || '—' }}
-                        </h4>
-
-                        <div *ngIf="customer?.nombre && customer?.nombre !== 'Consumidor Final'" class="mt-1">
-                            <p class="text-blue-700 text-xs leading-5 break-words">{{ customer?.telefono }}</p>
-                            <p class="text-blue-700 text-xs leading-5 break-all">{{ customer?.correo }}</p>
+                            <div *ngIf="customer?.nombre && customer?.nombre !== 'Consumidor Final'" class="mt-1">
+                                <p class="text-blue-700 text-xs leading-5 break-words">{{ customer?.telefono }}</p>
+                                <p class="text-blue-700 text-xs leading-5 break-all">{{ customer?.correo }}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -93,11 +102,12 @@
                 <!-- Grid de productos (scrollable) -->
                 <div class="max-h-[48vh] sm:max-h-[50vh] overflow-y-auto pr-1">
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-3 pb-5">
-                        <div *ngFor="let product of filteredProductList ;trackBy: trackByProductId" (click)="addProduct(product)" [ngClass]="{
-                'cursor-pointer rounded border p-2 shadow-sm transition text-[12px] sm:text-xs': true,
-                'hover:bg-muted': !product.is_out_of_stock,
-                'border-red-500 bg-red-50': product.is_out_of_stock
-              }">
+                        <div *ngFor="let product of filteredProductList ;trackBy: trackByProductId"
+                            (click)="!product.is_out_of_stock && addProduct(product)" [ngClass]="{
+                  'cursor-pointer rounded border p-2 shadow-sm transition text-[12px] sm:text-xs': true,
+                  'hover:bg-muted': !product.is_out_of_stock,
+                  'border-red-500 bg-red-50 opacity-70 pointer-events-none': product.is_out_of_stock
+                }">
                             <h3 class="font-semibold text-foreground leading-snug">
                                 {{ product.nombre }}
                             </h3>
@@ -111,10 +121,10 @@
                                 <span *ngIf="product.descripcion">({{ product.descripcion }})</span>
                             </p>
 
-                            <p class="text-muted-foreground text-base sm:text-lg">
+                            <p class="text-muted-foreground text-base sm:text-lg" *ngIf="permissions?.canSeeMoney">
                                 ${{ product.precio | number: '1.2-2' }}
                             </p>
-                            <p class="text-yellow-600 text-[10px] italic mb-1">
+                            <p class="text-yellow-600 text-[10px] italic mb-1" *ngIf="permissions?.canSeeMoney">
                                 ({{ product.tax_value }}% IVA)
                             </p>
                         </div>
@@ -140,7 +150,7 @@
                     </div>
                 </div>
 
-                <!-- Tipo de Orden -->
+                <!-- Tipo de Orden (visible para todos) -->
                 <div class="mt-2">
                     <label class="block text-xs font-semibold text-gray-700 mb-1">Tipo de orden</label>
                     <div class="inline-flex rounded-md border overflow-hidden w-full sm:w-auto">
@@ -179,10 +189,14 @@
                 <ng-container *ngIf="cart.length > 0; else emptyCart">
                     <div class="flex-grow overflow-auto space-y-1 max-h-[42vh] sm:max-h-[50vh] pr-1">
                         <div *ngFor="let item of cart" class="flex justify-between items-center border-b py-2">
-                            <span class="font-medium text-foreground">
-                                {{ item.nombre }} {{ item.descripcion ? '(' + item.descripcion + ')' : '' }}
-                                <span class="text-foreground font-normal">x{{ item.quantity }}</span>
-                            </span>
+                            <div class="min-w-0">
+                                <span class="font-medium text-foreground block">
+                                    {{ item.nombre || item.name }} {{ item.descripcion ? '(' + item.descripcion + ')' :
+                                    '' }}
+                                    <span class="text-foreground font-normal">x{{ item.quantity }}</span>
+                                </span>
+                            </div>
+
                             <div class="flex items-center gap-2">
                                 <button (click)="decrease(item)"
                                     class="w-8 h-8 rounded-full border text-foreground hover:bg-gray-100 flex items-center justify-center"
@@ -196,23 +210,36 @@
                                     <fa-icon icon="plus"></fa-icon>
                                 </button>
 
-                                <strong class="ml-2 text-foreground">${{ item.total | number: '1.2-2' }}</strong>
+                                <strong *ngIf="permissions?.canSeeMoney" class="ml-2 text-foreground">
+                                    ${{ item.total | number: '1.2-2' }}
+                                </strong>
                             </div>
                         </div>
                     </div>
 
-                    <!-- TOTALES -->
-                    <div class="pt-3 space-y-1 text-[13px] sm:text-xs text-foreground">
+                    <!-- TOTALES (solo caja/admin) -->
+                    <div *ngIf="permissions?.canSeeMoney" class="pt-3 space-y-1 text-[13px] sm:text-xs text-foreground">
                         <p>Subtotal: ${{ subtotal | number: '1.2-2' }}</p>
                         <p>IVA (15%): ${{ iva | number: '1.2-2' }}</p>
                         <p class="text-base font-bold">Total: ${{ total | number: '1.2-2' }}</p>
                     </div>
 
                     <!-- BOTONES -->
-                    <div class="space-y-2">
-                        <button (click)="abrirModalPago()
-              " class="w-full rounded bg-primary px-4 py-3 text-white font-semibold hover:bg-primary/90 text-sm min-h-[44px]">
+                    <!-- Caja/Admin: cobrar -->
+                    <div *ngIf="permissions?.canCharge" class="space-y-2">
+                        <button (click)="abrirModalPago()"
+                            class="w-full rounded bg-primary px-4 py-3 text-white font-semibold hover:bg-primary/90 text-sm min-h-[44px]">
                             Crear Orden
+                        </button>
+                    </div>
+
+                    <!-- Mesero: enviar a cocina -->
+                   
+                    <div *ngIf="roleName==='Mesero' && permissions?.canSendToKitchen" class="space-y-2">
+
+                        <button (click)="enviarAComanda()"
+                            class="w-full rounded bg-primary px-4 py-3 text-white font-semibold hover:bg-primary/90 text-sm min-h-[44px]">
+                            Enviar a cocina
                         </button>
                     </div>
                 </ng-container>
@@ -225,9 +252,9 @@
     </div>
 </div>
 
-<!-- MODAL DE NUEVO CLIENTE -->
-<div *ngIf="showCustomerModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-3" role="dialog"
-    aria-modal="true">
+<!-- MODAL DE NUEVO CLIENTE (solo caja/admin) -->
+<div *ngIf="showCustomerModal && roleName!=='Mesero' && permissions?.canSelectCustomer"
+    class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-3" role="dialog" aria-modal="true">
     <div
         class="bg-white w-full max-w-md rounded shadow-lg p-4 text-[13px] sm:text-xs relative max-h-[90dvh] overflow-y-auto">
         <button class="absolute top-2 right-3 text-lg" (click)="showCustomerModal = false"
@@ -239,8 +266,7 @@
             <div>
                 <label class="block text-sm font-medium">Tipo de Identificación</label>
                 <select formControlName="tipo_identificacion" class="w-full border rounded px-3 py-2 text-sm">
-                    <!-- <option value="07 - Consumidor Final">Consumidor Final</option> -->
-                    <option value="05 - Cedula">Cédula</option>
+                    <option value="05 - Cédula">Cédula</option>
                     <option value="04 - RUC">RUC</option>
                 </select>
                 <div *ngIf="f['tipo_identificacion'].invalid && submitted" class="text-red-500 text-sm">
@@ -292,7 +318,7 @@
             <div>
                 <label class="block text-sm font-medium">Dirección</label>
                 <input type="text" formControlName="direccion" class="w-full border rounded px-3 py-2 text-sm" />
-                <div *ngIf="f['direccion'].invalid && submitted" class="text-red-500 text-sm">Dirección inválido.</div>
+                <div *ngIf="f['direccion'].invalid && submitted" class="text-red-500 text-sm">Dirección inválida.</div>
             </div>
 
             <!-- Botón -->
@@ -306,19 +332,19 @@
     </div>
 </div>
 
-<!-- MODAL DE PAGO -->
-<div *ngIf="showPaymentModal" class="fixed inset-0 z-50" role="dialog" aria-modal="true">
+<!-- MODAL DE PAGO (solo caja/admin) -->
+<div *ngIf="showPaymentModal && permissions?.canCharge" class="fixed inset-0 z-50" role="dialog" aria-modal="true">
     <!-- backdrop -->
     <div class="absolute inset-0 bg-black/40" (click)="showPaymentModal = false" aria-hidden="true"></div>
 
     <!-- contenedor -->
     <div class="relative mx-auto w-full h-dvh md:h-auto md:max-h-[90dvh] max-w-5xl
-           md:rounded-lg bg-white shadow-2xl
-           md:top-1/2 md:-translate-y-1/2
-           md:px-6 md:py-6
-           flex flex-col
-           p-safe">
-        <!-- Header (sticky en mobile) -->
+              md:rounded-lg bg-white shadow-2xl
+              md:top-1/2 md:-translate-y-1/2
+              md:px-6 md:py-6
+              flex flex-col
+              p-safe">
+        <!-- Header -->
         <div class="sticky top-0 z-10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b">
             <div class="px-4 py-3 md:px-0 md:py-0 md:border-none flex items-center justify-center">
                 <h2 class="text-lg md:text-2xl font-bold text-gray-800">Finalizar Pedido</h2>
@@ -330,7 +356,7 @@
             </button>
         </div>
 
-        <!-- Contenido desplazable -->
+        <!-- Contenido -->
         <div class="flex-1 overflow-y-auto px-4 md:px-0">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 py-4">
                 <!-- Columna izquierda -->
@@ -343,6 +369,7 @@
                             <p class="text-blue-600 text-xs break-all">{{ customer?.correo }}</p>
                         </div>
                     </div>
+
                     <div class="mt-2 text-xs">
                         <span class="text-gray-600">Tipo de orden:</span>
                         <span class="font-semibold">{{ orderType }}</span>
@@ -357,7 +384,7 @@
                         <h3 class="text-base md:text-lg font-semibold text-gray-700 mb-2">🧾 Detalle del Pedido</h3>
 
                         <div *ngIf="cart.length > 0; else noItems" class="space-y-3 text-xs">
-                            <div *ngFor="let item of cart; "
+                            <div *ngFor="let item of cart;"
                                 class="flex justify-between items-center border-b border-gray-200 pb-2">
                                 <div class="min-w-0">
                                     <p class="font-medium text-gray-800 truncate">
@@ -397,7 +424,7 @@
                             Pago</label>
                         <select id="payment-method" [(ngModel)]="paymentMethod" (change)="calcularCambio()"
                             class="w-full border border-gray-300 rounded-md px-3 md:px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary">
-                            <option [value]="item.codigo" *ngFor="let item of payments; ">
+                            <option [value]="item.codigo" *ngFor="let item of payments;">
                                 {{ item.description || item.nombre }}
                             </option>
                         </select>
@@ -427,7 +454,7 @@
 
                     <div>
                         <label for="alias-input" class="sr-only">Alias para la entrega</label>
-                        <input id="alias-input" type="text" [(ngModel)]="alias" maxlength="20"
+                        <input id="alias-input" type="text" oninput="this.value = this.value.toUpperCase()" [(ngModel)]="alias" maxlength="20"
                             class="w-full border border-gray-300 rounded-md px-3 md:px-4 py-3 text-xl font-semibold text-center text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
                             placeholder="Nombre/alias para la entrega (Opcional)" />
                     </div>
@@ -435,7 +462,7 @@
             </div>
         </div>
 
-        <!-- Footer (sticky) -->
+        <!-- Footer -->
         <footer class="w-full">
             <div class="sticky bottom-0 z-10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-t">
                 <div class="px-4 py-3 md:px-0 md:py-4 flex flex-col md:flex-row md:justify-end gap-2 md:gap-4">
@@ -454,37 +481,38 @@
 </div>
 
 <!-- MODAL: ELECCIÓN DE IMPRESIÓN -->
-<div *ngIf="showPrintModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-3"
-    (click)="showPrintModal=false " role="dialog" aria-modal="true">
-    <div class="bg-white w-full max-w-md rounded shadow-lg p-5 sm:p-6 text-center relative"
-        (click)="$event.stopPropagation()">
-        <button class="absolute top-2 right-3 text-lg" (click)="closePrintModal()" aria-label="Cerrar">×</button>
+<div *ngIf="showPrintModal"
+     class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-3"
+     role="dialog" aria-modal="true">
+  <div class="bg-white w-full max-w-md rounded shadow-lg p-5 sm:p-6 text-center relative"
+       (click)="$event.stopPropagation()">
+    <button class="absolute top-2 right-3 text-lg" (click)="closePrintModal()" aria-label="Cerrar">×</button>
 
-        <h3 class="text-base sm:text-lg font-semibold mb-3 sm:mb-4">¿Qué deseas imprimir?</h3>
-        <p class="text-gray-600 text-sm mb-5 sm:mb-6">Selecciona una opción para continuar.</p>
+    <h3 class="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
+      {{ roleName==='Mesero' ? '¿Enviar a cocina?' : '¿Qué deseas imprimir?' }}
+    </h3>
+    <p class="text-gray-600 text-sm mb-5 sm:mb-6">
+      {{ roleName==='Mesero' ? 'Selecciona cómo enviar la comanda.' : 'Selecciona una opción para continuar.' }}
+    </p>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-            <button
-                class="bg-blue-500 hover:bg-blue-600 text-white py-3 sm:py-4 rounded-lg text-base font-medium active:scale-95 transition min-h-[44px]"
-                (click)="handlePrintSelection('comanda')">
-                Comanda
-            </button>
-
-            <button
-                class="bg-green-500 hover:bg-green-600 text-white py-3 sm:py-4 rounded-lg text-base font-medium active:scale-95 transition min-h-[44px]"
-                (click)="handlePrintSelection('recibo')">
-                Recibo
-            </button>
-
-            <button
-                class="bg-purple-500 hover:bg-purple-600 text-white py-3 sm:py-4 rounded-lg text-base font-medium active:scale-95 transition min-h-[44px]"
-                (click)="handlePrintSelection('ambas')">
-                Ambas
-            </button>
-        </div>
-
-        <div class="pt-5 sm:pt-6">
-            <button class="text-gray-500 text-sm underline min-h-[40px]" (click)="closePrintModal()">Cancelar</button>
-        </div>
+    <!-- Opciones Caja/Gerente -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3" *ngIf="roleName!=='Mesero'">
+      <button class="bg-blue-500 hover:bg-blue-600 text-white py-3 sm:py-4 rounded-lg text-base font-medium active:scale-95 transition min-h-[44px]"
+              (click)="handlePrintSelection('comanda')">Comanda</button>
+      <button class="bg-green-500 hover:bg-green-600 text-white py-3 sm:py-4 rounded-lg text-base font-medium active:scale-95 transition min-h-[44px]"
+              (click)="handlePrintSelection('recibo')">Recibo</button>
+      <button class="bg-purple-500 hover:bg-purple-600 text-white py-3 sm:py-4 rounded-lg text-base font-medium active:scale-95 transition min-h-[44px]"
+              (click)="handlePrintSelection('ambas')">Ambas</button>
     </div>
+
+    <!-- Opción Mesero: solo comanda -->
+    <div class="grid grid-cols-1 gap-2 sm:gap-3" *ngIf="roleName==='Mesero'">
+      <button class="bg-blue-500 hover:bg-blue-600 text-white py-3 sm:py-4 rounded-lg text-base font-medium active:scale-95 transition min-h-[44px]"
+              (click)="handlePrintSelection('comanda')">Comanda</button>
+    </div>
+
+    <div class="pt-5 sm:pt-6">
+      <button class="text-gray-500 text-sm underline min-h[40px]" (click)="closePrintModal()">Cancelar</button>
+    </div>
+  </div>
 </div>

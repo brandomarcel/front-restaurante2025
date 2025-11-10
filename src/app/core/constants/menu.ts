@@ -34,12 +34,12 @@ export class Menu {
         },
         {
           icon: 'assets/icons/tablericons/file-invoice.svg',
-          label: 'Lista de Facturas',
+          label: 'Lista Facturas',
           route: '/dashboard/invoices',
         },
         {
           icon: 'assets/icons/tablericons/file-invoice.svg',
-          label: 'Lista de Notas de Crédito',
+          label: 'Lista Notas Crédito',
           route: '/dashboard/credit-notes',
         },
       ],
@@ -97,7 +97,7 @@ export class Menu {
         },
         {
           icon: 'assets/icons/tablericons/shopping-bag.svg',
-          label: 'Lista de Órdenes',
+          label: 'Lista Órdenes',
           route: '/dashboard/orders',
         },
         {
@@ -122,7 +122,7 @@ export class Menu {
         {
           allowedRoles: ['CAJERO'],
           icon: 'assets/icons/tablericons/shopping-bag.svg',
-          label: 'Lista de Órdenes',
+          label: 'Lista Órdenes',
           route: '/dashboard/orders',
         },
 
