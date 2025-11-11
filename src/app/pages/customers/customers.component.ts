@@ -83,7 +83,10 @@ export class CustomersComponent implements OnInit {
         const mensaje: any = this.frappeErrorService.handle(err);
         this.alertService.error(mensaje);
         console.error('Error al cargar clientes', err);
-      }
+      },
+        complete: () => {
+          this.spinner.hide();
+        }
     });
   }
 
@@ -154,6 +157,9 @@ export class CustomersComponent implements OnInit {
           const mensaje: any = this.frappeErrorService.handle(error);
           this.alertService.error(mensaje);
           this.spinner.hide();
+        },
+        complete: () => {
+          this.spinner.hide();
         }
       });
     } else {
@@ -167,7 +173,11 @@ export class CustomersComponent implements OnInit {
         },
         error: (error: any) => {
           const mensaje: any = this.frappeErrorService.handle(error);
+          console.log('Error al crear cliente', error);
           this.alertService.error(mensaje);
+          this.spinner.hide();
+        },
+        complete: () => {
           this.spinner.hide();
         }
       });

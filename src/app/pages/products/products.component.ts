@@ -56,13 +56,16 @@ export class ProductsComponent implements OnInit {
         console.log('res', res);
         this.productos = res.message.data || [];
         this.productosFiltradosList = res.message.data; // Inicializar la lista filtrada
-        this.productosFiltradosList.sort((a, b) => a.name.localeCompare(b.name));
+        this.productosFiltradosList.sort((a, b) => a.nombre.localeCompare(b.nombre));
         console.log('Productos cargados:', this.productos);
       },
       error: (error: any) => {
         const mensaje: any = this.frappeErrorService.handle(error);
         this.alertService.error(mensaje);
-      }
+      },
+        complete: () => {
+          this.spinner.hide();
+        }
     });
   }
 
@@ -153,7 +156,10 @@ export class ProductsComponent implements OnInit {
         const mensaje: any = this.frappeErrorService.handle(error);
         this.alertService.error(mensaje);
         this.spinner.hide();
-      }
+      },
+        complete: () => {
+          this.spinner.hide();
+        }
     });
   }
 
@@ -175,7 +181,10 @@ export class ProductsComponent implements OnInit {
         const mensaje: any = this.frappeErrorService.handle(err);
         this.alertService.error(mensaje);
         this.spinner.hide();
-      }
+      },
+        complete: () => {
+          this.spinner.hide();
+        }
     });
   }
 
@@ -191,6 +200,9 @@ export class ProductsComponent implements OnInit {
         error: (err) => {
           const mensaje: any = this.frappeErrorService.handle(err);
           this.alertService.error(mensaje);
+          this.spinner.hide();
+        },
+        complete: () => {
           this.spinner.hide();
         }
       });

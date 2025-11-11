@@ -16,8 +16,9 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-2 w-full">
       <!-- Usuario -->
       <ng-select class="ng-select-tailwind" [(ngModel)]="filters.usuario" placeholder="Usuario" [items]="usuarios"
-        bindLabel="email" bindValue="email" (change)="buscar()">
+        bindLabel="email" bindValue="email" (change)="buscar()" placeholder="Busca y agrega un ítem">
       </ng-select>
+  
 
       <!-- Desde -->
       <input type="date" class="input" [(ngModel)]="filters.desde" />

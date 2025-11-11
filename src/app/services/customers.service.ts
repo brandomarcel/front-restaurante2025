@@ -73,13 +73,9 @@ getAll(isactive?: number) {
   // }
 
   create(data: Omit<any, 'name'>): Observable<any> {
-    return this.http.post<any>(`${this.urlBase}.create_cliente`, data).pipe(
-          catchError((error) => {
-            const msg = this.frappeErr.handle(error) || 'Error al crear el cliente.';
-            toast.error(msg);
-            return EMPTY;
-          })
-        );
+    return this.http.post<any>(`${this.urlBase}.create_cliente`, data, {
+      withCredentials: true
+    });
       }
   update(data: any) {
     return this.http.put(`${this.urlBase}.update_cliente`, data, {

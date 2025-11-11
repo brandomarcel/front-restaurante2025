@@ -56,8 +56,9 @@ export class Menu {
           route: '/caja',
           children: [
             { label: 'Apertura', route: '/caja/apertura' },
-            { label: 'Cierre', route: '/caja/cierre' },
             { label: 'Retiros', route: '/caja/retiro' },
+            { label: 'Cierre', route: '/caja/cierre' },
+            
           ],
         },
       ],

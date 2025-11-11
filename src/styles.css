@@ -218,7 +218,7 @@ select {
 
 /* NG-SELECT estilos */
 .ng-select-tailwind .ng-select-container {
-  @apply bg-white border border-slate-300 rounded-md px-2 py-1 h-auto min-h-[2rem] shadow-none;
+  @apply bg-white border border-slate-300 rounded-md px-2 py-1 h-auto min-h-[2.5rem] shadow-none;
   font-size: 0.875rem; /* text-xs */
   line-height: 1.25rem;
 }

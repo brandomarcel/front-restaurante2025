@@ -11,7 +11,10 @@
     </div>
 
     <div class="flex gap-2">
-      <button class="btn btn-primary" (click)="abrirModal()">+ Nuevo Producto</button>
+    
+       <app-button full impact="bold" tone="primary" shape="rounded" size="medium" (click)="abrirModal()">
+        + Nuevo Producto
+      </app-button>
     </div>
   </div>
 
@@ -35,7 +38,7 @@
   </div>
 
   <!-- Tabla -->
-  <ng-container *ngIf="productosFiltradosList?.length; else emptyProducts">
+  <ng-container *ngIf="productosFiltradosList.length; else emptyProducts">
     <div class="app-table-wrap">
       <table class="app-table">
         <thead class="app-thead">

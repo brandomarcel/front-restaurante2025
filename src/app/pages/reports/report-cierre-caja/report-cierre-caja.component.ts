@@ -20,7 +20,7 @@ export class ReportCierreCajaComponent implements OnInit {
 
   // Filtros
   filters = {
-    usuario: '',
+    usuario: null,
     desde: '',
     hasta: ''
   };
@@ -50,6 +50,8 @@ export class ReportCierreCajaComponent implements OnInit {
 
     this.buscar(); // Carga inicial
     this.today = this.utilsService.getSoloFechaEcuador();
+    this.filters.desde = this.today;
+    this.filters.hasta = this.today;
   }
 
 
@@ -84,7 +86,7 @@ export class ReportCierreCajaComponent implements OnInit {
   /** 🔍 Buscar cierres según filtros */
   buscar(): void {
     this.cajasService.obtenerReporteCierres(
-      this.filters.usuario,
+      this.filters.usuario || '',
       this.filters.desde,
       this.filters.hasta
     ).subscribe({

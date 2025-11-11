@@ -10,9 +10,10 @@
             </div>
         </div>
 
-        <button class="btn btn-primary" (click)="abrirModal()">
+        <app-button full impact="bold" tone="primary" shape="rounded" size="medium" (click)="abrirModal()">
             + Nuevo Cliente
-        </button>
+        </app-button>
+
     </div>
 
     <!-- Filtros -->
@@ -49,17 +50,17 @@
                         <td class="app-td">{{ c.num_identificacion }}</td>
                         <td class="app-td">{{ c.telefono || '—' }}</td>
                         <td class="app-td">{{ c.correo || '—' }}</td>
-                           <td class="app-td">
-              <span class="badge" [ngClass]="{
+                        <td class="app-td">
+                            <span class="badge" [ngClass]="{
                       'badge-green':  c.isactive,
                       'badge-red':    !c.isactive
                     }">
-                {{ c.isactive ? 'Activo' : 'Inactivo' }}
-         
-              </span>
-            </td>
-                                    <td class="app-td text-center">
-              <div class="inline-flex gap-2 ">
+                                {{ c.isactive ? 'Activo' : 'Inactivo' }}
+
+                            </span>
+                        </td>
+                        <td class="app-td text-center">
+                            <div class="inline-flex gap-2 ">
                                 <button class="btn btn-outline" (click)="abrirModal(c)">✏️ Editar</button>
                                 <button class="btn btn-warn" (click)="delete(c.name)">🗑️ Eliminar</button>
                             </div>
