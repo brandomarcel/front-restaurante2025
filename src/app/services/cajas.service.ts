@@ -1,12 +1,16 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { catchError, shareReplay } from 'rxjs';
 import { environment } from 'src/environments/environment';
+import { FrappeErrorService } from '../core/services/frappe-error.service';
 
 @Injectable({ providedIn: 'root' })
 export class CajasService {
   private readonly apiUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient,
+    private frappeErrorService: FrappeErrorService
+  ) { }
 
   /** 📦 Obtener categorías (ejemplo que ya tenías) */
   getAllCategorias() {
@@ -37,7 +41,10 @@ export class CajasService {
   /** 📊 Obtener datos automáticos para el cierre de caja */
   getDatosCierre(usuario: string) {
     const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.cierre_de_caja.cierre_de_caja.calcular_datos_para_cierre`;
-    return this.http.get<any>(`${url}?usuario=${usuario}`, { withCredentials: true });
+    return this.http.get<any>(`${url}?usuario=${usuario}`, { withCredentials: true }).pipe(
+      catchError((e) => this.frappeErrorService.handle(e)),
+      shareReplay(1)
+    );
   }
 
   /** ✅ Crear el cierre de caja */
@@ -49,35 +56,35 @@ export class CajasService {
 
 
   /** Obtener retiros del turno actual */
-getRetirosPorApertura(aperturaId: string) {
-  const filters = encodeURIComponent(JSON.stringify([
-    ["relacionado_a", "=", aperturaId]
-  ]));
-  const fields = encodeURIComponent(JSON.stringify(["name", "fecha_hora", "motivo", "monto"]));
-  const url = `/api/resource/Retiro de Caja?fields=${fields}&filters=${filters}&order_by=fecha_hora desc`;
-  return this.http.get<any>(url, { withCredentials: true });
-}
+  getRetirosPorApertura(aperturaId: string) {
+    const filters = encodeURIComponent(JSON.stringify([
+      ["relacionado_a", "=", aperturaId]
+    ]));
+    const fields = encodeURIComponent(JSON.stringify(["name", "fecha_hora", "motivo", "monto"]));
+    const url = `/api/resource/Retiro de Caja?fields=${fields}&filters=${filters}&order_by=fecha_hora desc`;
+    return this.http.get<any>(url, { withCredentials: true });
+  }
 
 
-eliminarRetiro(name: string) {
-  return this.http.delete(`/api/resource/Retiro de Caja/${name}`, {
-    withCredentials: true
-  });
-}
+  eliminarRetiro(name: string) {
+    return this.http.delete(`/api/resource/Retiro de Caja/${name}`, {
+      withCredentials: true
+    });
+  }
 
 
-/** 📄 Obtener reporte de cierres de caja */
-obtenerReporteCierres(usuario?: string, desde?: string, hasta?: string) {
-  let params: any = {};
-  if (usuario) params.usuario = usuario;
-  if (desde) params.desde = desde;
-  if (hasta) params.hasta = hasta;
+  /** 📄 Obtener reporte de cierres de caja */
+  obtenerReporteCierres(usuario?: string, desde?: string, hasta?: string) {
+    let params: any = {};
+    if (usuario) params.usuario = usuario;
+    if (desde) params.desde = desde;
+    if (hasta) params.hasta = hasta;
 
-  const query = new URLSearchParams(params).toString();
-  const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.cierre_de_caja.cierre_de_caja.obtener_reporte_cierres?${query}`;
+    const query = new URLSearchParams(params).toString();
+    const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.cierre_de_caja.cierre_de_caja.obtener_reporte_cierres?${query}`;
 
-  return this.http.get<any>(url, { withCredentials: true });
-}
+    return this.http.get<any>(url, { withCredentials: true });
+  }
 
 
 

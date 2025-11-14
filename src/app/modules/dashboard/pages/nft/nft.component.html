@@ -1,172 +1,96 @@
-<div>
-  <!-- Header -->
-  <!-- <app-nft-header></app-nft-header> -->
-  <!-- end Header -->
+<div class="p-4 bg-gray-100 ">
+  <h1 class="text-2xl font-bold mb-4 text-gray-800">📊 <span class="text-blue-600">{{userData?.first_name}}</span></h1>
 
-  <div class="p-6 bg-gray-100 min-h-screen">
-    <h1 class="text-3xl font-bold mb-6 text-gray-800">📊 Bienvenido {{userData?.first_name}} </h1>
+<!-- Componente Avisos -->
+  <app-avisos [avisos]="avisos" (eliminar)="eliminarAviso($event)" class="mb-4 block"></app-avisos>
 
-    <!-- Métricas principales -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-      <!-- Card: Pedidos del Dia -->
-      <div class="bg-white rounded-xl shadow-md p-5 flex items-center gap-4">
-        <div class="bg-green-100 p-3 rounded-full">
-          <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+  <!-- Métricas principales - Más compacto -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+    <!-- Pedidos del Dia -->
+    <div class="bg-white rounded-lg shadow-sm p-3">
+      <div class="flex items-center gap-2">
+        <div class="bg-green-100 p-2 rounded">
+          <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h11M9 21V3m12 10h-4m4 0l-2-2m2 2l-2 2" />
           </svg>
         </div>
-        <div>
-          <p class="text-gray-500 text-sm">Pedidos del Dia</p>
-          <p class="text-2xl font-bold text-gray-800">{{ totalOrdersToday }}</p>
+        <div class="min-w-0">
+          <p class="text-xs text-gray-500">Pedidos</p>
+          <p class="text-lg font-bold text-gray-800">{{ totalOrdersToday }}</p>
         </div>
       </div>
+    </div>
 
-      <!-- Card: Ventas Totales -->
-      <div class="bg-white rounded-xl shadow-md p-5 flex items-center gap-4">
-        <div class="bg-blue-100 p-3 rounded-full">
-          <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round"
-              d="M12 8c-1.657 0-3 1.343-3 3 0 1.38.938 2.5 2.188 2.875C11.5 14.563 11 15.75 11 17h2c0-1.25-.5-2.438-1.188-3.125C13.063 13.5 14 12.38 14 11c0-1.657-1.343-3-3-3z" />
+    <!-- Ventas Totales -->
+    <div class="bg-white rounded-lg shadow-sm p-3">
+      <div class="flex items-center gap-2">
+        <div class="bg-blue-100 p-2 rounded">
+          <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 1.343-3 3 0 1.38.938 2.5 2.188 2.875C11.5 14.563 11 15.75 11 17h2c0-1.25-.5-2.438-1.188-3.125C13.063 13.5 14 12.38 14 11c0-1.657-1.343-3-3-3z" />
           </svg>
         </div>
-        <div>
-          <p class="text-gray-500 text-sm">Ventas del Dia</p>
-          <p class="text-2xl font-bold text-gray-800">{{ total_sales_today | currency }}</p>
+        <div class="min-w-0">
+          <p class="text-xs text-gray-500">Ventas</p>
+          <p class="text-lg font-bold text-gray-800">{{ total_sales_today | currency:'USD':'symbol':'1.0-0' }}</p>
         </div>
       </div>
-
-      <!-- Card: Pedidos en curso -->
-      <!-- <div class="bg-white rounded-xl shadow-md p-5 flex items-center gap-4">
-      <div class="bg-yellow-100 p-3 rounded-full">
-        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" stroke-width="2"
-             viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round"
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      </div>
-      <div>
-        <p class="text-gray-500 text-sm">En Curso</p>
-        <p class="text-2xl font-bold text-gray-800">{{ ordersInProgress }}</p>
-      </div>
-    </div> -->
-
-      <!-- Card: Clientes nuevos (ejemplo adicional) -->
-      <!-- <div class="bg-white rounded-xl shadow-md p-5 flex items-center gap-4">
-      <div class="bg-purple-100 p-3 rounded-full">
-        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" stroke-width="2"
-             viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round"
-                d="M17 20h5v-2a4 4 0 00-5-4h-2m-4 0H7a4 4 0 00-5 4v2h5m4-12a4 4 0 110-8 4 4 0 010 8zm6 4a4 4 0 100-8 4 4 0 000 8z" />
-        </svg>
-      </div>
-      <div>
-        <p class="text-gray-500 text-sm">Clientes Nuevos</p>
-        <p class="text-2xl font-bold text-gray-800">16</p>
-      </div>
-    </div> -->
-
     </div>
 
-    <!-- 🧾 Resumen de Caja -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-  <!-- Apertura de Caja -->
-  <div class="bg-white rounded-xl shadow-md p-5">
-    <div class="flex items-center gap-4">
-      <div class="bg-indigo-100 p-3 rounded-full">
-        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2"
-             viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
+    <!-- Apertura de Caja -->
+    <div class="bg-white rounded-lg shadow-sm p-3">
+      <div class="flex items-center gap-2">
+        <div class="bg-indigo-100 p-2 rounded">
+          <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <p class="text-xs text-gray-500">Apertura</p>
+          <p class="text-lg font-bold text-gray-800">{{ montoApertura | currency:'USD':'symbol':'1.0-0' }}</p>
+        </div>
       </div>
-      <div>
-        <p class="text-sm text-gray-500">Monto Apertura</p>
-        <p class="text-2xl font-bold text-gray-800">{{ montoApertura | currency }}</p>
+    </div>
+
+    <!-- Retiros -->
+    <div class="bg-white rounded-lg shadow-sm p-3">
+      <div class="flex items-center gap-2">
+        <div class="bg-red-100 p-2 rounded">
+          <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3M6 12a9 9 0 0118 0" />
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <p class="text-xs text-gray-500">Retiros</p>
+          <p class="text-lg font-bold text-gray-800">{{ totalRetiros | currency:'USD':'symbol':'1.0-0' }}</p>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Retiros realizados -->
-  <div class="bg-white rounded-xl shadow-md p-5">
-    <div class="flex items-center gap-4">
-      <div class="bg-red-100 p-3 rounded-full">
-        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" stroke-width="2"
-             viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3M6 12a9 9 0 0118 0" />
-        </svg>
+  <!-- Efectivo Sistema -->
+  <div class="bg-white rounded-lg shadow-sm p-3 mb-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="bg-yellow-100 p-2 rounded">
+          <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 1.343-3 3 0 1.38.938 2.5 2.188 2.875C11.5 14.563 11 15.75 11 17h2c0-1.25-.5-2.438-1.188-3.125C13.063 13.5 14 12.38 14 11c0-1.657-1.343-3-3-3z" />
+          </svg>
+        </div>
+        <span class="text-sm text-gray-500">Efectivo Sistema</span>
       </div>
-      <div>
-        <p class="text-sm text-gray-500">Retiros Turno</p>
-        <p class="text-2xl font-bold text-gray-800">{{ totalRetiros | currency }}</p>
-      </div>
+      <p class="text-xl font-bold text-gray-800">{{ efectivoSistema | currency:'USD':'symbol':'1.0-0' }}</p>
     </div>
   </div>
 
-  <!-- Efectivo Esperado en Caja -->
-  <div class="bg-white rounded-xl shadow-md p-5">
-    <div class="flex items-center gap-4">
-      <div class="bg-yellow-100 p-3 rounded-full">
-        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" stroke-width="2"
-             viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round"
-                d="M12 8c-1.657 0-3 1.343-3 3 0 1.38.938 2.5 2.188 2.875C11.5 14.563 11 15.75 11 17h2c0-1.25-.5-2.438-1.188-3.125C13.063 13.5 14 12.38 14 11c0-1.657-1.343-3-3-3z" />
-        </svg>
-      </div>
-      <div>
-        <p class="text-sm text-gray-500">Efectivo Sistema</p>
-        <p class="text-2xl font-bold text-gray-800">{{ efectivoSistema | currency }}</p>
-      </div>
-    </div>
+  <!-- Productos más vendidos - Compacto -->
+  <div class="bg-white rounded-lg shadow-sm p-3">
+    <h3 class="text-sm font-semibold text-gray-800 mb-2">Top Productos</h3>
+    <ul class="space-y-1 text-xs">
+      <li *ngFor="let product of topProducts" class="flex justify-between text-gray-700">
+        <span class="truncate">{{ product.name }}</span>
+        <span class="font-semibold whitespace-nowrap ml-2">{{ product.count }}</span>
+      </li>
+      <li *ngIf="topProducts.length === 0" class="text-gray-400 text-center py-2">Sin datos</li>
+    </ul>
   </div>
 </div>
-
-
-
-    <!-- Productos más vendidos -->
-    <div class="bg-white rounded-xl shadow-md p-4 ">
-      <h2 class="text-xl font-semibold text-gray-800 mb-4">Top 5 Productos Más Vendidos del dia</h2>
-      <ul class="divide-y divide-gray-200">
-        <li *ngFor="let product of topProducts" class="py-2 flex justify-between text-gray-700">
-          <span>{{ product.name }}</span>
-          <span class="font-semibold">{{ product.count }} vendidos</span>
-        </li>
-      </ul>
-    </div>
-
-    <!-- Navegación rápida -->
-    <!-- <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      <button [routerLink]="['/dashboard/pos']" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded shadow">
-        Nueva Orden
-      </button>
-      <button [routerLink]="['/dashboard/orders']" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded shadow">
-        Ver Ordenes
-      </button>
-      <button [routerLink]="['/dashboard/products']" class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded shadow">
-        Productos
-      </button>
-      <button [routerLink]="['/dashboard/customers']"  class="bg-gray-700 hover:bg-gray-800 text-white font-medium py-2 px-4 rounded shadow">
-        Clientes
-      </button>
-    </div> -->
-  </div>
-
-
-  <!-- <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
-
-
-
-    <div nft-dual-card [nft]="nft[0]" class="md:col-span-2"></div>
-
-    <div nft-single-card [nft]="nft[1]"></div>
-
-    <div nft-single-card [nft]="nft[2]"></div>
-
-    <div nft-chart-card class="md:col-span-2 xl:col-span-1"></div>
-
-    <div nft-auctions-table class="md:col-span-2 xl:col-span-3"></div>
-
-
-  </div> -->
-</div>
-
-
-

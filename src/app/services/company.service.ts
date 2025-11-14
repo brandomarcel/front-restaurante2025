@@ -39,6 +39,10 @@ export class CompanyService {
     return this.http.get(`${this.apiUrl}/resource/Company`, { params, withCredentials: true });
   }
 
+  get_empresa() {
+    return this.http.get(`${this.apiUrl}/method/restaurante_app.restaurante_bmarc.api.user.get_empresa`, { withCredentials: true });
+  }
+
   getOne(name: string) {
     return this.http.get(`${this.apiUrl}/resource/Company/${encodeURIComponent(name)}`, { withCredentials: true });
   }
@@ -82,18 +86,18 @@ export class CompanyService {
   }
 
   analyzeFirma(password: string, companyId?: string, company_ruc?: string, file_url?: string, save_to_company = 1) {
-  const payload: any = { password, save_to_company };
-  if (companyId) payload.company = companyId;
-  if (company_ruc) payload.company_ruc = company_ruc;
-  if (file_url) payload.file_url = file_url;
+    const payload: any = { password, save_to_company };
+    if (companyId) payload.company = companyId;
+    if (company_ruc) payload.company_ruc = company_ruc;
+    if (file_url) payload.file_url = file_url;
 
-  // Ajusta el path al del método Python que te pasé
-  return this.http.post(
-    `${this.urlBase}.analyze_company_firma`,
-    payload,
-    { withCredentials: true }
-  );
-}
+    // Ajusta el path al del método Python que te pasé
+    return this.http.post(
+      `${this.urlBase}.analyze_company_firma`,
+      payload,
+      { withCredentials: true }
+    );
+  }
 
-  
+
 }
