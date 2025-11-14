@@ -115,17 +115,6 @@ export class OrdersService {
     );
   }
 
-  create_and_emit_from_ui_v2_from_order(payload: any): Observable<any> {
-    const url = `${this.urlBase}.create_and_emit_from_ui_v2_from_order`;
-    return this.http.post<any>(url, payload, { withCredentials: true }).pipe(
-      catchError((e) => {
-        const msg = this.frappeErr.handle(e) || 'Error al crear la orden.';
-        toast.error(msg);
-        return EMPTY;
-      })
-    );
-  }
-
   /** Estos dos revísalos si existen realmente en tu backend */
   create(order: any): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/resource/orders`, order, { withCredentials: true }).pipe(
