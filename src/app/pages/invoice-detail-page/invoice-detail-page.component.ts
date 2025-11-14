@@ -99,6 +99,7 @@ this.spinner.hide();
   }
 
   reenviarFactura() {
+    this.spinner.show();
     this.invoicesSvc.emit_existing_invoice_v2(this.invoice.name).subscribe({
       next: (res: any) => {
         console.log('emit_existing_invoice_v2:', res);
