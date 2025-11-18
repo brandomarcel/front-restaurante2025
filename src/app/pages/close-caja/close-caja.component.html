@@ -14,19 +14,19 @@
     <!-- Monto apertura -->
     <div>
       <p class="text-sm text-muted-foreground">Monto de apertura:</p>
-      <p class="text-lg font-semibold text-gray-800">${{ cierre.monto_apertura }}</p>
+      <p class="text-lg font-semibold text-gray-800">{{ cierre.monto_apertura | currency}}</p>
     </div>
 
     <!-- Ventas en efectivo -->
     <div>
       <p class="text-sm text-muted-foreground">Ventas en efectivo:</p>
-      <p class="text-lg font-semibold text-gray-800">${{ cierre.efectivo_sistema }}</p>
+      <p class="text-lg font-semibold text-gray-800">{{ cierre.efectivo_sistema | currency}}</p>
     </div>
 
     <!-- Total retiros -->
     <div>
       <p class="text-sm text-muted-foreground">Retiros del turno:</p>
-      <p class="text-lg font-semibold text-gray-800">${{ cierre.total_retiros }}</p>
+      <p class="text-lg font-semibold text-gray-800">{{ cierre.total_retiros | currency }}</p>
     </div>
 
     <!-- Efectivo contado -->
@@ -51,7 +51,7 @@
         [class.text-green-600]="cierre.diferencia >= 0"
         [class.text-red-600]="cierre.diferencia < 0"
       >
-        ${{ cierre.diferencia }}
+        {{ cierre.diferencia | currency }}
       </p>
     </div>
 

@@ -76,6 +76,7 @@ export class Menu {
           children: [
             { label: 'Productos Mas Vendidos', route: '/report/ventasproducto' },
             { label: 'Cierres de Caja', route: '/report/report-cierre-caja' },
+            { label: 'Reporte de Ventas', route: '/report/report-orders' },
           ],
         },
       ],

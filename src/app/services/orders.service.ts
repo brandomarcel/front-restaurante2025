@@ -2,7 +2,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
-import { catchError, EMPTY, Observable } from 'rxjs';
+import { catchError, EMPTY, Observable, shareReplay } from 'rxjs';
 import { FrappeErrorService } from '../core/services/frappe-error.service';
 import { toast } from 'ngx-sonner';
 import { API_ENDPOINT } from '../core/constants/api.constants';
@@ -145,6 +145,32 @@ export class OrdersService {
     const params = new HttpParams({ fromObject: filters });
     return this.http.get(`${this.apiUrl}/filter`, { params });
   }
+
+getOrdersReport(company: string, from_date: string, to_date: string, limit : number, offset : number ): Observable<any> {
+  const reportName = 'Orders Report';
+
+  const filters = {
+    company: company,
+    from_date: from_date,
+    to_date: to_date,
+    limit: limit,
+    offset: offset
+  };
+
+  const url = `${this.apiUrl}/method/frappe.desk.query_report.run`;
+
+  const params = new HttpParams()
+    .set('report_name', reportName)
+    .set('filters', JSON.stringify(filters));
+
+  return this.http.get<any>(url, { params, withCredentials: true })
+    .pipe(
+      catchError(e => this.frappeErr.handle(e)),
+      shareReplay(1)
+    );
+}
+
+
 
   // src/app/services/orders.service.ts
 updateStatus(name: string, status: 'Ingresada' | 'Preparación' | 'Cerrada') {

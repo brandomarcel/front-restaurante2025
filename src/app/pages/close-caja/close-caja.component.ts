@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 import { AlertService } from 'src/app/core/services/alert.service';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-close-caja',
@@ -25,11 +26,11 @@ export class CloseCajaComponent implements OnInit {
   };
 
   detallePorMetodo: any = {};
-  sinApertura = false;
+  sinApertura = true;
 
   constructor(
     private cajasService: CajasService,
-    private alertService:AlertService
+    private alertService: AlertService
   ) { }
 
   ngOnInit(): void {
@@ -40,24 +41,33 @@ export class CloseCajaComponent implements OnInit {
 
   }
 
-  getDatosCierre() {
-    this.cajasService.getDatosCierre(this.cierre.usuario).subscribe({
-      next: (res) => {
-        console.log('getDatosCierre', res);
-        const respuesta = res.message;
-        this.cierre.apertura = respuesta.apertura;
-        this.cierre.monto_apertura = respuesta.monto_apertura;
-        this.cierre.efectivo_sistema = respuesta.efectivo_sistema;
-        this.cierre.total_retiros = respuesta.total_retiros;
-        this.detallePorMetodo = respuesta.detalle;
-        this.calcularDiferencia();
-      },
-      error: (err) => {
-        // Si el backend devuelve error porque no hay apertura
-        this.sinApertura = true;
-        console.warn('No hay apertura activa:', err);
-      }
-    });
+  async getDatosCierre() {
+
+    try {
+
+      const response = await firstValueFrom(this.cajasService.getDatosCierre(this.cierre.usuario));
+      console.log('getDatosCierre', response);
+      const respuesta = response.message;
+      this.sinApertura = false;
+      this.cierre.apertura = respuesta.apertura;
+      this.cierre.monto_apertura = respuesta.monto_apertura;
+      this.cierre.efectivo_sistema = respuesta.efectivo_sistema;
+      this.cierre.total_retiros = respuesta.total_retiros;
+      this.detallePorMetodo = respuesta.detalle;
+      this.calcularDiferencia();
+    } catch (error) {
+      console.warn('No hay apertura activa:', error);
+    }
+  }
+
+  cleanCaja() {
+    this.sinApertura = true;
+    this.cierre.monto_apertura = 0;
+    this.cierre.efectivo_sistema = 0;
+    this.cierre.total_retiros = 0;
+    this.cierre.efectivo_real = 0;
+    this.cierre.diferencia = 0;
+    this.detallePorMetodo = {};
   }
 
   onEfectivoRealChange(valor: number) {
@@ -85,7 +95,7 @@ export class CloseCajaComponent implements OnInit {
     this.cajasService.crearCierreCaja(data).subscribe(() => {
 
       this.alertService.success('Cierre guardado correctamente');
-      this.getDatosCierre();
+      this.cleanCaja();
     });
   }
 

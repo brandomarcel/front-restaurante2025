@@ -48,10 +48,11 @@ export class ReportCierreCajaComponent implements OnInit {
 
     this.cargarUsuarios();
 
-    this.buscar(); // Carga inicial
+   
     this.today = this.utilsService.getSoloFechaEcuador();
     this.filters.desde = this.today;
     this.filters.hasta = this.today;
+     this.buscar(); // Carga inicial
   }
 
 
@@ -85,12 +86,15 @@ export class ReportCierreCajaComponent implements OnInit {
 
   /** 🔍 Buscar cierres según filtros */
   buscar(): void {
+    console.log('Buscando cierres...');
+    console.log('Filtros:', this.filters);
     this.cajasService.obtenerReporteCierres(
       this.filters.usuario || '',
       this.filters.desde,
       this.filters.hasta
     ).subscribe({
       next: (res) => {
+        console.log('Cierres obtenidos:', res);
         this.cierres = res.message.data || res; // depende si tu backend usa return o frappe.response
       },
       error: (err) => {

@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { catchError, shareReplay } from 'rxjs';
+import { catchError, shareReplay, throwError } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { FrappeErrorService } from '../core/services/frappe-error.service';
 
@@ -42,7 +42,8 @@ export class CajasService {
   getDatosCierre(usuario: string) {
     const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.cierre_de_caja.cierre_de_caja.calcular_datos_para_cierre`;
     return this.http.get<any>(`${url}?usuario=${usuario}`, { withCredentials: true }).pipe(
-      catchError((e) => this.frappeErrorService.handle(e)),
+      catchError((e) => throwError(() => this.frappeErrorService.handle(e)))
+      ,
       shareReplay(1)
     );
   }
