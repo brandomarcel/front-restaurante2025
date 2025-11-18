@@ -87,7 +87,8 @@ export class NftComponent implements OnInit, OnDestroy {
         },
         error: (err: any) => {
           console.error('Error al obtener datos:', err);
-          this.agregarAviso('Error', 'Ocurrió un error al cargar los datos', 'error');
+          this.generarAvisos();
+          // this.agregarAviso('Error', 'Ocurrió un error al cargar los datos', 'error');
         }
       });
   }
@@ -138,7 +139,7 @@ export class NftComponent implements OnInit, OnDestroy {
   private generarAvisos(): void {
     // Limpiar avisos previos
     this.avisos = [];
-     if (this.companyData?.firma) {
+    if (this.companyData?.firma) {
       this.agregarAviso('Aviso', 'Ingrese su firma electronica para poder emitir facturas.',
         'warning');
     }
@@ -190,7 +191,7 @@ export class NftComponent implements OnInit, OnDestroy {
     //   );
     // }
 
-   
+
   }
 
   // Método público para agregar avisos manualmente
