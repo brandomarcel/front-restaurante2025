@@ -266,8 +266,8 @@
             <div>
                 <label class="block text-sm font-medium">Tipo de Identificación</label>
                 <select formControlName="tipo_identificacion" class="w-full border rounded px-3 py-2 text-sm">
-                    <option value="05 - Cédula">Cédula</option>
-                    <option value="04 - RUC">RUC</option>
+                    <option *ngFor="let item of identificationTypes" [value]="item.value">{{ item.label }}</option>
+                    
                 </select>
                 <div *ngIf="f['tipo_identificacion'].invalid && submitted" class="text-red-500 text-sm">
                     Seleccione un tipo válido.

@@ -19,6 +19,7 @@ import { AlertService } from '../../core/services/alert.service';
 import { finalize } from 'rxjs';
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
 import { AuthService } from 'src/app/services/auth.service';
+import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
 
 type RoleName = 'Cajero' | 'Mesero' | 'Gerente' | 'Desconocido';
 
@@ -74,6 +75,8 @@ export class PosComponent implements OnInit {
     canSelectCustomer: true,  // Seleccionar/crear cliente
     canSendToKitchen: true    // Enviar a cocina (comanda)
   };
+
+  identificationTypes = VARIABLE_CONSTANTS.IDENTIFICATION_TYPE;
 
   constructor(
     public menuService: MenuService,
