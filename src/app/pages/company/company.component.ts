@@ -68,7 +68,8 @@ export class CompanyComponent implements OnInit {
       ncseq_prod: ['', Validators.required],
       logo: [''], // URL del archivo en Frappe
       urlfirma: [''],             // se llenará con el file_url retornado por Frappe
-      clave: [null, Validators.required] // Password para la firma
+      clave: [null, Validators.required], // Password para la firma
+      obligado_a_llevar_contabilidad: [false, Validators.required]
     });
   }
 
@@ -83,6 +84,7 @@ export class CompanyComponent implements OnInit {
 
       // Frappe guarda 'ambiente' como string; para el switch usamos boolean (true = producción)
       const ambienteBool = company.ambiente === 'PRUEBAS' ? false : true;
+      
       this.form.patchValue({ ...company, ambiente: ambienteBool, logo: company.logo || '', urlfirma: company.urlfirma || '' });
       this.certInfo = {
         subject: company.cert_common_name,
@@ -138,6 +140,7 @@ export class CompanyComponent implements OnInit {
 
 save() {
   this.submitted = true;
+  console.log('this.form.value', this.form.value);
   if (this.form.invalid) return;
 
   // Helpers de lectura segura
@@ -264,7 +267,7 @@ save() {
 
   private doUpdate() {
     const { ambiente, ...payload } = this.form.value;
-
+    console.log('payload', payload);
     // IMPORTANTE:
     // - `payload.clave` va en claro; Frappe (Password) lo cifrará al guardar.
     // - `payload.urlfirma` ya debería tener el file_url (si subiste firma).
