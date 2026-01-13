@@ -118,11 +118,11 @@ export class Menu {
     {
       group: 'Configuracion',
       separator: false,
-      allowedRoles: ['CAJERO'],
+      allowedRoles: ['MESERO'],
       items: [
 
         {
-          allowedRoles: ['CAJERO'],
+          allowedRoles: ['MESERO'],
           icon: 'assets/icons/tablericons/shopping-bag.svg',
           label: 'Lista Órdenes',
           route: '/dashboard/orders',

@@ -6,8 +6,9 @@ import { AppComponent } from './app/app.component';
 import { AppRoutingModule } from './app/app-routing.module';
 import { BrowserModule, bootstrapApplication } from '@angular/platform-browser';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideFontAwesome } from './app/providers/fontawesome.provider';
+import { frappeAuthInterceptor } from './app/core/interceptor/frappe-auth.interceptor';
 
 
 if (environment.production) {
@@ -19,7 +20,11 @@ if (environment.production) {
 }
 
 bootstrapApplication(AppComponent, {
-  providers: [importProvidersFrom(BrowserModule, AppRoutingModule), provideAnimations(), provideHttpClient(),provideFontAwesome()],
+  providers: [
+  importProvidersFrom(BrowserModule, AppRoutingModule),
+  provideAnimations(),
+  provideHttpClient(withInterceptors([frappeAuthInterceptor])),
+  provideFontAwesome()],
 }).catch((err) => console.error(err));
 
 function selfXSSWarning() {

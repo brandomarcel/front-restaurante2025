@@ -1,11 +1,12 @@
 // src/app/services/orders.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { catchError, EMPTY, Observable, shareReplay } from 'rxjs';
 import { FrappeErrorService } from '../core/services/frappe-error.service';
 import { toast } from 'ngx-sonner';
 import { API_ENDPOINT } from '../core/constants/api.constants';
+import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 
 // 👇 Interface alineada a tu payload
 export interface OrderItemDTO {
@@ -85,14 +86,14 @@ export class OrdersService {
     if (createdTo) params = params.set('created_to', createdTo);
 
     return this.http.get<OrdersListResponse>(`${this.urlBase}.get_all_orders`, {
-      withCredentials: true,
+      context: new HttpContext().set(REQUIRE_AUTH, true),
       params
     });
   }
 
   get_dashboard_metrics() {
     return this.http.get(`${this.urlBase}.get_dashboard_metrics`, {
-      withCredentials: true
+      context: new HttpContext().set(REQUIRE_AUTH, true)
     });
   }
 
@@ -100,13 +101,13 @@ export class OrdersService {
   getById(name: string) {
     return this.http.get<{ data?: OrderDTO; message?: OrderDTO;[k: string]: any }>(
       `${this.urlBase}.get_order_with_details?order_name=${encodeURIComponent(name)}`,
-      { withCredentials: true }
+      { context: new HttpContext().set(REQUIRE_AUTH, true) }
     );
   }
 
   create_order_v2(payload: any): Observable<any> {
     const url = `${this.urlBase}.create_order_v2`;
-    return this.http.post<any>(url, payload, { withCredentials: true }).pipe(
+    return this.http.post<any>(url, payload, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
       catchError((error) => {
         const msg = this.frappeErr.handle(error) || 'Error al crear la orden.';
         toast.error(msg);
@@ -117,7 +118,7 @@ export class OrdersService {
 
   /** Estos dos revísalos si existen realmente en tu backend */
   create(order: any): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/resource/orders`, order, { withCredentials: true }).pipe(
+    return this.http.post<any>(`${this.apiUrl}/resource/orders`, order, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
       catchError((error) => {
         const msg = this.frappeErr.handle(error) || 'Error al crear la orden.';
         toast.error(msg);
@@ -128,7 +129,7 @@ export class OrdersService {
 
   update(payload: any): Observable<any> {
     const url = `${this.urlBase}.update_order`;
-    return this.http.post<any>(url, payload, { withCredentials: true }).pipe(
+    return this.http.post<any>(url, payload, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
       catchError((e) => {
         const msg = this.frappeErr.handle(e) || 'Error al actualizar la orden.';
         toast.error(msg);
@@ -163,7 +164,7 @@ getOrdersReport(company: string, from_date: string, to_date: string, limit : num
     .set('report_name', reportName)
     .set('filters', JSON.stringify(filters));
 
-  return this.http.get<any>(url, { params, withCredentials: true })
+  return this.http.get<any>(url, { params, context: new HttpContext().set(REQUIRE_AUTH, true) })
     .pipe(
       catchError(e => this.frappeErr.handle(e)),
       shareReplay(1)
@@ -178,7 +179,7 @@ updateStatus(name: string, status: 'Ingresada' | 'Preparación' | 'Cerrada') {
   body.set('name', name);
   body.set('status', status);
   // o HttpParams si prefieres GET/qs
-  return this.http.post<any>(`${this.urlBase}.set_order_status`, body, { withCredentials: true });
+  return this.http.post<any>(`${this.urlBase}.set_order_status`, body, { context: new HttpContext().set(REQUIRE_AUTH, true) });
 }
 
 

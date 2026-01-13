@@ -73,7 +73,8 @@ export class PosComponent implements OnInit {
     canCharge: true,          // Cobrar / abrir modal de pago
     canPrintReceipt: true,    // Imprimir recibo/factura
     canSelectCustomer: true,  // Seleccionar/crear cliente
-    canSendToKitchen: true    // Enviar a cocina (comanda)
+    canSendToKitchen: true,    // Enviar a cocina (comanda)
+    canSeeTypeOrder: true,        // Ver tipo de pedido
   };
 
   identificationTypes = VARIABLE_CONSTANTS.IDENTIFICATION_TYPE;
@@ -161,7 +162,8 @@ export class PosComponent implements OnInit {
           canCharge: false,
           canPrintReceipt: false,
           canSelectCustomer: false,
-          canSendToKitchen: true
+          canSendToKitchen: true,
+          canSeeTypeOrder: false
         };
       case 'Cajero':
         return {
@@ -169,7 +171,8 @@ export class PosComponent implements OnInit {
           canCharge: true,
           canPrintReceipt: true,
           canSelectCustomer: true,
-          canSendToKitchen: true
+          canSendToKitchen: true,
+          canSeeTypeOrder: false
         };
       case 'Gerente':
         return {
@@ -177,7 +180,8 @@ export class PosComponent implements OnInit {
           canCharge: true,
           canPrintReceipt: true,
           canSelectCustomer: true,
-          canSendToKitchen: true
+          canSendToKitchen: true,
+          canSeeTypeOrder: true
         };
       default:
         // Por defecto conservador (similar a Cajero para no romper flujos)
@@ -186,7 +190,8 @@ export class PosComponent implements OnInit {
           canCharge: true,
           canPrintReceipt: true,
           canSelectCustomer: true,
-          canSendToKitchen: true
+          canSendToKitchen: true,
+          canSeeTypeOrder: true
         };
     }
   }
@@ -215,7 +220,12 @@ export class PosComponent implements OnInit {
       this.spinner.hide();
       this.products = res.message.data || [];
       this.applyFilters();
-    });
+    },
+    error => {
+      this.spinner.hide();
+      console.error('Error al cargar productos:', error);
+    }
+  );
   }
 
   loadCategory() {
@@ -223,6 +233,10 @@ export class PosComponent implements OnInit {
     this.categoryService.getAll().subscribe((res: any) => {
       this.spinner.hide();
       this.categories = res.message.data || [];
+    },
+    error => {
+      this.spinner.hide();
+      console.error('Error al cargar productos:', error);
     });
   }
 
@@ -231,7 +245,12 @@ export class PosComponent implements OnInit {
     this.paymentsService.getAll().subscribe((res: any) => {
       this.spinner.hide();
       this.payments = res || [];
-    });
+    },
+    error => {
+      this.spinner.hide();
+      console.error('Error al cargar productos:', error);
+    }
+  );
   }
 
   // ======= Cliente =======
@@ -486,13 +505,19 @@ export class PosComponent implements OnInit {
   }
 
   // ======= Flujo Mesero (enviar a cocina) =======
-  enviarAComanda() {
+  async saveOrderMesero() {
     if (!this.permissions.canSendToKitchen) {
       toast.warning('Este rol no puede enviar a cocina.');
       return;
     }
     if (this.cart.length === 0) {
       toast.error('Agrega productos al carrito.');
+      return;
+    }
+
+    if (!this.alias) {
+      toast.error('Ingresa un alias.');
+      this.identificationCustomer = '';
       return;
     }
 
@@ -513,15 +538,21 @@ export class PosComponent implements OnInit {
       })),
       // sin payments
     };
+    const result = await this.alertService.confirm('¿Desea crear la orden?','Confirmación');
+    console.log('result', result);
+    if (!result.isConfirmed) return;
+
+    console.log('paso todo esto');
 
     this.spinner.show();
     this.ordersService.create_order_v2(order).subscribe({
       next: (res: any) => {
         const orderId = res.message?.name;
         this.pendingOrderId = orderId;
-        toast.success('Comanda enviada a cocina.');
+        toast.success('Orden creada.');
         // Para mesero, por defecto solo comanda
-        this.printComanda(orderId);
+        //this.printComanda(orderId);
+        this.clearPage();
       },
       error: () => {
         toast.error('Error al enviar la comanda.');

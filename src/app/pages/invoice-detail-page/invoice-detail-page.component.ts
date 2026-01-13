@@ -112,6 +112,9 @@ this.spinner.hide();
         this.spinner.hide();
 
         console.error(err);
+      },
+      complete: () => {
+        this.spinner.hide();
       }
     });
   }

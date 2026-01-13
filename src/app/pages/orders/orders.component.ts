@@ -68,7 +68,7 @@ export class OrdersComponent implements OnInit {
         this.totalOrders = res.message.total || 0;
         this.totalPages = Math.ceil(this.totalOrders / this.pageSize) || 1;
 
-        this.actualizarOrdenesFiltradas();  // ✅ aplicar filtros con la data nueva
+        this.actualizarOrdenesFiltradas();  // aplicar filtros con la data nueva
         this.spinner.hide();
       },
       error: (err) => {

@@ -1,10 +1,11 @@
 // src/app/services/credit_note.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { catchError, throwError } from 'rxjs';
 import { FrappeErrorService } from '../core/services/frappe-error.service';
 import { toast } from 'ngx-sonner';
+import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 
 @Injectable({ providedIn: 'root' })
 export class CreditNoteService {
@@ -18,7 +19,7 @@ export class CreditNoteService {
     return this.http.post<any>(
       url,
       { invoice_name, motivo },
-      { withCredentials: true }
+      {context: new HttpContext().set(REQUIRE_AUTH, true) }
     ).pipe(
       catchError((e) => {
         const msg = this.err.handle(e) || 'Error al crear la nota de crédito.';
@@ -36,7 +37,7 @@ export class CreditNoteService {
 
     return this.http.get(
       `${this.api}/method/restaurante_app.facturacion_bmarc.einvoice.credit_note_api.get_all_credit_notes`,
-      { withCredentials: true, params }
+      {context: new HttpContext().set(REQUIRE_AUTH, true), params }
     );
   }
 
@@ -45,7 +46,7 @@ export class CreditNoteService {
     const params = new HttpParams().set('name', name);
     return this.http.get(
       `${environment.apiUrl}/method/restaurante_app.facturacion_bmarc.einvoice.credit_note_api.get_credit_note_detail`,
-      { withCredentials: true, params }
+      {context: new HttpContext().set(REQUIRE_AUTH, true), params }
     );
   }
 

@@ -26,6 +26,7 @@ export class NavbarMobileMenuComponent implements OnInit {
 
   public toggleMenu(subMenu: SubMenuItem) {
     this.menuService.toggleMenu(subMenu);
+    console.log('toggleMenu', subMenu );
   }
 
   public closeMenu() {

@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { catchError, EMPTY, Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { API_ENDPOINT } from '../core/constants/api.constants';
 import { toast } from 'ngx-sonner';
 import { FrappeErrorService } from '../core/services/frappe-error.service';
+import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 export interface Customer {
   id: number;
   fullName: string;
@@ -46,7 +47,7 @@ export class CustomersService {
   //   const campos = ["name","nombre","num_identificacion","telefono","correo","direccion","tipo_identificacion","isactive"];
 
   //   return this.http.get(`${this.apiUrl}/resource/Cliente?fields=${JSON.stringify(campos)}`, {
-  //     withCredentials: true
+  //     context: new HttpContext().set(REQUIRE_AUTH, true)
   //   });
   // }
 
@@ -60,7 +61,7 @@ getAll(isactive?: number) {
 
     return this.http.get(`${this.urlBase}.get_clientes`, {
       params,
-      withCredentials: true
+      context: new HttpContext().set(REQUIRE_AUTH, true)
     });
   }
 
@@ -74,12 +75,12 @@ getAll(isactive?: number) {
 
   create(data: Omit<any, 'name'>): Observable<any> {
     return this.http.post<any>(`${this.urlBase}.create_cliente`, data, {
-      withCredentials: true
+      context: new HttpContext().set(REQUIRE_AUTH, true)
     });
       }
   update(data: any) {
     return this.http.put(`${this.urlBase}.update_cliente`, data, {
-      withCredentials: true
+      context: new HttpContext().set(REQUIRE_AUTH, true)
     });
   }
 
@@ -87,13 +88,13 @@ getAll(isactive?: number) {
 
   // update(name: string, data: any) {
   //   return this.http.put(`${this.apiUrl}/resource/Cliente/${name}`, data, {
-  //     withCredentials: true
+  //     context: new HttpContext().set(REQUIRE_AUTH, true)
   //   });
   // }
 
   delete(name: string) {
     return this.http.delete(`${this.apiUrl}/resource/Cliente/${name}`, {
-      withCredentials: true
+      context: new HttpContext().set(REQUIRE_AUTH, true)
     });
   }
 

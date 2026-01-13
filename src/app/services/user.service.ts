@@ -1,9 +1,10 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, map, Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { RoleKey, UserItem } from '../core/models/user_item';
 import { API_ENDPOINT } from '../core/constants/api.constants';
+import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 
 interface User {
   email: string;
@@ -56,7 +57,7 @@ export class UserService {
     const query = new URLSearchParams(params).toString();
     const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.api.utils.get_usuarios_con_roles${query ? '?' + query : ''}`;
 
-    return this.http.get<any>(url, { withCredentials: true });
+    return this.http.get<any>(url, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
 
 
@@ -93,7 +94,7 @@ export class UserService {
       role_key: 'cajero', // o el rol que ya tenía; para fast_path da igual
       add_permission: 0
     },
-      { withCredentials: true }
+      { context: new HttpContext().set(REQUIRE_AUTH, true) }
     );
   }
 
@@ -101,7 +102,7 @@ export class UserService {
   //   const url = `${this.apiUrl}/resource/User/${encodeURIComponent(email)}`;
 
   //   return this.http.put<any>( url, { enabled: enabled ? 1 : 0 },
-  //     { withCredentials: true } 
+  //     { context: new HttpContext().set(REQUIRE_AUTH, true) } 
   //   );
   // }
 
@@ -115,6 +116,7 @@ export class UserService {
     const p = profile.toUpperCase().trim();
     if (p === 'ADMIN COMPANY') return 'gerente';
     if (p === 'CAJERO COMPANY') return 'cajero';
+    if (p === 'MESERO COMPANY') return 'mesero';
     return undefined;
   }
 

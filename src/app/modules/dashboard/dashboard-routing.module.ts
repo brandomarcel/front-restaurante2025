@@ -7,7 +7,6 @@ import { CustomersComponent } from 'src/app/pages/customers/customers.component'
 import { ProductsComponent } from 'src/app/pages/products/products.component';
 import { CompanyComponent } from 'src/app/pages/company/company.component';
 import { OrdersComponent } from 'src/app/pages/orders/orders.component';
-import { ReportOrdersComponent } from 'src/app/pages/reports/report-orders/report-orders.component';
 import { CategorysComponent } from 'src/app/pages/categorys/categorys.component';
 import { InvoicingComponent } from 'src/app/pages/invoicing/invoicing.component';
 import { UsersComponent } from 'src/app/pages/users/users.component';

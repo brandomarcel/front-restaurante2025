@@ -10,7 +10,7 @@
       <div class="px-2 py-1 rounded-md border bg-gray-50 text-[11px] font-semibold" [ngClass]="{
              'text-green-700': order?.sri?.status === 'AUTORIZADO',
              'text-red-700': order?.sri?.status === 'Rejected' || order?.sri?.status === 'Error',
-             'text-yellow-700': !order?.sri?.status || (order?.sri?.status !== 'AUTORIZADO' && order?.sri?.status !== 'Rejected' && order?.sri?.status !== 'Error')
+             'text-yellow-500': !order?.sri?.status || (order?.sri?.status !== 'AUTORIZADO' && order?.sri?.status !== 'Rejected' && order?.sri?.status !== 'Error')
            }">
         {{ sriStatus || '—' }}
       </div>
@@ -34,7 +34,7 @@
     Luego podrás <strong>Generar Factura</strong> desde esta misma orden.
   </ng-container>
   <ng-template #bloqueado>
-    Ítems bloqueados porque la orden ya fue <strong>facturada</strong>
+    Ítems bloqueados porque la orden contiene una <strong>factura</strong>
     <ng-container *ngIf="order?.sri?.invoice as inv">
       (<a [routerLink]="['/dashboard/invoices', inv]" class="text-blue-600 underline hover:no-underline"
         title="Ver factura {{ inv }}">{{ inv }}</a>)

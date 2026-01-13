@@ -12,11 +12,11 @@
                         <h2 class="text-lg sm:text-xl font-semibold text-primary">Toma de pedido (Mesero)</h2>
                         <input type="text" [(ngModel)]="alias" oninput="this.value = this.value.toUpperCase()" maxlength="20"
                             class="w-full border rounded px-3 py-2 text-sm"
-                            placeholder="Alias / nombre para la mesa o entrega (opcional)" />
+                            placeholder="Alias / nombre para la mesa o entrega" />
                     </div>
 
                     <!-- Encabezado Caja/Gerente (cliente fiscal) -->
-                    <div *ngIf="roleName!=='Mesero' && permissions?.canSelectCustomer">
+                    <div *ngIf="roleName!=='Mesero' && permissions.canSelectCustomer">
                         <div class="flex items-center justify-between gap-3">
                             <h2 class="text-lg sm:text-xl font-semibold text-primary">Cliente</h2>
 
@@ -76,7 +76,7 @@
                     <!-- Buscador (responsivo) -->
                     <div class="flex items-stretch gap-2">
                         <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()"
-                            placeholder="Buscar productos por nombre o descripción…"
+                            placeholder="Buscar por nombre o descripción…"
                             class="flex-1 min-w-0 rounded px-3 sm:px-4 py-2 text-sm" aria-label="Buscar productos" />
 
                         <button (click)="searchTerm=''; applyFilters()"
@@ -121,10 +121,10 @@
                                 <span *ngIf="product.descripcion">({{ product.descripcion }})</span>
                             </p>
 
-                            <p class="text-muted-foreground text-base sm:text-lg" *ngIf="permissions?.canSeeMoney">
+                            <p class="text-muted-foreground text-base sm:text-lg" *ngIf="permissions.canSeeMoney">
                                 ${{ product.precio | number: '1.2-2' }}
                             </p>
-                            <p class="text-yellow-600 text-[10px] italic mb-1" *ngIf="permissions?.canSeeMoney">
+                            <p class="text-yellow-600 text-[10px] italic mb-1" *ngIf="permissions.canSeeMoney">
                                 ({{ product.tax_value }}% IVA)
                             </p>
                         </div>
@@ -151,7 +151,7 @@
                 </div>
 
                 <!-- Tipo de Orden (visible para todos) -->
-                <div class="mt-2">
+                <div class="mt-2" *ngIf="permissions.canSeeTypeOrder">
                     <label class="block text-xs font-semibold text-gray-700 mb-1">Tipo de orden</label>
                     <div class="inline-flex rounded-md border overflow-hidden w-full sm:w-auto">
                         <button type="button" class="px-3 py-2 text-[13px] sm:text-xs flex-1 sm:flex-none min-h-[44px]"
@@ -210,7 +210,7 @@
                                     <fa-icon icon="plus"></fa-icon>
                                 </button>
 
-                                <strong *ngIf="permissions?.canSeeMoney" class="ml-2 text-foreground">
+                                <strong *ngIf="permissions.canSeeMoney" class="ml-2 text-foreground">
                                     ${{ item.total | number: '1.2-2' }}
                                 </strong>
                             </div>
@@ -218,7 +218,7 @@
                     </div>
 
                     <!-- TOTALES (solo caja/admin) -->
-                    <div *ngIf="permissions?.canSeeMoney" class="pt-3 space-y-1 text-[13px] sm:text-xs text-foreground">
+                    <div *ngIf="permissions.canSeeMoney" class="pt-3 space-y-1 text-[13px] sm:text-xs text-foreground">
                         <p>Subtotal: ${{ subtotal | number: '1.2-2' }}</p>
                         <p>IVA (15%): ${{ iva | number: '1.2-2' }}</p>
                         <p class="text-base font-bold">Total: ${{ total | number: '1.2-2' }}</p>
@@ -226,7 +226,7 @@
 
                     <!-- BOTONES -->
                     <!-- Caja/Admin: cobrar -->
-                    <div *ngIf="permissions?.canCharge" class="space-y-2">
+                    <div *ngIf="permissions.canCharge" class="space-y-2">
                         <button (click)="abrirModalPago()"
                             class="w-full rounded bg-primary px-4 py-3 text-white font-semibold hover:bg-primary/90 text-sm min-h-[44px]">
                             Crear Orden
@@ -235,11 +235,11 @@
 
                     <!-- Mesero: enviar a cocina -->
                    
-                    <div *ngIf="roleName==='Mesero' && permissions?.canSendToKitchen" class="space-y-2">
+                    <div *ngIf="roleName==='Mesero' && permissions.canSendToKitchen" class="space-y-2">
 
-                        <button (click)="enviarAComanda()"
+                        <button (click)="saveOrderMesero()"
                             class="w-full rounded bg-primary px-4 py-3 text-white font-semibold hover:bg-primary/90 text-sm min-h-[44px]">
-                            Enviar a cocina
+                            Generar Orden
                         </button>
                     </div>
                 </ng-container>
@@ -253,7 +253,7 @@
 </div>
 
 <!-- MODAL DE NUEVO CLIENTE (solo caja/admin) -->
-<div *ngIf="showCustomerModal && roleName!=='Mesero' && permissions?.canSelectCustomer"
+<div *ngIf="showCustomerModal && roleName!=='Mesero' && permissions.canSelectCustomer"
     class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-3" role="dialog" aria-modal="true">
     <div
         class="bg-white w-full max-w-md rounded shadow-lg p-4 text-[13px] sm:text-xs relative max-h-[90dvh] overflow-y-auto">
@@ -333,7 +333,7 @@
 </div>
 
 <!-- MODAL DE PAGO (solo caja/admin) -->
-<div *ngIf="showPaymentModal && permissions?.canCharge" class="fixed inset-0 z-50" role="dialog" aria-modal="true">
+<div *ngIf="showPaymentModal && permissions.canCharge" class="fixed inset-0 z-50" role="dialog" aria-modal="true">
     <!-- backdrop -->
     <div class="absolute inset-0 bg-black/40" (click)="showPaymentModal = false" aria-hidden="true"></div>
 

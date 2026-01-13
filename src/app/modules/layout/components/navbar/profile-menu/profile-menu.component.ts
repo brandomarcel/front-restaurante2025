@@ -6,8 +6,9 @@ import { AngularSvgIconModule } from 'angular-svg-icon';
 import { ThemeService } from '../../../../../core/services/theme.service';
 import { ClickOutsideDirective } from '../../../../../shared/directives/click-outside.directive';
 import { AuthService } from 'src/app/services/auth.service';
+import { Role } from 'src/app/core/models/menu.model';
 
-type Role = 'GERENTE' | 'CAJERO';
+// type Role = 'GERENTE' | 'CAJERO';
 
 interface ProfileItem {
   title: string;
@@ -92,7 +93,8 @@ export class ProfileMenuComponent implements OnInit {
       '';
 
     const r = String(rawRole).trim().toUpperCase();
-    this.roleUpper = r === 'GERENTE' || r === 'CAJERO' ? (r as Role) : null;
+    console.log('r', r);
+    this.roleUpper = r === 'GERENTE' || r === 'CAJERO' || r === 'MESERO' ? (r as Role) : null;
 
     // Filtra los ítems del menú en base al rol
     this.visibleProfileMenu = this.profileMenu.filter(item =>

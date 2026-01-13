@@ -1,9 +1,10 @@
 // company.service.ts
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { API_ENDPOINT } from '../core/constants/api.constants';
+import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 
 export interface CompanyInfo {
   name?: string;                 // En Frappe suele ser string
@@ -36,27 +37,27 @@ export class CompanyService {
 
   getAll(fields: string[] = ['*']) {
     const params = new HttpParams().set('fields', JSON.stringify(fields)).set('limit_page_length', '0');
-    return this.http.get(`${this.apiUrl}/resource/Company`, { params, withCredentials: true });
+    return this.http.get(`${this.apiUrl}/resource/Company`, { params, context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
 
   get_empresa() {
-    return this.http.get(`${this.apiUrl}/method/restaurante_app.restaurante_bmarc.api.user.get_empresa`, { withCredentials: true });
+    return this.http.get(`${this.apiUrl}/method/restaurante_app.restaurante_bmarc.api.user.get_empresa`, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
 
   getOne(name: string) {
-    return this.http.get(`${this.apiUrl}/resource/Company/${encodeURIComponent(name)}`, { withCredentials: true });
+    return this.http.get(`${this.apiUrl}/resource/Company/${encodeURIComponent(name)}`, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
 
   create(data: CompanyInfo) {
-    return this.http.post(`${this.apiUrl}/resource/Company`, data, { withCredentials: true });
+    return this.http.post(`${this.apiUrl}/resource/Company`, data, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
 
   update(id: string, data: Partial<CompanyInfo>) {
-    return this.http.put(`${this.apiUrl}/resource/Company/${encodeURIComponent(id)}`, data, { withCredentials: true });
+    return this.http.put(`${this.apiUrl}/resource/Company/${encodeURIComponent(id)}`, data, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
 
   delete(id: string) {
-    return this.http.delete(`${this.apiUrl}/resource/Company/${encodeURIComponent(id)}`, { withCredentials: true });
+    return this.http.delete(`${this.apiUrl}/resource/Company/${encodeURIComponent(id)}`, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
 
   /** Sube y adjunta el logo al doc Company, y actualiza el campo 'logo' */
@@ -68,7 +69,7 @@ export class CompanyService {
     form.append('docname', String(companyId)); // 🔴 obligatorio
     form.append('fieldname', 'logo');
 
-    return this.http.post(`${this.apiUrl}/method/upload_file`, form, { withCredentials: true });
+    return this.http.post(`${this.apiUrl}/method/upload_file`, form, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
   /** Sube y adjunta la FIRMA (.p12) al doc Company, y setea el campo 'urlfirma' */
   uploadFirma(file: File, companyId: string) {
@@ -82,7 +83,7 @@ export class CompanyService {
     // (Opcional) nombre forzado:
     // form.append('file_name', `firma_${companyId}.p12`);
 
-    return this.http.post(`${this.apiUrl}/method/upload_file`, form, { withCredentials: true });
+    return this.http.post(`${this.apiUrl}/method/upload_file`, form, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
 
   analyzeFirma(password: string, companyId?: string, company_ruc?: string, file_url?: string, save_to_company = 1) {
@@ -95,7 +96,7 @@ export class CompanyService {
     return this.http.post(
       `${this.urlBase}.analyze_company_firma`,
       payload,
-      { withCredentials: true }
+      { context: new HttpContext().set(REQUIRE_AUTH, true) }
     );
   }
 

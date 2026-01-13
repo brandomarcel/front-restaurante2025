@@ -8,4 +8,4 @@ export interface UserItem {
   role_profile_name?: string;
   role_key?: RoleKey;  // derivado
 }
-export type RoleKey = 'cajero' | 'gerente';
+export type RoleKey = 'cajero' | 'gerente' | 'mesero';

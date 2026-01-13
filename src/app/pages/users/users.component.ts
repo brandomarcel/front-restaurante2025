@@ -40,6 +40,7 @@ export class UsersComponent implements OnInit {
   roles: { value: RoleKey; label: string }[] = [
     { value: 'gerente', label: 'Gerente' },
     { value: 'cajero', label: 'Cajero' },
+    { value: 'mesero', label: 'Mesero' },
   ];
 
   constructor(
@@ -76,8 +77,10 @@ export class UsersComponent implements OnInit {
       limit: 1000
     }).subscribe({
       next: (rows) => {
+        console.log('rows', rows);
         this.spinner.hide();
         this.users = rows;
+        console.log('users', this.users);
         this.filtrar();
       },
       error: () => this.spinner.hide()
@@ -114,6 +117,7 @@ export class UsersComponent implements OnInit {
       (u.first_name && u.first_name.toLowerCase().includes(t)) ||
       (u.last_name && u.last_name.toLowerCase().includes(t))
     );
+    console.log('filtered', this.filtered);
     this.page = 1;
   }
 
@@ -173,7 +177,7 @@ export class UsersComponent implements OnInit {
         this.usersService.setEnabled(u.email, desired).subscribe({
           next: (response) => {
             console.log('response', response);
-            const res = response?.message ;
+            const res = response?.message;
             u.enabled = desired ? 1 : 0;
             toast.success(desired ? 'Usuario habilitado' : 'Usuario deshabilitado');
             if (!res.enabled && this.userLoged.email === res.user) {

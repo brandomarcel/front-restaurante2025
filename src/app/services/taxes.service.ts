@@ -1,9 +1,10 @@
 // taxes.service.ts
 
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
+import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 
 export interface CompanyInfo {
   name: number;
@@ -26,21 +27,27 @@ export class TaxesService {
     const campos = ["name", "value"];
 
     return this.http.get(`${environment.apiUrl}/resource/taxes?fields=${JSON.stringify(campos)}`, {
-      withCredentials: true
+      context: new HttpContext().set(REQUIRE_AUTH, true)
     });
   }
 
   create(data: CompanyInfo): Observable<CompanyInfo> {
-    return this.http.post<CompanyInfo>(this.apiUrl, data);
+    return this.http.post<CompanyInfo>(this.apiUrl, data, {
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    });
   }
 
   update(id: number, data: CompanyInfo): Observable<CompanyInfo> {
     console.log('id', id);
     console.log('data', data);
-    return this.http.patch<CompanyInfo>(`${this.apiUrl}/${id}`, data);
+    return this.http.patch<CompanyInfo>(`${this.apiUrl}/${id}`, data, {
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    });
   }
 
   delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    return this.http.delete<void>(`${this.apiUrl}/${id}`, {
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    });
   }
 }

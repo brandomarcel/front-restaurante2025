@@ -1,11 +1,12 @@
 // src/app/services/auth.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable, switchMap, tap } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { UserService } from './user.service';
 import { Router } from '@angular/router';
 import { FrappeSocketService } from './frappe-socket.service';
+import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 
 interface LoginResponse {
   access_token: string;
@@ -56,10 +57,9 @@ login(username: string, password: string) {
   body.set('pwd', password);
 
   return this.http.post(
-    `${this.apiUrl}/method/login`,   // 👈 OJO: incluye /api
+    `${this.apiUrl}/method/login`, 
     body.toString(),
-    {
-      withCredentials: true,             // 👈 imprescindible para cookie `sid`
+    {         
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       observe: 'response'
     }
@@ -77,7 +77,7 @@ login(username: string, password: string) {
 
   getUserInfo() {
     return this.http.get<any>(`${this.apiUrl}/method/restaurante_app.restaurante_bmarc.api.user.get_user_roles_and_doctype_permissions`, {
-      withCredentials: true
+      context: new HttpContext().set(REQUIRE_AUTH, true)
     }).pipe(
       tap(res => {
         console.log('getUserInfo', res);
@@ -101,7 +101,7 @@ login(username: string, password: string) {
 
   logout() {
     return this.http.get(`${this.apiUrl}/method/logout`, {
-      withCredentials: true
+      context: new HttpContext().set(REQUIRE_AUTH, true)
     }).pipe(
       tap(() => {
         console.log('logout');

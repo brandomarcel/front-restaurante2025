@@ -1,10 +1,11 @@
 // src/app/services/invoices.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { catchError, EMPTY, Observable } from 'rxjs';
 import { FrappeErrorService } from '../core/services/frappe-error.service';
 import { toast } from 'ngx-sonner';
+import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 
 @Injectable({ providedIn: 'root' })
 export class InvoicesService {
@@ -18,7 +19,7 @@ export class InvoicesService {
     return this.http.post<any>(
       url,
       payload,
-      { withCredentials: true }
+      { context: new HttpContext().set(REQUIRE_AUTH, true) }
     ).pipe(
       catchError((e) => {
         const msg = this.err.handle(e) || 'Error al crear la factura.';
@@ -34,7 +35,7 @@ export class InvoicesService {
     return this.http.post<any>(
       url,
       {invoice_name:invoice_name},
-      { withCredentials: true }
+      { context: new HttpContext().set(REQUIRE_AUTH, true) }
     ).pipe(
       catchError((e) => {
         const msg = this.err.handle(e) || 'Error al crear la factura.';
@@ -49,7 +50,7 @@ export class InvoicesService {
     return this.http.post<any>(
       `${this.api}/method/restaurante_app.facturacion_bmarc.doctype.sales_invoice.sales_invoice.queue_einvoice`,
       { invoice_name },
-      { withCredentials: true }
+      { context: new HttpContext().set(REQUIRE_AUTH, true) }
     );
   }
 
@@ -60,7 +61,7 @@ export class InvoicesService {
 
   return this.http.get(
     `${this.api}/method/restaurante_app.facturacion_bmarc.einvoice.invoices_api.get_all_invoices`,
-    { withCredentials: true, params }
+    { context: new HttpContext().set(REQUIRE_AUTH, true), params }
   );
 }
 
@@ -68,7 +69,7 @@ getOrderDetail(name: string) {
   const params = new HttpParams().set('name', name);
   return this.http.get(
     `${environment.apiUrl}/method/restaurante_app.facturacion_bmarc.einvoice.invoices_api.get_order_detail`,
-    { withCredentials: true, params }
+    { context: new HttpContext().set(REQUIRE_AUTH, true), params }
   );
 }
 
@@ -76,7 +77,7 @@ getOrderDetail(name: string) {
     const params = new HttpParams().set('name', name);
     return this.http.get(
       `${environment.apiUrl}/method/restaurante_app.facturacion_bmarc.einvoice.invoices_api.get_invoice_detail`,
-      { withCredentials: true, params }
+      { context: new HttpContext().set(REQUIRE_AUTH, true), params }
     );
   }
 

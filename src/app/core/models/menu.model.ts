@@ -16,4 +16,4 @@ export interface SubMenuItem {
   children?: Array<SubMenuItem>;
   allowedRoles?: Role[]; // opcional: regla a nivel grupo
 }
-export type Role = 'GERENTE' | 'CAJERO';
+export type Role = 'GERENTE' | 'CAJERO' | 'MESERO';

@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { API_ENDPOINT } from '../core/constants/api.constants';
 import { map } from 'rxjs';
+import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 
 @Injectable({ providedIn: 'root' })
 export class PaymentsService {
@@ -14,8 +15,9 @@ export class PaymentsService {
   }
     getAll() {
       return this.http.get<any>(`${this.urlBase}.get_payments`, {
-        withCredentials: true
-      }).pipe(
+        context: new HttpContext().set(REQUIRE_AUTH, true)
+      }
+     ).pipe(
         map((res: any) => res.message.data) // extrae solo el array
       );
     }

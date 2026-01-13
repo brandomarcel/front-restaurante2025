@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { API_ENDPOINT } from '../core/constants/api.constants';
 import { map } from 'rxjs';
+import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 
 @Injectable({ providedIn: 'root' })
 export class ProductsService {
@@ -17,7 +18,7 @@ export class ProductsService {
   //   const campos = ['name', 'nombre', 'precio', 'descripcion', 'categoria', 'tax','isactive','is_out_of_stock'];
 
   //   return this.http.get(`${environment.apiUrl}/resource/Producto?fields=${JSON.stringify(campos)}&limit_page_length=1000&order_by=categoria asc`, {
-  //     withCredentials: true
+  //     
   //   });
   // }
 
@@ -29,8 +30,9 @@ export class ProductsService {
       }
   
       return this.http.get(`${this.urlBase}.get_productos`, {
+        context: new HttpContext().set(REQUIRE_AUTH, true),
         params,
-        withCredentials: true
+        
       });
     }
 
@@ -41,21 +43,23 @@ export class ProductsService {
 
   create(data: any) {
     return this.http.post(`${this.apiUrl}/resource/Producto`, data, {
-      withCredentials: true
+      context: new HttpContext().set(REQUIRE_AUTH, true),
     });
   }
 
 
   update(name: string, data: any) {
     return this.http.put(`${this.apiUrl}/resource/Producto/${name}`, data, {
-      withCredentials: true
+      context: new HttpContext().set(REQUIRE_AUTH, true),
+      
     });
   }
 
 
   delete(name: string) {
     return this.http.delete(`${this.apiUrl}/resource/Producto/${name}`, {
-      withCredentials: true
+      context: new HttpContext().set(REQUIRE_AUTH, true),
+      
     });
   }
 }

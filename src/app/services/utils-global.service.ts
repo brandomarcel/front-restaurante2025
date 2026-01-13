@@ -1,10 +1,11 @@
 // src/app/services/credit_note.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { catchError, EMPTY, Observable } from 'rxjs';
 import { FrappeErrorService } from '../core/services/frappe-error.service';
 import { toast } from 'ngx-sonner';
+import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 
 @Injectable({ providedIn: 'root' })
 export class UtilsGlobalService {
@@ -19,7 +20,7 @@ export class UtilsGlobalService {
 
   return this.http.get(
     `${this.api}/method/restaurante_app.facturacion_bmarc.einvoice.credit_note_api.get_all_credit_notes`,
-    { withCredentials: true, params }
+    { context: new HttpContext().set(REQUIRE_AUTH, true), params }
   );
 }
 

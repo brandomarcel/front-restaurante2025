@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
+import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 
 @Injectable({
   providedIn: 'root',
@@ -24,7 +25,7 @@ getReporteMasVendidos(filters: any): Observable<any> {
 
   return this.http.get(url, {
     params,
-    withCredentials: true
+    context: new HttpContext().set(REQUIRE_AUTH, true)
   });
 }
 
@@ -37,7 +38,7 @@ getReporteMasVendidos(filters: any): Observable<any> {
     return this.http.get('/api/method/frappe.desk.query_report.download_xlsx', {
       params,
       responseType: 'blob',
-      withCredentials: true
+      context: new HttpContext().set(REQUIRE_AUTH, true)
     });
   }
 

@@ -72,8 +72,12 @@ export class SignInComponent implements OnInit {
         const role: any = this.auth.getCurrentUser();
         console.log('role', role);
         this.menu.setMenuForRole(role.roles[0]) ;
-
         this.spinner.hide();
+
+        if (role.roles.includes('Mesero')) {
+          this._router.navigate(['/dashboard/pos']);
+          return;
+        }
         this._router.navigate(['/dashboard']); // Ruta protegida del POS
       },
       error: (error: any) => {
