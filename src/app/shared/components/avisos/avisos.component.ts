@@ -24,11 +24,4 @@ export class AvisosComponent {
   eliminarAviso(id: string): void {
     this.eliminar.emit(id);
   }
-}/*************  ✨ Windsurf Command ⭐  *************/
-/*******  bc775711-c05f-4d0c-a632-9b6eeebdccd5  *******//**
-
- * Valida que la empresa tenga configurados sus datos principales.
-
- * Si algún dato falta, se generará un aviso correspondiente.
-
- */
+}

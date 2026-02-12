@@ -1,6 +1,6 @@
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { catchError, shareReplay, throwError } from 'rxjs';
+import { catchError, Observable, shareReplay, throwError } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { FrappeErrorService } from '../core/services/frappe-error.service';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
@@ -13,7 +13,7 @@ export class CajasService {
     private frappeErrorService: FrappeErrorService
   ) { }
 
-  /** 📦 Obtener categorías (ejemplo que ya tenías) */
+
   getAllCategorias() {
     const campos = ['name', 'nombre', 'description', 'isactive'];
     return this.http.get(`${this.apiUrl}/resource/categorias?fields=${JSON.stringify(campos)}`, {
@@ -21,26 +21,24 @@ export class CajasService {
     });
   }
 
-  /** 🟢 Verificar si el usuario ya tiene una apertura activa */
+
   verificarAperturaActiva(usuario: string) {
     const url = `${this.apiUrl}/resource/Apertura de Caja?fields=["name"]&filters=[["usuario","=","${usuario}"],["estado","=","Abierta"]]`;
     return this.http.get<any>(url, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
 
-  /** 🟢 Crear apertura de caja */
+
   crearAperturaCaja(data: any) {
     const url = `${this.apiUrl}/resource/Apertura de Caja`;
     return this.http.post(url, data, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
 
-  /** 🔻 Registrar retiro de caja */
   registrarRetiro(data: any) {
     const url = `${this.apiUrl}/resource/Retiro de Caja`;
     return this.http.post(url, data, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
 
-  /** 📊 Obtener datos automáticos para el cierre de caja */
-  getDatosCierre(usuario: string) {
+  getDatosCierre(usuario: string):Observable<any> {
     const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.cierre_de_caja.cierre_de_caja.calcular_datos_para_cierre`;
     return this.http.get<any>(`${url}?usuario=${usuario}`, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
       catchError((e) => throwError(() => this.frappeErrorService.handle(e)))
@@ -49,7 +47,7 @@ export class CajasService {
     );
   }
 
-  /** ✅ Crear el cierre de caja */
+
   crearCierreCaja(data: any) {
     return this.http.post(`${this.apiUrl}/resource/Cierre de Caja`, data, {
       context: new HttpContext().set(REQUIRE_AUTH, true)

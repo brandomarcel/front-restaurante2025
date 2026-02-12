@@ -5,10 +5,11 @@ import { OrdersService } from '../../../../services/orders.service';
 import { CajasService } from 'src/app/services/cajas.service';
 import { CompanyService } from '../../../../services/company.service';
 import { UserData } from 'src/app/core/models/user_data';
-import { forkJoin, Subject } from 'rxjs';
+import { firstValueFrom, forkJoin, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { getValueOrDefault, isNullOrEmpty } from 'src/app/shared/utils/validation';
+import { isNullOrEmpty } from 'src/app/shared/utils/validation';
 import { AvisosComponent } from "src/app/shared/components/avisos/avisos.component";
+import { diasRestantes } from 'src/app/shared/utils/date.utils';
 
 // Interfaz para los avisos
 interface Aviso {
@@ -25,6 +26,8 @@ interface CompanyData {
   email?: string;
   address?: string;
   firma?: boolean;
+  cert_not_after?: string;
+  cert_not_before?: string;
 }
 
 @Component({
@@ -66,31 +69,28 @@ export class NftComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private loadData(): void {
-    // Obtener datos del localStorage
+  async loadData() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    this.userData = user.user_data;
-
-    // Usar forkJoin para cargar todo en paralelo
+    console.log('user', user);
+    this.userData = user;
+    this.getDatosCierre();
     forkJoin({
       dashboard: this.ordersService.get_dashboard_metrics(),
       empresa: this.companyService.get_empresa(),
-      cierre: this.cajasService.getDatosCierre(user.email)
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (results: any) => {
+          console.warn('RESULTS', results);
           this.procesarDashboard(results.dashboard);
           this.procesarEmpresa(results.empresa);
-          this.procesarCierre(results.cierre);
           this.generarAvisos();
         },
         error: (err: any) => {
           console.error('Error al obtener datos:', err);
-          this.generarAvisos();
-          // this.agregarAviso('Error', 'Ocurrió un error al cargar los datos', 'error');
         }
       });
+
   }
 
   private procesarDashboard(response: any): void {
@@ -106,17 +106,20 @@ export class NftComponent implements OnInit, OnDestroy {
     }
   }
 
-  private procesarEmpresa(response: any): void {
+  async procesarEmpresa(data: any) {
     try {
-      const data = response?.message;
-      console.log('data Empresa', data.urlfirma);
-      if (data) {
+      const resp = data?.message;
+      console.log('data Empresa', resp.urlfirma);
+      if (resp) {
         this.companyData = {
-          name: data.name || 'Sin nombre',
-          phone: data.phone,
-          email: data.email,
-          address: data.address,
-          firma: isNullOrEmpty(data.urlfirma)
+          name: resp.name || 'Sin nombre',
+          phone: resp.phone,
+          email: resp.email,
+          address: resp.address,
+          firma: isNullOrEmpty(resp.urlfirma),
+          cert_not_after: resp.cert_not_after,
+          cert_not_before: resp.cert_not_before
+
         };
       }
     } catch (error) {
@@ -124,14 +127,20 @@ export class NftComponent implements OnInit, OnDestroy {
     }
   }
 
-  private procesarCierre(response: any): void {
+  async getDatosCierre() {
+
+    const userEmail: string = String(this.userData?.email || '');
+    console.log('userEmail', userEmail);
+
     try {
-      const data = response?.message || {};
+      const resp: any = await firstValueFrom(this.cajasService.getDatosCierre(userEmail))
+      console.log('resp', resp);
+      const data = resp?.message || {};
       this.montoApertura = data.monto_apertura || 0;
       this.totalRetiros = data.total_retiros || 0;
       this.efectivoSistema = data.efectivo_sistema || 0;
     } catch (error) {
-      console.error('Error procesando cierre:', error);
+      console.error('Error datos cierre:', error);
     }
   }
 
@@ -151,6 +160,28 @@ export class NftComponent implements OnInit, OnDestroy {
         'warning'
       );
     }
+
+    const dateEndCert: string = String(this.companyData?.cert_not_after || null);
+    if (dateEndCert) {
+      const dias = diasRestantes(dateEndCert);
+      if (dias <= 30 && dias > 0) {
+        this.agregarAviso(
+          'Firma Digital',
+          `La firma digital vencera en ${dias} día(s).`,
+          'warning'
+        );
+      } else if (dias <= 0) {
+        this.agregarAviso(
+          'Firma Digital',
+          'La firma digital ha expirado',
+          'error'
+        );
+      }
+    }
+
+
+
+
 
     // Ejemplo: Diferencia en efectivo
     // if (this.montoApertura > 0) {
