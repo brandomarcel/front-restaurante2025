@@ -1,5 +1,5 @@
 <div class="p-4 bg-gray-100 ">
-  <h1 class="text-2xl font-bold mb-4 text-gray-800">📊 <span class="text-blue-600">{{userData?.first_name}}</span></h1>
+  <h1 class="text-2xl font-bold mb-4 text-gray-800">📊 <span class="text-blue-600">{{userData?.fullName}}</span></h1>
 
 <!-- Componente Avisos -->
   <app-avisos [avisos]="avisos" (eliminar)="eliminarAviso($event)" class="mb-4 block"></app-avisos>
@@ -84,7 +84,7 @@
 
   <!-- Productos más vendidos - Compacto -->
   <div class="bg-white rounded-lg shadow-sm p-3">
-    <h3 class="text-sm font-semibold text-gray-800 mb-2">Top Productos</h3>
+    <h3 class="text-sm font-semibold text-gray-800 mb-2">Top Productos más vendidos del Día</h3>
     <ul class="space-y-1 text-xs">
       <li *ngFor="let product of topProducts" class="flex justify-between text-gray-700">
         <span class="truncate">{{ product.name }}</span>

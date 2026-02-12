@@ -1,6 +1,6 @@
 export interface UserData {
   email: string
-  full_name: string
+  fullName: string
   first_name: string
   last_name: any
   username: string
