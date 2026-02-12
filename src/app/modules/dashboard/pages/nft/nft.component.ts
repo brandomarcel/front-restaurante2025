@@ -41,6 +41,7 @@ export class NftComponent implements OnInit, OnDestroy {
   // Métricas
   totalOrdersToday = 0;
   total_sales_today = 0;
+  idApertura:string = '';
   montoApertura = 0;
   totalRetiros = 0;
   efectivoSistema = 0;
@@ -81,7 +82,6 @@ export class NftComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (results: any) => {
-          console.warn('RESULTS', results);
           this.procesarDashboard(results.dashboard);
           this.procesarEmpresa(results.empresa);
           this.generarAvisos();
@@ -136,6 +136,7 @@ export class NftComponent implements OnInit, OnDestroy {
       const resp: any = await firstValueFrom(this.cajasService.getDatosCierre(userEmail))
       console.log('resp', resp);
       const data = resp?.message || {};
+      this.idApertura = data.apertura || '';
       this.montoApertura = data.monto_apertura || 0;
       this.totalRetiros = data.total_retiros || 0;
       this.efectivoSistema = data.efectivo_sistema || 0;
@@ -152,8 +153,8 @@ export class NftComponent implements OnInit, OnDestroy {
       this.agregarAviso('Aviso', 'Ingrese su firma electronica para poder emitir facturas.',
         'warning');
     }
-    // Ejemplo: Sin apertura de caja
-    if (!this.montoApertura) {
+  
+    if (this.idApertura === '') {
       this.agregarAviso(
         'Caja',
         'No hay apertura de caja activa. Por favor, realiza la apertura.',
