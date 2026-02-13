@@ -13,22 +13,22 @@ import { OrdersService } from 'src/app/services/orders.service';
 import { PaymentsService } from 'src/app/services/payments.service';
 import { PrintService } from 'src/app/services/print.service';
 import { ProductsService } from 'src/app/services/products.service';
-import { environment } from '../../../environments/environment';
-import { UtilsService } from '../../core/services/utils.service';
-import { AlertService } from '../../core/services/alert.service';
 import { finalize } from 'rxjs';
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
 import { AuthService } from 'src/app/services/auth.service';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
+import { CartService } from '../services/cart.service';
+import { environment } from 'src/environments/environment';
+import { AlertService } from 'src/app/core/services/alert.service';
 
 type RoleName = 'Cajero' | 'Mesero' | 'Gerente' | 'Desconocido';
-
 @Component({
-  selector: 'app-pos',
+  selector: 'app-pos-caja',
+  standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, OnlyNumbersDirective, ButtonComponent],
-  templateUrl: './pos.component.html',
+  templateUrl: './pos-caja.component.html',
 })
-export class PosComponent implements OnInit {
+export class PosCajaComponent implements OnInit {
   ambiente: string = '';
   showPaymentModal: boolean = false;
   amountReceived: number | null = null;
@@ -43,7 +43,7 @@ export class PosComponent implements OnInit {
   identificationCustomer: string = '';
   customer: any = null;
   alias: string = '';
-  cart: any[] = [];
+  // cart: any[] = [];
   searchTerm: string = '';
   selectedCategory = '';
   orderType: 'Servirse' | 'Llevar' | 'Domicilio' = 'Servirse';
@@ -65,17 +65,6 @@ export class PosComponent implements OnInit {
 
   private url = environment.URL;
 
-  // ===== Roles y Permisos =====
-  roleName: RoleName = 'Desconocido';
-  permissions = {
-    canSeeMoney: true,        // Ver precios/totales
-    canCharge: true,          // Cobrar / abrir modal de pago
-    canPrintReceipt: true,    // Imprimir recibo/factura
-    canSelectCustomer: true,  // Seleccionar/crear cliente
-    canSendToKitchen: true,    // Enviar a cocina (comanda)
-    canSeeTypeOrder: true,        // Ver tipo de pedido
-  };
-
   identificationTypes = VARIABLE_CONSTANTS.IDENTIFICATION_TYPE;
 
   constructor(
@@ -88,24 +77,14 @@ export class PosComponent implements OnInit {
     private ordersService: OrdersService,
     private spinner: NgxSpinnerService,
     private printService: PrintService,
-    private utilsService: UtilsService,
-    private alertService: AlertService,
-    private auth: AuthService
+    private auth: AuthService,
+    public cartService: CartService,
+    public alertService: AlertService,
   ) {
 
   }
 
   ngOnInit(): void {
-    // === Rol actual (único por ahora) ===
-    const me: any = this.auth.getCurrentUser();
-    const rawRole: string | undefined = me?.roles?.[0];
-    // Normaliza el nombre del rol a nuestras etiquetas
-    // this.roleName = 'Gerente';
-    this.roleName = this.mapRawRole(rawRole);
-    console.log('📦rawRole', rawRole);
-    this.permissions = this.getPermissionsFromRole(this.roleName);
-    console.log('📦roleName', this.roleName, '📦permissions', this.permissions);
-
     const ambienteGuardado = localStorage.getItem('ambiente');
     console.log('📦ambienteGuardado', ambienteGuardado);
     this.ambiente = ambienteGuardado ?? '----------';
@@ -142,58 +121,6 @@ export class PosComponent implements OnInit {
     ]);
   }
 
-  // ======= Mapeo de roles y permisos =======
-  private mapRawRole(raw?: string): RoleName {
-    if (!raw) return 'Desconocido';
-    const r = raw.toLowerCase();
-    if (r.includes('mesero')) return 'Mesero';
-    if (r.includes('cajero')) return 'Cajero';
-    if (r.includes('gerente') || r.includes('admin')) return 'Gerente';
-    return 'Desconocido';
-  }
-
-  private getPermissionsFromRole(role: RoleName) {
-    console.log('📦role', role);
-    switch (role) {
-      case 'Mesero':
-        return {
-          canSeeMoney: false,
-          canCharge: false,
-          canPrintReceipt: false,
-          canSelectCustomer: false,
-          canSendToKitchen: true,
-          canSeeTypeOrder: false
-        };
-      case 'Cajero':
-        return {
-          canSeeMoney: true,
-          canCharge: true,
-          canPrintReceipt: true,
-          canSelectCustomer: true,
-          canSendToKitchen: true,
-          canSeeTypeOrder: false
-        };
-      case 'Gerente':
-        return {
-          canSeeMoney: true,
-          canCharge: true,
-          canPrintReceipt: true,
-          canSelectCustomer: true,
-          canSendToKitchen: true,
-          canSeeTypeOrder: true
-        };
-      default:
-        // Por defecto conservador (similar a Cajero para no romper flujos)
-        return {
-          canSeeMoney: true,
-          canCharge: true,
-          canPrintReceipt: true,
-          canSelectCustomer: true,
-          canSendToKitchen: true,
-          canSeeTypeOrder: true
-        };
-    }
-  }
 
   // ======= UI helpers =======
   public toggleSidebar() {
@@ -220,11 +147,11 @@ export class PosComponent implements OnInit {
       this.products = res.message.data || [];
       this.applyFilters();
     },
-    error => {
-      this.spinner.hide();
-      console.error('Error al cargar productos:', error);
-    }
-  );
+      error => {
+        this.spinner.hide();
+        console.error('Error al cargar productos:', error);
+      }
+    );
   }
 
   loadCategory() {
@@ -233,10 +160,10 @@ export class PosComponent implements OnInit {
       this.spinner.hide();
       this.categories = res.message.data || [];
     },
-    error => {
-      this.spinner.hide();
-      console.error('Error al cargar productos:', error);
-    });
+      error => {
+        this.spinner.hide();
+        console.error('Error al cargar productos:', error);
+      });
   }
 
   loadMethodPayment() {
@@ -245,11 +172,11 @@ export class PosComponent implements OnInit {
       this.spinner.hide();
       this.payments = res || [];
     },
-    error => {
-      this.spinner.hide();
-      console.error('Error al cargar productos:', error);
-    }
-  );
+      error => {
+        this.spinner.hide();
+        console.error('Error al cargar productos:', error);
+      }
+    );
   }
 
   // ======= Cliente =======
@@ -350,7 +277,8 @@ export class PosComponent implements OnInit {
   }
 
   addProduct(product: any) {
-    const existing = this.cart.find(i => (i.name ?? i.nombre) === (product.name ?? product.nombre));
+    const existing = this.cartService.cart
+      .find(i => (i.name ?? i.nombre) === (product.name ?? product.nombre));
     const price = this.toNumber(product.precio ?? product.price);
     const taxValue = this.getTaxPercent(product); // 0 o 15
 
@@ -366,7 +294,7 @@ export class PosComponent implements OnInit {
         tax_value: taxValue
       };
       this.recalcItem(newItem);
-      this.cart.push(newItem);
+      this.cartService.cart.push(newItem);
     }
   }
 
@@ -380,34 +308,30 @@ export class PosComponent implements OnInit {
       item.quantity--;
       this.recalcItem(item);
     } else {
-      const i = this.cart.indexOf(item);
-      if (i !== -1) this.cart.splice(i, 1);
+      const i = this.cartService.cart.indexOf(item);
+      if (i !== -1) this.cartService.cart.splice(i, 1);
     }
   }
 
   get subtotal(): number {
-    return this.round2(this.cart.reduce((acc, it) => acc + this.toNumber(it.subtotal), 0));
+    return this.round2(this.cartService.cart.reduce((acc, it) => acc + this.toNumber(it.subtotal), 0));
   }
   get iva(): number {
-    return this.round2(this.cart.reduce((acc, it) => acc + this.toNumber(it.iva), 0));
+    return this.round2(this.cartService.cart.reduce((acc, it) => acc + this.toNumber(it.iva), 0));
   }
   get total(): number {
-    return this.round2(this.cart.reduce((acc, it) => acc + this.toNumber(it.total), 0));
+    return this.round2(this.cartService.cart.reduce((acc, it) => acc + this.toNumber(it.total), 0));
   }
 
   // ======= Pago (solo Cajero/Gerente) =======
   abrirModalPago() {
-    if (!this.permissions.canCharge) {
-      toast.warning('Este rol no puede cobrar. Envía la comanda a cocina.');
-      return;
-    }
 
     if (!this.customer) {
       toast.error('Selecciona un cliente.');
       this.identificationCustomer = '';
       return;
     }
-    if (this.cart.length === 0) {
+    if (this.cartService.cart.length === 0) {
       toast.error('Agrega productos al carrito.');
       return;
     }
@@ -421,7 +345,7 @@ export class PosComponent implements OnInit {
     if (this.paymentMethod === '01') {
       const recibido = Number(this.amountReceived);
       if (Number.isFinite(recibido)) {
-        this.change = recibido - this.total;
+        this.change = recibido - this.cartService.total;
       } else {
         this.change = 0;
       }
@@ -429,17 +353,12 @@ export class PosComponent implements OnInit {
   }
 
   confirmarPago(typePago: string) {
-    if (!this.permissions.canCharge) {
-      toast.warning('Este rol no puede cobrar.');
-      return;
-    }
-
     const payment = this.payments.find((p: any) => p.codigo === this.paymentMethod);
     const TYPE_IDENTIFICATION_RUC = "07 - Consumidor Final";
     const UMBRAL = 50;
 
     const isConsumidorFinal = this.customer?.tipo_identificacion === TYPE_IDENTIFICATION_RUC;
-    const totalN = Number(this.total);
+    const totalN = Number(this.cartService.total);
 
     if (isConsumidorFinal && typePago === 'Factura' && totalN >= UMBRAL) {
       toast.error(`El consumidor final no puede facturar por un monto mayor o igual a $${UMBRAL}.`);
@@ -450,12 +369,12 @@ export class PosComponent implements OnInit {
       customer: this.customer?.name,
       alias: this.alias,
       estado: typePago,
-      total: this.total.toFixed(2),
+      total: this.cartService.total.toFixed(2),
       type_orden: this.orderType,
       delivery_address: this.deliveryAddress,
       delivery_phone: this.deliveryPhone,
       fecha: this.today,
-      items: this.cart.map(item => ({
+      items: this.cartService.cart.map(item => ({
         product: item.name ?? item.nombre, // asegúrate que sea el código correcto
         qty: item.quantity,
         rate: item.price,
@@ -505,11 +424,7 @@ export class PosComponent implements OnInit {
 
   // ======= Flujo Mesero (enviar a cocina) =======
   async saveOrderMesero() {
-    if (!this.permissions.canSendToKitchen) {
-      toast.warning('Este rol no puede enviar a cocina.');
-      return;
-    }
-    if (this.cart.length === 0) {
+    if (this.cartService.cart.length === 0) {
       toast.error('Agrega productos al carrito.');
       return;
     }
@@ -524,12 +439,12 @@ export class PosComponent implements OnInit {
       // Para mesero no exigimos cliente
       alias: this.alias,
       estado: 'Nota Venta', // etiqueta para tu backend
-      total: this.total.toFixed(2), // puede no ser usado para cocina
+      total: this.cartService.total.toFixed(2), // puede no ser usado para cocina
       type_orden: this.orderType,
       delivery_address: this.deliveryAddress,
       delivery_phone: this.deliveryPhone,
       fecha: this.today,
-      items: this.cart.map(item => ({
+      items: this.cartService.cart.map(item => ({
         product: item.name ?? item.nombre,
         qty: item.quantity,
         rate: item.price,
@@ -537,7 +452,7 @@ export class PosComponent implements OnInit {
       })),
       // sin payments
     };
-    const result = await this.alertService.confirm('¿Desea crear la orden?','Confirmación');
+    const result = await this.alertService.confirm('¿Desea crear la orden?', 'Confirmación');
     console.log('result', result);
     if (!result.isConfirmed) return;
 
@@ -624,23 +539,11 @@ export class PosComponent implements OnInit {
   // Abre el modal después de crear el pedido
   openPrintModal(orderId: string) {
     this.pendingOrderId = orderId;
-    // Para cajero deja 'ambas' por defecto; para mesero mostramos/forzamos comanda
-    this.printOption = this.roleName === 'Mesero' ? 'comanda' : 'ambas';
     this.showPrintModal = true;
   }
 
   handlePrintSelection(option: 'comanda' | 'recibo' | 'ambas') {
     if (!this.pendingOrderId) return;
-
-    // Mesero no puede imprimir recibo
-    if (this.roleName === 'Mesero' && option === 'recibo') {
-      toast.warning('El rol Mesero no puede imprimir recibo.');
-      return;
-    }
-    if (this.roleName === 'Mesero' && option === 'ambas') {
-      // En mesero "ambas" no aplica; fuerza comanda
-      option = 'comanda';
-    }
 
     switch (option) {
       case 'comanda':
@@ -683,7 +586,7 @@ export class PosComponent implements OnInit {
   }
 
   clearPage() {
-    this.cart = [];
+    this.cartService.clear();
     this.customer = null;
     this.alias = '';
     this.identificationCustomer = '';
@@ -764,6 +667,15 @@ export class PosComponent implements OnInit {
       ''
     );
   }
+remove(item: any) {
+  const index = this.cartService.cart.indexOf(item);
+  if (index !== -1) {
+    this.cartService.cart.splice(index, 1);
+  }
+}
+
+
+
 
   trackByProductId = (_: number, p: any) => p?.id || p?._id || p?.codigo || p?.name || p?.nombre;
 }

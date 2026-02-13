@@ -1,0 +1,117 @@
+<div class="bg-background flex flex-col h-full relative">
+
+  <!-- ================= HEADER ================= -->
+  <div class="bg-white shadow-sm px-4 py-3 space-y-3">
+
+    <h2 class="text-lg font-semibold text-primary">
+      Toma de pedido (Mesero)
+    </h2>
+
+    <input
+      type="text"
+      [(ngModel)]="alias"
+      (input)="alias = alias.toUpperCase()"
+      maxlength="20"
+      class="w-full border rounded-lg px-4 py-3 text-base focus:ring-2 focus:ring-primary/40 outline-none"
+      placeholder="Mesa / Alias" />
+
+    <div class="flex gap-2">
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="applyFilters()"
+        placeholder="Buscar producto…"
+        class="flex-1 rounded-lg px-4 py-3 text-base border focus:ring-2 focus:ring-primary/40 outline-none" />
+
+      <button
+        (click)="clearSearch()"
+        class="bg-gray-200 text-gray-800 px-4 py-3 rounded-lg active:scale-95 transition">
+        Limpiar
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ================= PRODUCTOS ================= -->
+  <div class="p-4 pb-70">
+
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+
+      <div
+        *ngFor="let product of filteredProductList"
+        (click)="addProduct(product)"
+        class="bg-white rounded-2xl shadow-sm hover:shadow-md p-4 active:scale-95 transition cursor-pointer">
+
+        <h3 class="font-semibold text-base leading-snug">
+          {{ product.nombre }}
+        </h3>
+
+        <p class="text-sm text-gray-500 mt-1"
+           *ngIf="product.descripcion">
+          {{ product.descripcion }}
+        </p>
+
+      </div>
+
+      <div
+        *ngIf="filteredProductList.length === 0"
+        class="col-span-full text-center py-6 text-gray-500 italic">
+        No hay productos disponibles.
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ================= FOOTER FIJO ================= -->
+  <div class="fixed bottom-0 left-0 right-0 bg-white border-t shadow-[0_-4px_12px_rgba(0,0,0,0.08)] p-4 space-y-3">
+
+    <!-- Carrito -->
+    <div *ngIf="cartService.cart.length > 0"
+         class="max-h-60 overflow-y-auto space-y-2 pr-1">
+
+      <div
+        *ngFor="let item of cartService.cart"
+        class="flex justify-between items-center text-sm">
+
+        <span class="font-medium">
+          {{ item.nombre }} x{{ item.quantity }}
+        </span>
+
+        <div class="flex items-center gap-2">
+
+          <button
+            (click)="cartService.decrease(item)"
+            class="w-9 h-9 rounded-full border bg-gray-50 active:scale-90 transition">
+            −
+          </button>
+
+          <button
+            (click)="cartService.increase(item)"
+            class="w-9 h-9 rounded-full border bg-gray-50 active:scale-90 transition">
+            +
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Botón principal -->
+    <button
+      (click)="saveOrderMesero()"
+      [disabled]="cartService.cart.length === 0"
+      [class.opacity-50]="cartService.cart.length === 0"
+      class="w-full bg-primary text-white py-4 rounded-2xl text-lg font-semibold active:scale-95 transition shadow-md">
+
+      Generar Orden
+      <span class="ml-2 text-sm font-normal">
+        ({{ cartService.cart.length }} items)
+      </span>
+
+    </button>
+
+  </div>
+
+</div>

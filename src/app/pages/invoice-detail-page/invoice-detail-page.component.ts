@@ -103,6 +103,7 @@ this.spinner.hide();
     this.invoicesSvc.emit_existing_invoice_v2(this.invoice.name).subscribe({
       next: (res: any) => {
         console.log('emit_existing_invoice_v2:', res);
+        toast.success('Factura reenviada');
         const id = this.route.snapshot.paramMap.get('id')!;
         this.fetch(id);
 

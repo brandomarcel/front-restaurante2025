@@ -1,0 +1,637 @@
+<div class="bg-background flex flex-col xl:text-[13px]">
+    <div class="container mx-auto px-4 py-3 flex-grow flex flex-col">
+
+        <div class="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-4 flex-grow">
+
+            <!-- ================= IZQUIERDA ================= -->
+            <div class="flex flex-col overflow-hidden">
+
+
+                <!-- CLIENTE -->
+                <div class="bg-white rounded-lg shadow-sm border p-3">
+
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-sm font-semibold text-primary">Cliente</h2>
+                            <span *ngIf="customer"
+                                class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                                Seleccionado
+                            </span>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button (click)="showCustomerModal = true"
+                                class="bg-primary text-white px-2.5 py-1.5 rounded min-h-[36px]">
+                                <fa-icon icon="user-plus"></fa-icon>
+                            </button>
+
+                            <button (click)="selectFinalConsumer()"
+                                class="bg-primary text-white px-3 py-1.5 rounded min-h-[36px] text-xs">
+                                Consumidor Final
+                            </button>
+
+                            <button *ngIf="customer" (click)="identificationCustomer=''; customer=null"
+                                class="bg-red-500 text-white px-3 py-1.5 rounded min-h-[36px] text-xs">
+                                Cambiar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Buscador -->
+                    <div *ngIf="!customer" class="mt-2 flex items-center gap-2">
+                        <div class="relative flex-1">
+                            <input type="text" maxlength="13" appOnlyNumbers [(ngModel)]="identificationCustomer"
+                                (keyup.enter)="findByIdentificationCustomer()" placeholder="Cédula o RUC"
+                                class="w-full border rounded pl-9 pr-3 py-1.5 text-xs focus:ring-2 focus:ring-primary outline-none" />
+                            <fa-icon icon="id-card"
+                                class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
+                            </fa-icon>
+                        </div>
+
+                        <button (click)="findByIdentificationCustomer()"
+                            class="bg-primary text-white px-3 py-1.5 rounded text-xs min-h-[34px]">
+                            Buscar
+                        </button>
+                    </div>
+
+                    <!-- Tarjeta -->
+                    <div *ngIf="customer" class="mt-3 bg-blue-50 border rounded p-3 text-xs">
+                        <div class="flex gap-2">
+                            <div
+                                class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                                {{ customer?.nombre?.charAt(0) }}
+                            </div>
+                            <div>
+                                <p class="font-semibold text-blue-900">
+                                    {{ customer?.nombre }}
+                                </p>
+                                <div *ngIf="customer?.nombre !== 'Consumidor Final'" class="text-blue-700 text-[11px]">
+                                    <p>📞 {{ customer?.telefono }}</p>
+                                    <p>✉ {{ customer?.correo }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PRODUCTOS -->
+                <div class="mt-3 flex flex-col flex-grow overflow-hidden">
+
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-sm font-semibold text-primary">Productos</h2>
+
+                        <div class="flex gap-2">
+                            <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()"
+                                placeholder="Buscar..." class="border rounded px-3 py-1.5 text-xs w-48" />
+
+                            <button (click)="searchTerm=''; applyFilters()"
+                                class="bg-gray-200 px-3 py-1.5 rounded text-xs">
+                                Limpiar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Categorías -->
+                    <div class="flex gap-2 overflow-x-auto pb-2">
+                        <button (click)="onCategorySelected('')" class="text-xs px-3 py-1.5 border rounded min-h-[32px]"
+                            [class.bg-primary]="selectedCategory === ''">
+                            Todos
+                        </button>
+
+                        <button *ngFor="let category of categories" (click)="onCategorySelected(category.name)"
+                            class="text-xs px-3 py-1.5 border rounded min-h-[32px]"
+                            [class.bg-primary]="selectedCategory === category.name">
+                            {{ category.nombre }}
+                        </button>
+                    </div>
+
+                    <!-- GRID -->
+                    <div class="flex-grow overflow-y-auto pr-1">
+                        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6 gap-2 pb-4">
+
+                            <div *ngFor="let product of filteredProductList; trackBy: trackByProductId"
+                                (click)="!product.is_out_of_stock && addProduct(product)"
+                                class="rounded border p-2 text-xs shadow-sm transition relative" [ngClass]="{
+    'hover:bg-gray-50 cursor-pointer': !product.is_out_of_stock,
+    'opacity-60 border-red-400 bg-red-50 cursor-not-allowed': product.is_out_of_stock
+  }">
+
+                                <!-- Badge estado -->
+                                <span *ngIf="product.is_out_of_stock"
+                                    class="absolute top-1 right-1 text-[7px] bg-red-500 text-white px-0.5 py-0.1 rounded">
+                                    AGOTADO
+                                </span>
+
+                                <!-- <span *ngIf="!product.is_out_of_stock"
+                                    class="absolute top-1 right-1 text-[9px] bg-emerald-500 text-white px-1.5 py-0.5 rounded">
+                                    ACTIVO
+                                </span> -->
+
+                                <p class="font-medium truncate">
+                                    {{ product.nombre }}
+                                </p>
+
+                                <p class="text-gray-500 text-[10px] truncate">
+                                    {{ product.descripcion }}
+                                </p>
+
+                                <p class="font-semibold mt-1">
+                                    ${{ product.precio | number:'1.2-2' }}
+                                </p>
+
+                                <p class="text-yellow-600 text-[10px]">
+                                    {{ product.tax_value }}% IVA
+                                </p>
+
+                            </div>
+
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ================= RESUMEN ================= -->
+            <div class="flex flex-col text-xs bg-white border rounded-lg p-3 shadow-sm">
+
+                <!-- INFO SUPERIOR -->
+                <div
+                    class="bg-gray-50 border rounded-lg p-2 text-[11px] text-gray-700 flex justify-between items-center mb-3">
+
+                    <div class="flex gap-4">
+
+                        <div class="flex items-center gap-2">
+
+                            <span class="text-gray-500 text-xs">
+                                Ambiente:
+                            </span>
+
+                            <span class="px-3 py-1 rounded-full text-xs font-bold tracking-wide shadow-sm" [ngClass]="ambiente === 'PRODUCCION'
+      ? 'bg-green-100 text-green-700 border border-green-300'
+      : 'bg-yellow-100 text-yellow-700 border border-yellow-300'">
+
+                                {{ ambiente || '—' }}
+
+                            </span>
+
+                        </div>
+
+                        <!-- 
+    <div class="flex text-end">
+      <span class="text-gray-500">Fecha:</span>
+      <span class="font-semibold">
+        {{ today | date:'dd/MM/yyyy' }}
+      </span>
+    </div> -->
+
+                        <!-- <div>
+      <span class="text-gray-500">Hora:</span>
+      <span class="font-semibold">
+        {{ today | date:'HH:mm' }}
+      </span>
+    </div> -->
+
+                    </div>
+
+                    <!-- <div>
+    <span class="text-gray-500">Usuario:</span>
+    <span class="font-semibold">
+      {{ userName }}
+    </span>
+  </div> -->
+
+                </div>
+                <label class="font-semibold mb-1">Tipo de orden</label>
+
+                <div class="flex rounded border overflow-hidden mb-2">
+                    <button class="flex-1 py-1.5 text-xs min-h-[36px]"
+                        [ngClass]="orderType==='Servirse' ? 'bg-primary text-white' : ''"
+                        (click)="setOrderType('Servirse')">
+                        Servirse
+                    </button>
+
+                    <button class="flex-1 py-1.5 text-xs border-l min-h-[36px]"
+                        [ngClass]="orderType==='Llevar' ? 'bg-primary text-white' : ''"
+                        (click)="setOrderType('Llevar')">
+                        Llevar
+                    </button>
+
+                    <button class="flex-1 py-1.5 text-xs border-l min-h-[36px]"
+                        [ngClass]="orderType==='Domicilio' ? 'bg-primary text-white' : ''"
+                        (click)="setOrderType('Domicilio')">
+                        Domicilio
+                    </button>
+                </div>
+
+                <div *ngIf="orderType==='Domicilio'" class="space-y-2 mb-2">
+                    <input [(ngModel)]="deliveryAddress" class="w-full border rounded px-2 py-1.5 text-xs"
+                        placeholder="Dirección" />
+                    <input [(ngModel)]="deliveryPhone" class="w-full border rounded px-2 py-1.5 text-xs"
+                        placeholder="Teléfono" />
+                </div>
+
+                <h3 class="font-semibold mb-1">Resumen</h3>
+
+                <div class="flex-grow overflow-y-auto space-y-1 mb-2 pr-1">
+
+                    <div *ngFor="let item of cartService.cart"
+                        class="flex justify-between items-center border-b py-1.5 text-xs">
+
+                        <!-- INFO -->
+                        <div class="flex-1 min-w-0">
+                            <p class="truncate font-medium">
+                                {{ item.nombre || item.name }}
+                            </p>
+                        </div>
+
+                        <!-- CONTROLES -->
+                        <div class="flex items-center gap-2">
+
+                            <!-- Disminuir -->
+                            <button (click)="decrease(item)"
+                                class="w-7 h-7 rounded border flex items-center justify-center hover:bg-gray-100">
+                                <fa-icon icon="minus" class="text-[10px]"></fa-icon>
+                            </button>
+
+                            <!-- Cantidad -->
+                            <span class="w-5 text-center font-semibold">
+                                {{ item.quantity }}
+                            </span>
+
+                            <!-- Aumentar -->
+                            <button (click)="increase(item)"
+                                class="w-7 h-7 rounded border flex items-center justify-center hover:bg-gray-100">
+                                <fa-icon icon="plus" class="text-[10px]"></fa-icon>
+                            </button>
+
+                            <!-- Precio -->
+                            <strong class="ml-2 w-16 text-right">
+                                ${{ item.total | number:'1.2-2' }}
+                            </strong>
+
+                            <!-- Eliminar de una -->
+                            <button (click)="remove(item)"
+                                class="w-7 h-7 rounded border border-red-400 text-red-500 flex items-center justify-center hover:bg-red-50 ml-2">
+                                <fa-icon icon="times" class="text-[10px]"></fa-icon>
+                            </button>
+
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <div class="border-t pt-2 space-y-1">
+                    <p>Subtotal: ${{ subtotal | number:'1.2-2' }}</p>
+                    <p>IVA: ${{ iva | number:'1.2-2' }}</p>
+                    <p class="font-bold text-sm">
+                        Total: ${{ total | number:'1.2-2' }}
+                    </p>
+                </div>
+
+                <button (click)="abrirModalPago()" class="mt-3 bg-primary text-white py-2 rounded text-xs min-h-[38px]">
+                    Crear Orden
+                </button>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+<!-- ================= MODAL PAGO ================= -->
+<div *ngIf="showPaymentModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+
+    <div class="bg-white w-full max-w-lg rounded p-6 relative">
+
+        <button class="absolute right-3 top-2 text-xl" (click)="showPaymentModal=false">
+            ×
+        </button>
+
+        <h2 class="text-xl font-bold mb-4">Finalizar Pedido</h2>
+
+        <!-- Método de pago -->
+        <div>
+            <label class="block text-sm font-medium mb-1">
+                Método de Pago
+            </label>
+
+            <select [(ngModel)]="paymentMethod" (change)="calcularCambio()" class="w-full border rounded px-3 py-2">
+                <option *ngFor="let item of payments" [value]="item.codigo">
+                    {{ item.description || item.nombre }}
+                </option>
+            </select>
+        </div>
+
+        <!-- Total -->
+        <div class="text-center mt-4">
+            <p class="text-gray-600">Total a Pagar</p>
+            <p class="text-4xl font-bold text-emerald-500">
+                ${{ cartService.total | number:'1.2-2' }}
+            </p>
+        </div>
+
+        <!-- Efectivo -->
+        <div *ngIf="paymentMethod === '01'" class="mt-4">
+            <input type="number" [(ngModel)]="amountReceived" (input)="calcularCambio()" placeholder="Monto entregado"
+                class="w-full border rounded px-3 py-2 text-center text-lg">
+            <p class="text-center mt-2 text-lg">
+                Cambio: ${{ change | number:'1.2-2' }}
+            </p>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex gap-3 mt-6">
+            <button (click)="confirmarPago('Nota Venta')" class="flex-1 bg-yellow-500 text-white py-3 rounded">
+                Nota Venta
+            </button>
+
+            <button (click)="confirmarPago('Factura')" class="flex-1 bg-primary text-white py-3 rounded">
+                Facturar
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<!-- MODAL DE NUEVO CLIENTE (solo caja/admin) -->
+<div *ngIf="showCustomerModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-3" role="dialog"
+    aria-modal="true">
+    <div
+        class="bg-white w-full max-w-md rounded shadow-lg p-4 text-[13px] sm:text-xs relative max-h-[90dvh] overflow-y-auto">
+        <button class="absolute top-2 right-3 text-lg" (click)="showCustomerModal = false"
+            aria-label="Cerrar">×</button>
+        <h3 class="text-base font-semibold mb-2">Nuevo Cliente</h3>
+
+        <form [formGroup]="clienteForm" (ngSubmit)="guardarCliente()" class="space-y-4">
+            <!-- Tipo -->
+            <div>
+                <label class="block text-sm font-medium">Tipo de Identificación</label>
+                <select formControlName="tipo_identificacion" class="w-full border rounded px-3 py-2 text-sm">
+                    <option *ngFor="let item of identificationTypes" [value]="item.value">{{ item.label }}</option>
+
+                </select>
+                <div *ngIf="f['tipo_identificacion'].invalid && submitted" class="text-red-500 text-sm">
+                    Seleccione un tipo válido.
+                </div>
+            </div>
+
+            <!-- Identificación -->
+            <div>
+                <label class="block text-sm font-medium">Identificación</label>
+                <input [attr.maxlength]="getMaxLength()" type="text" formControlName="num_identificacion"
+                    class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['num_identificacion'].invalid && submitted" class="text-red-500 text-sm">Campo requerido.
+                </div>
+
+                <div *ngIf="f['num_identificacion'].errors?.['cedulaInvalida'] && submitted"
+                    class="text-red-500 text-sm">
+                    La cédula debe tener 10 caracteres.
+                </div>
+                <div *ngIf="f['num_identificacion'].errors?.['rucInvalido'] && submitted" class="text-red-500 text-sm">
+                    El RUC debe tener 13 caracteres.
+                </div>
+            </div>
+
+            <!-- Nombre / Razón Social -->
+            <div>
+                <label class="block text-sm font-medium">Nombre / Razón Social</label>
+                <input type="text" formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm"
+                    oninput="this.value = this.value.toUpperCase()" />
+                <div *ngIf="f['nombre'].invalid && submitted" class="text-red-500 text-sm">Campo requerido.</div>
+            </div>
+
+            <!-- Email -->
+            <div>
+                <label class="block text-sm font-medium">Email</label>
+                <input type="email" formControlName="correo" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['correo'].invalid && submitted" class="text-red-500 text-sm">Email inválido.</div>
+            </div>
+
+            <!-- Teléfono -->
+            <div>
+                <label class="block text-sm font-medium">Teléfono</label>
+                <input maxlength="10" type="text" formControlName="telefono"
+                    class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['telefono'].invalid && submitted" class="text-red-500 text-sm">Teléfono inválido.</div>
+            </div>
+
+            <!-- Dirección -->
+            <div>
+                <label class="block text-sm font-medium">Dirección</label>
+                <input type="text" formControlName="direccion" class="w-full border rounded px-3 py-2 text-sm" />
+                <div *ngIf="f['direccion'].invalid && submitted" class="text-red-500 text-sm">Dirección inválida.</div>
+            </div>
+
+            <!-- Botón -->
+            <div class="pt-2">
+                <button type="submit"
+                    class="bg-primary text-white px-4 py-3 rounded w-full disabled:opacity-50 min-h-[44px]">
+                    Guardar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL DE PAGO (solo caja/admin) -->
+<div *ngIf="showPaymentModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog"
+    aria-modal="true">
+
+    <!-- CONTENEDOR -->
+    <div class="bg-white w-full max-w-6xl h-[92vh] rounded-xl shadow-2xl flex flex-col overflow-hidden">
+
+        <!-- HEADER -->
+        <div class="flex items-center justify-between px-5 py-3 border-b bg-white">
+            <h2 class="text-lg font-semibold text-gray-800">
+                Finalizar Pedido
+            </h2>
+
+            <button class="text-2xl text-gray-500 hover:text-gray-700" (click)="showPaymentModal = false">
+                ×
+            </button>
+        </div>
+
+        <!-- CONTENIDO -->
+        <div class="flex flex-1 overflow-hidden">
+
+            <!-- ================= IZQUIERDA ================= -->
+            <div class="w-1/2 border-r p-4 flex flex-col overflow-hidden">
+
+                <!-- Cliente -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs">
+                    <p class="font-semibold text-blue-900">
+                        👤 {{ customer?.nombre }}
+                    </p>
+
+                    <div *ngIf="customer?.nombre !== 'Consumidor Final'"
+                        class="mt-1 text-blue-700 text-[11px] space-y-0.5">
+                        <p>{{ customer?.num_identificacion }}</p>
+                        <p>{{ customer?.telefono }}</p>
+                        <p class="break-all">{{ customer?.correo }}</p>
+                    </div>
+                </div>
+
+                <!-- Tipo orden -->
+                <div class="mt-3 text-xs">
+                    <span class="text-gray-500">Tipo:</span>
+                    <span class="font-semibold ml-1">{{ orderType }}</span>
+
+                    <div *ngIf="orderType === 'Domicilio'" class="mt-1 text-blue-700 text-[11px]">
+                        <p>📍 {{ deliveryAddress || '—' }}</p>
+                        <p>📞 {{ deliveryPhone || '—' }}</p>
+                    </div>
+                </div>
+
+                <!-- Detalle -->
+                <div class="mt-3 flex-1 overflow-y-auto bg-gray-50 rounded-lg border p-3 text-xs">
+
+                    <div *ngFor="let item of cartService.cart" class="flex justify-between border-b py-1.5">
+
+                        <div class="min-w-0">
+                            <p class="truncate font-medium">
+                                {{ item.nombre }}
+                            </p>
+                            <p class="text-gray-500 text-[10px]">
+                                x{{ item.quantity }} • ${{ item.price | number:'1.2-2' }}
+                            </p>
+                        </div>
+
+                        <strong>
+                            ${{ item.total | number:'1.2-2' }}
+                        </strong>
+                    </div>
+
+                    <!-- Totales -->
+                    <div class="pt-3 space-y-1 border-t mt-2 text-xs">
+                        <div class="flex justify-between">
+                            <span>Subtotal</span>
+                            <span>${{ subtotal | number:'1.2-2' }}</span>
+                        </div>
+
+                        <div class="flex justify-between">
+                            <span>IVA</span>
+                            <span>${{ iva | number:'1.2-2' }}</span>
+                        </div>
+
+                        <div class="flex justify-between font-bold text-sm pt-1">
+                            <span>Total</span>
+                            <span>${{ total | number:'1.2-2' }}</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ================= DERECHA ================= -->
+            <div class="w-1/2 p-5 flex flex-col">
+
+                <!-- TOTAL GRANDE -->
+                <div class="text-center">
+                    <p class="text-gray-500 text-sm">Total a Pagar</p>
+                    <p class="text-5xl font-bold text-emerald-500">
+                        ${{ total | number:'1.2-2' }}
+                    </p>
+                </div>
+
+                <!-- Método -->
+                <div class="mt-6">
+                    <label class="block text-xs font-medium mb-1">
+                        Método de Pago
+                    </label>
+
+                    <select [(ngModel)]="paymentMethod" (change)="calcularCambio()"
+                        class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary">
+                        <option *ngFor="let item of payments" [value]="item.codigo">
+                            {{ item.description || item.nombre }}
+                        </option>
+                    </select>
+                </div>
+
+                <!-- Efectivo -->
+                <div *ngIf="paymentMethod === '01'" class="mt-6">
+
+                    <input type="number" [(ngModel)]="amountReceived" (input)="calcularCambio()"
+                        class="w-full border rounded-md px-3 py-3 text-2xl font-semibold text-center focus:ring-2 focus:ring-primary"
+                        placeholder="Monto recibido" />
+
+                    <div class="mt-4 text-center">
+                        <p class="text-gray-500 text-sm">Cambio</p>
+                        <p class="text-5xl font-bold" [class.text-red-500]="change < 0"
+                            [class.text-emerald-500]="change >= 0">
+                            ${{ change | number:'1.2-2' }}
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- Alias -->
+                <div class="mt-6">
+                    <input type="text" [(ngModel)]="alias" maxlength="20"
+                        oninput="this.value = this.value.toUpperCase()"
+                        class="w-full border rounded-md px-3 py-2 text-sm text-center" placeholder="Alias (opcional)" />
+                </div>
+
+                <!-- BOTONES -->
+                <div class="mt-auto pt-6 grid grid-cols-2 gap-3">
+
+                    <button (click)="confirmarPago('Nota Venta')"
+                        class="bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-lg font-semibold text-sm">
+                        Nota de Venta
+                    </button>
+
+                    <button (click)="confirmarPago('Factura')"
+                        class="bg-primary hover:bg-primary/90 text-white py-3 rounded-lg font-semibold text-sm">
+                        Facturar
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+
+<!-- MODAL: ELECCIÓN DE IMPRESIÓN -->
+<div *ngIf="showPrintModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-3" role="dialog"
+    aria-modal="true">
+    <div class="bg-white w-full max-w-md rounded shadow-lg p-5 sm:p-6 text-center relative"
+        (click)="$event.stopPropagation()">
+        <button class="absolute top-2 right-3 text-lg" (click)="closePrintModal()" aria-label="Cerrar">×</button>
+
+        <h3 class="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
+            {{'¿Qué deseas imprimir?' }}
+        </h3>
+        <p class="text-gray-600 text-sm mb-5 sm:mb-6">
+            {{'Selecciona una opción para continuar.' }}
+        </p>
+
+        <!-- Opciones Caja/Gerente -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+            <button
+                class="bg-blue-500 hover:bg-blue-600 text-white py-3 sm:py-4 rounded-lg text-base font-medium active:scale-95 transition min-h-[44px]"
+                (click)="handlePrintSelection('comanda')">Comanda</button>
+            <button
+                class="bg-green-500 hover:bg-green-600 text-white py-3 sm:py-4 rounded-lg text-base font-medium active:scale-95 transition min-h-[44px]"
+                (click)="handlePrintSelection('recibo')">Recibo</button>
+            <button
+                class="bg-purple-500 hover:bg-purple-600 text-white py-3 sm:py-4 rounded-lg text-base font-medium active:scale-95 transition min-h-[44px]"
+                (click)="handlePrintSelection('ambas')">Ambas</button>
+        </div>
+
+        <div class="pt-5 sm:pt-6">
+            <button class="text-gray-500 text-sm underline min-h[40px]" (click)="closePrintModal()">Cancelar</button>
+        </div>
+    </div>
+</div>

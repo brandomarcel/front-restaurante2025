@@ -16,6 +16,7 @@ import { InvoiceDetailPageComponent } from 'src/app/pages/invoice-detail-page/in
 import { CreditNotesComponent } from 'src/app/pages/credit-notes/credit-notes.component';
 import { CreditNoteDetailPageComponent } from 'src/app/pages/credit-note-detail-page/credit-note-detail-page.component';
 import { OrdersRealtimeComponent } from 'src/app/pages/orders-realtime/orders-realtime.component';
+import { PosShellComponent } from 'src/app/pages/pos/pos-shell/pos-shell.component';
 
 const routes: Routes = [
   {
@@ -24,7 +25,8 @@ const routes: Routes = [
     children: [
       { path: '', redirectTo: 'main', pathMatch: 'full' },
       { path: 'main', component: NftComponent },
-      { path: 'pos', component: PosComponent },
+      // { path: 'pos', component: PosComponent },
+      { path: 'pos', component: PosShellComponent },
       { path: 'customers', component: CustomersComponent },
       { path: 'products', component: ProductsComponent },
       { path: 'company', component: CompanyComponent },

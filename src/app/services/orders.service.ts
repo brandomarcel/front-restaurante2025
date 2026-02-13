@@ -97,7 +97,7 @@ export class OrdersService {
     });
   }
 
-  /** 🔧 Bugfix: el name es string tipo "ORD-00884" y faltaba "=" en la URL */
+
   getById(name: string) {
     return this.http.get<{ data?: OrderDTO; message?: OrderDTO;[k: string]: any }>(
       `${this.urlBase}.get_order_with_details?order_name=${encodeURIComponent(name)}`,
@@ -116,7 +116,7 @@ export class OrdersService {
     );
   }
 
-  /** Estos dos revísalos si existen realmente en tu backend */
+
   create(order: any): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/resource/orders`, order, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
       catchError((error) => {

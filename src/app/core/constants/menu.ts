@@ -128,6 +128,12 @@ export class Menu {
           route: '/dashboard/orders',
         },
 
+        {
+          icon: 'assets/icons/tablericons/building-store.svg',
+          label: 'POS',
+          route: '/dashboard/pos',
+        },
+
       ],
     },
   ];

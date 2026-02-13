@@ -267,12 +267,12 @@ export class OrderDetailPageComponent implements OnInit {
       : (it.tax === 'IVA-15' ? 15 : 0);
 
     return {
-      product:   it.productId || 'ADHOC',         // 👈 fieldname del child
-      qty,                                        // 👈
-      rate:      this.round2(rate),               // 👈
-      tax:       it.tax ?? null,                  // 👈 Link a "taxes" (ej. 'IVA-15'), opcional
-      total:     lineSubtotal,                    // 👈 subtotal SIN IVA
-      tax_rate:  taxRate                          // 👈 0 o 15
+      product:   it.productId || 'ADHOC',         //  fieldname del child
+      qty,                                        // 
+      rate:      this.round2(rate),               // 
+      tax:       it.tax ?? null,                  //  Link a "taxes" (ej. 'IVA-15'), opcional
+      total:     lineSubtotal,                    //  subtotal SIN IVA
+      tax_rate:  taxRate                          //  0 o 15
     };
   });
 
@@ -334,6 +334,6 @@ export class OrderDetailPageComponent implements OnInit {
   // A) bloquear si es de tipo Factura
   // return this.order?.type === 'Factura';
   // B) bloquear si ya fue AUTORIZADA en SRI (recomendado)
-  return (this.order?.sri?.status === 'AUTORIZADO') || (this.order?.type === 'Factura');
+  return (this.order?.sri?.status != 'Sin factura') || (this.order?.type === 'Factura');
 }
 }
