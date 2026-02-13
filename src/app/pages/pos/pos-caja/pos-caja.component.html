@@ -1,14 +1,14 @@
-<div class="bg-background flex flex-col xl:text-[13px]">
-    <div class="container mx-auto px-4 py-3 flex-grow flex flex-col">
+<div class="bg-background max-h-screen flex flex-col xl:text-[10px] overflow-hidden">
 
-        <div class="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-4 flex-grow">
+    <div class="container mx-auto px-4 py-3 flex-1 flex flex-col min-h-0">
+
+        <div class="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-4 flex-1 min-h-0">
 
             <!-- ================= IZQUIERDA ================= -->
-            <div class="flex flex-col overflow-hidden">
-
+            <div class="flex flex-col min-h-0 overflow-hidden">
 
                 <!-- CLIENTE -->
-                <div class="bg-white rounded-lg shadow-sm border p-3">
+                <div class="bg-white rounded-lg shadow-sm border p-3 flex-shrink-0">
 
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
@@ -74,10 +74,10 @@
                     </div>
                 </div>
 
-                <!-- PRODUCTOS -->
-                <div class="mt-3 flex flex-col flex-grow overflow-hidden">
+                <div class="mt-3 flex flex-col flex-1 min-h-0 overflow-hidden">
 
-                    <div class="flex justify-between items-center mb-2">
+                    <!-- HEADER -->
+                    <div class="flex justify-between items-center mb-2 flex-shrink-0">
                         <h2 class="text-sm font-semibold text-primary">Productos</h2>
 
                         <div class="flex gap-2">
@@ -91,41 +91,36 @@
                         </div>
                     </div>
 
-                    <!-- Categorías -->
-                    <div class="flex gap-2 overflow-x-auto pb-2">
+                    <!-- CATEGORÍAS -->
+                    <div class="flex gap-2 overflow-x-auto pb-2 flex-shrink-0">
                         <button (click)="onCategorySelected('')" class="text-xs px-3 py-1.5 border rounded min-h-[32px]"
                             [class.bg-primary]="selectedCategory === ''">
                             Todos
                         </button>
 
                         <button *ngFor="let category of categories" (click)="onCategorySelected(category.name)"
-                            class="text-xs px-3 py-1.5 border rounded min-h-[32px]"
+                            class="text-xs px-3 py-1.5 border rounded min-h-[32px] whitespace-nowrap"
                             [class.bg-primary]="selectedCategory === category.name">
                             {{ category.nombre }}
                         </button>
                     </div>
 
-                    <!-- GRID -->
-                    <div class="flex-grow overflow-y-auto pr-1">
+                    <!-- GRID CON SCROLL -->
+                    <div class="flex-1 min-h-0 overflow-y-auto pr-1">
+
                         <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6 gap-2 pb-4">
 
                             <div *ngFor="let product of filteredProductList; trackBy: trackByProductId"
                                 (click)="!product.is_out_of_stock && addProduct(product)"
                                 class="rounded border p-2 text-xs shadow-sm transition relative" [ngClass]="{
-    'hover:bg-gray-50 cursor-pointer': !product.is_out_of_stock,
-    'opacity-60 border-red-400 bg-red-50 cursor-not-allowed': product.is_out_of_stock
-  }">
+                                   'hover:bg-gray-50 cursor-pointer': !product.is_out_of_stock,
+                                   'opacity-60 border-red-400 bg-red-50 cursor-not-allowed': product.is_out_of_stock
+                                 }">
 
-                                <!-- Badge estado -->
                                 <span *ngIf="product.is_out_of_stock"
-                                    class="absolute top-1 right-1 text-[7px] bg-red-500 text-white px-0.5 py-0.1 rounded">
+                                    class="absolute top-1 right-1 text-[9px] bg-red-500 text-white px-1 py-0.5 rounded">
                                     AGOTADO
                                 </span>
-
-                                <!-- <span *ngIf="!product.is_out_of_stock"
-                                    class="absolute top-1 right-1 text-[9px] bg-emerald-500 text-white px-1.5 py-0.5 rounded">
-                                    ACTIVO
-                                </span> -->
 
                                 <p class="font-medium truncate">
                                     {{ product.nombre }}
@@ -145,20 +140,17 @@
 
                             </div>
 
-
                         </div>
+
                     </div>
                 </div>
-
             </div>
 
             <!-- ================= RESUMEN ================= -->
-            <div class="flex flex-col text-xs bg-white border rounded-lg p-3 shadow-sm">
+            <div class="flex flex-col text-xs bg-white border rounded-lg p-3 shadow-sm min-h-0">
 
                 <!-- INFO SUPERIOR -->
-                <div
-                    class="bg-gray-50 border rounded-lg p-2 text-[11px] text-gray-700 flex justify-between items-center mb-3">
-
+                <div class="bg-gray-50 border rounded-lg p-2 text-[11px] mb-3 flex-shrink-0">
                     <div class="flex gap-4">
 
                         <div class="flex items-center gap-2">
@@ -193,15 +185,8 @@
     </div> -->
 
                     </div>
-
-                    <!-- <div>
-    <span class="text-gray-500">Usuario:</span>
-    <span class="font-semibold">
-      {{ userName }}
-    </span>
-  </div> -->
-
                 </div>
+
                 <label class="font-semibold mb-1">Tipo de orden</label>
 
                 <div class="flex rounded border overflow-hidden mb-2">
@@ -231,46 +216,41 @@
                         placeholder="Teléfono" />
                 </div>
 
-                <h3 class="font-semibold mb-1">Resumen</h3>
+                <h3 class="font-semibold mb-1 flex-shrink-0">Resumen</h3>
 
-                <div class="flex-grow overflow-y-auto space-y-1 mb-2 pr-1">
+                <!-- CARRITO SCROLL -->
+                <div class="flex-1 min-h-0 overflow-y-auto space-y-1 mb-2 pr-1">
 
                     <div *ngFor="let item of cartService.cart"
                         class="flex justify-between items-center border-b py-1.5 text-xs">
 
-                        <!-- INFO -->
                         <div class="flex-1 min-w-0">
-                            <p class="truncate font-medium">
-                                {{ item.nombre || item.name }}
+                            <p class="font-medium line-clamp-2 break-words">
+                                {{ item.nombre || item.name }} <span class="text-gray-500 text-[10px]">{{ item.descripcion }}</span> 
                             </p>
                         </div>
 
-                        <!-- CONTROLES -->
+
                         <div class="flex items-center gap-2">
 
-                            <!-- Disminuir -->
                             <button (click)="decrease(item)"
                                 class="w-7 h-7 rounded border flex items-center justify-center hover:bg-gray-100">
                                 <fa-icon icon="minus" class="text-[10px]"></fa-icon>
                             </button>
 
-                            <!-- Cantidad -->
                             <span class="w-5 text-center font-semibold">
                                 {{ item.quantity }}
                             </span>
 
-                            <!-- Aumentar -->
                             <button (click)="increase(item)"
                                 class="w-7 h-7 rounded border flex items-center justify-center hover:bg-gray-100">
                                 <fa-icon icon="plus" class="text-[10px]"></fa-icon>
                             </button>
 
-                            <!-- Precio -->
                             <strong class="ml-2 w-16 text-right">
                                 ${{ item.total | number:'1.2-2' }}
                             </strong>
 
-                            <!-- Eliminar de una -->
                             <button (click)="remove(item)"
                                 class="w-7 h-7 rounded border border-red-400 text-red-500 flex items-center justify-center hover:bg-red-50 ml-2">
                                 <fa-icon icon="times" class="text-[10px]"></fa-icon>
@@ -281,8 +261,8 @@
 
                 </div>
 
-
-                <div class="border-t pt-2 space-y-1">
+                <!-- TOTALES -->
+                <div class="border-t pt-2 space-y-1 flex-shrink-0">
                     <p>Subtotal: ${{ subtotal | number:'1.2-2' }}</p>
                     <p>IVA: ${{ iva | number:'1.2-2' }}</p>
                     <p class="font-bold text-sm">
@@ -290,7 +270,8 @@
                     </p>
                 </div>
 
-                <button (click)="abrirModalPago()" class="mt-3 bg-primary text-white py-2 rounded text-xs min-h-[38px]">
+                <button (click)="abrirModalPago()"
+                    class="mt-3 bg-primary text-white py-2 rounded text-xs min-h-[38px] flex-shrink-0">
                     Crear Orden
                 </button>
 
@@ -299,7 +280,6 @@
         </div>
     </div>
 </div>
-
 
 
 

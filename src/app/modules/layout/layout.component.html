@@ -1,24 +1,26 @@
 <div class="flex h-screen w-full overflow-hidden">
-  <!-- Sidebar -->
+
   <app-sidebar></app-sidebar>
 
-  <div class="flex grow flex-col content-start overflow-hidden bg-card">
-    <!-- Header -->
-    <app-navbar></app-navbar>
-    <!-- main content -->
-<div
-  id="main-content"
-  class="scrollbar-thumb-rounded scrollbar-track-rounded grow overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted">
-  <div class="mx-auto w-full max-w-[1600px] px-3 sm:px-6 py-4">
-    <router-outlet></router-outlet>
-  </div>
-</div>
+  <!-- CONTENEDOR DERECHO -->
+  <div class="flex flex-1 flex-col min-h-0 overflow-hidden bg-card">
 
+    <!-- NAVBAR -->
+    <app-navbar class="flex-shrink-0"></app-navbar>
 
-    <!-- footer -->
-    <app-footer></app-footer>
+    <!-- MAIN (SCROLL SOLO AQUÍ) -->
+    <div
+      id="main-content"
+      class="flex-1 min-h-0 overflow-y-auto">
 
-    <!-- Bottom bar -->
-    <!-- <app-bottom-navbar></app-bottom-navbar> -->
+      <div class="mx-auto w-full max-w-[1600px] px-3 sm:px-6 py-4">
+        <router-outlet></router-outlet>
+      </div>
+
+    </div>
+
+    <!-- FOOTER (NO EMPUJA) -->
+    <app-footer class="flex-shrink-0"></app-footer>
+
   </div>
 </div>

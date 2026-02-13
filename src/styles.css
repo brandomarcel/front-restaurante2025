@@ -84,6 +84,18 @@
   *, ::after, ::before, ::backdrop, ::file-selector-button {
     border-color: var(--color-gray-200, currentColor);
   }
+
+  @layer base {
+  html, body {
+    @apply h-full overflow-hidden;
+  }
+
+  body {
+    overscroll-behavior: none;
+  }
+}
+
+
 }
 
 /* Dropdown utilities (usa nesting nativo; si no compila, expando abajo) */
