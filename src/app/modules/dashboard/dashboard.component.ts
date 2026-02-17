@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { UtilsService } from 'src/app/core/services/utils.service';
 import { CompanyService } from 'src/app/services/company.service';
 
 @Component({
@@ -9,7 +10,8 @@ import { CompanyService } from 'src/app/services/company.service';
 })
 export class DashboardComponent implements OnInit {
   constructor(
-    private service: CompanyService
+    private service: CompanyService,
+    private utilsService: UtilsService
   ) { }
 
   ngOnInit(): void {
@@ -28,6 +30,7 @@ export class DashboardComponent implements OnInit {
         }
 
         localStorage.setItem('ambiente', company.ambiente);
+        this.utilsService.cambiarAmbiente(company.ambiente);
         console.log('company', company);
       }
     });

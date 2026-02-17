@@ -1,39 +1,51 @@
-<div class="border rounded-lg p-4 shadow-sm"
-     [ngClass]="{
-       'bg-sky-50 border-sky-300': order.status==='Ingresada',
-       'bg-amber-50 border-amber-300': order.status==='Preparación',
-       'bg-emerald-50 border-emerald-300': order.status==='Cerrada'
-     }">
+<div class="rounded-xl border p-4 shadow-sm hover:shadow-md transition bg-white">
 
   <div class="flex justify-between items-center">
-    <div class="text-sm font-semibold">
+
+    <div class="font-semibold text-gray-800">
       #{{ order.name }}
     </div>
-    <span class="text-xs font-medium">
+
+    <span class="text-xs px-2 py-1 rounded-full font-medium"
+          [ngClass]="{
+            'bg-sky-100 text-sky-700': order.status === 'Ingresada',
+            'bg-amber-100 text-amber-700': order.status === 'Preparación',
+            'bg-emerald-100 text-emerald-700': order.status === 'Cerrada'
+          }">
       {{ order.status }}
     </span>
+
   </div>
 
-  <div class="mt-2 text-right font-bold">
+  <div class="mt-2 text-sm text-gray-500">
+    {{ order.customer.nombre }}
+  </div>
+
+  <div class="mt-3 text-right text-lg font-bold">
     {{ order.total | currency:'USD' }}
   </div>
 
-  <div class="mt-3 flex gap-2">
-    <button (click)="open.emit(order)"
-      class="border px-3 py-1 text-xs rounded">
+  <div class="mt-4 flex gap-2">
+
+    <button
+      (click)="open.emit(order)"
+      class="flex-1 border rounded-md text-sm py-1 hover:bg-gray-50">
       Detalle
     </button>
 
-    <button *ngIf="order.status==='Ingresada'"
+    <button
+      *ngIf="order.status==='Ingresada'"
       (click)="toPreparacion.emit(order)"
-      class="bg-amber-500 text-white px-3 py-1 text-xs rounded">
+      class="flex-1 bg-amber-500 text-white text-sm py-1 rounded-md">
       Preparación
     </button>
 
-    <button *ngIf="order.status==='Preparación'"
+    <button
+      *ngIf="order.status==='Preparación'"
       (click)="toCerrada.emit(order)"
-      class="bg-sky-600 text-white px-3 py-1 text-xs rounded">
+      class="flex-1 bg-sky-600 text-white text-sm py-1 rounded-md">
       Cerrar
     </button>
+
   </div>
 </div>

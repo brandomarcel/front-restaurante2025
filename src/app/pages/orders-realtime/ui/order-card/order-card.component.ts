@@ -10,7 +10,7 @@ import { OrderVM } from 'src/app/services/realtime-orders.service';
 })
 export class OrderCardComponent {
 
-  @Input() order!: OrderVM;
+  @Input({ required: true }) order!: OrderVM;
 
   @Output() open = new EventEmitter<OrderVM>();
   @Output() toPreparacion = new EventEmitter<OrderVM>();

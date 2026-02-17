@@ -48,6 +48,7 @@ public getFechaHoraEcuador(): string {
 
   // Función para cambiar el ambiente
   cambiarAmbiente(nuevoAmbiente: string) {
+    console.log('cambiarAmbiente', nuevoAmbiente);
     this.ambienteSubject.next(nuevoAmbiente);
   }
 

@@ -1,56 +1,76 @@
-<div #topAnchor></div>
+<div class="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center shadow-sm z-40">
 
-<div class="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center">
   <div>
     <h2 class="text-lg font-semibold">Órdenes en tiempo real</h2>
     <p class="text-xs text-gray-500">Actualización automática</p>
   </div>
 
   <div class="flex items-center gap-3">
-    <div class="text-sm hidden sm:block">
+
+    <button
+      (click)="toggleModoCocina()"
+      class="px-3 py-1.5 border rounded-md text-sm hover:bg-gray-50">
+      {{ modoCocina ? 'Vista Normal' : 'Vista Cocina' }}
+    </button>
+
+    <div class="hidden sm:block text-sm">
       Total:
-      <span *ngIf="total$ | async as total" class="font-semibold">{{ total }}</span>
+      <span *ngIf="total$ | async as total" class="font-semibold">
+        {{ total }}
+      </span>
     </div>
 
-    <button *ngIf="newCount > 0"
-      (click)="scrollToTop()"
-      class="bg-emerald-600 text-white px-3 py-1 rounded-full text-sm">
+    <span *ngIf="newCount > 0"
+          class="bg-emerald-600 text-white text-xs px-3 py-1 rounded-full">
       {{ newCount }} nueva{{ newCount>1?'s':'' }}
-    </button>
+    </span>
+
   </div>
 </div>
 
-<div class="p-4">
-  <input
-    type="text"
-    placeholder="Buscar..."
-    [(ngModel)]="search"
-    class="w-full sm:w-72 border rounded px-3 py-2 mb-4" />
+<!-- NORMAL -->
+<div *ngIf="!modoCocina" class="p-4 space-y-4">
+
+  <!-- MOBILE -->
+  <div class="md:hidden space-y-3">
+    <app-order-card
+      *ngFor="let o of orders"
+      [order]="o"
+      (open)="open($event)"
+      (toPreparacion)="toPreparacion($event)"
+      (toCerrada)="toCerrada($event)">
+    </app-order-card>
+  </div>
+
+  <!-- DESKTOP -->
+  <div class="hidden md:block">
+    <app-order-table
+      [orders]="orders"
+      (open)="open($event)"
+      (toPreparacion)="toPreparacion($event)"
+      (toCerrada)="toCerrada($event)">
+    </app-order-table>
+  </div>
+
 </div>
 
-<!-- MOBILE -->
-<div class="md:hidden px-4 space-y-3">
-  <app-order-card
+<!-- COCINA -->
+<div *ngIf="modoCocina"
+     class="p-6 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6 bg-gray-100 min-h-screen">
+
+  <app-order-kitchen-card
     *ngFor="let o of orders"
     [order]="o"
-    (open)="open($event)"
     (toPreparacion)="toPreparacion($event)"
     (toCerrada)="toCerrada($event)">
-  </app-order-card>
-</div>
+  </app-order-kitchen-card>
 
-<!-- DESKTOP -->
-<div class="hidden md:block px-4">
-  <app-order-table
-    [orders]="orders"
-    (open)="open($event)"
-    (toPreparacion)="toPreparacion($event)"
-    (toCerrada)="toCerrada($event)">
-  </app-order-table>
 </div>
 
 <app-order-modal
   *ngIf="selectedOrder"
   [order]="selectedOrder"
-  (close)="closeModal()">
+  (close)="closeModal()"
+  (toPreparacion)="toPreparacion($event)"
+  (toCerrada)="toCerrada($event)">
 </app-order-modal>

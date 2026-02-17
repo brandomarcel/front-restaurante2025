@@ -111,6 +111,7 @@ export class CompanyComponent implements OnInit {
         const nuevoAmbiente = res?.data?.ambiente || this.ambiente;
         this.alertService.success('Ambiente cambiado correctamente');
         localStorage.setItem('ambiente', nuevoAmbiente);
+        console.log('nuevoAmbiente', nuevoAmbiente);
         this.utilsService.cambiarAmbiente(nuevoAmbiente);
       },
       error: () => this.alertService.error('No se pudo cambiar el ambiente')

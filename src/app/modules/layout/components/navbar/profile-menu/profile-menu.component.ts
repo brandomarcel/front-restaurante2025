@@ -1,13 +1,14 @@
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AngularSvgIconModule } from 'angular-svg-icon';
 import { ThemeService } from '../../../../../core/services/theme.service';
 import { ClickOutsideDirective } from '../../../../../shared/directives/click-outside.directive';
 import { AuthService } from 'src/app/services/auth.service';
 import { Role } from 'src/app/core/models/menu.model';
-
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { UtilsService } from '../../../../../core/services/utils.service';
 // type Role = 'GERENTE' | 'CAJERO';
 
 interface ProfileItem {
@@ -47,6 +48,10 @@ interface ProfileItem {
   standalone: true,
 })
 export class ProfileMenuComponent implements OnInit {
+  private utilsService = inject(UtilsService);
+
+ambiente$ = this.utilsService.ambiente$;
+
   public isOpen = false;
 
   // Ítems del menú de perfil (anotados con allowedRoles)
@@ -64,12 +69,12 @@ export class ProfileMenuComponent implements OnInit {
   public visibleProfileMenu: ProfileItem[] = [];
 
   public themeColors = [
-    { name: 'base',   code: '#e11d48' },
+    { name: 'base', code: '#e11d48' },
     { name: 'yellow', code: '#f59e0b' },
-    { name: 'green',  code: '#22c55e' },
-    { name: 'blue',   code: '#3b82f6' },
+    { name: 'green', code: '#22c55e' },
+    { name: 'blue', code: '#3b82f6' },
     { name: 'orange', code: '#ea580c' },
-    { name: 'red',    code: '#cc0022' },
+    { name: 'red', code: '#cc0022' },
     { name: 'violet', code: '#6d28d9' },
   ];
   public themeMode = ['light', 'dark'];
@@ -78,9 +83,18 @@ export class ProfileMenuComponent implements OnInit {
   public user: any = {};
   public roleUpper: Role | null = null; // 'GERENTE' | 'CAJERO' | null
 
-  constructor(public themeService: ThemeService, private authService: AuthService) {}
+  ambiente: any;
+
+
+  constructor(public themeService: ThemeService, private authService: AuthService,
+
+  ) { }
 
   ngOnInit(): void {
+
+
+
+    console.warn('ambiente', this.ambiente);
     this.user = JSON.parse(localStorage.getItem('user') || '{}');
 
     console.log('user', this.user);

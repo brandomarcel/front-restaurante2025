@@ -1,0 +1,93 @@
+<div class="rounded-2xl border shadow-md p-5"
+     [ngClass]="borderClass()">
+
+  <!-- HEADER -->
+  <div class="flex items-start justify-between gap-3">
+
+    <div class="min-w-0">
+      <div class="flex items-center gap-2">
+        <div class="text-xl font-extrabold text-gray-900">
+          #{{ order.name }}
+        </div>
+
+        <span class="text-[11px] px-2 py-1 rounded-full font-semibold"
+              [ngClass]="badgeClass()">
+          {{ order.status }}
+        </span>
+      </div>
+
+      <div class="mt-1 text-sm text-gray-700 truncate">
+        {{ order.customer?.nombre || '—' }}
+      </div>
+    </div>
+
+    <!-- TIMER -->
+    <div class="text-right">
+      <div class="text-2xl font-extrabold text-gray-900 leading-none">
+        {{ minutes }}
+        <span class="text-sm font-semibold text-gray-500">min</span>
+      </div>
+      <div class="text-xs font-semibold" [ngClass]="urgencyClass()">
+        {{ urgencyText() }}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ITEMS -->
+  <div class="mt-4 rounded-xl bg-white/70 border border-white/40 p-3 max-h-48 overflow-auto">
+    <div class="text-[11px] font-semibold text-gray-500 mb-2">
+      ÍTEMS
+    </div>
+
+    <div class="space-y-2">
+      <div *ngFor="let it of order.items" class="flex items-start justify-between gap-2">
+        <div class="flex items-start gap-2 min-w-0">
+          <div class="w-10 text-right font-extrabold text-gray-900">
+            {{ getItemQty(it) }}x
+          </div>
+          <div class="font-semibold text-gray-900 truncate">
+            {{ getItemName(it) }}
+          </div>
+        </div>
+
+        <!-- opcional: total del item -->
+        <div class="text-xs text-gray-600 font-semibold whitespace-nowrap"
+             *ngIf="it?.total != null">
+          {{ it.total | number:'1.2-2' }}
+        </div>
+      </div>
+
+      <div *ngIf="(order.items?.length ?? 0) === 0" class="text-sm text-gray-500">
+        Sin ítems
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="mt-4 flex items-center justify-between gap-3">
+    <div class="text-sm font-semibold text-gray-900">
+      Total:
+      <span class="text-base font-extrabold">
+        {{ order.total | currency:'USD':'symbol':'1.2-2' }}
+      </span>
+    </div>
+
+    <div class="flex gap-2">
+      <button
+        *ngIf="order.status === 'Ingresada'"
+        (click)="toPreparacion.emit(order)"
+        class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-extrabold text-sm transition">
+        ➡ Preparación
+      </button>
+
+      <button
+        *ngIf="order.status === 'Preparación'"
+        (click)="toCerrada.emit(order)"
+        class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-sm transition">
+        ✅ Lista
+      </button>
+    </div>
+  </div>
+
+</div>

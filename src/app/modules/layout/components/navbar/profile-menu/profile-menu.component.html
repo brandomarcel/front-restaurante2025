@@ -5,9 +5,14 @@
           class="rounded px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700">
       Gerente
     </span> -->
+    <span class="px-3 py-1 rounded-full text-xs font-bold tracking-wide shadow-sm" [ngClass]="(ambiente$  | async) === 'PRODUCCION'
+      ? 'bg-green-100 text-green-700 border border-green-300'
+      : 'bg-yellow-100 text-yellow-700 border border-yellow-300'">
 
-    <span 
-          class="rounded px-2 py-0.5 text-[10px] font-semibold bg-sky-100 text-sky-700">
+      {{ (ambiente$ | async) || '—' }}
+
+    </span>
+    <span class="rounded px-2 py-0.5 text-[10px] font-semibold bg-sky-100 text-sky-700">
       {{user.email}}
     </span>
 
@@ -20,14 +25,13 @@
     <!-- Botón de perfil -->
     <button (click)="toggleMenu()" class="bg-card relative flex rounded-full text-sm" type="button">
       <span class="sr-only">Abrir menú de usuario</span>
-      <img class="size-9 shrink-0 rounded-md" src="assets/images/userLogo.png"
-           alt="Avatar de usuario" />
+      <img class="size-9 shrink-0 rounded-md" src="assets/images/userLogo.png" alt="Avatar de usuario" />
     </button>
   </div>
 
   <!-- Dropdown -->
   <div [@openClose]="isOpen ? 'open' : 'closed'"
-       class="bg-background shadow-custom border-muted absolute z-20 mt-2 w-60 origin-top-right transform rounded-md border border-dashed py-4 ring-1 ring-transparent ring-opacity-5 transition focus:outline-hidden ltr:right-0 rtl:left-0">
+    class="bg-background shadow-custom border-muted absolute z-20 mt-2 w-60 origin-top-right transform rounded-md border border-dashed py-4 ring-1 ring-transparent ring-opacity-5 transition focus:outline-hidden ltr:right-0 rtl:left-0">
 
     <!-- Header del dropdown -->
     <div class="flex-row flex items-center px-4 pb-4">
@@ -40,19 +44,19 @@
 
         <!-- Badge: Gerente -->
         <span *ngIf="roleUpper === 'GERENTE'"
-              class="rounded px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700">
+          class="rounded px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700">
           Gerente
         </span>
 
         <!-- Badge: Cajero -->
         <span *ngIf="roleUpper === 'CAJERO'"
-              class="rounded px-2 py-0.5 text-[10px] font-semibold bg-sky-100 text-sky-700">
+          class="rounded px-2 py-0.5 text-[10px] font-semibold bg-sky-100 text-sky-700">
           Cajero
         </span>
 
         <!-- Badge: Mesero -->
         <span *ngIf="roleUpper === 'MESERO'"
-              class="rounded px-2 py-0.5 text-[10px] font-semibold bg-purple-100 text-purple-700">
+          class="rounded px-2 py-0.5 text-[10px] font-semibold bg-purple-100 text-purple-700">
           Mesero
         </span>
       </div>
@@ -63,18 +67,18 @@
     <!-- Items del menú -->
     <ul class="my-2 mx-2 flex flex-col">
       @for (item of visibleProfileMenu; track $index) {
-        <li [routerLink]="item.link"
-            (click)="isOpen = false"
-            class="text-muted-foreground hover:bg-card hover:text-primary inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-semibold">
-          <svg-icon [src]="item.icon" [svgClass]="'h-5 w-5 text-muted-foreground/50'"></svg-icon>
-          {{ item.title }}
-        </li>
+      <li [routerLink]="item.link" (click)="isOpen = false"
+        class="text-muted-foreground hover:bg-card hover:text-primary inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-semibold">
+        <svg-icon [src]="item.icon" [svgClass]="'h-5 w-5 text-muted-foreground/50'"></svg-icon>
+        {{ item.title }}
+      </li>
       }
 
       <!-- Logout -->
       <li (click)="logout()"
-          class="text-muted-foreground hover:bg-card hover:text-primary inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-semibold">
-        <svg-icon src="./assets/icons/heroicons/outline/logout.svg" [svgClass]="'h-5 w-5 text-muted-foreground/50'"></svg-icon>
+        class="text-muted-foreground hover:bg-card hover:text-primary inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-semibold">
+        <svg-icon src="./assets/icons/heroicons/outline/logout.svg"
+          [svgClass]="'h-5 w-5 text-muted-foreground/50'"></svg-icon>
         Cerrar Sesión
       </li>
     </ul>

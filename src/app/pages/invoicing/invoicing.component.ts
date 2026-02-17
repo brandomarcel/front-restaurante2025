@@ -422,6 +422,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
           .pipe(finalize(() => this.spinner.hide()))
           .subscribe({
             next: (res) => {
+              console.log('res save invoce',res);
               const inv = res?.message.invoice;
               toast.success(`Factura ${inv} creada y enviada al SRI.`);
               this.clearInvoiceForm();
@@ -434,7 +435,9 @@ export class InvoicingComponent implements OnInit, OnDestroy {
                   }
                 });
 
-            }
+            },error: (err: any) => {
+          console.error('Error al obtener datos:', err);
+        }
           });
       });
   }
