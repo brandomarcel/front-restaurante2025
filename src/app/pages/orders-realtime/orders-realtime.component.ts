@@ -2,111 +2,86 @@ import { Component, OnDestroy, OnInit, ViewChild, ElementRef } from '@angular/co
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { Subscription } from 'rxjs';
 
 import { RealtimeOrdersService, OrderVM } from 'src/app/services/realtime-orders.service';
 import { OrdersService } from 'src/app/services/orders.service';
-import { Subscription } from 'rxjs';
-
-// Pipe de filtros (asegúrate de que exista y sea standalone)
-import { OrderRealtimeFilterPipe } from 'src/app/core/pipes/order-realtime-filter';
 import { UtilsService } from '../../core/services/utils.service';
+
+import { OrderCardComponent } from './ui/order-card/order-card.component';
+import { OrderTableComponent } from './ui/order-table/order-table.component';
+import { OrderModalComponent } from './ui/order-modal/order-modal.component';
 
 @Component({
   selector: 'app-orders-realtime',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, OrderRealtimeFilterPipe],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    OrderCardComponent,
+    OrderTableComponent,
+    OrderModalComponent
+  ],
   templateUrl: './orders-realtime.component.html'
 })
 export class OrdersRealtimeComponent implements OnInit, OnDestroy {
-  // filtros UI
-  search: string = '';
-  tipo: string = '';
-
-  // data
-  orders: OrderVM[] = [];
-  newCount = 0;
-
-  // total (observable por si lo quieres mostrar en la barra)
-  total$ = this.rt.streamTotal();
-
-  private sub = new Subscription();
 
   @ViewChild('topAnchor') topAnchor!: ElementRef;
+
+  search = '';
+  orders: OrderVM[] = [];
+  newCount = 0;
+  selectedOrder: OrderVM | null = null;
+
+  total$ = this.rt.streamTotal();
+  private sub = new Subscription();
 
   constructor(
     private rt: RealtimeOrdersService,
     private ordersApi: OrdersService,
-    private utilsService: UtilsService
+    private utils: UtilsService
   ) {}
 
   ngOnInit(): void {
-    // carga inicial (página 0, 20 items)
-    const today = this.utilsService.getSoloFechaEcuador(); // "2025-10-27"
+    const today = this.utils.getSoloFechaEcuador();
+    this.rt.loadInitial(50, 0, today, today);
 
-    this.sub.add(
-      this.rt.loadInitial(20, 0, today, today).subscribe(list => {
-        this.orders = list;
-        // console.log('[init list]', list);
-      })
-    );
-
-    // stream en tiempo real
     this.sub.add(
       this.rt.streamOrders().subscribe(list => {
-        this.orders = list;
-        // console.log('[stream list]', list);
+        this.orders = list ?? [];
       })
     );
 
-    // contador de nuevos
     this.sub.add(
       this.rt.streamNewCount().subscribe(n => this.newCount = n)
     );
-  }
-
-  scrollToTop() {
-    this.topAnchor?.nativeElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    this.rt.markNewSeen();
-  }
-
-  trackByName = (_: number, item: OrderVM) => item.name;
-
-  /** Helper: imprime el nombre del cliente seguro */
-  getCustomerName(o: OrderVM): string {
-    if (!o?.customer) return '—';
-    return typeof o.customer === 'string'
-      ? o.customer
-      : (o.customer?.['nombre'] || '—');
   }
 
   ngOnDestroy(): void {
     this.sub.unsubscribe();
   }
 
+  scrollToTop() {
+    this.topAnchor.nativeElement.scrollIntoView({ behavior: 'smooth' });
+    this.rt.markNewSeen();
+  }
+
+  open(o: OrderVM) {
+    this.selectedOrder = o;
+  }
+
+  closeModal() {
+    this.selectedOrder = null;
+  }
+
   toPreparacion(o: OrderVM) {
-  const prev = o.status;
-  // optimista
-  o.status = 'Preparación';
-  (o as any)._flash = true;
-  (o as any)._flashType = 'update';
+    o.status = 'Preparación';
+    this.ordersApi.updateStatus(o.name, 'Preparación').subscribe();
+  }
 
-  this.ordersApi.updateStatus(o.name, 'Preparación').subscribe({
-    next: () => { /* el socket traerá el update real */ },
-    error: () => { o.status = prev as any; delete (o as any)._flash; delete (o as any)._flashType; }
-  });
-}
-
-toCerrada(o: OrderVM) {
-  const prev = o.status;
-  o.status = 'Cerrada';
-  (o as any)._flash = true;
-  (o as any)._flashType = 'update';
-
-  this.ordersApi.updateStatus(o.name, 'Cerrada').subscribe({
-    next: () => {},
-    error: () => { o.status = prev as any; delete (o as any)._flash; delete (o as any)._flashType; }
-  });
-}
-
-
+  toCerrada(o: OrderVM) {
+    o.status = 'Cerrada';
+    this.ordersApi.updateStatus(o.name, 'Cerrada').subscribe();
+  }
 }

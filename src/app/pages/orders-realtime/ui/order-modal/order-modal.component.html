@@ -1,0 +1,62 @@
+<div class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+     (click)="close.emit()">
+
+  <div class="bg-white rounded-xl w-full max-w-2xl p-5 shadow-lg"
+       (click)="$event.stopPropagation()">
+
+    <div class="flex justify-between items-start">
+
+      <div>
+        <h2 class="text-lg font-bold">
+          Orden #{{ order.name }}
+        </h2>
+
+        <div class="text-sm text-gray-600">
+          {{ order.customer?.nombre }}
+        </div>
+      </div>
+
+      <button (click)="close.emit()"
+              class="border px-3 py-1 rounded text-xs">
+        ✖
+      </button>
+
+    </div>
+
+    <div class="mt-4 space-y-2">
+
+      <div *ngFor="let it of order.items"
+           class="flex justify-between border-t pt-2">
+
+        <div>
+          {{ it.quantity }}x {{ it.productName }}
+        </div>
+
+        <div>
+          {{ it.price | currency:'USD':'symbol':'1.2-2' }}
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="mt-4 flex justify-end gap-2">
+
+      <button
+        *ngIf="order.status === 'Ingresada'"
+        (click)="toPreparacion.emit(order)"
+        class="bg-amber-500 text-white px-4 py-2 rounded">
+        Preparación
+      </button>
+
+      <button
+        *ngIf="order.status === 'Preparación'"
+        (click)="askClose.emit(order)"
+        class="bg-sky-600 text-white px-4 py-2 rounded">
+        Cerrar
+      </button>
+
+    </div>
+
+  </div>
+</div>

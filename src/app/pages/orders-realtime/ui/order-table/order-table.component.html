@@ -1,0 +1,86 @@
+<div class="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+  <table class="min-w-full text-sm">
+
+    <!-- HEADER -->
+    <thead class="bg-gray-50 text-gray-600">
+      <tr>
+        <th class="px-4 py-3 text-left">N° Orden</th>
+        <th class="px-4 py-3 text-left">Fecha</th>
+        <th class="px-4 py-3 text-left">Cliente</th>
+        <th class="px-4 py-3 text-right">Total</th>
+        <th class="px-4 py-3 text-left">Estado</th>
+        <th class="px-4 py-3 text-center">Acciones</th>
+      </tr>
+    </thead>
+
+    <!-- BODY -->
+    <tbody>
+      <tr *ngFor="let o of orders; trackBy: trackByName"
+          class="border-t transition hover:bg-gray-50"
+          [ngClass]="getRowClass(o.status)">
+
+        <!-- ORDEN -->
+        <td class="px-4 py-3 font-semibold text-gray-900">
+          #{{ o.name }}
+        </td>
+
+        <!-- FECHA -->
+        <td class="px-4 py-3 text-gray-600">
+          {{ o.createdAt | date:'dd/MM/yyyy HH:mm' }}
+        </td>
+
+        <!-- CLIENTE -->
+        <td class="px-4 py-3 text-gray-700">
+          {{ o.customer?.nombre || o.customer || '—' }}
+        </td>
+
+        <!-- TOTAL -->
+        <td class="px-4 py-3 text-right font-semibold text-gray-900">
+          {{ o.total | currency:'USD':'symbol':'1.2-2' }}
+        </td>
+
+        <!-- ESTADO -->
+        <td class="px-4 py-3">
+          <span class="text-xs px-2 py-1 rounded-full font-medium"
+                [ngClass]="getBadgeClass(o.status)">
+            {{ o.status }}
+          </span>
+        </td>
+
+        <!-- ACCIONES -->
+        <td class="px-4 py-3 text-center space-x-2">
+
+          <button
+            (click)="open.emit(o)"
+            class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition">
+            🔎 Detalle
+          </button>
+
+          <button
+            *ngIf="o.status==='Ingresada'"
+            (click)="toPreparacion.emit(o)"
+            class="inline-flex items-center rounded-md bg-amber-500 text-white px-3 py-1.5 text-xs hover:bg-amber-600 transition">
+            ➡ Preparación
+          </button>
+
+          <button
+            *ngIf="o.status==='Preparación'"
+            (click)="toCerrada.emit(o)"
+            class="inline-flex items-center rounded-md bg-sky-600 text-white px-3 py-1.5 text-xs hover:bg-sky-700 transition">
+            ✅ Cerrar
+          </button>
+
+        </td>
+
+      </tr>
+
+      <!-- EMPTY STATE -->
+      <tr *ngIf="orders.length === 0">
+        <td colspan="6" class="text-center py-8 text-gray-500">
+          No hay órdenes disponibles.
+        </td>
+      </tr>
+
+    </tbody>
+  </table>
+</div>

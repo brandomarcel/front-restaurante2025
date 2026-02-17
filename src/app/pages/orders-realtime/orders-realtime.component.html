@@ -1,144 +1,56 @@
 <div #topAnchor></div>
 
-<!-- barra sticky con contador -->
-<div
-  class="sticky top-0 bg-white/80 backdrop-blur border-b border-gray-200 px-4 py-2 flex items-center justify-between">
-  <div class="min-w-0">
-    <h2 class="text-lg font-semibold truncate">Órdenes en tiempo real</h2>
-    <p class="text-xs text-gray-500">Se actualiza automáticamente cuando se crean o cambian órdenes.</p>
+<div class="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center">
+  <div>
+    <h2 class="text-lg font-semibold">Órdenes en tiempo real</h2>
+    <p class="text-xs text-gray-500">Actualización automática</p>
   </div>
 
   <div class="flex items-center gap-3">
-    <div class="text-xs text-gray-500 hidden sm:block">
-      Total: <span class="font-medium text-gray-700" *ngIf="total$ | async as total">{{ total }}</span>
+    <div class="text-sm hidden sm:block">
+      Total:
+      <span *ngIf="total$ | async as total" class="font-semibold">{{ total }}</span>
     </div>
 
-    <button *ngIf="newCount > 0" (click)="scrollToTop()"
-      class="ml-3 inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white text-sm px-3 py-1.5 shadow hover:bg-emerald-700 active:bg-emerald-800 transition"
-      aria-label="Ver nuevas órdenes">
-      <span class="h-2 w-2 rounded-full bg-white animate-ping"></span>
+    <button *ngIf="newCount > 0"
+      (click)="scrollToTop()"
+      class="bg-emerald-600 text-white px-3 py-1 rounded-full text-sm">
       {{ newCount }} nueva{{ newCount>1?'s':'' }}
     </button>
   </div>
 </div>
 
-<!-- filtros -->
-<div class="px-4 py-3 flex flex-col sm:flex-row gap-2 sm:items-center">
-  <input type="text" placeholder="Buscar por cliente o #orden…"
-    class="w-full sm:w-72 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-    [(ngModel)]="search" />
-
-  <!-- <select
-    class="w-full sm:w-48 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-    [(ngModel)]="tipo">
-    <option value="">Todos los tipos</option>
-    <option>Factura</option>
-    <option>Nota Venta</option>
-  </select> -->
+<div class="p-4">
+  <input
+    type="text"
+    placeholder="Buscar..."
+    [(ngModel)]="search"
+    class="w-full sm:w-72 border rounded px-3 py-2 mb-4" />
 </div>
 
-<!-- móvil: cards -->
-<div class="px-4 grid grid-cols-1 gap-3 md:hidden">
-  <div *ngFor="let o of orders | slice:0:100 | orderRealtimeFilter:search:tipo; trackBy: trackByName"
-    class="rounded-lg border bg-white p-3 shadow-sm transition" [ngClass]="{
-  'border-sky-400 bg-sky-50': o.status==='Ingresada',
-  'border-amber-400 bg-amber-50': o.status==='Preparación',
-  'border-emerald-400 bg-emerald-50': o.status==='Cerrada'
-}">
-
-    <div class="flex items-center justify-between mb-1">
-      <div class="text-xs text-gray-500">#{{ o.name }}</div>
-      <span class="text-[11px] px-2 py-0.5 rounded-full" [ngClass]="{
-  'bg-sky-100 text-sky-700': o.status==='Ingresada',
-  'bg-amber-100 text-amber-700': o.status==='Preparación',
-  'bg-emerald-100 text-emerald-700': o.status==='Cerrada'
-}">
-        {{ o.status || '—' }}
-      </span>
-    </div>
-
-    <div class="flex items-baseline justify-between">
-      <!-- <div class="font-semibold text-gray-900 truncate">
-        {{ getCustomerName(o) }}
-      </div> -->
-      <div class="text-right">
-        <div class="text-base font-bold text-gray-900">{{ o.total | currency:'USD':'symbol':'1.2-2' }}</div>
-        <!-- <div class="text-[11px] text-gray-500">IVA: {{ o.iva || 0 | number:'1.2-2' }}</div> -->
-      </div>
-    </div>
-
-    <div class="mt-2 flex items-center justify-between text-[11px] text-gray-500">
-      <div class="truncate">Estado: <span class="font-medium text-gray-700">{{ o.sri?.status || '—' }}</span></div>
-      <div>{{ o.createdAt | date:'dd/MM, HH:mm' }}</div>
-    </div>
-
-    <!-- botones -->
-    <div class="mt-3 flex gap-2 flex-wrap">
-      <button *ngIf="o.status==='Ingresada'" (click)="toPreparacion(o)"
-        class="inline-flex items-center justify-center rounded-md bg-amber-500 text-white px-3 py-1.5 text-xs hover:bg-amber-600">➡️
-        A Preparación</button>
-
-      <button *ngIf="o.status==='Preparación'" (click)="toCerrada(o)"
-        class="inline-flex items-center justify-center rounded-md bg-sky-600 text-white px-3 py-1.5 text-xs hover:bg-sky-700">✅
-        Cerrar</button>
-
-      <a [routerLink]="['/dashboard/orders', o.name]"
-        class="inline-flex items-center justify-center rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">🔎
-        Detalle</a>
-    </div>
-  </div>
+<!-- MOBILE -->
+<div class="md:hidden px-4 space-y-3">
+  <app-order-card
+    *ngFor="let o of orders"
+    [order]="o"
+    (open)="open($event)"
+    (toPreparacion)="toPreparacion($event)"
+    (toCerrada)="toCerrada($event)">
+  </app-order-card>
 </div>
 
-<!-- desktop: tabla -->
+<!-- DESKTOP -->
 <div class="hidden md:block px-4">
-  <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
-    <table class="min-w-full text-sm">
-      <thead class="bg-gray-50 text-gray-600">
-        <tr>
-          <th class="px-4 py-2 text-left">N° Orden</th>
-          <th class="px-4 py-2 text-left">Fecha</th>
-          <!-- <th class="px-4 py-2 text-left">Cliente</th>
-          <th class="px-4 py-2 text-right">IVA</th> -->
-          <th class="px-4 py-2 text-right">Total</th>
-          <th class="px-4 py-2 text-left">Estado</th>
-          <th class="px-4 py-2 text-center">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let o of orders | slice:0:100 | orderRealtimeFilter:search:tipo; trackBy: trackByName"
-          class="border-t transition" [ngClass]="{
-  'border-sky-400 bg-sky-50': o.status==='Ingresada',
-  'border-amber-400 bg-amber-50': o.status==='Preparación',
-  'border-emerald-400 bg-emerald-50': o.status==='Cerrada'
-}">
-          <td class="px-4 py-2 align-top font-medium text-gray-900">#{{ o.name }}</td>
-          <td class="px-4 py-2 align-top text-gray-700">{{ o.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
-          <!-- <td class="px-4 py-2 align-top text-gray-900">
-            {{ getCustomerName(o) }}
-          </td>
-          <td class="px-4 py-2 align-top text-right text-gray-700">{{ o.iva || 0 | number:'1.2-2' }}</td> -->
-          <td class="px-4 py-2 align-top text-right font-semibold text-gray-900">{{ o.total |
-            currency:'USD':'symbol':'1.2-2' }}</td>
-          <td class="px-4 py-2 align-top">
-            <span class="text-[11px] px-2 py-0.5 rounded-full" [ngClass]="{
-  'bg-sky-100 text-sky-700': o.status==='Ingresada',
-  'bg-amber-100 text-amber-700': o.status==='Preparación',
-  'bg-emerald-100 text-emerald-700': o.status==='Cerrada'
-}">{{ o.status || '—' }}</span>
-          </td>
-          <td class="px-4 py-2 align-top text-center space-x-2">
-            <button *ngIf="o.status==='Ingresada'" (click)="toPreparacion(o)"
-              class="inline-flex items-center rounded-md bg-amber-500 text-white px-3 py-1 text-xs hover:bg-amber-600">A
-              Preparación</button>
-
-            <button *ngIf="o.status==='Preparación'" (click)="toCerrada(o)"
-              class="inline-flex items-center rounded-md bg-sky-600 text-white px-3 py-1 text-xs hover:bg-sky-700">Cerrar</button>
-
-            <a [routerLink]="['/dashboard/orders', o.name]"
-              class="inline-flex items-center justify-center rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">🔎Detalle</a>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <app-order-table
+    [orders]="orders"
+    (open)="open($event)"
+    (toPreparacion)="toPreparacion($event)"
+    (toCerrada)="toCerrada($event)">
+  </app-order-table>
 </div>
+
+<app-order-modal
+  *ngIf="selectedOrder"
+  [order]="selectedOrder"
+  (close)="closeModal()">
+</app-order-modal>
