@@ -5,7 +5,6 @@ import { Router, RouterLink } from '@angular/router';
 import { AngularSvgIconModule } from 'angular-svg-icon';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { AuthService } from 'src/app/services/auth.service';
-import { toast } from 'ngx-sonner';
 import { NgxSpinnerComponent, NgxSpinnerService } from 'ngx-spinner';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
@@ -21,7 +20,8 @@ import { MenuService } from 'src/app/modules/layout/services/menu.service';
 export class SignInComponent implements OnInit {
   form!: FormGroup;
   submitted = false;
-  passwordTextType!: boolean;
+  passwordTextType = false;
+  isSubmitting = false;
 
   constructor(private readonly _formBuilder: FormBuilder,
     private authService: AuthService,
@@ -64,15 +64,14 @@ export class SignInComponent implements OnInit {
     this.submitted = true;
 
     if (this.form.invalid) return;
+    this.isSubmitting = true;
     this.spinner.show();
     this.authService.login(this.form.value.email, this.form.value.password).subscribe({
       next: (res:any) => {
-        console.log('res', res);
-        console.log('this.auth.getCurrentUser()', this.auth.getCurrentUser());
         const role: any = this.auth.getCurrentUser();
-        console.log('role', role);
         this.menu.setMenuForRole(role.roles[0]) ;
         this.spinner.hide();
+        this.isSubmitting = false;
 
         if (role.roles.includes('Mesero')) {
           this._router.navigate(['/dashboard/pos']);
@@ -84,6 +83,7 @@ export class SignInComponent implements OnInit {
         const mensaje: any = this.frappeErrorService.handle(error);
         this.alertService.error(mensaje);
         this.spinner.hide();
+        this.isSubmitting = false;
       }
     });
 
