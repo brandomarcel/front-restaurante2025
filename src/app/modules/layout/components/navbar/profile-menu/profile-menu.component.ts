@@ -1,15 +1,13 @@
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AngularSvgIconModule } from 'angular-svg-icon';
 import { ThemeService } from '../../../../../core/services/theme.service';
 import { ClickOutsideDirective } from '../../../../../shared/directives/click-outside.directive';
 import { AuthService } from 'src/app/services/auth.service';
 import { Role } from 'src/app/core/models/menu.model';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { UtilsService } from '../../../../../core/services/utils.service';
-// type Role = 'GERENTE' | 'CAJERO';
 
 interface ProfileItem {
   title: string;
@@ -50,7 +48,7 @@ interface ProfileItem {
 export class ProfileMenuComponent implements OnInit {
   private utilsService = inject(UtilsService);
 
-ambiente$ = this.utilsService.ambiente$;
+  ambiente$ = this.utilsService.ambiente$;
 
   public isOpen = false;
 
@@ -83,21 +81,11 @@ ambiente$ = this.utilsService.ambiente$;
   public user: any = {};
   public roleUpper: Role | null = null; // 'GERENTE' | 'CAJERO' | null
 
-  ambiente: any;
-
-
-  constructor(public themeService: ThemeService, private authService: AuthService,
-
-  ) { }
+  constructor(public themeService: ThemeService, private authService: AuthService) {}
 
   ngOnInit(): void {
-
-
-
-    console.warn('ambiente', this.ambiente);
     this.user = JSON.parse(localStorage.getItem('user') || '{}');
 
-    console.log('user', this.user);
     // Normaliza el rol desde varias posibles propiedades
     const rawRole =
       this.user?.roles?.[0] ??
@@ -107,14 +95,12 @@ ambiente$ = this.utilsService.ambiente$;
       '';
 
     const r = String(rawRole).trim().toUpperCase();
-    console.log('r', r);
     this.roleUpper = r === 'GERENTE' || r === 'CAJERO' || r === 'MESERO' ? (r as Role) : null;
 
     // Filtra los ítems del menú en base al rol
     this.visibleProfileMenu = this.profileMenu.filter(item =>
       !item.allowedRoles || (this.roleUpper && item.allowedRoles.includes(this.roleUpper))
     );
-    console.log('this.profileMenu', this.profileMenu);
   }
 
   public toggleMenu(): void {
@@ -144,5 +130,19 @@ ambiente$ = this.utilsService.ambiente$;
     this.themeService.theme.update((theme) => {
       return { ...theme, direction: value };
     });
+  }
+
+  get roleLabel(): string {
+    if (this.roleUpper === 'GERENTE') return 'Gerente';
+    if (this.roleUpper === 'CAJERO') return 'Cajero';
+    if (this.roleUpper === 'MESERO') return 'Mesero';
+    return 'Usuario';
+  }
+
+  get roleBadgeClass(): string {
+    if (this.roleUpper === 'GERENTE') return 'bg-emerald-100 text-emerald-700';
+    if (this.roleUpper === 'CAJERO') return 'bg-sky-100 text-sky-700';
+    if (this.roleUpper === 'MESERO') return 'bg-violet-100 text-violet-700';
+    return 'bg-gray-100 text-gray-700';
   }
 }
