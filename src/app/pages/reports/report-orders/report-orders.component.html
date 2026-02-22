@@ -1,82 +1,80 @@
-<div class="bg-primary-foreground p-3 space-y-4">
-  <!-- Header -->
-  <div class="app-page-header">
-    <div>
-      <h2 class="app-page-title">Ventas Generales</h2>
-      <div class="app-page-subtle">Filtrado por fecha</div>
-    </div>
-
-
-    <app-button (click)="exportToExcel()" full impact="bold" tone="success" shape="rounded" size="medium">
-      Descargar Excel
-    </app-button>
-  </div>
-  <!-- Filtros -->
-
-  <!-- Filtros -->
-  <div class="toolbar">
-    <div class="flex flex-col md:flex-row gap-3 md:items-end w-full">
+<div class="app-container space-y-4">
+  <div class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <div>
-        <label class="block mb-1 font-medium">Desde</label>
+        <h2 class="text-xl font-bold">Reporte de Ventas Generales</h2>
+        <p class="text-xs text-primary-foreground/80">Consulta por rango de fechas y exporta resultados.</p>
+      </div>
+      <app-button (click)="exportToExcel()" impact="bold" tone="success" shape="rounded" size="medium">
+        Descargar Excel
+      </app-button>
+    </div>
+  </div>
+
+  <div class="rounded-xl border border-primary/15 bg-white p-4 shadow-sm">
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-end">
+      <div>
+        <label class="mb-1 block text-xs font-semibold text-gray-600">Desde</label>
         <input type="date" [(ngModel)]="filters.startDate" class="input" />
       </div>
-
       <div>
-        <label class="block mb-1 font-medium">Hasta</label>
+        <label class="mb-1 block text-xs font-semibold text-gray-600">Hasta</label>
         <input type="date" [(ngModel)]="filters.endDate" class="input" />
       </div>
-
       <div>
-        <app-button (click)="applyFilters()" full impact="bold" tone="info" shape="rounded" size="large">
+        <app-button (click)="applyFilters()" impact="bold" tone="primary" shape="rounded" size="medium">
           Buscar
         </app-button>
       </div>
     </div>
   </div>
 
-
   <ng-container *ngIf="orders.length > 0; else emptyOrders">
-    <!-- Tabla -->
-    <div class="overflow-auto rounded-lg shadow mt-4">
-      <table class="min-w-full bg-white">
-        <thead>
-          <tr class="bg-gray-100 text-left text-sm font-medium text-gray-700">
-            <th class="p-3">#</th>
-            <th class="p-3">Cliente</th>
-            <th class="p-3">Subtotal</th>
-            <th class="p-3">IVA</th>
-            <th class="p-3">Total</th>
-            <th class="p-3">Fecha</th>
+    <div class="app-table-wrap">
+      <table class="app-table text-xs">
+        <thead class="app-thead">
+          <tr>
+            <th class="app-th">#</th>
+            <th class="app-th">Cliente</th>
+            <th class="app-th text-right">Subtotal</th>
+            <th class="app-th text-right">IVA</th>
+            <th class="app-th text-right">Total</th>
+            <th class="app-th">Fecha</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let order of orders" class="text-sm border-b">
-            <td class="p-3">{{ order.id }}</td>
-            <td class="p-3">{{ order.customerName }}</td>
-            <td class="p-3">${{ order.subtotal | number:'1.2-2' }}</td>
-            <td class="p-3">${{ order.iva | number:'1.2-2' }}</td>
-            <td class="p-3">${{ order.total | number:'1.2-2' }}</td>
-            <td class="p-3">{{ order.createdAt | date: 'short' }}</td>
+          <tr *ngFor="let order of orders" class="app-tr">
+            <td class="app-td">{{ order.id }}</td>
+            <td class="app-td">{{ order.customerName }}</td>
+            <td class="app-td text-right">${{ order.subtotal | number:'1.2-2' }}</td>
+            <td class="app-td text-right">${{ order.iva | number:'1.2-2' }}</td>
+            <td class="app-td text-right font-semibold">${{ order.total | number:'1.2-2' }}</td>
+            <td class="app-td">{{ order.createdAt | date: 'short' }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Resumen -->
-    <div class="mt-6 border-t pt-4 text-sm text-gray-700">
-      <h3 class="text-base font-semibold mb-2">Resumen de resultados:</h3>
-      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-        <div><strong>Total órdenes:</strong> {{ totalItems }}</div>
-        <div><strong>Subtotal global:</strong> ${{ subtotalGlobal | number:'1.2-2' }}</div>
-        <div><strong>Total global:</strong> ${{ totalGlobal | number:'1.2-2' }}</div>
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div class="rounded-lg border border-primary/15 bg-primary/5 p-3">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">Total ordenes</p>
+        <p class="mt-1 text-lg font-bold text-primary">{{ totalItems }}</p>
+      </div>
+      <div class="rounded-lg border border-primary/15 bg-primary/5 p-3">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">Subtotal global</p>
+        <p class="mt-1 text-lg font-bold text-primary">${{ subtotalGlobal | number:'1.2-2' }}</p>
+      </div>
+      <div class="rounded-lg border border-primary/15 bg-primary/5 p-3">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">Total global</p>
+        <p class="mt-1 text-lg font-bold text-primary">${{ totalGlobal | number:'1.2-2' }}</p>
       </div>
     </div>
   </ng-container>
 
   <ng-template #emptyOrders>
-        <div class="app-card">
+    <div class="app-card">
       <div class="app-card-body text-center text-gray-500">
-        No se encontraron datos.
+        No se encontraron ventas para el rango seleccionado.
       </div>
     </div>
   </ng-template>
