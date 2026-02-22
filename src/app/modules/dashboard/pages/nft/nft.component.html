@@ -1,96 +1,130 @@
-<div class="p-4 bg-gray-100 ">
-  <h1 class="text-2xl font-bold mb-4 text-gray-800">📊 <span class="text-blue-600">{{userData?.fullName}}</span></h1>
+<div class="min-h-full bg-primary-foreground p-4 lg:p-6">
+  <section class="mb-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg lg:px-6">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <!-- <p class="text-xs uppercase tracking-widest text-primary-foreground/80">Dashboard Operativo</p> -->
+        <h1 class="mt-1 text-2xl font-bold">Bienvenido, {{ userData?.fullName || 'Equipo' }}</h1>
+        <p class="mt-1 text-sm text-primary-foreground/80">Resumen de operación de hoy: {{ today | date:'dd/MM/yyyy' }}</p>
+      </div>
 
-<!-- Componente Avisos -->
+      <div class="flex flex-wrap gap-2">
+        <span class="rounded-full px-3 py-1 text-xs font-semibold"
+          [ngClass]="cajaAbierta ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'">
+          Caja {{ cajaAbierta ? 'abierta' : 'sin apertura' }}
+        </span>
+        <span class="rounded-full px-3 py-1 text-xs font-semibold" [ngClass]="firmaClasses">
+          Firma: {{ firmaLabel }}
+        </span>
+      </div>
+    </div>
+  </section>
+
   <app-avisos [avisos]="avisos" (eliminar)="eliminarAviso($event)" class="mb-4 block"></app-avisos>
 
-  <!-- Métricas principales - Más compacto -->
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-    <!-- Pedidos del Dia -->
-    <div class="bg-white rounded-lg shadow-sm p-3">
-      <div class="flex items-center gap-2">
-        <div class="bg-green-100 p-2 rounded">
-          <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h11M9 21V3m12 10h-4m4 0l-2-2m2 2l-2 2" />
-          </svg>
+  <section class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    <article class="rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white p-4 shadow-sm">
+      <div class="mb-2 flex items-center justify-between">
+        <p class="text-xs font-semibold uppercase tracking-wide text-indigo-700">Pedidos del dia</p>
+        <span class="rounded-md bg-indigo-100 px-2 py-1 text-[10px] font-bold text-indigo-700">ORD</span>
+      </div>
+      <p class="text-2xl font-extrabold text-indigo-800">{{ totalOrdersToday }}</p>
+      <div class="mt-2 h-1.5 rounded-full bg-indigo-100">
+        <div class="h-1.5 w-3/5 rounded-full bg-indigo-500"></div>
+      </div>
+    </article>
+
+    <article class="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-4 shadow-sm">
+      <div class="mb-2 flex items-center justify-between">
+        <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Ventas del dia</p>
+        <span class="rounded-md bg-emerald-100 px-2 py-1 text-[10px] font-bold text-emerald-700">USD</span>
+      </div>
+      <p class="text-2xl font-extrabold text-emerald-800">{{ total_sales_today | currency:'USD':'symbol':'1.0-0' }}</p>
+      <div class="mt-2 h-1.5 rounded-full bg-emerald-100">
+        <div class="h-1.5 w-4/5 rounded-full bg-emerald-500"></div>
+      </div>
+    </article>
+
+    <article class="rounded-xl border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-4 shadow-sm">
+      <div class="mb-2 flex items-center justify-between">
+        <p class="text-xs font-semibold uppercase tracking-wide text-sky-700">Estado de firma</p>
+        <span class="rounded-md bg-sky-100 px-2 py-1 text-[10px] font-bold text-sky-700">SRI</span>
+      </div>
+      <p class="text-lg font-extrabold text-sky-800">{{ firmaLabel }}</p>
+      <p class="mt-1 text-xs text-sky-700">
+        Vence: {{ companyData?.cert_not_after ? (companyData?.cert_not_after | date:'dd/MM/yyyy') : 'Sin certificado' }}
+      </p>
+      <div class="mt-2 h-1.5 rounded-full bg-sky-100">
+        <div class="h-1.5 w-3/4 rounded-full bg-sky-500"></div>
+      </div>
+    </article>
+
+    <article class="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-4 shadow-sm">
+      <div class="mb-2 flex items-center justify-between">
+        <p class="text-xs font-semibold uppercase tracking-wide text-amber-700">Apertura de caja</p>
+        <span class="rounded-md bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-700">INICIO</span>
+      </div>
+      <p class="text-2xl font-extrabold text-amber-800">{{ montoApertura | currency:'USD':'symbol':'1.0-0' }}</p>
+      <p class="mt-1 text-xs text-amber-700">ID: {{ idApertura || 'No disponible' }}</p>
+      <div class="mt-2 h-1.5 rounded-full bg-amber-100">
+        <div class="h-1.5 w-3/4 rounded-full bg-amber-500"></div>
+      </div>
+    </article>
+
+    <article class="rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-white p-4 shadow-sm">
+      <div class="mb-2 flex items-center justify-between">
+        <p class="text-xs font-semibold uppercase tracking-wide text-rose-700">Retiros del turno</p>
+        <span class="rounded-md bg-rose-100 px-2 py-1 text-[10px] font-bold text-rose-700">SALIDA</span>
+      </div>
+      <p class="text-2xl font-extrabold text-rose-800">{{ totalRetiros | currency:'USD':'symbol':'1.0-0' }}</p>
+      <div class="mt-2 h-1.5 rounded-full bg-rose-100">
+        <div class="h-1.5 w-1/2 rounded-full bg-rose-500"></div>
+      </div>
+    </article>
+  </section>
+
+  <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+    <article class="rounded-xl border border-primary/20 bg-white p-4 shadow-sm xl:col-span-2">
+      <div class="mb-3 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-primary">Control de caja</h2>
+        <span class="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Turno actual</span>
+      </div>
+
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div class="rounded-lg bg-primary/5 p-3 ring-1 ring-primary/10">
+          <p class="text-xs text-gray-600">Monto apertura</p>
+          <p class="mt-1 text-lg font-bold text-primary">{{ montoApertura | currency:'USD':'symbol':'1.0-0' }}</p>
         </div>
-        <div class="min-w-0">
-          <p class="text-xs text-gray-500">Pedidos</p>
-          <p class="text-lg font-bold text-gray-800">{{ totalOrdersToday }}</p>
+        <div class="rounded-lg bg-primary/5 p-3 ring-1 ring-primary/10">
+          <p class="text-xs text-gray-600">Retiros acumulados</p>
+          <p class="mt-1 text-lg font-bold text-primary">{{ totalRetiros | currency:'USD':'symbol':'1.0-0' }}</p>
+        </div>
+        <div class="rounded-lg bg-emerald-50 p-3 ring-1 ring-emerald-200">
+          <p class="text-xs text-emerald-700">Efectivo en sistema</p>
+          <p class="mt-1 text-lg font-bold text-emerald-800">{{ efectivoSistema | currency:'USD':'symbol':'1.0-0' }}</p>
         </div>
       </div>
-    </div>
+    </article>
 
-    <!-- Ventas Totales -->
-    <div class="bg-white rounded-lg shadow-sm p-3">
-      <div class="flex items-center gap-2">
-        <div class="bg-blue-100 p-2 rounded">
-          <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 1.343-3 3 0 1.38.938 2.5 2.188 2.875C11.5 14.563 11 15.75 11 17h2c0-1.25-.5-2.438-1.188-3.125C13.063 13.5 14 12.38 14 11c0-1.657-1.343-3-3-3z" />
-          </svg>
-        </div>
-        <div class="min-w-0">
-          <p class="text-xs text-gray-500">Ventas</p>
-          <p class="text-lg font-bold text-gray-800">{{ total_sales_today | currency:'USD':'symbol':'1.0-0' }}</p>
-        </div>
+    <article class="rounded-xl border border-primary/20 bg-white p-4 shadow-sm">
+      <div class="mb-3 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-primary">Top productos del dia</h2>
+        <span class="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold text-primary">RANKING</span>
       </div>
-    </div>
 
-    <!-- Apertura de Caja -->
-    <div class="bg-white rounded-lg shadow-sm p-3">
-      <div class="flex items-center gap-2">
-        <div class="bg-indigo-100 p-2 rounded">
-          <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-        <div class="min-w-0">
-          <p class="text-xs text-gray-500">Apertura</p>
-          <p class="text-lg font-bold text-gray-800">{{ montoApertura | currency:'USD':'symbol':'1.0-0' }}</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Retiros -->
-    <div class="bg-white rounded-lg shadow-sm p-3">
-      <div class="flex items-center gap-2">
-        <div class="bg-red-100 p-2 rounded">
-          <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3M6 12a9 9 0 0118 0" />
-          </svg>
-        </div>
-        <div class="min-w-0">
-          <p class="text-xs text-gray-500">Retiros</p>
-          <p class="text-lg font-bold text-gray-800">{{ totalRetiros | currency:'USD':'symbol':'1.0-0' }}</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Efectivo Sistema -->
-  <div class="bg-white rounded-lg shadow-sm p-3 mb-4">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <div class="bg-yellow-100 p-2 rounded">
-          <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 1.343-3 3 0 1.38.938 2.5 2.188 2.875C11.5 14.563 11 15.75 11 17h2c0-1.25-.5-2.438-1.188-3.125C13.063 13.5 14 12.38 14 11c0-1.657-1.343-3-3-3z" />
-          </svg>
-        </div>
-        <span class="text-sm text-gray-500">Efectivo Sistema</span>
-      </div>
-      <p class="text-xl font-bold text-gray-800">{{ efectivoSistema | currency:'USD':'symbol':'1.0-0' }}</p>
-    </div>
-  </div>
-
-  <!-- Productos más vendidos - Compacto -->
-  <div class="bg-white rounded-lg shadow-sm p-3">
-    <h3 class="text-sm font-semibold text-gray-800 mb-2">Top Productos más vendidos del Día</h3>
-    <ul class="space-y-1 text-xs">
-      <li *ngFor="let product of topProducts" class="flex justify-between text-gray-700">
-        <span class="truncate">{{ product.name }}</span>
-        <span class="font-semibold whitespace-nowrap ml-2">{{ product.count }}</span>
-      </li>
-      <li *ngIf="topProducts.length === 0" class="text-gray-400 text-center py-2">Sin datos</li>
-    </ul>
-  </div>
+      <ul class="space-y-2 text-xs">
+        <li *ngFor="let product of topProducts; let i = index" class="rounded-lg bg-primary/5 p-2 ring-1 ring-primary/10">
+          <div class="mb-1 flex items-center justify-between gap-2">
+            <span class="truncate font-medium text-gray-700">{{ i + 1 }}. {{ product.name }}</span>
+            <span class="font-semibold text-primary">{{ product.count }}</span>
+          </div>
+          <div class="h-1.5 rounded-full bg-primary/20">
+            <div class="h-1.5 rounded-full bg-primary" [style.width.%]="getProductShare(product.count)"></div>
+          </div>
+        </li>
+        <li *ngIf="topProducts.length === 0" class="rounded-lg bg-primary/5 py-3 text-center text-gray-400 ring-1 ring-primary/10">
+          Sin ventas registradas aun.
+        </li>
+      </ul>
+    </article>
+  </section>
 </div>

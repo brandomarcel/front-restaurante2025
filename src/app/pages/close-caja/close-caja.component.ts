@@ -48,7 +48,7 @@ export class CloseCajaComponent implements OnInit {
       const response = await firstValueFrom(this.cajasService.getDatosCierre(this.cierre.usuario));
       console.log('getDatosCierre', response);
       const respuesta = response.message;
-      this.sinApertura = false;
+      this.sinApertura = respuesta.apertura == null;
       this.cierre.apertura = respuesta.apertura;
       this.cierre.monto_apertura = respuesta.monto_apertura;
       this.cierre.efectivo_sistema = respuesta.efectivo_sistema;

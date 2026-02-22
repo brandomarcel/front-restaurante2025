@@ -46,6 +46,8 @@ export class NftComponent implements OnInit, OnDestroy {
   totalRetiros = 0;
   efectivoSistema = 0;
   topProducts: any[] = [];
+  today = new Date();
+  certDaysLeft: number | null = null;
 
   // Nuevas propiedades
   userData?: UserData | null;
@@ -72,12 +74,13 @@ export class NftComponent implements OnInit, OnDestroy {
 
   async loadData() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    console.log('user', user);
     this.userData = user;
+    const userEmail: string = String(this.userData?.email || '');
     this.getDatosCierre();
+
     forkJoin({
       dashboard: this.ordersService.get_dashboard_metrics(),
-      empresa: this.companyService.get_empresa(),
+      empresa: this.companyService.get_empresa()
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -91,6 +94,20 @@ export class NftComponent implements OnInit, OnDestroy {
         }
       });
 
+  }
+    async getDatosCierre() {
+
+    const userEmail: string = String(this.userData?.email || '');
+    console.log('userEmail', userEmail);
+
+      const resp: any = await firstValueFrom(this.cajasService.getDatosCierre(userEmail))
+      console.log('resp', resp);
+      const data = resp?.message || {};
+      this.idApertura = data.apertura;
+      this.montoApertura = data.monto_apertura || 0;
+      this.totalRetiros = data.total_retiros || 0;
+      this.efectivoSistema = data.efectivo_sistema || 0;
+ 
   }
 
   private procesarDashboard(response: any): void {
@@ -106,10 +123,9 @@ export class NftComponent implements OnInit, OnDestroy {
     }
   }
 
-  async procesarEmpresa(data: any) {
+  procesarEmpresa(data: any) {
     try {
       const resp = data?.message;
-      console.log('data Empresa', resp.urlfirma);
       if (resp) {
         this.companyData = {
           name: resp.name || 'Sin nombre',
@@ -127,14 +143,8 @@ export class NftComponent implements OnInit, OnDestroy {
     }
   }
 
-  async getDatosCierre() {
-
-    const userEmail: string = String(this.userData?.email || '');
-    console.log('userEmail', userEmail);
-
+  private procesarCierre(resp: any): void {
     try {
-      const resp: any = await firstValueFrom(this.cajasService.getDatosCierre(userEmail))
-      console.log('resp', resp);
       const data = resp?.message || {};
       this.idApertura = data.apertura || '';
       this.montoApertura = data.monto_apertura || 0;
@@ -154,7 +164,7 @@ export class NftComponent implements OnInit, OnDestroy {
         'warning');
     }
   
-    if (this.idApertura === '') {
+    if (!this.idApertura) {
       this.agregarAviso(
         'Caja',
         'No hay apertura de caja activa. Por favor, realiza la apertura.',
@@ -165,6 +175,7 @@ export class NftComponent implements OnInit, OnDestroy {
     const dateEndCert: string = String(this.companyData?.cert_not_after || null);
     if (dateEndCert) {
       const dias = diasRestantes(dateEndCert);
+      this.certDaysLeft = dias;
       if (dias <= 30 && dias > 0) {
         this.agregarAviso(
           'Firma',
@@ -178,6 +189,8 @@ export class NftComponent implements OnInit, OnDestroy {
           'error'
         );
       }
+    } else {
+      this.certDaysLeft = null;
     }
 
 
@@ -228,7 +241,6 @@ export class NftComponent implements OnInit, OnDestroy {
 
   // Método público para agregar avisos manualmente
   agregarAviso(titulo: string, mensaje: string, tipo: 'error' | 'warning' | 'info' | 'success'): void {
-    console.log('Agregar aviso:', { titulo, mensaje, tipo });
     const aviso: Aviso = {
       id: `aviso_${this.avisoCounter++}`,
       titulo,
@@ -237,7 +249,6 @@ export class NftComponent implements OnInit, OnDestroy {
       fecha: new Date()
     };
     this.avisos.push(aviso);
-    console.log('avisos', this.avisos);
   }
 
   // Método para eliminar un aviso
@@ -248,5 +259,50 @@ export class NftComponent implements OnInit, OnDestroy {
   // Método para limpiar todos los avisos
   limpiarAvisos(): void {
     this.avisos = [];
+  }
+
+  get cajaAbierta(): boolean {
+    return this.idApertura != null;
+  }
+
+  get ticketPromedio(): number {
+    if (!this.totalOrdersToday) {
+      return 0;
+    }
+    return this.total_sales_today / this.totalOrdersToday;
+  }
+
+  get firmaLabel(): string {
+    if (this.companyData?.firma) {
+      return 'Sin firma';
+    }
+    if (this.certDaysLeft === null) {
+      return 'Sin certificado';
+    }
+    if (this.certDaysLeft <= 0) {
+      return 'Vencida';
+    }
+    if (this.certDaysLeft <= 30) {
+      return `Vence en ${this.certDaysLeft} dias`;
+    }
+    return 'Al dia';
+  }
+
+  get firmaClasses(): string {
+    if (this.companyData?.firma || this.certDaysLeft === null || this.certDaysLeft <= 0) {
+      return 'bg-red-100 text-red-700';
+    }
+    if (this.certDaysLeft <= 30) {
+      return 'bg-amber-100 text-amber-700';
+    }
+    return 'bg-emerald-100 text-emerald-700';
+  }
+
+  getProductShare(count: number): number {
+    const maxCount = Math.max(...this.topProducts.map((item: any) => Number(item.count) || 0), 0);
+    if (!maxCount) {
+      return 0;
+    }
+    return ((Number(count) || 0) / maxCount) * 100;
   }
 }
