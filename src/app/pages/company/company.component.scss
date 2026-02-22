@@ -14,10 +14,14 @@
   background: #eef2ff;               /* indigo-50 */
 }
 
-/* ya los tienes, por si acaso */
 .logo-preview {
   width: 150px; height: 150px;
   justify-content: center;
   border: 1px solid #e5e7eb; border-radius: 6px; background: white;
   object-fit: contain; padding: 4px;
+}
+
+.form-busy {
+  opacity: 0.85;
+  pointer-events: none;
 }

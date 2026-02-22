@@ -1,10 +1,12 @@
 // company.service.ts
 import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { catchError, EMPTY, Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { API_ENDPOINT } from '../core/constants/api.constants';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
+import { FrappeErrorService } from '../core/services/frappe-error.service';
+import { toast } from 'ngx-sonner';
 
 export interface CompanyInfo {
   name?: string;                 // En Frappe suele ser string
@@ -31,7 +33,9 @@ export class CompanyService {
   private readonly apiUrl = environment.apiUrl; // Cambia si usás otro backend
 
   private urlBase: string = '';
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient,
+    private frappeErr: FrappeErrorService,
+  ) {
     this.urlBase = this.apiUrl + API_ENDPOINT.AnalyzeFirma;
   }
 
@@ -75,13 +79,12 @@ export class CompanyService {
   uploadFirma(file: File, companyId: string) {
     const form = new FormData();
     form.append('file', file);
-    form.append('is_private', '0');              // 👈 1 privado SIEMPRE
+    form.append('is_private', '0');
     form.append('doctype', 'Company');
     form.append('docname', String(companyId));
-    form.append('fieldname', 'urlfirma');        // 👈 Frappe setea el valor del campo automáticamente
-
-    // (Opcional) nombre forzado:
-    // form.append('file_name', `firma_${companyId}.p12`);
+    form.append('fieldname', 'urlfirma');
+    // Fuerza nombre único para evitar caché/reuso por nombre en cargas consecutivas.
+    form.append('file_name', `firma_${companyId}_${Date.now()}.p12`);
 
     return this.http.post(`${this.apiUrl}/method/upload_file`, form, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
@@ -96,8 +99,14 @@ export class CompanyService {
     return this.http.post(
       `${this.urlBase}.analyze_company_firma`,
       payload,
-      { context: new HttpContext().set(REQUIRE_AUTH, true) }
-    );
+      { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
+            catchError((error) => {
+              const msg = this.frappeErr.handle(error) || 'Error al crear la orden.';
+              toast.error(msg);
+              return EMPTY;
+            })
+          );
+        
   }
 
 

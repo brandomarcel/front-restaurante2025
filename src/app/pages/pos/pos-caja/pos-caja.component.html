@@ -566,34 +566,34 @@
 
 
 <!-- MODAL: ELECCIÓN DE IMPRESIÓN -->
-<div *ngIf="showPrintModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-3" role="dialog"
+<div *ngIf="showPrintModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3" role="dialog"
     aria-modal="true">
-    <div class="bg-white w-full max-w-md rounded shadow-lg p-5 sm:p-6 text-center relative"
+    <div class="bg-white w-full max-w-lg rounded-xl border border-slate-200 shadow-2xl p-5 sm:p-6 relative"
         (click)="$event.stopPropagation()">
-        <button class="absolute top-2 right-3 text-lg" (click)="closePrintModal()" aria-label="Cerrar">×</button>
+        <button class="absolute top-3 right-3 h-8 w-8 rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+            (click)="closePrintModal()" aria-label="Cerrar">
+            ×
+        </button>
 
-        <h3 class="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
-            {{'¿Qué deseas imprimir?' }}
-        </h3>
-        <p class="text-gray-600 text-sm mb-5 sm:mb-6">
-            {{'Selecciona una opción para continuar.' }}
-        </p>
+        <div class="mb-4">
+            <h3 class="text-lg font-semibold text-slate-800">Impresión de comprobantes</h3>
+            <p class="text-slate-500 text-sm mt-1">Elige qué documento deseas imprimir para esta orden.</p>
+        </div>
 
-        <!-- Opciones Caja/Gerente -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <button
-                class="bg-blue-500 hover:bg-blue-600 text-white py-3 sm:py-4 rounded-lg text-base font-medium active:scale-95 transition min-h-[44px]"
+                class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-3 text-sm font-semibold text-sky-700 hover:bg-sky-100 transition min-h-[44px]"
                 (click)="handlePrintSelection('comanda')">Comanda</button>
             <button
-                class="bg-green-500 hover:bg-green-600 text-white py-3 sm:py-4 rounded-lg text-base font-medium active:scale-95 transition min-h-[44px]"
+                class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition min-h-[44px]"
                 (click)="handlePrintSelection('recibo')">Recibo</button>
             <button
-                class="bg-purple-500 hover:bg-purple-600 text-white py-3 sm:py-4 rounded-lg text-base font-medium active:scale-95 transition min-h-[44px]"
+                class="rounded-lg bg-primary text-white px-3 py-3 text-sm font-semibold hover:bg-primary/90 transition min-h-[44px]"
                 (click)="handlePrintSelection('ambas')">Ambas</button>
         </div>
 
-        <div class="pt-5 sm:pt-6">
-            <button class="text-gray-500 text-sm underline min-h[40px]" (click)="closePrintModal()">Cancelar</button>
+        <div class="pt-4 text-center">
+            <button class="text-slate-500 text-sm underline hover:text-slate-700" (click)="closePrintModal()">Cerrar</button>
         </div>
     </div>
 </div>

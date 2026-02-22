@@ -47,21 +47,21 @@
       <div>
         <div class="text-gray-500 font-semibold">Identificación</div>
         <div class="text-gray-900">
-          {{ order.customer?.num_identificacion || '—' }}
+          {{ order.customer.num_identificacion || '—' }}
         </div>
       </div>
 
       <div>
         <div class="text-gray-500 font-semibold">Correo</div>
         <div class="text-gray-900">
-          {{ order.customer?.correo || '—' }}
+          {{ order.customer.correo || '—' }}
         </div>
       </div>
 
       <div>
         <div class="text-gray-500 font-semibold">Teléfono</div>
         <div class="text-gray-900">
-          {{ order.customer?.telefono || '—' }}
+          {{ order.customer.telefono || '—' }}
         </div>
       </div>
 
@@ -95,7 +95,7 @@
 
         </div>
 
-        <div *ngIf="order.items?.length === 0"
+        <div *ngIf="order.items.length === 0"
              class="text-gray-500 text-sm">
           Sin ítems
         </div>
@@ -124,7 +124,7 @@
     </div>
 
     <!-- SRI -->
-    <div *ngIf="order.sri?.status"
+    <div *ngIf="order.sri.status"
          class="mt-6 p-3 rounded-xl bg-gray-50 text-sm">
 
       <div class="font-semibold text-gray-700">
