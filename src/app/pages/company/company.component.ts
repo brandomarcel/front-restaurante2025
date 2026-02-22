@@ -6,6 +6,7 @@ import { CompanyService } from 'src/app/services/company.service';
 import { AlertService } from '../../core/services/alert.service';
 import { UtilsService } from '../../core/services/utils.service';
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
+import { NgxSpinnerService } from 'ngx-spinner';
 
 @Component({
   selector: 'app-company',
@@ -42,7 +43,8 @@ export class CompanyComponent implements OnInit {
     private fb: FormBuilder,
     private service: CompanyService,
     private alertService: AlertService,
-    private utilsService: UtilsService
+    private utilsService: UtilsService,
+    private spinner: NgxSpinnerService,
   ) { }
 
   ngOnInit() {
@@ -162,6 +164,7 @@ save() {
     }
 
     // Si tu backend necesita URL explícita, pasa this.form.value.urlfirma
+    this.spinner.show();
     this.service.analyzeFirma(clave, this.companyId, undefined, this.form.value.urlfirma, 1).subscribe({
       next: (r: any) => {
         const info = r?.message?.info || r?.info;
@@ -170,8 +173,10 @@ save() {
         }
         this.doUpdate();
       },
-      error: () => this.alertService.error('Clave incorrecta o archivo .p12 inválido.')
-    });
+      error: () => this.alertService.error('Clave incorrecta o archivo .p12 inválido.'),
+      complete: () => this.spinner.hide(),
+    },
+  );
   };
 
   const afterUploadLogoThenAnalyze = () => {

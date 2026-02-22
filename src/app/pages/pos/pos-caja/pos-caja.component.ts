@@ -375,7 +375,7 @@ export class PosCajaComponent implements OnInit {
       delivery_phone: this.deliveryPhone,
       fecha: this.today,
       items: this.cartService.cart.map(item => ({
-        product: item.name ?? item.nombre, // asegúrate que sea el código correcto
+        product: item.name ?? item.nombre,
         qty: item.quantity,
         rate: item.price,
         tax_rate: item.tax_value

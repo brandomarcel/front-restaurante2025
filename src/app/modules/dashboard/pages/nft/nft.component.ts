@@ -150,7 +150,7 @@ export class NftComponent implements OnInit, OnDestroy {
     // Limpiar avisos previos
     this.avisos = [];
     if (this.companyData?.firma) {
-      this.agregarAviso('Aviso', 'Ingrese su firma electronica para poder emitir facturas.',
+      this.agregarAviso('Aviso', 'Ingrese su firma para poder emitir facturas.',
         'warning');
     }
   
@@ -167,14 +167,14 @@ export class NftComponent implements OnInit, OnDestroy {
       const dias = diasRestantes(dateEndCert);
       if (dias <= 30 && dias > 0) {
         this.agregarAviso(
-          'Firma Digital',
-          `La firma digital vencera en ${dias} día(s).`,
+          'Firma',
+          `La firma vencera en ${dias} día(s).`,
           'warning'
         );
       } else if (dias <= 0) {
         this.agregarAviso(
-          'Firma Digital',
-          'La firma digital ha expirado',
+          'Firma',
+          'La firma ha expirado',
           'error'
         );
       }
