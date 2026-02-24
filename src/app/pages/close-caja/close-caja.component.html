@@ -1,84 +1,74 @@
-<div class="max-w-md mx-auto my-10 p-6 border rounded shadow-sm bg-white">
-  <div class="text-center mb-6">
-    <h2 class="text-3xl font-semibold text-foreground">Cierre de Caja</h2>
-    <p class="text-sm text-muted-foreground">Finaliza el turno registrando el efectivo contado</p>
+<div class="app-container space-y-4">
+  <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
+    <h2 class="text-xl font-bold">Cierre de Caja</h2>
+    <p class="text-xs text-primary-foreground/80">Registra el efectivo contado y cierra el turno de forma segura.</p>
+  </section>
+
+  <div *ngIf="sinApertura" class="rounded-lg border border-red-300 bg-red-50 p-3 text-sm font-medium text-red-700">
+    No hay apertura activa para este usuario. Debes abrir caja antes de registrar un cierre.
   </div>
 
-  <!-- Si no hay apertura activa -->
-  <div *ngIf="sinApertura" class="text-red-600 text-center font-medium bg-red-50 border border-red-300 rounded p-3 mb-4">
-    No puedes realizar un cierre sin una apertura de caja activa.
-  </div>
+  <ng-container *ngIf="!sinApertura">
+    <section class="grid grid-cols-1 gap-3 md:grid-cols-4">
+      <article class="rounded-lg border border-primary/15 bg-white p-3 shadow-sm">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">Apertura</p>
+        <p class="mt-1 text-sm font-semibold text-gray-700">{{ cierre.apertura }}</p>
+        <p class="text-xs text-gray-500">{{ cierre.monto_apertura | currency }}</p>
+      </article>
+      <article class="rounded-lg border border-primary/15 bg-white p-3 shadow-sm">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">Efectivo sistema</p>
+        <p class="mt-1 text-lg font-bold text-primary">{{ cierre.efectivo_sistema | currency }}</p>
+      </article>
+      <article class="rounded-lg border border-primary/15 bg-white p-3 shadow-sm">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">Retiros</p>
+        <p class="mt-1 text-lg font-bold text-primary">{{ cierre.total_retiros | currency }}</p>
+      </article>
+      <article class="rounded-lg border border-amber-200 bg-amber-50 p-3 shadow-sm">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-amber-700">Esperado en caja</p>
+        <p class="mt-1 text-lg font-bold text-amber-800">{{ totalEsperado | currency }}</p>
+      </article>
+    </section>
 
-  <!-- Formulario de cierre -->
-  <form *ngIf="!sinApertura" class="space-y-4">
-    <!-- Monto apertura -->
-    <div>
-      <p class="text-sm text-muted-foreground">Monto de apertura:</p>
-      <p class="text-lg font-semibold text-gray-800">{{ cierre.monto_apertura | currency}}</p>
-    </div>
+    <section class="rounded-xl border border-primary/15 bg-white p-4 shadow-sm space-y-4">
+      <div *ngIf="objectKeys(detallePorMetodo).length > 0" class="rounded-lg bg-primary/5 p-3">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-primary mb-2">Detalle de pagos</p>
+        <ul class="space-y-1 text-xs text-gray-700">
+          <li *ngFor="let metodo of objectKeys(detallePorMetodo)" class="flex items-center justify-between">
+            <span>{{ metodo }}</span>
+            <span class="font-semibold">{{ detallePorMetodo[metodo] | currency }}</span>
+          </li>
+        </ul>
+      </div>
 
-    <!-- Ventas en efectivo -->
-    <div>
-      <p class="text-sm text-muted-foreground">Ventas en efectivo:</p>
-      <p class="text-lg font-semibold text-gray-800">{{ cierre.efectivo_sistema | currency}}</p>
-    </div>
+      <div>
+        <label class="mb-1 block text-xs font-semibold text-gray-600" for="efectivo_real">Efectivo contado</label>
+        <input type="number" id="efectivo_real" name="efectivo_real" [(ngModel)]="cierre.efectivo_real" class="input"
+          placeholder="Ej: 150.00" (input)="onEfectivoRealChange(cierre.efectivo_real)" />
+      </div>
 
-    <!-- Total retiros -->
-    <div>
-      <p class="text-sm text-muted-foreground">Retiros del turno:</p>
-      <p class="text-lg font-semibold text-gray-800">{{ cierre.total_retiros | currency }}</p>
-    </div>
+      <div class="rounded-lg p-3"
+        [ngClass]="cierre.diferencia >= 0 ? 'bg-emerald-50 ring-1 ring-emerald-200' : 'bg-red-50 ring-1 ring-red-200'">
+        <p class="text-[11px] font-semibold uppercase tracking-wide"
+          [ngClass]="cierre.diferencia >= 0 ? 'text-emerald-700' : 'text-red-700'">
+          Diferencia de caja
+        </p>
+        <p class="mt-1 text-xl font-bold" [ngClass]="cierre.diferencia >= 0 ? 'text-emerald-700' : 'text-red-700'">
+          {{ cierre.diferencia | currency }}
+        </p>
+      </div>
 
-    <!-- Efectivo contado -->
-    <div>
-      <label class="block text-sm text-muted-foreground mb-1" for="efectivo_real">Efectivo contado</label>
-      <input
-        type="number"
-        id="efectivo_real"
-        name="efectivo_real"
-        [(ngModel)]="cierre.efectivo_real"
-        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-        placeholder="Ej: 150.00"
-        (input)="onEfectivoRealChange(cierre.efectivo_real)"
-      />
-    </div>
+      <div>
+        <label class="mb-1 block text-xs font-semibold text-gray-600" for="observaciones">Observaciones</label>
+        <textarea id="observaciones" name="observaciones" [(ngModel)]="cierre.observaciones" rows="3" class="input"
+          placeholder="Notas adicionales del cierre"></textarea>
+      </div>
 
-    <!-- Diferencia -->
-    <div>
-      <p class="text-sm text-muted-foreground">Diferencia:</p>
-      <p
-        class="text-lg font-semibold"
-        [class.text-green-600]="cierre.diferencia >= 0"
-        [class.text-red-600]="cierre.diferencia < 0"
-      >
-        {{ cierre.diferencia | currency }}
-      </p>
-    </div>
-
-    <!-- Observaciones -->
-    <div>
-      <label class="block text-sm text-muted-foreground mb-1" for="observaciones">Observaciones</label>
-      <textarea
-        id="observaciones"
-        name="observaciones"
-        [(ngModel)]="cierre.observaciones"
-        rows="3"
-        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-        placeholder="Notas adicionales..."
-      ></textarea>
-    </div>
-
-    <!-- Botón -->
-    <div class="text-center pt-4">
-      <app-button
-        impact="bold"
-        tone="primary"
-        shape="rounded"
-        size="medium"
-        (click)="guardarCierre()"
-      >
-        Guardar Cierre
-      </app-button>
-    </div>
-  </form>
+      <div class="pt-2">
+        <app-button impact="bold" tone="primary" shape="rounded" size="medium" [disabled]="!canSave"
+          (click)="guardarCierre()">
+          Guardar Cierre
+        </app-button>
+      </div>
+    </section>
+  </ng-container>
 </div>

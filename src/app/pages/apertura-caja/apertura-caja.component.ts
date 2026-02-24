@@ -1,5 +1,4 @@
 import { Component, OnInit } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
@@ -40,6 +39,10 @@ export class AperturaCajaComponent implements OnInit {
   }
 
   abrirCaja() {
+    if (!this.canSubmit) {
+      return;
+    }
+
     const data = {
       ...this.apertura,
       fecha_hora: this.getFechaHoraEcuador()
@@ -60,5 +63,9 @@ export class AperturaCajaComponent implements OnInit {
     const pad = (n: number) => n.toString().padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
       `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  }
+
+  get canSubmit(): boolean {
+    return !this.cajaActiva && Number(this.apertura.monto_apertura) > 0;
   }
 }

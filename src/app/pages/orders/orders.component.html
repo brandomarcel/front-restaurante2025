@@ -1,75 +1,57 @@
-<div class="flex flex-col">
-
-  <!-- Header -->
-  <div class="app-page-header">
-    <div>
-      <h2 class="app-page-title">Órdenes</h2>
-      <div class="app-page-subtle space-x-1">
-        <span># Registros:</span>
-        <span class="text-foreground font-semibold">{{ totalOrders }}</span>
+<div class="app-container space-y-4">
+  <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 class="text-xl font-bold">Ordenes</h2>
+        <p class="text-xs text-primary-foreground/80">Listado unificado de ordenes del sistema POS.</p>
+      </div>
+      <div class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
+        Registros: {{ totalOrders }}
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Filtros -->
-  <div class="toolbar">
-    <div class="flex flex-col sm:flex-row gap-2 w-full">
-      <!-- Texto: N° orden / cliente / cédula / tipo / estado -->
-      <input class="input" type="text" [(ngModel)]="searchTerm" (ngModelChange)="actualizarOrdenesFiltradas()"
-        placeholder="Buscar por #orden, cliente, cédula, tipo o estado SRI..." />
+  <section class="rounded-xl border border-primary/15 bg-white p-4 shadow-sm">
+    <div class="toolbar !mb-0">
+      <div class="flex w-full flex-col gap-2 sm:flex-row">
+        <input class="input" type="text" [(ngModel)]="searchTerm"
+          placeholder="Buscar por #orden, cliente, cedula, tipo o estado SRI..." />
+        <select class="select" [(ngModel)]="tipoFiltro" (ngModelChange)="actualizarOrdenesFiltradas()">
+          <option value="">Todos los tipos</option>
+          <option value="Factura">Factura</option>
+          <option value="Nota Venta">Nota de venta</option>
+        </select>
+      </div>
 
-      <!-- Tipo -->
-      <select class="select" [(ngModel)]="tipoFiltro" (ngModelChange)="actualizarOrdenesFiltradas()">
-        <option value="">Todos los tipos</option>
-        <option value="Factura">Factura</option>
-        <option value="Nota Venta">Nota de venta</option>
-      </select>
-
-      <!-- Anulación -->
-      <!-- <select class="select" [(ngModel)]="anulacionFiltro" (ngModelChange)="actualizarOrdenesFiltradas()">
-        <option value="">Todas (incluye anuladas)</option>
-        <option value="soloAnuladas">Solo anuladas</option>
-        <option value="excluirAnuladas">Excluir anuladas</option>
-      </select> -->
+      <div class="flex gap-2">
+        <app-button (click)="limpiarFiltros()" impact="bold" tone="light" shape="rounded" size="small">
+          Limpiar
+        </app-button>
+      </div>
     </div>
+  </section>
 
-    <div class="flex gap-2">
-      <app-button (click)="limpiarFiltros()" full impact="bold" tone="light" shape="rounded" size="small">
-        Limpiar
-      </app-button>
-    </div>
-  </div>
-
-  <!-- Tabla de órdenes -->
   <ng-container *ngIf="ordersFiltradosList.length > 0; else emptyOrders">
-    <div class="app-table-wrap">
-      <table class="app-table">
+    <section class="app-table-wrap">
+      <table class="app-table text-xs">
         <thead class="app-thead">
           <tr>
             <th class="app-th">N° Orden</th>
             <th class="app-th">Fecha</th>
             <th class="app-th">Cliente</th>
-            <th class="app-th">IVA</th>
-            <th class="app-th">Total</th>
+            <th class="app-th text-right">IVA</th>
+            <th class="app-th text-right">Total</th>
             <th class="app-th">Tipo</th>
-            <!-- <th class="app-th last:text-center">Estado SRI</th> -->
-            <th class="app-th last:text-center">Acciones</th>
+            <th class="app-th text-center">Acciones</th>
           </tr>
         </thead>
-
         <tbody>
-          <tr *ngFor="let order of ordersFiltradosList" class="app-tr text-xs">
+          <tr *ngFor="let order of ordersFiltradosList" class="app-tr">
             <td class="app-td">{{ order.name }}</td>
             <td class="app-td">{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
-            <td class="app-td">
-              {{ order.customer?.fullName || order.customer?.nombre || '—' }}
-            </td>
-            <td class="app-td">
-              {{ order.iva | currency:'USD':'symbol':'1.2-2' }}
-            </td>
-            <td class="app-td font-semibold">
-              {{ order.total | currency:'USD':'symbol':'1.2-2' }}
-            </td>
+            <td class="app-td">{{ order.customer?.fullName || order.customer?.nombre || '—' }}</td>
+            <td class="app-td text-right">{{ order.iva | currency:'USD':'symbol':'1.2-2' }}</td>
+            <td class="app-td text-right font-semibold">{{ order.total | currency:'USD':'symbol':'1.2-2' }}</td>
             <td class="app-td">
               <span class="badge" [ngClass]="{
                   'badge-green': order.type === 'Factura',
@@ -78,50 +60,26 @@
                 {{ order.type }}
               </span>
             </td>
-            <!-- <td class="app-td text-center">
-              <span class="badge" [ngClass]="{
-                  'badge-green': order.sri?.status === 'AUTORIZADO',
-                  'badge-red': order.sri?.status === 'Rejected' || order.sri?.status === 'Error',
-                  'badge-yellow': order.sri?.status !== 'AUTORIZADO'
-                                   && order.sri?.status !== 'Rejected'
-                                   && order.sri?.status !== 'Error'
-                }">
-                {{
-                order.sri?.status === 'AUTORIZADO' ? 'AUTORIZADO' :
-                order.sri?.status === 'Rejected' ? 'Rechazada' :
-                order.sri?.status === 'Error' ? 'Error' :
-                order.sri?.status === 'Queued' ? 'En cola' :
-                order.sri?.status === 'Processing'? 'En proceso' :
-                order.sri?.status === 'Draft' ? 'Borrador' :
-                (order.sri?.status || 'Sin factura')
-                }}
-              </span>
-            </td> -->
-
             <td class="app-td text-center">
-              <div class="inline-flex gap-2">
-                <button class="btn btn-outline" [routerLink]="['/dashboard/orders', order.name]">🔎 Abrir</button>
-              </div>
+              <button class="btn btn-outline" [routerLink]="['/dashboard/orders', order.name]">Abrir</button>
             </td>
           </tr>
         </tbody>
       </table>
 
-      <!-- Paginación -->
       <div class="pager">
         <button class="pager-btn" (click)="prevPage()" [disabled]="page === 1">« Anterior</button>
-        <span class="text-sm">Página {{ page }} de {{ totalPages }}</span>
+        <span class="text-sm">Pagina {{ page }} de {{ totalPages }}</span>
         <button class="pager-btn" (click)="nextPage()" [disabled]="page === totalPages">Siguiente »</button>
       </div>
-    </div>
+    </section>
   </ng-container>
 
   <ng-template #emptyOrders>
     <div class="app-card">
       <div class="app-card-body text-center text-gray-500">
-        No hay órdenes para mostrar.
+        No hay ordenes para mostrar.
       </div>
     </div>
   </ng-template>
-
 </div>

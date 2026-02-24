@@ -1,125 +1,97 @@
-<div class="flex flex-col">
-
-  <!-- Header -->
-  <div class="app-page-header">
-    <div>
-      <h2 class="app-page-title">Productos</h2>
-      <div class="app-page-subtle space-x-1">
-        <span># Registros:</span>
-        <span class="text-foreground font-semibold">{{ productosFiltradosList.length || 0 }}</span>
+<div class="app-container space-y-4">
+  <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 class="text-xl font-bold">Productos</h2>
+        <p class="text-xs text-primary-foreground/80">Catalogo de productos para ventas y facturacion.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
+          Registros: {{ productosFiltradosList.length || 0 }}
+        </div>
+        <app-button impact="bold" tone="light" shape="rounded" size="small" (click)="abrirModal()">
+          Nuevo Producto
+        </app-button>
       </div>
     </div>
+  </section>
 
-    <div class="flex gap-2">
-    
-       <app-button full impact="bold" tone="primary" shape="rounded" size="medium" (click)="abrirModal()">
-        + Nuevo Producto
-      </app-button>
+  <section class="rounded-xl border border-primary/15 bg-white p-4 shadow-sm">
+    <div class="toolbar !mb-0">
+      <div class="flex w-full flex-col gap-2 sm:flex-row">
+        <input class="input" type="text" [(ngModel)]="searchTerm"
+          placeholder="Buscar por nombre o estado (disponible/agotado)..." />
+        <select class="select" [(ngModel)]="categoriaFiltro" (ngModelChange)="actualizarProductosFiltrados()">
+          <option value="">Todas las categorias</option>
+          <option *ngFor="let c of categories" [value]="c.name">{{ c.nombre }}</option>
+        </select>
+      </div>
+      <div class="flex gap-2" (click)="categoriaFiltro=''; searchTerm=''; actualizarProductosFiltrados()">
+        <app-button impact="bold" tone="light" shape="rounded" size="small">
+          Limpiar
+        </app-button>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Filtros -->
-  <div class="toolbar">
-    <div class="flex gap-2 w-full md:w-auto">
-      <input class="input" type="text" [(ngModel)]="searchTerm"
-        placeholder="Buscar por nombre o estado (disponible / agotado)..." />
-      <select class="select" [(ngModel)]="categoriaFiltro" (ngModelChange)="actualizarProductosFiltrados()">
-        <option value="">Todas las categorías</option>
-        <option *ngFor="let c of categories" [value]="c.name">{{ c.nombre }}</option>
-      </select>
-    </div>
-
-    <div class="flex gap-2" (click)="categoriaFiltro=''; searchTerm=''; actualizarProductosFiltrados()">
-
-      <app-button full impact="bold" tone="light" shape="rounded" size="small">
-        Limpiar
-      </app-button>
-    </div>
-  </div>
-
-  <!-- Tabla -->
   <ng-container *ngIf="productosFiltradosList.length; else emptyProducts">
-    <div class="app-table-wrap">
-      <table class="app-table">
+    <section class="app-table-wrap">
+      <table class="app-table text-xs">
         <thead class="app-thead">
           <tr>
-           
             <th class="app-th">Producto</th>
-            <th class="app-th">Código</th>
-            <th class="app-th">Categoría</th>
-            <th class="app-th">Impuesto(IVA)</th>
-            <th class="app-th">Precio</th>
+            <th class="app-th">Codigo</th>
+            <th class="app-th">Categoria</th>
+            <th class="app-th">Impuesto (IVA)</th>
+            <th class="app-th text-right">Precio</th>
             <th class="app-th">Stock</th>
-             <th class="app-th">Estado</th>
-            <th class="app-th last:text-center">Acciones</th>
+            <th class="app-th">Estado</th>
+            <th class="app-th text-center">Acciones</th>
           </tr>
         </thead>
 
         <tbody>
-          <tr
-            *ngFor="let p of productosFiltradosList | paginate: { itemsPerPage: pageSize, currentPage: page }; trackBy: trackByName"
+          <tr *ngFor="let p of productosFiltradosList | paginate: { itemsPerPage: pageSize, currentPage: page }; trackBy: trackByName"
             class="app-tr">
-
-
             <td class="app-td">
               <div class="flex flex-col">
                 <span class="font-medium text-gray-900">{{ p.nombre }}</span>
                 <span class="text-xs text-gray-500">{{ p.descripcion || '' }}</span>
               </div>
             </td>
-
             <td class="app-td font-mono text-xs text-gray-600">{{ p.codigo || '—' }}</td>
-
+            <td class="app-td">{{ getNameCategory(p.categoria) }}</td>
+            <td class="app-td"><span class="badge badge-gray">{{ p.tax_value || 'IVA-0' }}</span></td>
+            <td class="app-td text-right font-semibold">{{ p.precio | currency }}</td>
             <td class="app-td">
-              {{ getNameCategory(p.categoria) }}
-            </td>
-
-            <td class="app-td">
-              <span class="badge badge-gray">{{ p.tax_value || 'IVA-0' }}</span>
-            </td>
-
-            <td class="app-td font-semibold">{{ p.precio | currency }}</td>
-
-            <td class="app-td">
-              <span class="badge" [ngClass]="{
-                      'badge-green':  !p.is_out_of_stock,
-                      'badge-red':    p.is_out_of_stock
-                    }">
+              <span class="badge" [ngClass]="{ 'badge-green': !p.is_out_of_stock, 'badge-red': p.is_out_of_stock }">
                 {{ p.is_out_of_stock ? 'Agotado' : 'Disponible' }}
               </span>
             </td>
-
-            
             <td class="app-td">
-              <span class="badge" [ngClass]="{
-                      'badge-green':  p.isactive,
-                      'badge-red':    !p.isactive
-                    }">
+              <span class="badge" [ngClass]="{ 'badge-green': p.isactive, 'badge-red': !p.isactive }">
                 {{ p.isactive ? 'Activo' : 'Inactivo' }}
               </span>
             </td>
-
             <td class="app-td text-center">
-              <div class="inline-flex gap-2 ">
-                <button class="btn btn-outline" (click)="abrirModal(p)">✏️ Editar</button>
-                <button class="btn btn-warn" (click)="eliminar(p.name)">🗑️ Eliminar</button>
+              <div class="inline-flex gap-2">
+                <button class="btn btn-outline" (click)="abrirModal(p)">Editar</button>
+                <button class="btn btn-warn" (click)="eliminar(p.name)">Eliminar</button>
               </div>
             </td>
-
           </tr>
         </tbody>
       </table>
 
-      <!-- Paginación (ngx-pagination) -->
       <div class="pager">
         <button class="pager-btn" (click)="page = page - 1" [disabled]="page === 1">« Anterior</button>
-        <span class="text-sm">Página {{ page }}</span>
+        <span class="text-sm">Pagina {{ page }}</span>
         <button class="pager-btn" (click)="page = page + 1"
           [disabled]="(productosFiltradosList.length || 0) <= (page * pageSize)">
           Siguiente »
         </button>
       </div>
-    </div>
+    </section>
   </ng-container>
 
   <ng-template #emptyProducts>

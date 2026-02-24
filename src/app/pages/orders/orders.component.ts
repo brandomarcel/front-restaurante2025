@@ -40,7 +40,7 @@ export class OrdersComponent implements OnInit {
   activeTab = 'info';
 
   // NUEVOS filtros
-  tipoFiltro: '' | 'Factura' | 'Nota de venta' = '';
+  tipoFiltro: '' | 'Factura' | 'Nota Venta' = '';
   anulacionFiltro: '' | 'soloAnuladas' | 'excluirAnuladas' = '';
 
   private url = environment.URL

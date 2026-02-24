@@ -1,6 +1,5 @@
 import { Component, OnInit } from '@angular/core';
 import { CajasService } from 'src/app/services/cajas.service';
-import { AuthService } from 'src/app/services/auth.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
@@ -82,6 +81,10 @@ export class CloseCajaComponent implements OnInit {
   }
 
   guardarCierre() {
+    if (!this.canSave) {
+      return;
+    }
+
     const detalle = Object.keys(this.detallePorMetodo).map(key => ({
       metodo_pago: key,
       monto: this.detallePorMetodo[key]
@@ -101,5 +104,13 @@ export class CloseCajaComponent implements OnInit {
 
   objectKeys(obj: any): string[] {
     return Object.keys(obj);
+  }
+
+  get totalEsperado(): number {
+    return (Number(this.cierre.monto_apertura) || 0) + (Number(this.cierre.efectivo_sistema) || 0);
+  }
+
+  get canSave(): boolean {
+    return !this.sinApertura && this.cierre.apertura && this.cierre.efectivo_real >= 0;
   }
 }

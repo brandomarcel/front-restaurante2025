@@ -1,38 +1,43 @@
-<div class="flex flex-col">
-    <!-- Header -->
-    <div class="app-page-header">
-        <div>
-            <h2 class="app-page-title">Usuarios</h2>
-            <div class="app-page-subtle space-x-1">
-                <span># Registros:</span>
-                <span class="text-foreground font-semibold">{{ filtered.length }}</span>
+<div class="app-container space-y-4">
+    <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h2 class="text-xl font-bold">Usuarios</h2>
+                <p class="text-xs text-primary-foreground/80">Gestion de accesos y roles del sistema.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
+                    Registros: {{ filtered.length }}
+                </div>
+                <app-button impact="bold" tone="light" shape="rounded" size="small" (click)="abrirModal()">
+                    Nuevo Usuario
+                </app-button>
             </div>
         </div>
+    </section>
 
-        <app-button  impact="bold" tone="primary" shape="rounded" size="medium" (click)="abrirModal()" >+ Nuevo Usuario</app-button>
-        <!-- <button class="btn btn-primary" (click)="abrirModal()">+ Nuevo Usuario</button> -->
-    </div>
-
-    <!-- Toolbar -->
-    <div class="toolbar">
-        <input class="input" type="text" [(ngModel)]="search" placeholder="Buscar por nombre o email..." />
-        <div class="flex gap-2">
-            <button class="btn btn-outline" (click)="search=''; filtrar()">Limpiar</button>
+    <section class="rounded-xl border border-primary/15 bg-white p-4 shadow-sm">
+        <div class="toolbar !mb-0">
+            <input class="input" type="text" [(ngModel)]="search" placeholder="Buscar por nombre o email..." />
+            <div class="flex gap-2">
+                <app-button impact="bold" tone="light" shape="rounded" size="small" (click)="search=''; filtrar()">
+                    Limpiar
+                </app-button>
+            </div>
         </div>
-    </div>
+    </section>
 
-    <!-- Tabla -->
     <ng-container *ngIf="filtered.length; else emptyState">
-        <div class="app-table-wrap">
-            <table class="app-table">
+        <section class="app-table-wrap">
+            <table class="app-table text-xs">
                 <thead class="app-thead">
                     <tr>
                         <th class="app-th">Email</th>
                         <th class="app-th">Nombre</th>
-                        <th class="app-th">Teléfono</th>
+                        <th class="app-th">Telefono</th>
                         <th class="app-th">Rol</th>
                         <th class="app-th text-center">Estado</th>
-                        <th class="app-th last:text-center">Acciones</th>
+                        <th class="app-th text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -43,36 +48,33 @@
                         <td class="app-td">{{ u.phone || '—' }}</td>
                         <td class="app-td capitalize">{{ u.role_key || (u.role_profile_name || '—') }}</td>
                         <td class="app-td text-center">
-                            <button class="btn btn-xs" [class.btn-success]="u.enabled" [class.btn-ghost]="!u.enabled"
-                                (click)="toggleEnabled(u)">
+                            <button class="btn btn-outline" (click)="toggleEnabled(u)">
                                 {{ u.enabled ? 'Activo' : 'Inactivo' }}
                             </button>
                         </td>
                         <td class="app-td text-center">
                             <div class="inline-flex gap-2">
-                                <button class="btn btn-outline" (click)="abrirModal(u)">✏️ Editar</button>
-                                <!-- <button class="btn btn-danger" (click)="borrar(u)">🗑️ Eliminar</button> -->
+                                <button class="btn btn-outline" (click)="abrirModal(u)">Editar</button>
                             </div>
                         </td>
                     </tr>
                 </tbody>
             </table>
 
-            <!-- Paginación -->
             <div class="pager">
                 <button class="pager-btn" (click)="page = page - 1" [disabled]="page === 1">« Anterior</button>
-                <span class="text-sm">Página {{ page }}</span>
+                <span class="text-sm">Pagina {{ page }}</span>
                 <button class="pager-btn" (click)="page = page + 1"
                     [disabled]="(filtered.length || 0) <= (page * pageSize)">
                     Siguiente »
                 </button>
             </div>
-        </div>
+        </section>
     </ng-container>
 
     <ng-template #emptyState>
         <div class="app-card">
-            <div class="app-card-body text-center text-gray-500">No hay usuarios</div>
+            <div class="app-card-body text-center text-gray-500">No hay usuarios para mostrar.</div>
         </div>
     </ng-template>
 

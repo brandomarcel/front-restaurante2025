@@ -1,134 +1,93 @@
-<div class="flex flex-col">
-
-    <!-- Header -->
-    <div class="app-page-header">
-        <div>
-            <h2 class="app-page-title">Notas de Crédito</h2>
-            <div class="app-page-subtle space-x-1">
-                <span># Registros:</span>
-                <span class="text-foreground font-semibold">{{ total }}</span>
+<div class="app-container space-y-4">
+    <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h2 class="text-xl font-bold">Notas de Credito</h2>
+                <p class="text-xs text-primary-foreground/80">Listado unificado de notas de credito emitidas.</p>
+            </div>
+            <div class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
+                Registros: {{ total }}
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- Filtros -->
-    <div class="toolbar">
-        <div class="flex flex-col sm:flex-row gap-2 w-full">
-            <input class="input" type="text" [(ngModel)]="search"
-                placeholder="Buscar por #factura, clave de acceso, cliente, identificación o estado…" />
+    <section class="rounded-xl border border-primary/15 bg-white p-4 shadow-sm">
+        <div class="toolbar !mb-0">
+            <div class="flex w-full flex-col gap-2 sm:flex-row">
+                <input class="input" type="text" [(ngModel)]="search"
+                    placeholder="Buscar por #nota, clave, cliente, identificacion o estado..." />
 
-            <select class="select" [(ngModel)]="conOrdenFiltro" (ngModelChange)="aplicarFiltros()">
-                <option value="">Todas</option>
-                <option value="con">Con orden</option>
-                <option value="sin">Sin orden</option>
-            </select>
+                <select class="select" [(ngModel)]="conOrdenFiltro" (ngModelChange)="aplicarFiltros()">
+                    <option value="">Todas</option>
+                    <option value="con">Con orden</option>
+                    <option value="sin">Sin orden</option>
+                </select>
+            </div>
+
+            <div class="flex gap-2">
+                <app-button (click)="limpiarFiltros()" impact="bold" tone="light" shape="rounded" size="small">
+                    Limpiar
+                </app-button>
+            </div>
         </div>
+    </section>
 
-        <div class="flex gap-2">
-            <app-button (click)="limpiarFiltros()" full impact="bold" tone="light" shape="rounded" size="small">
-                Limpiar
-            </app-button>
-        </div>
-    </div>
-
-    <!-- Tabla -->
     <ng-container *ngIf="invoicesFiltradas.length > 0; else empty">
-        <div class="app-table-wrap">
-            <table class="app-table">
-                <!-- ...tu tabla -->
+        <section class="app-table-wrap">
+            <table class="app-table text-xs">
                 <thead class="app-thead">
                     <tr>
-                        <th class="app-th">N° Nota Crédito</th>
+                        <th class="app-th">N° Nota Credito</th>
                         <th class="app-th">Fecha Emision</th>
                         <th class="app-th">Cliente</th>
-                        <th class="app-th">Total</th>
+                        <th class="app-th text-right">Total</th>
                         <th class="app-th">Estado SRI</th>
                         <th class="app-th">Fact. Asociada</th>
-                        <th class="app-th last:text-center">Acciones</th>
+                        <th class="app-th text-center">Acciones</th>
                     </tr>
                 </thead>
 
                 <tbody>
-                    <tr *ngFor="let inv of invoicesFiltradas" class="app-tr text-xs">
+                    <tr *ngFor="let inv of invoicesFiltradas" class="app-tr">
                         <td class="app-td">
                             <div class="flex flex-col">
                                 <span class="font-semibold">{{ inv.sri?.number || '—' }}</span>
                                 <span class="text-[11px] text-muted-foreground">{{ inv.name }}</span>
                             </div>
                         </td>
-
-                        <td class="app-td">{{ inv.posting_date }}</td>
-
+                        <td class="app-td">{{ inv.posting_date || '—' }}</td>
+                        <td class="app-td">{{ inv.customer?.fullName || inv.customer?.name || '—' }}</td>
+                        <td class="app-td text-right font-semibold">{{ inv.total | currency:'USD':'symbol':'1.2-2' }}</td>
                         <td class="app-td">
-                            {{ inv.customer?.fullName || inv.customer?.name || '—' }}
-                        </td>
-
-                        <td class="app-td font-semibold">
-                            {{ inv.total | currency:'USD':'symbol':'1.2-2' }}
-                        </td>
-
-                        <td class="app-td">
-                            <span class="badge" [ngClass]="{
-        'badge-green': inv.sri?.status === 'AUTORIZADO',
-        'badge-red': inv.sri?.status === 'Rejected' || inv.sri?.status === 'Error',
-        'badge-yellow': inv.sri?.status !== 'AUTORIZADO'
-                          && inv.sri?.status !== 'Rejected'
-                          && inv.sri?.status !== 'Error'
-      }">
-                                {{
-                                inv.sri?.status === 'AUTORIZADO' ? 'AUTORIZADO' :
-                                inv.sri?.status === 'Rejected' ? 'Rechazada' :
-                                inv.sri?.status === 'Error' ? 'Error' :
-                                inv.sri?.status === 'Queued' ? 'En cola' :
-                                inv.sri?.status === 'Processing' ? 'En proceso' :
-                                inv.sri?.status === 'Draft' ? 'Borrador' :
-                                (inv.sri?.status || '—')
-                                }}
+                            <span class="badge" [ngClass]="getSriStatusBadge(inv.sri?.status)">
+                                {{ getSriStatusLabel(inv.sri?.status) }}
                             </span>
                         </td>
-
-                        <td class="app-td">
-                            <!-- <button *ngIf="inv.order; else noOrder" class="btn btn-outline"
-                                (click)="irAOrden(inv.order)">
-                                Ver orden: {{ inv.order }}
-                                
-                            </button> 
-                            <ng-template #noOrder><span class="text-muted-foreground">—</span></ng-template> -->
-                            {{ inv.invoice_modified.invoice_reference || '—' }}
-
-
-                        </td>
-
+                        <td class="app-td">{{ inv.invoice_modified?.invoice_reference || '—' }}</td>
                         <td class="app-td text-center">
-                            <div class="inline-flex gap-2">
-                                <!-- Antes: (click)="openInvoiceDetail(inv)" -->
-                                <button class="btn btn-outline" [routerLink]="['/dashboard/credit-note', inv.name]">
-                                    🔎 Abrir
-                                </button>
-                            </div>
+                            <button class="btn btn-outline" [routerLink]="['/dashboard/credit-note', inv.name]">
+                                Abrir
+                            </button>
                         </td>
-
                     </tr>
                 </tbody>
             </table>
 
-            <!-- Paginación -->
             <div class="pager">
                 <button class="pager-btn" (click)="prevPage()" [disabled]="page === 1">« Anterior</button>
-                <span class="text-sm">Página {{ page }} de {{ totalPages }}</span>
+                <span class="text-sm">Pagina {{ page }} de {{ totalPages }}</span>
                 <button class="pager-btn" (click)="nextPage()" [disabled]="page === totalPages">Siguiente »</button>
             </div>
-        </div>
+        </section>
     </ng-container>
 
     <ng-template #empty>
         <div class="app-card">
             <div class="app-card-body text-center text-gray-500">
-                No hay facturas para mostrar.
+                No hay notas de credito para mostrar.
             </div>
         </div>
     </ng-template>
-
 </div>
 
 

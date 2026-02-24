@@ -48,6 +48,10 @@ export class RetiroCajaComponent implements OnInit {
   }
 
   registrarRetiro() {
+    if (!this.canSubmit) {
+      return;
+    }
+
     const data = {
       ...this.retiro,
       fecha_hora: this.getFechaHoraEcuador()
@@ -95,5 +99,9 @@ eliminarRetiro(name: string) {
     });
   }
 }
+
+  get canSubmit(): boolean {
+    return this.cajaActiva && Number(this.retiro.monto) > 0 && String(this.retiro.motivo || '').trim().length > 0;
+  }
 
 }

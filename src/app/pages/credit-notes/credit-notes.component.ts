@@ -140,4 +140,22 @@ export class CreditNotesComponent implements OnInit {
     if (!orderName) return;
     this.router.navigate(['/orders'], { queryParams: { id: orderName } });
   }
+
+  getSriStatusLabel(status: string | undefined | null): string {
+    const value = String(status || '').trim();
+    if (value === 'AUTORIZADO') return 'AUTORIZADO';
+    if (value === 'Rejected') return 'Rechazada';
+    if (value === 'Error') return 'Error';
+    if (value === 'Queued') return 'En cola';
+    if (value === 'Processing') return 'En proceso';
+    if (value === 'Draft') return 'Borrador';
+    return value || '—';
+  }
+
+  getSriStatusBadge(status: string | undefined | null): string {
+    const value = String(status || '').trim();
+    if (value === 'AUTORIZADO') return 'badge-green';
+    if (value === 'Rejected' || value === 'Error' || value === 'ANULADA') return 'badge-red';
+    return 'badge-yellow';
+  }
 }

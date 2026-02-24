@@ -1,48 +1,46 @@
-<div class="flex flex-col">
-
-    <!-- Header -->
-    <div class="app-page-header">
-        <div>
-            <h2 class="app-page-title">Clientes</h2>
-            <div class="app-page-subtle space-x-1">
-                <span># Registros:</span>
-                <span class="text-foreground font-semibold">{{ filteredCustomersList.length }}</span>
+<div class="app-container space-y-4">
+    <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h2 class="text-xl font-bold">Clientes</h2>
+                <p class="text-xs text-primary-foreground/80">Gestion de clientes para facturacion y POS.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
+                    Registros: {{ filteredCustomersList.length }}
+                </div>
+                <app-button impact="bold" tone="light" shape="rounded" size="small" (click)="abrirModal()">
+                    Nuevo Cliente
+                </app-button>
             </div>
         </div>
+    </section>
 
-        <app-button full impact="bold" tone="primary" shape="rounded" size="medium" (click)="abrirModal()">
-            + Nuevo Cliente
-        </app-button>
-
-    </div>
-
-    <!-- Filtros -->
-    <div class="toolbar">
-        <input class="input" type="text" [(ngModel)]="searchTerm" placeholder="Buscar por nombre o identificación..." />
-        <div class="flex gap-2">
-            <app-button (click)="_searchTerm=''; filtrarClientes()" full impact="bold" tone="light" shape="rounded"
-                size="small">
-                Limpiar
-            </app-button>
-
-
+    <section class="rounded-xl border border-primary/15 bg-white p-4 shadow-sm">
+        <div class="toolbar !mb-0">
+            <input class="input" type="text" [(ngModel)]="searchTerm" placeholder="Buscar por nombre o identificacion..." />
+            <div class="flex gap-2">
+                <app-button (click)="_searchTerm=''; filtrarClientes()" impact="bold" tone="light" shape="rounded"
+                    size="small">
+                    Limpiar
+                </app-button>
+            </div>
         </div>
-    </div>
+    </section>
 
-    <!-- Tabla -->
     <ng-container *ngIf="filteredCustomersList.length; else emptyCustomers">
-        <div class="app-table-wrap">
-            <table class="app-table">
+        <section class="app-table-wrap">
+            <table class="app-table text-xs">
                 <thead class="app-thead">
                     <tr>
                         <th class="app-th">Nombre</th>
-                        <th class="app-th">Identificación</th>
-                        <th class="app-th">Teléfono</th>
+                        <th class="app-th">Identificacion</th>
+                        <th class="app-th">Telefono</th>
                         <th class="app-th">Email</th>
-                        <th class="app-th last:text-center">Acciones</th>
+                        <th class="app-th">Estado</th>
+                        <th class="app-th text-center">Acciones</th>
                     </tr>
                 </thead>
-
                 <tbody>
                     <tr *ngFor="let c of filteredCustomersList | paginate: { itemsPerPage: pageSize, currentPage: page }; trackBy: trackById"
                         class="app-tr">
@@ -51,40 +49,35 @@
                         <td class="app-td">{{ c.telefono || '—' }}</td>
                         <td class="app-td">{{ c.correo || '—' }}</td>
                         <td class="app-td">
-                            <span class="badge" [ngClass]="{
-                      'badge-green':  c.isactive,
-                      'badge-red':    !c.isactive
-                    }">
+                            <span class="badge" [ngClass]="{ 'badge-green': c.isactive, 'badge-red': !c.isactive }">
                                 {{ c.isactive ? 'Activo' : 'Inactivo' }}
-
                             </span>
                         </td>
                         <td class="app-td text-center">
-                            <div class="inline-flex gap-2 ">
-                                <button class="btn btn-outline" (click)="abrirModal(c)">✏️ Editar</button>
-                                <button class="btn btn-warn" (click)="delete(c.name)">🗑️ Eliminar</button>
+                            <div class="inline-flex gap-2">
+                                <button class="btn btn-outline" (click)="abrirModal(c)">Editar</button>
+                                <button class="btn btn-warn" (click)="delete(c.name)">Eliminar</button>
                             </div>
                         </td>
                     </tr>
                 </tbody>
             </table>
 
-            <!-- Paginación -->
             <div class="pager">
                 <button class="pager-btn" (click)="page = page - 1" [disabled]="page === 1">« Anterior</button>
-                <span class="text-sm">Página {{ page }}</span>
+                <span class="text-sm">Pagina {{ page }}</span>
                 <button class="pager-btn" (click)="page = page + 1"
                     [disabled]="(filteredCustomersList.length || 0) <= (page * pageSize)">
                     Siguiente »
                 </button>
             </div>
-        </div>
+        </section>
     </ng-container>
 
     <ng-template #emptyCustomers>
         <div class="app-card">
             <div class="app-card-body text-center text-gray-500">
-                No hay datos para mostrar
+                No hay clientes para mostrar.
             </div>
         </div>
     </ng-template>
