@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Subject, debounceTime } from 'rxjs';
 import { OrdersService, OrdersListResponse } from './orders.service';
 import { FrappeSocketService } from './frappe-socket.service';
-import { UserService } from './user.service';
 
 /* ================================
    MODELOS EXACTOS SEGÚN TU RAW
@@ -51,6 +50,7 @@ export interface OrderVM {
   customer: CustomerVM;
   sri: SriVM;
   usuario?: string;
+  alias?: string;
 
   items: OrderItemVM[];
   payments: any[];
@@ -71,6 +71,10 @@ export class RealtimeOrdersService {
 
   private refetchTrigger = new Subject<void>();
   private firstLoadDone = false;
+  private isInitialLoading = false;
+  private lastLoadKey = '';
+  private recentRealtimeEvents = new Map<string, number>();
+  private readonly REALTIME_DEDUPE_MS = 1000;
 
   private readonly STATUS_ORDER: Record<string, number> = {
     'Ingresada': 0,
@@ -80,8 +84,7 @@ export class RealtimeOrdersService {
 
   constructor(
     private api: OrdersService,
-    private sock: FrappeSocketService,
-    private userService: UserService
+    private sock: FrappeSocketService
   ) {
     const companyId = localStorage.getItem('companyId') ?? 'DEFAULT';
 
@@ -90,12 +93,11 @@ export class RealtimeOrdersService {
     /* ================= SOCKET ================= */
 
     this.sock.on<any>(`brando_conect:company:${companyId}`, (evt) => {
-      console.log('evt',evt);
-
       if (!evt?.name) return;
       if ((evt.company || 'DEFAULT') !== companyId) return;
 
       const action = (evt._action || '').toLowerCase() as 'insert' | 'update' | 'delete';
+      if (this.isDuplicatedRealtimeEvent(evt, action)) return;
 
       // DELETE
       if (action === 'delete') {
@@ -130,13 +132,22 @@ export class RealtimeOrdersService {
   /* ================= API PÚBLICA ================= */
 
   // ⚠️ IMPORTANTE: YA NO retorna observable
-  loadInitial(limit = 50, offset = 0, createdFrom?: any, createdTo?: any): void {
-    this.api.getAll(limit, offset, createdFrom, createdTo)
+  loadInitial(limit = 50, offset = 0, createdFrom?: any, createdTo?: any, status?: string, force = false): void {
+    const loadKey = `${limit}|${offset}|${createdFrom ?? ''}|${createdTo ?? ''}|${status ?? ''}`;
+    if (this.isInitialLoading) return;
+    if (!force && this.firstLoadDone && this.lastLoadKey === loadKey && this.orders$.value.length > 0) return;
+
+    this.isInitialLoading = true;
+    this.lastLoadKey = loadKey;
+
+    this.api.getAll(limit, offset, createdFrom, createdTo, 'desc', status)
       .subscribe((res: OrdersListResponse) => {
         const list = this.mapList(res);
         this.orders$.next([...list]);
         this.total$.next((res as any)?.message?.total ?? list.length);
         this.firstLoadDone = true;
+      }).add(() => {
+        this.isInitialLoading = false;
       });
   }
 
@@ -216,11 +227,14 @@ export class RealtimeOrdersService {
 
   private mapOne(o: any): OrderVM {
     const createdISO = o.createdAtISO || this.toIsoLike(o.createdAt);
+    const status = this.normalizeStatus(o.status);
+    const type = this.normalizeType(o.type);
 
     return {
       name: o.name,
-      status: o.status ?? 'Ingresada',
-      type: o.type ?? '',
+      alias: o.alias ?? '',
+      status,
+      type,
       createdAt: o.createdAt ?? '',
       createdAtISO: createdISO,
 
@@ -237,7 +251,12 @@ export class RealtimeOrdersService {
       },
 
       sri: {
-        status: o.sri?.status ?? ''
+        status: o.sri?.status ?? '',
+        authorization_datetime: o.sri?.authorization_datetime ?? '',
+        access_key: o.sri?.access_key ?? '',
+        invoice: o.sri?.invoice ?? '',
+        number: o.sri?.number ?? '',
+        grand_total: Number(o.sri?.grand_total ?? 0)
       },
 
       usuario: o.usuario ?? '',
@@ -257,5 +276,48 @@ export class RealtimeOrdersService {
   private toIsoLike(s?: string): string {
     if (!s) return '';
     return s.includes('T') ? s : s.replace(' ', 'T');
+  }
+
+  private normalizeStatus(raw: any): OrderVM['status'] {
+    const source = String(raw ?? '').trim();
+    const value = source.toLowerCase();
+
+    if (value.includes('ingres')) return 'Ingresada';
+    if (value.includes('prepar')) return 'Preparación';
+    if (value.includes('cerr') || value.includes('lista') || value.includes('entreg')) return 'Cerrada';
+
+    return source || 'Ingresada';
+  }
+
+  private normalizeType(raw: any): string {
+    const source = String(raw ?? '').trim();
+    const value = source.toLowerCase();
+
+    if (!value) return 'Nota Venta';
+    if (value.includes('factura')) return 'Factura';
+    if (value.includes('nota') || value.includes('venta')) return 'Nota Venta';
+
+    return source;
+  }
+
+  private isDuplicatedRealtimeEvent(evt: any, action: 'insert' | 'update' | 'delete'): boolean {
+    const signature = [
+      action,
+      evt?.name ?? '',
+      evt?.data?.status ?? '',
+      evt?.data?.createdAtISO ?? evt?.data?.createdAt ?? ''
+    ].join('|');
+
+    const now = Date.now();
+    const prev = this.recentRealtimeEvents.get(signature);
+    this.recentRealtimeEvents.set(signature, now);
+
+    for (const [key, ts] of this.recentRealtimeEvents) {
+      if (now - ts > this.REALTIME_DEDUPE_MS * 4) {
+        this.recentRealtimeEvents.delete(key);
+      }
+    }
+
+    return prev !== undefined && now - prev <= this.REALTIME_DEDUPE_MS;
   }
 }

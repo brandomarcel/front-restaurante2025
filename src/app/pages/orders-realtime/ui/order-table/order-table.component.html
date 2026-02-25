@@ -1,86 +1,78 @@
-<div class="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
-  <table class="min-w-full text-sm">
-
-    <!-- HEADER -->
-    <thead class="bg-gray-50 text-gray-600">
+<section class="app-table-wrap">
+  <table class="app-table text-xs">
+    <thead class="app-thead">
       <tr>
-        <th class="px-4 py-3 text-left">N° Orden</th>
-        <th class="px-4 py-3 text-left">Fecha</th>
-        <th class="px-4 py-3 text-left">Cliente</th>
-        <th class="px-4 py-3 text-right">Total</th>
-        <th class="px-4 py-3 text-left">Estado</th>
-        <th class="px-4 py-3 text-center">Acciones</th>
+        <th class="app-th">Orden</th>
+        <th class="app-th">Fecha</th>
+        <th class="app-th">Cliente</th>
+        <th class="app-th">Tipo</th>
+        <th class="app-th">Estado</th>
+        <th class="app-th">SRI</th>
+        <th class="app-th text-right">Total</th>
+        <th class="app-th text-center">Acciones</th>
       </tr>
     </thead>
 
-    <!-- BODY -->
     <tbody>
-      <tr *ngFor="let o of orders; trackBy: trackByName"
-          class="border-t transition hover:bg-gray-50"
-          [ngClass]="getRowClass(o.status)">
-
-        <!-- ORDEN -->
-        <td class="px-4 py-3 font-semibold text-gray-900">
-          #{{ o.name }}
+      <tr *ngFor="let o of orders; trackBy: trackByName" class="app-tr" [ngClass]="getRowClass(o.status)">
+        <td class="app-td">
+          <div class="flex flex-col">
+            <span class="font-semibold text-gray-900">{{ o.name }}</span>
+            <span class="text-[11px] text-muted-foreground">{{ o.alias || o.usuario || '—' }}</span>
+          </div>
         </td>
 
-        <!-- FECHA -->
-        <td class="px-4 py-3 text-gray-600">
-          {{ o.createdAt | date:'dd/MM/yyyy HH:mm' }}
-        </td>
+        <td class="app-td text-gray-600">{{ (o.createdAtISO || o.createdAt) | date:'dd/MM/yyyy HH:mm' }}</td>
+        <td class="app-td">{{ o.customer.nombre || 'Consumidor final' }}</td>
+        <td class="app-td">{{ o.type || 'Nota Venta' }}</td>
 
-        <!-- CLIENTE -->
-        <td class="px-4 py-3 text-gray-700">
-          {{ o.customer.nombre || o.customer || '—' }}
-        </td>
-
-        <!-- TOTAL -->
-        <td class="px-4 py-3 text-right font-semibold text-gray-900">
-          {{ o.total | currency:'USD':'symbol':'1.2-2' }}
-        </td>
-
-        <!-- ESTADO -->
-        <td class="px-4 py-3">
-          <span class="text-xs px-2 py-1 rounded-full font-medium"
-                [ngClass]="getBadgeClass(o.status)">
+        <td class="app-td">
+          <span class="badge" [ngClass]="{
+            'badge-red': o.status === 'Ingresada',
+            'badge-yellow': o.status === 'Preparación',
+            'badge-green': o.status === 'Cerrada',
+            'badge-gray': o.status !== 'Ingresada' && o.status !== 'Preparación' && o.status !== 'Cerrada'
+          }">
             {{ o.status }}
           </span>
         </td>
 
-        <!-- ACCIONES -->
-        <td class="px-4 py-3 text-center space-x-2">
-
-          <button
-            (click)="open.emit(o)"
-            class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition">
-            🔎 Detalle
-          </button>
-
-          <button
-            *ngIf="o.status==='Ingresada'"
-            (click)="toPreparacion.emit(o)"
-            class="inline-flex items-center rounded-md bg-amber-500 text-white px-3 py-1.5 text-xs hover:bg-amber-600 transition">
-            ➡ Preparación
-          </button>
-
-          <button
-            *ngIf="o.status==='Preparación'"
-            (click)="toCerrada.emit(o)"
-            class="inline-flex items-center rounded-md bg-sky-600 text-white px-3 py-1.5 text-xs hover:bg-sky-700 transition">
-            ✅ Cerrar
-          </button>
-
+        <td class="app-td">
+          <span class="badge" [ngClass]="getSriBadge(o.sri.status)">
+            {{ o.sri.status || 'Sin factura' }}
+          </span>
         </td>
 
+        <td class="app-td text-right font-semibold">{{ o.total | currency:'USD':'symbol':'1.2-2' }}</td>
+
+        <td class="app-td text-center">
+          <div class="flex items-center justify-center gap-2">
+            <button type="button" (click)="open.emit(o)" class="btn btn-outline">Detalle</button>
+
+            <button
+              *ngIf="allowActions && o.status === 'Ingresada'"
+              type="button"
+              (click)="toPreparacion.emit(o)"
+              class="btn bg-amber-500 text-white hover:bg-amber-600">
+              Preparacion
+            </button>
+
+            <button
+              *ngIf="allowActions && o.status === 'Preparación'"
+              type="button"
+              (click)="toCerrada.emit(o)"
+              class="btn bg-emerald-600 text-white hover:bg-emerald-700">
+              Marcar lista
+            </button>
+          </div>
+        </td>
       </tr>
 
-      <!-- EMPTY STATE -->
       <tr *ngIf="orders.length === 0">
-        <td colspan="6" class="text-center py-8 text-gray-500">
-          No hay órdenes disponibles.
+        <td colspan="8" class="app-td py-8 text-center text-gray-500">
+          No hay ordenes disponibles.
         </td>
       </tr>
-
     </tbody>
   </table>
-</div>
+</section>

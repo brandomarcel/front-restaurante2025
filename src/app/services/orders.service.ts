@@ -75,7 +75,8 @@ export class OrdersService {
     offset: number = 0,
     createdFrom?: string,
     createdTo?: string,
-    order: 'asc' | 'desc' = 'desc'
+    order: 'asc' | 'desc' = 'desc',
+    status?: string
   ): Observable<OrdersListResponse> {
     let params = new HttpParams()
       .set('limit', String(limit))
@@ -84,6 +85,7 @@ export class OrdersService {
 
     if (createdFrom) params = params.set('created_from', createdFrom);
     if (createdTo) params = params.set('created_to', createdTo);
+    if (status) params = params.set('status', status);
 
     return this.http.get<OrdersListResponse>(`${this.urlBase}.get_all_orders`, {
       context: new HttpContext().set(REQUIRE_AUTH, true),

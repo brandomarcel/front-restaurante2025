@@ -11,6 +11,7 @@ import { OrderVM } from 'src/app/services/realtime-orders.service';
 export class OrderTableComponent {
 
   @Input() orders: OrderVM[] = [];
+  @Input() allowActions = true;
 
   @Output() open = new EventEmitter<OrderVM>();
   @Output() toPreparacion = new EventEmitter<OrderVM>();
@@ -42,5 +43,15 @@ export class OrderTableComponent {
       default:
         return '';
     }
+  }
+
+  getSriBadge(status?: string): string {
+    const value = String(status ?? '').toLowerCase();
+
+    if (!value || value.includes('sin factura')) return 'badge-gray';
+    if (value.includes('autor')) return 'badge-green';
+    if (value.includes('error') || value.includes('rechaz')) return 'badge-red';
+
+    return 'badge-yellow';
   }
 }

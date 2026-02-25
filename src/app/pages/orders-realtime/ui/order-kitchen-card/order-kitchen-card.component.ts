@@ -11,7 +11,9 @@ import { OrderVM } from 'src/app/services/realtime-orders.service';
 export class OrderKitchenCardComponent implements OnInit, OnDestroy {
 
   @Input({ required: true }) order!: OrderVM;
+  @Input() allowActions = true;
 
+  @Output() open = new EventEmitter<OrderVM>();
   @Output() toPreparacion = new EventEmitter<OrderVM>();
   @Output() toCerrada = new EventEmitter<OrderVM>();
 
@@ -52,10 +54,9 @@ export class OrderKitchenCardComponent implements OnInit, OnDestroy {
   }
 
   urgencyText(): string {
-    // puedes ajustar thresholds
-    if (this.minutes >= 20) return '🔥 URGENTE';
-    if (this.minutes >= 10) return '⏱️ EN COLA';
-    return '🟢 OK';
+    if (this.minutes >= 20) return 'Urgente';
+    if (this.minutes >= 10) return 'En cola';
+    return 'A tiempo';
   }
 
   urgencyClass(): string {
@@ -71,5 +72,14 @@ export class OrderKitchenCardComponent implements OnInit, OnDestroy {
 
   getItemName(it: any): string {
     return String(it?.productName ?? it?.product ?? '—');
+  }
+
+  get visibleItems(): any[] {
+    return Array.isArray(this.order?.items) ? this.order.items.slice(0, 4) : [];
+  }
+
+  get remainingItems(): number {
+    const total = Array.isArray(this.order?.items) ? this.order.items.length : 0;
+    return Math.max(0, total - this.visibleItems.length);
   }
 }

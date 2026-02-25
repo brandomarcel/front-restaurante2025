@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CartService } from '../services/cart.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { CategoryService } from 'src/app/services/category.service';
@@ -8,6 +8,9 @@ import { toast } from 'ngx-sonner';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs';
+
+type OrderType = 'Servirse' | 'Llevar' | 'Domicilio';
 
 @Component({
   selector: 'app-pos-mesero',
@@ -17,13 +20,19 @@ import { FormsModule } from '@angular/forms';
 })
 export class PosMeseroComponent implements OnInit {
 
-  @ViewChild('productContainer') productContainer!: ElementRef;
-
   products: any[] = [];
   filteredProductList: any[] = [];
+  categories: any[] = [];
+  selectedCategory = '';
 
-  alias: string = '';
-  searchTerm: string = '';
+  alias = '';
+  searchTerm = '';
+  orderType: OrderType = 'Servirse';
+  deliveryAddress = '';
+  deliveryPhone = '';
+  cartExpanded = false;
+  isSubmittingOrder = false;
+  isLoadingProducts = false;
 
   constructor(
     public cartService: CartService,
@@ -36,58 +45,152 @@ export class PosMeseroComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadProducts();
+    this.loadCategories();
   }
 
-  loadProducts() {
-    this.productsService.getAll(1).subscribe((res: any) => {
-      this.products = res.message.data || [];
-      this.filteredProductList = this.products;
+  get totalItems(): number {
+    return this.cartService.cart.reduce((acc, item) => acc + Number(item?.quantity ?? 0), 0);
+  }
+
+  get canSubmitOrder(): boolean {
+    if (!this.alias.trim()) return false;
+    if (this.cartService.cart.length === 0) return false;
+    if (this.orderType === 'Domicilio' && (!this.deliveryAddress.trim() || !this.deliveryPhone.trim())) return false;
+    return !this.isSubmittingOrder;
+  }
+
+  get subtotal(): number {
+    return this.cartService.subtotal;
+  }
+
+  get iva(): number {
+    return this.cartService.iva;
+  }
+
+  get total(): number {
+    return this.cartService.total;
+  }
+
+  loadProducts(): void {
+    this.isLoadingProducts = true;
+    this.productsService.getAll(1).pipe(
+      finalize(() => this.isLoadingProducts = false)
+    ).subscribe((res: any) => {
+      this.products = res?.message?.data || [];
+      this.applyFilters();
     });
   }
 
-  clearSearch() {
-    this.searchTerm = '';
-    this.filteredProductList = this.products;
+  loadCategories(): void {
+    this.categoryService.getAll(1).subscribe({
+      next: (res: any) => {
+        this.categories = res?.message?.data || [];
+      }
+    });
   }
 
-  applyFilters() {
+  clearSearch(): void {
+    this.searchTerm = '';
+    this.applyFilters();
+  }
+
+  onCategorySelected(categoryName: string): void {
+    this.selectedCategory = categoryName;
+    this.applyFilters();
+  }
+
+  setOrderType(type: OrderType): void {
+    this.orderType = type;
+    if (type !== 'Domicilio') {
+      this.deliveryAddress = '';
+      this.deliveryPhone = '';
+    }
+  }
+
+  applyFilters(): void {
     const term = this.normalize(this.searchTerm);
+    const selectedCat = this.normalize(this.selectedCategory);
 
     this.filteredProductList = (this.products || []).filter((product: any) => {
+      const productCategory = this.normalize(this.getProductCategoryName(product));
+      const matchCategory = !selectedCat || productCategory === selectedCat;
+
+      if (!matchCategory) return false;
+      if (!term) return true;
+
       const name = this.normalize(product?.nombre ?? product?.name);
       const desc = this.normalize(product?.description ?? product?.descripcion);
       return name.includes(term) || desc.includes(term);
     });
   }
 
-  addProduct(product: any) {
-    this.cartService.addProduct(product);
+  addProduct(product: any): void {
+    if (product?.is_out_of_stock) return;
 
-    // Vibración en dispositivos compatibles
-    if (navigator.vibrate) {
+    this.cartService.addProduct(product);
+    this.cartExpanded = true;
+
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate(50);
     }
-
-    // Scroll suave hacia abajo
-    setTimeout(() => {
-      this.productContainer?.nativeElement?.scrollTo({
-        top: this.productContainer.nativeElement.scrollHeight,
-        behavior: 'smooth'
-      });
-    }, 100);
   }
 
-  async saveOrderMesero() {
+  increase(item: any): void {
+    this.cartService.increase(item);
+  }
+
+  decrease(item: any): void {
+    this.cartService.decrease(item);
+  }
+
+  remove(item: any): void {
+    const index = this.cartService.cart.indexOf(item);
+    if (index !== -1) this.cartService.cart.splice(index, 1);
+  }
+
+  toggleCartDetails(): void {
+    this.cartExpanded = !this.cartExpanded;
+  }
+
+  async clearCart(): Promise<void> {
+    if (this.cartService.cart.length === 0) return;
+
+    const result = await this.alertService.confirm(
+      '¿Vaciar comanda actual?',
+      'Confirmación'
+    );
+    if (!result.isConfirmed) return;
+
+    this.cartService.clear();
+    this.cartExpanded = false;
+  }
+
+  async saveOrderMesero(): Promise<void> {
+    if (this.isSubmittingOrder) return;
+
+    if (this.cartService.cart.length === 0) {
+      toast.error('Agrega productos a la comanda.');
+      return;
+    }
 
     if (!this.alias) {
-      toast.error('Ingresa un alias.');
+      toast.error('Ingresa la mesa o alias.');
+      return;
+    }
+
+    if (this.orderType === 'Domicilio' && (!this.deliveryAddress.trim() || !this.deliveryPhone.trim())) {
+      toast.error('Completa direccion y telefono para domicilio.');
       return;
     }
 
     const order = {
-      alias: this.alias,
+      alias: this.alias.trim().toUpperCase(),
       estado: 'Nota Venta',
       total: this.cartService.total.toFixed(2),
+      type_orden: this.orderType,
+      delivery_address: this.deliveryAddress.trim(),
+      delivery_phone: this.deliveryPhone.trim(),
+      fecha: this.buildEcuadorIsoDate(),
       items: this.cartService.cart.map(item => ({
         product: item.name ?? item.nombre,
         qty: item.quantity,
@@ -103,17 +206,38 @@ export class PosMeseroComponent implements OnInit {
 
     if (!result.isConfirmed) return;
 
+    this.isSubmittingOrder = true;
     this.spinner.show();
 
-    this.ordersService.create_order_v2(order).subscribe({
+    this.ordersService.create_order_v2(order).pipe(
+      finalize(() => {
+        this.isSubmittingOrder = false;
+        this.spinner.hide();
+      })
+    ).subscribe({
       next: () => {
         toast.success('Orden creada correctamente');
-        this.cartService.clear();
-        this.alias = '';
+        this.resetOrderForm();
       },
-      error: () => toast.error('Error al enviar la comanda.'),
-      complete: () => this.spinner.hide()
+      error: () => toast.error('Error al enviar la comanda.')
     });
+  }
+
+  trackByProduct = (_: number, p: any) => p?.name || p?.nombre;
+  trackByCart = (_: number, it: any) => `${it?.name || it?.nombre}-${it?.price}`;
+
+  private buildEcuadorIsoDate(): string {
+    const date = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Guayaquil' }));
+    return date.toISOString();
+  }
+
+  private resetOrderForm(): void {
+    this.cartService.clear();
+    this.alias = '';
+    this.orderType = 'Servirse';
+    this.deliveryAddress = '';
+    this.deliveryPhone = '';
+    this.cartExpanded = false;
   }
 
   private normalize(txt: any = ''): string {
@@ -122,5 +246,9 @@ export class PosMeseroComponent implements OnInit {
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .trim();
+  }
+
+  private getProductCategoryName(p: any): string {
+    return p?.categoria || p?.category?.name || p?.category?.nombre || '';
   }
 }

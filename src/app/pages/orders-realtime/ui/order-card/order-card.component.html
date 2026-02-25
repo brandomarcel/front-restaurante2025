@@ -1,51 +1,47 @@
-<div class="rounded-xl border p-4 shadow-sm hover:shadow-md transition bg-white">
-
-  <div class="flex justify-between items-center">
-
-    <div class="font-semibold text-gray-800">
-      #{{ order.name }}
+<article class="rounded-xl border border-primary/10 bg-white p-4 shadow-sm transition hover:shadow-md">
+  <div class="flex items-start justify-between gap-3">
+    <div class="min-w-0">
+      <p class="truncate text-sm font-semibold text-gray-900">{{ order.name }}</p>
+      <p class="text-xs text-muted-foreground">{{ order.customer.nombre || 'Consumidor final' }}</p>
     </div>
 
-    <span class="text-xs px-2 py-1 rounded-full font-medium"
-          [ngClass]="{
-            'bg-sky-100 text-sky-700': order.status === 'Ingresada',
-            'bg-amber-100 text-amber-700': order.status === 'Preparación',
-            'bg-emerald-100 text-emerald-700': order.status === 'Cerrada'
-          }">
+    <span class="badge" [ngClass]="{
+      'badge-red': order.status === 'Ingresada',
+      'badge-yellow': order.status === 'Preparación',
+      'badge-green': order.status === 'Cerrada',
+      'badge-gray': order.status !== 'Ingresada' && order.status !== 'Preparación' && order.status !== 'Cerrada'
+    }">
       {{ order.status }}
     </span>
-
   </div>
 
-  <div class="mt-2 text-sm text-gray-500">
-    {{ order.customer.nombre }}
+  <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+    <p>Fecha: <span class="font-medium text-gray-700">{{ (order.createdAtISO || order.createdAt) | date:'dd/MM HH:mm' }}</span></p>
+    <p class="text-right">Tipo: <span class="font-medium text-gray-700">{{ order.type || 'Nota Venta' }}</span></p>
   </div>
 
-  <div class="mt-3 text-right text-lg font-bold">
-    {{ order.total | currency:'USD' }}
+  <div class="mt-3 rounded-lg bg-primary/5 px-3 py-2 text-right">
+    <p class="text-[11px] uppercase tracking-wide text-muted-foreground">Total</p>
+    <p class="text-lg font-bold text-primary">{{ order.total | currency:'USD':'symbol':'1.2-2' }}</p>
   </div>
 
   <div class="mt-4 flex gap-2">
+    <button (click)="open.emit(order)" type="button" class="btn btn-outline flex-1">Detalle</button>
 
     <button
-      (click)="open.emit(order)"
-      class="flex-1 border rounded-md text-sm py-1 hover:bg-gray-50">
-      Detalle
-    </button>
-
-    <button
-      *ngIf="order.status==='Ingresada'"
+      *ngIf="allowActions && order.status === 'Ingresada'"
+      type="button"
       (click)="toPreparacion.emit(order)"
-      class="flex-1 bg-amber-500 text-white text-sm py-1 rounded-md">
-      Preparación
+      class="btn bg-amber-500 text-white hover:bg-amber-600">
+      Preparacion
     </button>
 
     <button
-      *ngIf="order.status==='Preparación'"
+      *ngIf="allowActions && order.status === 'Preparación'"
+      type="button"
       (click)="toCerrada.emit(order)"
-      class="flex-1 bg-sky-600 text-white text-sm py-1 rounded-md">
-      Cerrar
+      class="btn bg-emerald-600 text-white hover:bg-emerald-700">
+      Marcar lista
     </button>
-
   </div>
-</div>
+</article>
