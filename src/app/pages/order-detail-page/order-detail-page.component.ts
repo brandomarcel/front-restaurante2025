@@ -53,6 +53,7 @@ export class OrderDetailPageComponent implements OnInit {
   customerForm!: FormGroup;
 
   private baseUrl = environment.URL;
+  roleName: 'Gerente' | 'Cajero' | 'Mesero' | 'Desconocido' = 'Desconocido';
 
   constructor(
     private route: ActivatedRoute,
@@ -65,6 +66,7 @@ export class OrderDetailPageComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    this.roleName = this.detectRole();
     // modal cliente opcional
     this.customerForm = this.fb.group({
       nombre: [''],
@@ -255,7 +257,10 @@ export class OrderDetailPageComponent implements OnInit {
 
   // =================== Guardado ===================
  saveOrderChanges(): void {
-  if (this.isLocked) { toast.error('La orden ya está facturada.'); return; }
+  if (!this.canEditOrder) {
+    toast.error(this.isMesero && this.isClosed ? 'La orden ya está cerrada.' : 'La orden ya está facturada.');
+    return;
+  }
   if (!this.order?.name) { toast.error('Orden no válida'); return; }
 
   const items = this.orderItems.map(it => {
@@ -336,4 +341,40 @@ export class OrderDetailPageComponent implements OnInit {
   // B) bloquear si ya fue AUTORIZADA en SRI (recomendado)
   return (this.order?.sri?.status != 'Sin factura') || (this.order?.type === 'Factura');
 }
+
+  get isMesero(): boolean {
+    return this.roleName === 'Mesero';
+  }
+
+  get isClosed(): boolean {
+    const status = String(this.order?.status ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+    return status === 'cerrada';
+  }
+
+  get canEditOrder(): boolean {
+    if (this.isLocked) return false;
+    if (this.isMesero && this.isClosed) return false;
+    return true;
+  }
+
+  private detectRole(): 'Gerente' | 'Cajero' | 'Mesero' | 'Desconocido' {
+    const raw = localStorage.getItem('user');
+    if (!raw) return 'Desconocido';
+
+    try {
+      const user = JSON.parse(raw);
+      const role = String(user?.roles?.[0] ?? '').toLowerCase();
+      if (role.includes('mesero')) return 'Mesero';
+      if (role.includes('cajero')) return 'Cajero';
+      if (role.includes('gerente') || role.includes('admin')) return 'Gerente';
+    } catch {
+      return 'Desconocido';
+    }
+
+    return 'Desconocido';
+  }
 }

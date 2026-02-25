@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 import { CajasService } from 'src/app/services/cajas.service';
 import { AlertService } from 'src/app/core/services/alert.service';
+import { NgxSpinnerService } from 'ngx-spinner';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-apertura-caja',
@@ -20,25 +22,70 @@ export class AperturaCajaComponent implements OnInit {
   };
 
   cajaActiva = false;
+  loadingStatus = false;
+  saving = false;
+  private loadingCounter = 0;
 
   constructor(private cajasService: CajasService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private spinner: NgxSpinnerService
   ) { }
 
   ngOnInit(): void {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    this.apertura.usuario = user.email;
+    const user = this.getCurrentUser();
+    this.apertura.usuario = user?.email || '';
 
     this.verificarCajaAbierta();
   }
 
-  verificarCajaAbierta() {
-    this.cajasService.verificarAperturaActiva(this.apertura.usuario).subscribe(res => {
-      this.cajaActiva = res.data.length > 0;
+  private getCurrentUser(): { email?: string } | null {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}');
+    } catch {
+      return null;
+    }
+  }
+
+  private beginLoading(): void {
+    this.loadingCounter += 1;
+    if (this.loadingCounter === 1) {
+      this.spinner.show();
+    }
+  }
+
+  private endLoading(): void {
+    this.loadingCounter = Math.max(0, this.loadingCounter - 1);
+    if (this.loadingCounter === 0) {
+      this.spinner.hide();
+    }
+  }
+
+  verificarCajaAbierta(): void {
+    if (!this.apertura.usuario) {
+      this.cajaActiva = false;
+      return;
+    }
+
+    this.loadingStatus = true;
+    this.beginLoading();
+
+    this.cajasService.verificarAperturaActiva(this.apertura.usuario).pipe(
+      finalize(() => {
+        this.loadingStatus = false;
+        this.endLoading();
+      })
+    ).subscribe({
+      next: (res: any) => {
+        this.cajaActiva = Array.isArray(res?.data) && res.data.length > 0;
+      },
+      error: (error) => {
+        console.error('Error al verificar apertura activa:', error);
+        this.cajaActiva = false;
+      }
     });
   }
 
-  abrirCaja() {
+  abrirCaja(): void {
     if (!this.canSubmit) {
       return;
     }
@@ -48,9 +95,23 @@ export class AperturaCajaComponent implements OnInit {
       fecha_hora: this.getFechaHoraEcuador()
     };
 
-    this.cajasService.crearAperturaCaja(data).subscribe(() => {
-      this.alertService.success('Caja abierta correctamente');
-      this.cajaActiva = true;
+    this.saving = true;
+    this.beginLoading();
+
+    this.cajasService.create_apertura_de_caja(data).pipe(
+      finalize(() => {
+        this.saving = false;
+        this.endLoading();
+      })
+    ).subscribe({
+      next: () => {
+        this.alertService.success('Caja abierta correctamente');
+        this.cajaActiva = true;
+      },
+      error: (error) => {
+        console.error('Error al abrir caja:', error);
+        this.alertService.error('No se pudo abrir la caja.');
+      }
     });
   }
 
@@ -66,6 +127,9 @@ export class AperturaCajaComponent implements OnInit {
   }
 
   get canSubmit(): boolean {
-    return !this.cajaActiva && Number(this.apertura.monto_apertura) > 0;
+    return !this.cajaActiva
+      && Number(this.apertura.monto_apertura) > 0
+      && !this.loadingStatus
+      && !this.saving;
   }
 }

@@ -28,13 +28,23 @@ export class CajasService {
   }
 
 
-  crearAperturaCaja(data: any) {
-    const url = `${this.apiUrl}/resource/Apertura de Caja`;
+  // crearAperturaCaja(data: any) {
+  //   const url = `${this.apiUrl}/resource/Apertura de Caja`;
+  //   return this.http.post(url, data, { context: new HttpContext().set(REQUIRE_AUTH, true) });
+  // }
+
+  create_apertura_de_caja(data: any) {
+    const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.apertura_de_caja.apertura_de_caja.create_apertura_de_caja`;
     return this.http.post(url, data, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
 
-  registrarRetiro(data: any) {
-    const url = `${this.apiUrl}/resource/Retiro de Caja`;
+  // registrarRetiro(data: any) {
+  //   const url = `${this.apiUrl}/resource/Retiro de Caja`;
+  //   return this.http.post(url, data, { context: new HttpContext().set(REQUIRE_AUTH, true) });
+  // }
+
+  create_retiro_de_caja(data: any) {
+    const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.retiro_de_caja.retiro_de_caja.create_retiro_de_caja`;
     return this.http.post(url, data, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
 
@@ -47,12 +57,16 @@ export class CajasService {
     );
   }
 
-
-  crearCierreCaja(data: any) {
-    return this.http.post(`${this.apiUrl}/resource/Cierre de Caja`, data, {
-      context: new HttpContext().set(REQUIRE_AUTH, true)
-    });
+  create_cierre_de_caja(data: any) {
+    const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.cierre_de_caja.cierre_de_caja.create_cierre_de_caja`;
+    return this.http.post(url, data, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
+
+  // crearCierreCaja(data: any) {
+  //   return this.http.post(`${this.apiUrl}/resource/Cierre de Caja`, data, {
+  //     context: new HttpContext().set(REQUIRE_AUTH, true)
+  //   });
+  // }
 
 
   /** Obtener retiros del turno actual */

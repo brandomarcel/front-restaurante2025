@@ -57,7 +57,7 @@ export class RetiroCajaComponent implements OnInit {
       fecha_hora: this.getFechaHoraEcuador()
     };
 
-    this.cajasService.registrarRetiro(data).subscribe(() => {
+    this.cajasService.create_retiro_de_caja(data).subscribe(() => {
   
       this.alertService.success('Retiro registrado correctamente');
       this.retiro.motivo = '';
@@ -67,7 +67,7 @@ export class RetiroCajaComponent implements OnInit {
     });
   }
 
-  /** 📆 Fecha y hora local Ecuador en formato compatible */
+  /** Fecha y hora local Ecuador en formato compatible */
   getFechaHoraEcuador(): string {
     const date = new Date(
       new Date().toLocaleString('en-US', { timeZone: 'America/Guayaquil' })

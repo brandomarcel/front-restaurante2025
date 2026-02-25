@@ -11,7 +11,9 @@ import { ButtonComponent } from 'src/app/shared/components/button/button.compone
 
 import { RouterModule } from '@angular/router';
 import { environment } from 'src/environments/environment.prod';
+import { UtilsService } from 'src/app/core/services/utils.service';
 
+type EstadoOrden = '' | 'Ingresada' | 'Preparación' | 'Cerrada';
 
 @Component({
   selector: 'app-orders',
@@ -38,9 +40,11 @@ export class OrdersComponent implements OnInit {
 
   private _searchTerm = '';
   activeTab = 'info';
+  roleName: 'Gerente' | 'Cajero' | 'Mesero' | 'Desconocido' = 'Desconocido';
 
   // NUEVOS filtros
   tipoFiltro: '' | 'Factura' | 'Nota Venta' = '';
+  estadoFiltro: EstadoOrden = '';
   anulacionFiltro: '' | 'soloAnuladas' | 'excluirAnuladas' = '';
 
   private url = environment.URL
@@ -48,10 +52,12 @@ export class OrdersComponent implements OnInit {
     private ordersService: OrdersService,
     public spinner: NgxSpinnerService,
     private printService: PrintService,
+    private utils: UtilsService,
 
   ) { }
 
   ngOnInit() {
+    this.roleName = this.detectRole();
     this.loadOrders();
     console.log('THIS.url', this.url);
   }
@@ -59,8 +65,11 @@ export class OrdersComponent implements OnInit {
   loadOrders(): void {
     this.spinner.show();
     const offset = (this.page - 1) * this.pageSize;
+    const today = String(this.utils.getSoloFechaEcuador());
+    const createdFrom = this.isMesero ? today : undefined;
+    const createdTo = this.isMesero ? today : undefined;
 
-    this.ordersService.getAll(this.pageSize, offset).subscribe({
+    this.ordersService.getAll(this.pageSize, offset, createdFrom, createdTo).subscribe({
       next: (res: any) => {
         console.log('res', res);
         this.orders = res.message.data || [];
@@ -102,9 +111,11 @@ export class OrdersComponent implements OnInit {
     if (!term) return true;
     const hay = [
       o?.name,
+      o?.alias,
       o?.customer?.nombre,
       o?.customer?.num_identificacion,
       o?.type,
+      o?.status,
       o?.estado_sri || o?.sri?.estado_sri
     ]
       .map(v => (v ?? '').toString().toLowerCase())
@@ -124,6 +135,7 @@ export class OrdersComponent implements OnInit {
 
       // filtro por tipo (Factura / Nota de venta)
       const byTipo = !this.tipoFiltro || (o?.type === this.tipoFiltro);
+      const byEstado = !this.estadoFiltro || this.getCanonicalStatus(o?.status) === this.estadoFiltro;
 
       // filtro por anulación
       const anulada = this.esAnulada(o);
@@ -134,7 +146,7 @@ export class OrdersComponent implements OnInit {
             ? anulada
             : !anulada; // 'excluirAnuladas'
 
-      return byText && byTipo && byAnulacion;
+      return byText && byTipo && byEstado && byAnulacion;
     });
 
     this.ordersFiltradosList = lista;
@@ -143,8 +155,37 @@ export class OrdersComponent implements OnInit {
   limpiarFiltros(): void {
     this._searchTerm = '';
     this.tipoFiltro = '';
+    this.estadoFiltro = '';
     this.anulacionFiltro = '';
     this.actualizarOrdenesFiltradas();
+  }
+
+  setEstadoFiltro(value: EstadoOrden): void {
+    this.estadoFiltro = value;
+    this.actualizarOrdenesFiltradas();
+  }
+
+  countByEstado(value: EstadoOrden): number {
+    const lista = Array.isArray(this.orders) ? this.orders : [];
+    if (!value) return lista.length;
+    return lista.filter((o: any) => this.getCanonicalStatus(o?.status) === value).length;
+  }
+
+  isEstadoActivo(value: EstadoOrden): boolean {
+    return this.estadoFiltro === value;
+  }
+
+  isCerrada(order: any): boolean {
+    return this.getCanonicalStatus(order?.status) === 'Cerrada';
+  }
+
+  getCanonicalStatus(value: any): string {
+    const normalized = this.normalizeStatus(value);
+    if (!normalized) return '';
+    if (normalized.includes('ingres')) return 'Ingresada';
+    if (normalized.includes('prepar')) return 'Preparación';
+    if (normalized.includes('cerr') || normalized.includes('lista') || normalized.includes('entreg')) return 'Cerrada';
+    return String(value ?? '');
   }
 
   toggleOrderDetail(order: any) {
@@ -226,6 +267,35 @@ export class OrdersComponent implements OnInit {
       toast.error('No se pudo abrir la ventana de impresión');
       return;
     }
+  }
+
+  get isMesero(): boolean {
+    return this.roleName === 'Mesero';
+  }
+
+  private detectRole(): 'Gerente' | 'Cajero' | 'Mesero' | 'Desconocido' {
+    const raw = localStorage.getItem('user');
+    if (!raw) return 'Desconocido';
+
+    try {
+      const user = JSON.parse(raw);
+      const role = String(user?.roles?.[0] ?? '').toLowerCase();
+      if (role.includes('mesero')) return 'Mesero';
+      if (role.includes('cajero')) return 'Cajero';
+      if (role.includes('gerente') || role.includes('admin')) return 'Gerente';
+    } catch {
+      return 'Desconocido';
+    }
+
+    return 'Desconocido';
+  }
+
+  private normalizeStatus(value: any): string {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
   }
 
 }

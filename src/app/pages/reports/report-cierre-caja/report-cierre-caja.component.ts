@@ -8,6 +8,7 @@ import { UserService } from '../../../services/user.service';
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
 import { NgSelectComponent } from "@ng-select/ng-select";
 import { NgxSpinnerService } from 'ngx-spinner';
+import { finalize } from 'rxjs';
 @Component({
   selector: 'app-report-cierre-caja',
   imports: [CommonModule, FormsModule, ButtonComponent, NgSelectComponent],
@@ -20,129 +21,167 @@ export class ReportCierreCajaComponent implements OnInit {
 
   // Filtros
   filters = {
-    usuario: null,
+    usuario: null as string | null,
     desde: '',
     hasta: ''
   };
 
-  today: any;
+  today = '';
 
   usuarios: any[] = [];
 
   // Filtros
   filtrosUsers = {
-    usuario: null,
+    usuario: null as string | null,
     rol: ''
   };
 
+  loadingUsers = false;
+  loadingCierres = false;
+  loadingExport = false;
+  private loadingCounter = 0;
+
   constructor(private cajasService: CajasService,
     private utilsService: UtilsService,
-    private userService: UserService,
     private usersService: UserService,
     private spinner: NgxSpinnerService,
   ) { }
 
   ngOnInit(): void {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    this.filtrosUsers.usuario = user.email;
-
-    this.cargarUsuarios();
-
-   
-    this.today = this.utilsService.getSoloFechaEcuador();
+    this.today = String(this.utilsService.getSoloFechaEcuador());
     this.filters.desde = this.today;
     this.filters.hasta = this.today;
-     this.buscar(); // Carga inicial
+
+    const user = this.getCurrentUser();
+    this.filtrosUsers.usuario = user?.email || null;
+
+    this.cargarUsuarios();
+    this.buscar(); // Carga inicial
   }
 
+  private getCurrentUser(): { email?: string } | null {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}');
+    } catch {
+      return null;
+    }
+  }
 
-  // cargarUsuarios(): void {
-  //   this.userService.getUsuariosConRoles(this.filtrosUsers.usuario || ''  , this.filtrosUsers.rol)
-  //     .subscribe({
-  //       next: (res) => {
-  //         console.log('Usuarios con roles obtenidos:', res);
-  //         this.usuarios = res.message || res;
-  //       },
-  //       error: (err) => {
-  //         console.error('Error al obtener usuarios con roles:', err);
-  //       }
-  //     });
-  // }
+  private beginLoading(): void {
+    this.loadingCounter += 1;
+    if (this.loadingCounter === 1) {
+      this.spinner.show();
+    }
+  }
 
-    cargarUsuarios() {
-    this.spinner.show();
+  private endLoading(): void {
+    this.loadingCounter = Math.max(0, this.loadingCounter - 1);
+    if (this.loadingCounter === 0) {
+      this.spinner.hide();
+    }
+  }
+
+  cargarUsuarios(): void {
+    this.loadingUsers = true;
+    this.beginLoading();
     this.usersService.listByCompany({
       search: undefined,
       limit: 1000
-    }).subscribe({
-      next: (rows) => {
-        this.spinner.hide();
+    }).pipe(
+      finalize(() => {
+        this.loadingUsers = false;
+        this.endLoading();
+      })
+    ).subscribe({
+      next: (rows: any[]) => {
         this.usuarios = rows;
       },
-      error: () => this.spinner.hide()
+      error: (err) => {
+        console.error('Error al cargar usuarios:', err);
+        this.usuarios = [];
+      }
     });
   }
 
-
   /** 🔍 Buscar cierres según filtros */
   buscar(): void {
-    console.log('Buscando cierres...');
-    console.log('Filtros:', this.filters);
+    if (!this.filters.desde || !this.filters.hasta) return;
+
+    this.loadingCierres = true;
+    this.beginLoading();
     this.cajasService.obtenerReporteCierres(
       this.filters.usuario || '',
       this.filters.desde,
       this.filters.hasta
+    ).pipe(
+      finalize(() => {
+        this.loadingCierres = false;
+        this.endLoading();
+      })
     ).subscribe({
       next: (res) => {
-        console.log('Cierres obtenidos:', res);
-        this.cierres = res.message.data || res; // depende si tu backend usa return o frappe.response
+        const data = res?.message?.data || res?.data || res;
+        this.cierres = Array.isArray(data) ? data : [];
+
+        if (this.cierreSeleccionado && !this.cierres.some((c: any) => c?.name === this.cierreSeleccionado)) {
+          this.cierreSeleccionado = null;
+        }
       },
       error: (err) => {
         console.error('Error al obtener cierres:', err);
+        this.cierres = [];
       }
     });
   }
 
   /** 📦 Exportar los cierres con detalle a Excel */
   exportarExcel(): void {
-    const datosPlano: any[] = [];
+    if (!this.cierres.length || this.loadingExport) return;
 
-    // Obtener todos los métodos de pago únicos (para usar como columnas dinámicas)
-    const metodosUnicos = new Set<string>();
-    this.cierres.forEach(c => c.detalle?.forEach((p: any) => metodosUnicos.add(p.metodo_pago)));
+    this.loadingExport = true;
+    this.beginLoading();
 
-    // Generar los datos combinados
-    this.cierres.forEach((cierre) => {
-      const fila: any = {
-        Fecha: new Date(cierre.fecha_hora).toLocaleString(),
-        Usuario: cierre.usuario,
-        Apertura: cierre.apertura,
-        'Monto Apertura': cierre.monto_apertura,
-        'Sistema (Efectivo)': cierre.efectivo_sistema,
-        'Efectivo Real': cierre.efectivo_real,
-        Retiros: cierre.total_retiros,
-        Diferencia: cierre.diferencia,
-        Estado: cierre.estado
-      };
+    setTimeout(() => {
+      try {
+        const datosPlano: any[] = [];
+        const metodosUnicos = new Set<string>();
 
-      // Inicializar columnas de métodos con 0
-      metodosUnicos.forEach(metodo => {
-        fila[metodo] = 0;
-      });
+        this.cierres.forEach(c => c.detalle?.forEach((p: any) => metodosUnicos.add(p.metodo_pago)));
 
-      // Llenar montos por método en su respectiva columna
-      cierre.detalle?.forEach((pago: any) => {
-        fila[pago.metodo_pago] = pago.monto;
-      });
+        this.cierres.forEach((cierre) => {
+          const fila: any = {
+            Fecha: new Date(cierre.fecha_hora).toLocaleString(),
+            Usuario: cierre.usuario,
+            Apertura: cierre.apertura,
+            'Monto Apertura': cierre.monto_apertura,
+            'Sistema (Efectivo)': cierre.efectivo_sistema,
+            'Efectivo Real': cierre.efectivo_real,
+            Retiros: cierre.total_retiros,
+            Diferencia: cierre.diferencia,
+            Estado: cierre.estado
+          };
 
-      datosPlano.push(fila);
-    });
+          metodosUnicos.forEach((metodo) => {
+            fila[metodo] = 0;
+          });
 
-    const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(datosPlano);
-    const wb: XLSX.WorkBook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Cierres de Caja');
+          cierre.detalle?.forEach((pago: any) => {
+            fila[pago.metodo_pago] = pago.monto;
+          });
 
-    XLSX.writeFile(wb, 'cierres_de_caja.xlsx');
+          datosPlano.push(fila);
+        });
+
+        const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(datosPlano);
+        const wb: XLSX.WorkBook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Cierres de Caja');
+
+        XLSX.writeFile(wb, `cierres_de_caja_${this.filters.desde}_${this.filters.hasta}.xlsx`);
+      } finally {
+        this.loadingExport = false;
+        this.endLoading();
+      }
+    }, 0);
   }
 
 }
