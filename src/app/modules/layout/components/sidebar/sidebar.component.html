@@ -4,42 +4,41 @@
   role="navigation"
   aria-label="Sidebar"
 >
-   <div class="overflow-hidden min-h-0 h-full flex flex-col">
-    <!-- Logo y título -->
+  <div class="overflow-hidden min-h-0 h-full flex flex-col">
     <div
       [ngClass]="menuService.showSideBar ? 'justify-between' : 'justify-center'"
       class="mx-4 mb-2 flex h-9 items-center shrink-0"
     >
       <div class="flex items-center" *ngIf="menuService.showSideBar">
-<button type="button"
-  (click)="toggleSidebar()"
-  class="bg-primary flex items-center justify-center rounded-sm p-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
-  [attr.aria-expanded]="menuService.showSideBar ? 'true' : 'false'"
-  [attr.aria-controls]="'sidebar-menu'">
-   <img *ngIf="logoPreview; else defaultLogo" [src]="logoPreview" alt="FA" class="h-8 w-8"
-            loading="lazy" />
-
-
+        <button
+          type="button"
+          (click)="toggleSidebar()"
+          class="bg-primary flex items-center justify-center rounded-sm p-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
+          [attr.aria-expanded]="menuService.showSideBar ? 'true' : 'false'"
+          [attr.aria-controls]="'sidebar-menu'"
+        >
+          <img *ngIf="logoPreview; else defaultLogo" [src]="logoPreview" alt="FA" class="h-8 w-8" loading="lazy" />
           <ng-template #defaultLogo>
-            <img src="./assets/images/only_logo_FA.png" alt="FA" class="h-8 w-8"
-              loading="lazy" />
+            <img src="./assets/images/only_logo_FA.png" alt="FA" class="h-8 w-8" loading="lazy" />
           </ng-template>
-</button>
+        </button>
         <b class="text-foreground ps-2 ml-1 grow text-sm font-bold">
           {{ appJson.displayName }}
         </b>
       </div>
 
-<button type="button" (click)="toggleSidebar()"
-  class="text-muted-foreground/50 hover:text-muted-foreground flex items-center justify-center rounded-md p-2 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
-  [ngClass]="{ 'rotate-180': !menuService.showSideBar }"
-  [attr.aria-expanded]="menuService.showSideBar ? 'true' : 'false'"
-  [attr.aria-controls]="'sidebar-menu'">
-  <svg-icon src="assets/icons/heroicons/solid/chevron-double-left.svg"></svg-icon>
-</button>
+      <button
+        type="button"
+        (click)="toggleSidebar()"
+        class="text-muted-foreground/50 hover:text-muted-foreground flex items-center justify-center rounded-md p-2 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
+        [ngClass]="{ 'rotate-180': !menuService.showSideBar }"
+        [attr.aria-expanded]="menuService.showSideBar ? 'true' : 'false'"
+        [attr.aria-controls]="'sidebar-menu'"
+      >
+        <svg-icon src="assets/icons/heroicons/solid/chevron-double-left.svg"></svg-icon>
+      </button>
     </div>
 
-    <!-- Menú -->
     <div
       id="sidebar-menu"
       class="flex-1 min-h-0 overflow-auto px-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400"
@@ -49,22 +48,65 @@
   </div>
 
   <div class="mx-4 my-4 space-y-1 shrink-0">
-    <!-- Versión -->
     <a class="rounded-sm hover:bg-card group relative flex h-9 cursor-pointer items-center justify-start p-2">
-      <svg-icon src="assets/icons/heroicons/outline/information-circle.svg"
-        [svgClass]="'h-5 w-5 text-muted-foreground/50'"></svg-icon>
-
+      <svg-icon src="assets/icons/heroicons/outline/information-circle.svg" [svgClass]="'h-5 w-5 text-muted-foreground/50'"></svg-icon>
       <div class="ml-3 truncate text-[10px] font-semibold tracking-wide focus:outline-none">
         <span class="bg-primary/10 text-primary px-2 font-semibold">v{{ appJson.version }}</span>
       </div>
-
-      <!-- Tooltip cuando está colapsado -->
       <div class="absolute left-12 -top-4" *ngIf="!menuService.showSideBar">
         <span
-          class="bg-foreground text-background w-max origin-left scale-0 p-2 text-xs font-bold shadow-md transition-transform duration-200 group-hover:scale-100 pointer-events-none z-10">
+          class="bg-foreground text-background w-max origin-left scale-0 p-2 text-xs font-bold shadow-md transition-transform duration-200 group-hover:scale-100 pointer-events-none z-10"
+        >
           v{{ appJson.version }}
         </span>
       </div>
     </a>
   </div>
 </nav>
+
+<div *ngIf="menuService.showMobileMenu" class="fixed inset-0 z-[100] lg:hidden" aria-modal="true" role="dialog">
+  <button
+    type="button"
+    class="absolute inset-0 bg-black/45"
+    (click)="closeMobileMenu()"
+    aria-label="Cerrar menu lateral"
+  ></button>
+
+  <nav id="sidebar-mobile-menu" class="bg-background absolute inset-y-0 left-0 flex w-[280px] max-w-[85vw] flex-col pt-3 shadow-2xl">
+    <div class="mx-4 mb-2 flex h-9 items-center justify-between shrink-0">
+      <div class="flex items-center">
+        <div class="bg-primary flex items-center justify-center rounded-sm p-2">
+          <img *ngIf="logoPreview; else mobileDefaultLogo" [src]="logoPreview" alt="FA" class="h-8 w-8" loading="lazy" />
+          <ng-template #mobileDefaultLogo>
+            <img src="./assets/images/only_logo_FA.png" alt="FA" class="h-8 w-8" loading="lazy" />
+          </ng-template>
+        </div>
+        <b class="text-foreground ps-2 ml-1 grow text-sm font-bold">
+          {{ appJson.displayName }}
+        </b>
+      </div>
+
+      <button
+        type="button"
+        (click)="closeMobileMenu()"
+        class="text-muted-foreground/60 hover:text-muted-foreground flex items-center justify-center rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
+        aria-label="Cerrar menu lateral"
+      >
+        <svg-icon src="assets/icons/heroicons/outline/x.svg"></svg-icon>
+      </button>
+    </div>
+
+    <div class="flex-1 min-h-0 overflow-auto px-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
+      <app-sidebar-menu [mobile]="true"></app-sidebar-menu>
+    </div>
+
+    <div class="mx-4 my-4 space-y-1 shrink-0">
+      <div class="rounded-sm hover:bg-card group relative flex h-9 cursor-default items-center justify-start p-2">
+        <svg-icon src="assets/icons/heroicons/outline/information-circle.svg" [svgClass]="'h-5 w-5 text-muted-foreground/50'"></svg-icon>
+        <div class="ml-3 truncate text-[10px] font-semibold tracking-wide">
+          <span class="bg-primary/10 text-primary px-2 font-semibold">v{{ appJson.version }}</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</div>

@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { OrdersService } from 'src/app/services/orders.service';
-import * as XLSX from 'xlsx';
 import * as FileSaver from 'file-saver';
 import { UtilsService } from '../../../core/services/utils.service';
 import { NgxSpinnerService } from 'ngx-spinner';
@@ -18,16 +17,15 @@ import { ButtonComponent } from "src/app/shared/components/button/button.compone
 })
 export class ReportOrdersComponent implements OnInit {
   orders: any[] = [];
-  total = 0;
   currentPage = 1;
-  totalPages = 1;
+  pageSize = 100;
+  hasNextPage = false;
 
   filters: any = {
     company: localStorage.getItem('companyId'),
     startDate: this.utilsService.getFechaHoraEcuador().substring(0, 10),
     endDate: this.utilsService.getFechaHoraEcuador().substring(0, 10),
-    limit: 100,
-    offset: 0,
+    documentType: '',
   };
 
   totalItems = 0;
@@ -42,118 +40,137 @@ export class ReportOrdersComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-
     this.fetchOrders();
   }
 
-  async fetchOrders() {
-  const { startDate, endDate,company, limit, offset} = this.filters;
-  this.spinner.show();
-
-  try {
-    const response = await firstValueFrom(
-      this.orderService.getOrdersReport(company, startDate, endDate, limit, offset)
-    );
-
-    const rows = response.message?.result || [];
-    console.log('rows', rows);
-
-    this.orders = rows.map((row: any) => ({
-      id: row.name,
-      customerId: row.cliente,
-      customerName: row.nombre_cliente,
-      createdAt: row.creation,
-      subtotal: parseFloat(row.subtotal),
-      iva: parseFloat(row.iva),
-      total: parseFloat(row.total),
-    }));
-
-    this.calculateSummary(this.orders);
-    this.total = this.orders.length;
-    this.totalPages = 1;
-
-  } catch (error: any) {
-    console.warn('Error al obtener reporte:', error.message || error);
+  get totalPages(): number {
+    return this.hasNextPage ? this.currentPage + 1 : this.currentPage;
   }
 
-  this.spinner.hide();
-}
+  async fetchOrders() {
+    const offset = (this.currentPage - 1) * this.pageSize;
+    const reportFilters = this.cleanFilters({
+      company: this.filters.company,
+      from_date: this.filters.startDate,
+      to_date: this.filters.endDate,
+      estado: this.filters.documentType || undefined,
+      limit: String(this.pageSize),
+      offset: String(offset),
+    });
+    this.spinner.show();
+
+    try {
+      const response = await firstValueFrom(
+        this.orderService.getOrdersReport(reportFilters)
+      );
+
+      const rows = Array.isArray(response?.message?.result) ? response.message.result : [];
+      const columns = Array.isArray(response?.message?.columns) ? response.message.columns : [];
+      const totalRow = rows.find(
+        (row: any) => Array.isArray(row) && String(row?.[0] || '').trim().toLowerCase() === 'total',
+      );
+      const dataRows = rows.filter((row: any) => !Array.isArray(row));
+      const pageRows = dataRows.slice(0, this.pageSize);
+
+      this.orders = pageRows.map((row: any) => ({
+        id: row.name,
+        customerId: row.cliente,
+        customerName: row.nombre_cliente,
+        documentType: row.estado || row.type || row.tipo || row.tipo_comprobante || '',
+        createdAt: row.creation,
+        subtotal: Number.parseFloat(row.subtotal) || 0,
+        iva: Number.parseFloat(row.iva) || 0,
+        total: Number.parseFloat(row.total) || 0,
+      }));
+
+      this.hasNextPage = dataRows.length >= this.pageSize;
+      this.calculateSummary(this.orders, totalRow, columns);
+    } catch (error: any) {
+      console.warn('Error al obtener reporte:', error.message || error);
+      this.orders = [];
+      this.hasNextPage = false;
+      this.calculateSummary([]);
+    }
+
+    this.spinner.hide();
+  }
 
 
   applyFilters() {
-    this.filters.offset = 0;
     this.currentPage = 1;
     this.fetchOrders();
   }
 
-  calculateSummary(orders: any[]) {
-    this.totalItems = orders.length;
-    this.subtotalGlobal = orders.reduce((sum, o) => sum + o.subtotal, 0);
-    this.ivaGlobal = orders.reduce((sum, o) => sum + o.iva, 0);
-    this.totalGlobal = orders.reduce((sum, o) => sum + o.total, 0);
+  setPageSize(size: number): void {
+    this.pageSize = size;
+    this.currentPage = 1;
+    this.fetchOrders();
   }
 
-  exportToExcel() {
-    if (this.orders.length === 0) {
-      alert('No hay datos para exportar a Excel.');
+  nextPage(): void {
+    if (!this.hasNextPage) return;
+    this.currentPage += 1;
+    this.fetchOrders();
+  }
+
+  prevPage(): void {
+    if (this.currentPage <= 1) return;
+    this.currentPage -= 1;
+    this.fetchOrders();
+  }
+
+  calculateSummary(orders: any[], totalRow?: any[], columns: any[] = []) {
+    this.totalItems = orders.length;
+
+    if (Array.isArray(totalRow)) {
+      const subtotalIndex = this.getColumnIndex(columns, 'subtotal', 5);
+      const ivaIndex = this.getColumnIndex(columns, 'iva', 6);
+      const totalIndex = this.getColumnIndex(columns, 'total', 7);
+
+      this.subtotalGlobal = this.toNumber(totalRow[subtotalIndex]);
+      this.ivaGlobal = this.toNumber(totalRow[ivaIndex]);
+      this.totalGlobal = this.toNumber(totalRow[totalIndex]);
       return;
     }
 
-    const worksheetData: any[] = [];
+    this.subtotalGlobal = orders.reduce((sum, o) => sum + this.toNumber(o.subtotal), 0);
+    this.ivaGlobal = orders.reduce((sum, o) => sum + this.toNumber(o.iva), 0);
+    this.totalGlobal = orders.reduce((sum, o) => sum + this.toNumber(o.total), 0);
+  }
 
-    worksheetData.push([
-      'ID',
-      'Cliente',
-      'Fecha',
-      'Subtotal',
-      'IVA',
-      'Total'
-    ]);
+  private getColumnIndex(columns: any[], fieldname: string, fallback: number): number {
+    const idx = columns.findIndex((col: any) => col?.fieldname === fieldname);
+    return idx >= 0 ? idx : fallback;
+  }
 
-    for (const order of this.orders) {
-      worksheetData.push([
-        order.id,
-        order.customerName,
-        new Date(order.createdAt).toLocaleString(),
-        order.subtotal,
-        order.iva,
-        order.total
-      ]);
+  private toNumber(value: any): number {
+    const num = Number.parseFloat(String(value));
+    return Number.isFinite(num) ? num : 0;
+  }
+
+  exportToExcel() {
+    this.exportFromBackend();
+  }
+
+  private async exportFromBackend() {
+    const exportFilters = this.cleanFilters({
+      company: this.filters.company,
+      from_date: this.filters.startDate,
+      to_date: this.filters.endDate,
+      estado: this.filters.documentType || undefined,
+      limit: '500',
+    });
+
+    this.spinner.show();
+    try {
+      const file = await firstValueFrom(this.orderService.exportOrdersReportExcel(exportFilters));
+      const filename = `orders_report_${this.filters.startDate}_${this.filters.endDate}.xlsx`;
+      FileSaver.saveAs(file, filename);
+    } catch (error: any) {
+      console.warn('Error al exportar reporte:', error.message || error);
+      alert(error?.message || 'No se pudo exportar el reporte.');
     }
-
-    worksheetData.push([]);
-    worksheetData.push(['Resumen']);
-    worksheetData.push([
-      'Total órdenes',
-      this.totalItems,
-      '',
-      'Subtotal',
-      'IVA',
-      'Total'
-    ]);
-    worksheetData.push([
-      '',
-      '',
-      '',
-      this.subtotalGlobal,
-      this.ivaGlobal,
-      this.totalGlobal
-    ]);
-
-    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Órdenes');
-
-    const excelBuffer: any = XLSX.write(workbook, {
-      bookType: 'xlsx',
-      type: 'array',
-    });
-
-    const data: Blob = new Blob([excelBuffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    });
-
-    FileSaver.saveAs(data, 'ordenes.xlsx');
+    this.spinner.hide();
   }
 
   cleanFilters(filters: any): any {

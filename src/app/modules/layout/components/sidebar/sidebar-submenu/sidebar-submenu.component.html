@@ -1,6 +1,6 @@
 <div
   class="max-h-0 overflow-hidden pt-1 transition-all duration-500 ltr:pl-4 rtl:pr-4"
-  [ngClass]="{ hidden: !menuService.showSideBar, 'max-h-screen': submenu.expanded }">
+  [ngClass]="{ hidden: !mobile && !menuService.showSideBar, 'max-h-screen': submenu.expanded }">
   <ul
     class="border-border text-muted-foreground flex flex-col border-dashed ltr:border-l ltr:pl-2 rtl:border-r rtl:pr-2">
     <li *ngFor="let sub of submenu.children">
@@ -14,6 +14,7 @@
         <!-- Parent Menu -->
         <ng-template #parentMenu let-sub="sub">
           <a
+            (click)="closeMobileMenu()"
             [routerLink]="sub.route"
             routerLinkActive="text-primary"
             [routerLinkActiveOptions]="{ exact: true }"
@@ -33,7 +34,7 @@
             {{ sub.label }}
           </a>
           <button
-            [ngClass]="{ hidden: !menuService.showSideBar }"
+            [ngClass]="{ hidden: !mobile && !menuService.showSideBar }"
             class="text-foreground/50 flex cursor-pointer items-center justify-end px-2 transition-all duration-500">
             @if(!sub.expanded){
             <svg-icon src="assets/icons/heroicons/outline/plus.svg" svgClass="h-4 w-4"> </svg-icon>
@@ -45,7 +46,7 @@
       </div>
       <!-- Submenu items -->
       @if(sub.children?.length){
-      <app-sidebar-submenu [submenu]="sub"></app-sidebar-submenu>
+      <app-sidebar-submenu [submenu]="sub" [mobile]="mobile"></app-sidebar-submenu>
       }
     </li>
   </ul>

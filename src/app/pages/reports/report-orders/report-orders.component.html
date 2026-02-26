@@ -12,7 +12,7 @@
   </div>
 
   <div class="rounded-xl border border-primary/15 bg-white p-4 shadow-sm">
-    <div class="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-end">
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-4 md:items-end">
       <div>
         <label class="mb-1 block text-xs font-semibold text-gray-600">Desde</label>
         <input type="date" [(ngModel)]="filters.startDate" class="input" />
@@ -20,6 +20,14 @@
       <div>
         <label class="mb-1 block text-xs font-semibold text-gray-600">Hasta</label>
         <input type="date" [(ngModel)]="filters.endDate" class="input" />
+      </div>
+      <div>
+        <label class="mb-1 block text-xs font-semibold text-gray-600">Tipo</label>
+        <select [(ngModel)]="filters.documentType" class="select">
+          <option value="">Todos</option>
+          <option value="Factura">Factura</option>
+          <option value="Nota Venta">Nota Venta</option>
+        </select>
       </div>
       <div>
         <app-button (click)="applyFilters()" impact="bold" tone="primary" shape="rounded" size="medium">
@@ -30,11 +38,27 @@
   </div>
 
   <ng-container *ngIf="orders.length > 0; else emptyOrders">
+    <div class="rounded-xl border border-primary/15 bg-white p-3 shadow-sm">
+      <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold text-gray-600">Mostrar:</span>
+          <button *ngFor="let size of [10, 50, 100,500]" (click)="setPageSize(size)" class="btn"
+            [ngClass]="pageSize === size ? 'btn-primary' : 'btn-outline'">
+            {{ size }}
+          </button>
+        </div>
+        <div class="text-xs text-gray-600">
+          Pagina <strong>{{ currentPage }}</strong> de <strong>{{ totalPages }}</strong>
+        </div>
+      </div>
+
     <div class="app-table-wrap">
       <table class="app-table text-xs">
         <thead class="app-thead">
           <tr>
             <th class="app-th">#</th>
+            <th class="app-th">ID</th>
+            <th class="app-th">Tipo</th>
             <th class="app-th">Cliente</th>
             <th class="app-th text-right">Subtotal</th>
             <th class="app-th text-right">IVA</th>
@@ -43,8 +67,10 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let order of orders" class="app-tr">
+          <tr *ngFor="let order of orders; let i = index" class="app-tr">
+              <td class="app-td">{{ i + 1 }}</td>
             <td class="app-td">{{ order.id }}</td>
+            <td class="app-td">{{ order.documentType || '—' }}</td>
             <td class="app-td">{{ order.customerName }}</td>
             <td class="app-td text-right">${{ order.subtotal | number:'1.2-2' }}</td>
             <td class="app-td text-right">${{ order.iva | number:'1.2-2' }}</td>
@@ -54,16 +80,22 @@
         </tbody>
       </table>
     </div>
+    </div>
 
-    <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
       <div class="rounded-lg border border-primary/15 bg-primary/5 p-3">
-        <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">Total ordenes</p>
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">Total ordenes (pagina)</p>
         <p class="mt-1 text-lg font-bold text-primary">{{ totalItems }}</p>
       </div>
       <div class="rounded-lg border border-primary/15 bg-primary/5 p-3">
         <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">Subtotal global</p>
         <p class="mt-1 text-lg font-bold text-primary">${{ subtotalGlobal | number:'1.2-2' }}</p>
       </div>
+         <div class="rounded-lg border border-primary/15 bg-primary/5 p-3">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">IVA global</p>
+        <p class="mt-1 text-lg font-bold text-primary">${{ ivaGlobal | number:'1.2-2' }}</p>
+      </div>
+
       <div class="rounded-lg border border-primary/15 bg-primary/5 p-3">
         <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">Total global</p>
         <p class="mt-1 text-lg font-bold text-primary">${{ totalGlobal | number:'1.2-2' }}</p>

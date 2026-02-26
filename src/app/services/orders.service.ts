@@ -1,8 +1,8 @@
 // src/app/services/orders.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpHeaders, HttpParams } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
-import { catchError, EMPTY, Observable, shareReplay } from 'rxjs';
+import { catchError, EMPTY, Observable, of, switchMap, throwError } from 'rxjs';
 import { FrappeErrorService } from '../core/services/frappe-error.service';
 import { toast } from 'ngx-sonner';
 import { API_ENDPOINT } from '../core/constants/api.constants';
@@ -149,28 +149,83 @@ export class OrdersService {
     return this.http.get(`${this.apiUrl}/filter`, { params });
   }
 
-getOrdersReport(company: string, from_date: string, to_date: string, limit : number, offset : number ): Observable<any> {
+getOrdersReport(filters: Record<string, any>): Observable<any> {
   const reportName = 'Orders Report';
-
-  const filters = {
-    company: company,
-    from_date: from_date,
-    to_date: to_date,
-    limit: limit,
-    offset: offset
-  };
 
   const url = `${this.apiUrl}/method/frappe.desk.query_report.run`;
 
   const params = new HttpParams()
     .set('report_name', reportName)
-    .set('filters', JSON.stringify(filters));
+    .set('filters', JSON.stringify(filters))
+    .set('ignore_prepared_report', 'false')
+    .set('are_default_filters', 'false');
 
   return this.http.get<any>(url, { params, context: new HttpContext().set(REQUIRE_AUTH, true) })
     .pipe(
-      catchError(e => this.frappeErr.handle(e)),
-      shareReplay(1)
+      catchError((e) => {
+        const msg = this.frappeErr.handle(e) || 'No se pudo obtener el reporte de ordenes.';
+        return throwError(() => new Error(msg));
+      }),
     );
+}
+
+exportOrdersReportExcel(filters: Record<string, any>): Observable<Blob> {
+  return this.logReportExport('Orders Report', filters).pipe(
+    switchMap(() => this.downloadOrdersReportExcel(filters)),
+  );
+}
+
+private logReportExport(reportName: string, filters: Record<string, any>): Observable<unknown> {
+  const url = `${this.apiUrl}/method/frappe.core.doctype.access_log.access_log.make_access_log`;
+  const body = new HttpParams()
+    .set('doctype', '')
+    .set('report_name', reportName)
+    .set('filters', JSON.stringify(filters))
+    .set('file_type', 'Excel')
+    .set('method', 'Export');
+
+  return this.http.post(url, body.toString(), {
+    headers: new HttpHeaders({ 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }),
+    context: new HttpContext().set(REQUIRE_AUTH, true),
+  }).pipe(
+    catchError(() => of(null)),
+  );
+}
+
+private downloadOrdersReportExcel(filters: Record<string, any>): Observable<Blob> {
+  const apiRoot = this.apiUrl.endsWith('/api') ? this.apiUrl.slice(0, -4) : this.apiUrl;
+  const url = `${apiRoot}/`;
+  const appliedFilters = {
+    'Compañía': filters['company'] || '',
+    'Desde Fecha': filters['from_date'] || '',
+    'Hasta Fecha': filters['to_date'] || '',
+    'Estado': filters['estado'] || 'Todos',
+    'Número de datos': filters['limit'] || '',
+  };
+  const body = new HttpParams()
+    .set('cmd', 'frappe.desk.query_report.export_query')
+    .set('report_name', 'Orders Report')
+    .set('custom_columns', JSON.stringify([]))
+    .set('file_format_type', 'Excel')
+    .set('filters', JSON.stringify(filters))
+    .set('applied_filters', JSON.stringify(appliedFilters))
+    .set('visible_idx', JSON.stringify([]))
+    .set('csv_delimiter', ',')
+    .set('csv_quoting', '2')
+    .set('include_indentation', 'undefined')
+    .set('include_filters', '0');
+
+  return this.http.post(url, body.toString(), {
+    headers: new HttpHeaders({ 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }),
+    withCredentials: true,
+    responseType: 'blob',
+    context: new HttpContext().set(REQUIRE_AUTH, true),
+  }).pipe(
+    catchError((e) => {
+      const msg = this.frappeErr.handle(e) || 'No se pudo exportar el reporte de ordenes.';
+      return throwError(() => new Error(msg));
+    }),
+  );
 }
 
 

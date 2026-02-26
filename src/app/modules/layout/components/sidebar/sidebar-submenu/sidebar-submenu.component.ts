@@ -13,6 +13,7 @@ import { MenuService } from '../../../services/menu.service';
 })
 export class SidebarSubmenuComponent implements OnInit {
   @Input() public submenu = <SubMenuItem>{};
+  @Input() public mobile = false;
 
   constructor(public menuService: MenuService) {}
 
@@ -20,6 +21,12 @@ export class SidebarSubmenuComponent implements OnInit {
 
   public toggleMenu(menu: any) {
     this.menuService.toggleSubMenu(menu);
+  }
+
+  public closeMobileMenu() {
+    if (this.mobile) {
+      this.menuService.closeMobileMenu();
+    }
   }
 
   private collapse(items: Array<any>) {

@@ -18,12 +18,16 @@ export class SidebarComponent implements OnInit {
 
   ngOnInit(): void {
     const logo = localStorage.getItem('logo');
-    console.log('Logo cargado:', logo);
     if (logo) {
       this.logoPreview = logo;
     }
   }
+
   public toggleSidebar() {
     this.menuService.toggleSidebar();
+  }
+
+  public closeMobileMenu() {
+    this.menuService.closeMobileMenu();
   }
 }
