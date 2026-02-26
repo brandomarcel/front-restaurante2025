@@ -345,13 +345,16 @@ select {
 }
 
   /* Modal */
-  .app-modal-backdrop { @apply fixed inset-0 bg-black/30 flex items-center justify-center z-50; }
+  .app-modal-backdrop { @apply fixed inset-0 bg-black/30 flex items-center justify-center z-[220]; }
 .app-modal {
   @apply bg-white rounded-xl shadow-sm border border-gray-200
          w-full max-w-2xl max-h-[90vh] overflow-y-auto relative;
 }
 
   .app-modal-close { @apply absolute top-2 right-3 text-xl; }
+
+  /* Asegura que overlays/modales queden por encima de navbar/menus (z-90/120). */
+  .fixed.inset-0.z-50 { z-index: 220 !important; }
 
   /* Tabs */
   .tabs { @apply mb-4 border-b border-gray-200 flex gap-4 text-xs font-medium; }

@@ -5,7 +5,14 @@
         <h2 class="text-xl font-bold">Reporte de Ventas Generales</h2>
         <p class="text-xs text-primary-foreground/80">Consulta por rango de fechas y exporta resultados.</p>
       </div>
-      <app-button (click)="exportToExcel()" impact="bold" tone="success" shape="rounded" size="medium">
+      <app-button
+        (click)="exportToExcel()"
+        [disabled]="!canExport"
+        impact="bold"
+        tone="success"
+        shape="rounded"
+        size="medium"
+      >
         Descargar Excel
       </app-button>
     </div>

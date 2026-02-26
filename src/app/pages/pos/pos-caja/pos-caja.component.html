@@ -269,61 +269,6 @@
 
 
 
-<!-- ================= MODAL PAGO ================= -->
-<div *ngIf="showPaymentModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-
-    <div class="bg-white w-full max-w-lg rounded p-6 relative">
-
-        <button class="absolute right-3 top-2 text-xl" (click)="showPaymentModal=false">
-            ×
-        </button>
-
-        <h2 class="text-xl font-bold mb-4">Finalizar Pedido</h2>
-
-        <!-- Método de pago -->
-        <div>
-            <label class="block text-sm font-medium mb-1">
-                Método de Pago
-            </label>
-
-            <select [(ngModel)]="paymentMethod" (change)="calcularCambio()" class="w-full border rounded px-3 py-2">
-                <option *ngFor="let item of payments" [value]="item.codigo">
-                    {{ item.description || item.nombre }}
-                </option>
-            </select>
-        </div>
-
-        <!-- Total -->
-        <div class="text-center mt-4">
-            <p class="text-gray-600">Total a Pagar</p>
-            <p class="text-4xl font-bold text-emerald-500">
-                ${{ cartService.total | number:'1.2-2' }}
-            </p>
-        </div>
-
-        <!-- Efectivo -->
-        <div *ngIf="paymentMethod === '01'" class="mt-4">
-            <input type="number" [(ngModel)]="amountReceived" (input)="calcularCambio()" placeholder="Monto entregado"
-                class="w-full border rounded px-3 py-2 text-center text-lg">
-            <p class="text-center mt-2 text-lg">
-                Cambio: ${{ change | number:'1.2-2' }}
-            </p>
-        </div>
-
-        <!-- Botones -->
-        <div class="flex gap-3 mt-6">
-            <button (click)="confirmarPago('Nota Venta')" class="flex-1 bg-yellow-500 text-white py-3 rounded">
-                Nota Venta
-            </button>
-
-            <button (click)="confirmarPago('Factura')" class="flex-1 bg-primary text-white py-3 rounded">
-                Facturar
-            </button>
-        </div>
-
-    </div>
-</div>
-
 <!-- MODAL DE NUEVO CLIENTE (solo caja/admin) -->
 <div *ngIf="showCustomerModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-3" role="dialog"
     aria-modal="true">

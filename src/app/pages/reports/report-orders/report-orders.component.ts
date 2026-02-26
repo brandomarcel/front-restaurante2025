@@ -20,6 +20,7 @@ export class ReportOrdersComponent implements OnInit {
   currentPage = 1;
   pageSize = 100;
   hasNextPage = false;
+  exportLoading = false;
 
   filters: any = {
     company: localStorage.getItem('companyId'),
@@ -45,6 +46,10 @@ export class ReportOrdersComponent implements OnInit {
 
   get totalPages(): number {
     return this.hasNextPage ? this.currentPage + 1 : this.currentPage;
+  }
+
+  get canExport(): boolean {
+    return this.totalItems > 0 && !this.exportLoading;
   }
 
   async fetchOrders() {
@@ -149,6 +154,7 @@ export class ReportOrdersComponent implements OnInit {
   }
 
   exportToExcel() {
+    if (!this.canExport) return;
     this.exportFromBackend();
   }
 
@@ -161,6 +167,7 @@ export class ReportOrdersComponent implements OnInit {
       limit: '500',
     });
 
+    this.exportLoading = true;
     this.spinner.show();
     try {
       const file = await firstValueFrom(this.orderService.exportOrdersReportExcel(exportFilters));
@@ -171,6 +178,7 @@ export class ReportOrdersComponent implements OnInit {
       alert(error?.message || 'No se pudo exportar el reporte.');
     }
     this.spinner.hide();
+    this.exportLoading = false;
   }
 
   cleanFilters(filters: any): any {
