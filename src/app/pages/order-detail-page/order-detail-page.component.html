@@ -34,7 +34,7 @@
     Luego podrás <strong>Generar Factura</strong> desde esta misma orden.
   </ng-container>
   <ng-template #bloqueado>
-    <ng-container *ngIf="isMesero && isClosed; else byInvoiceLock">
+    <ng-container *ngIf="isReadOnlyView; else byInvoiceLock">
       La orden está <strong>cerrada</strong>. Como Mesero, solo puedes modificarla mientras esté abierta.
     </ng-container>
     <ng-template #byInvoiceLock>
@@ -124,7 +124,7 @@
               </td>
 
               <td class="px-3 py-2">
-                <div class="flex items-center gap-1">
+                <div *ngIf="!isReadOnlyView; else readOnlyQty" class="flex items-center gap-1">
                   <button type="button" class="w-7 h-7 grid place-items-center border rounded"
                     (click)="decrementOrderQty(i)" [disabled]="!canEditOrder">−</button>
 
@@ -135,12 +135,20 @@
                   <button type="button" class="w-7 h-7 grid place-items-center border rounded"
                     (click)="incrementOrderQty(i)" [disabled]="!canEditOrder">+</button>
                 </div>
+                <ng-template #readOnlyQty>
+                  <span class="inline-flex h-7 min-w-16 items-center justify-center rounded-md border border-gray-200 bg-gray-50 px-2 text-center">
+                    {{ item.quantity }}
+                  </span>
+                </ng-template>
               </td>
 
               <td class="px-3 py-2 text-right">
-                <input type="number" class="no-spinner w-24 h-7 text-center border-gray-300 rounded-md" min="0"
+                <input *ngIf="!isReadOnlyView; else readOnlyPrice" type="number" class="no-spinner w-24 h-7 text-center border-gray-300 rounded-md" min="0"
                   step="0.01" [ngModelOptions]="{standalone: true}" [(ngModel)]="item.price"
                   (ngModelChange)="recalculateOrder()" [readOnly]="!canEditOrder" [attr.tabindex]="!canEditOrder ? -1 : 0">
+                <ng-template #readOnlyPrice>
+                  <span class="text-gray-800">${{ item.price | number:'1.2-2' }}</span>
+                </ng-template>
               </td>
 
               <td class="px-3 py-2 font-semibold text-gray-800 text-right">
@@ -153,9 +161,10 @@
 
               <td class="px-2 py-2 text-right">
                 <button type="button" (click)="removeProductFromOrder(i)" class="text-red-600 hover:text-red-900"
-                  title="Eliminar" [disabled]="!canEditOrder">
+                  title="Eliminar" [disabled]="!canEditOrder" *ngIf="!isReadOnlyView">
                   <fa-icon [icon]="['fas', 'trash']" class="text-[12px]"></fa-icon>
                 </button>
+                <span *ngIf="isReadOnlyView" class="text-gray-400">—</span>
               </td>
             </tr>
 
@@ -187,7 +196,7 @@
 
       <section class="bg-white rounded-md border shadow-sm p-5">
         <div class="flex flex-col gap-2">
-          <app-button type="button" tone="primary" impact="bold" shape="rounded" (click)="saveOrderChanges()" full
+          <app-button *ngIf="!isReadOnlyView" type="button" tone="primary" impact="bold" shape="rounded" (click)="saveOrderChanges()" full
             [disabled]="!canEditOrder">
             Guardar Cambios
           </app-button>
@@ -225,7 +234,7 @@
     </div>
     <div class="flex gap-2">
       <app-button type="button" tone="light" shape="rounded" (click)="getComandaPdf()">Comanda</app-button>
-      <app-button type="button" tone="primary" shape="rounded" (click)="saveOrderChanges()"
+      <app-button *ngIf="!isReadOnlyView" type="button" tone="primary" shape="rounded" (click)="saveOrderChanges()"
         [disabled]="!canEditOrder">Guardar</app-button>
     </div>
   </div>

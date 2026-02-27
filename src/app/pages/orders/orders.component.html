@@ -122,9 +122,17 @@
               }">
               {{ order.type || 'Sin tipo' }}
             </span>
-            <button class="btn btn-outline !px-3 !py-1.5" [routerLink]="['/dashboard/orders', order.name]">
-              {{ isCerrada(order) ? 'Ver detalle' : 'Abrir orden' }}
+            <button
+              *ngIf="isCerrada(order); else openOrderButton"
+              class="btn btn-outline !px-3 !py-1.5"
+              (click)="openClosedOrderDetail(order)">
+              Ver detalle
             </button>
+            <ng-template #openOrderButton>
+              <button class="btn btn-outline !px-3 !py-1.5" [routerLink]="['/dashboard/orders', order.name]">
+                Abrir orden
+              </button>
+            </ng-template>
           </div>
         </article>
       </section>
@@ -184,11 +192,7 @@
       </section>
     </ng-template>
 
-    <div class="pager">
-      <button class="pager-btn" (click)="prevPage()" [disabled]="page === 1">« Anterior</button>
-      <span class="text-sm">Pagina {{ page }} de {{ totalPages }}</span>
-      <button class="pager-btn" (click)="nextPage()" [disabled]="page === totalPages">Siguiente »</button>
-    </div>
+
   </ng-container>
 
   <ng-template #emptyOrders>
@@ -199,3 +203,12 @@
     </div>
   </ng-template>
 </div>
+
+<app-order-modal
+  *ngIf="mostrarModal && orderSelected"
+  [order]="orderSelected"
+  [allowActions]="false"
+  [showGoOrder]="false"
+  (close)="cerrarModal()"
+  (print)="printFromModal($event)">
+</app-order-modal>

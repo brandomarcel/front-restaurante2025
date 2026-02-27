@@ -95,7 +95,7 @@
         </button>
 
         <button
-          *ngIf="canGoToOrderForInvoice"
+          *ngIf="showGoOrder && canGoToOrderForInvoice"
           type="button"
           (click)="goOrder.emit(order)"
           class="btn btn-primary">

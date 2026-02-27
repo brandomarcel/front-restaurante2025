@@ -347,17 +347,17 @@ export class OrderDetailPageComponent implements OnInit {
   }
 
   get isClosed(): boolean {
-    const status = String(this.order?.status ?? '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-    return status === 'cerrada';
+    const status = this.normalizeStatus(this.order?.status);
+    return status.includes('cerr') || status.includes('lista') || status.includes('entreg');
+  }
+
+  get isReadOnlyView(): boolean {
+    return this.isMesero && this.isClosed;
   }
 
   get canEditOrder(): boolean {
     if (this.isLocked) return false;
-    if (this.isMesero && this.isClosed) return false;
+    if (this.isReadOnlyView) return false;
     return true;
   }
 
@@ -376,5 +376,13 @@ export class OrderDetailPageComponent implements OnInit {
     }
 
     return 'Desconocido';
+  }
+
+  private normalizeStatus(value: any): string {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
   }
 }

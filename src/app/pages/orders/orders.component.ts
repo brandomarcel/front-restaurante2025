@@ -12,6 +12,7 @@ import { ButtonComponent } from 'src/app/shared/components/button/button.compone
 import { RouterModule } from '@angular/router';
 import { environment } from 'src/environments/environment.prod';
 import { UtilsService } from 'src/app/core/services/utils.service';
+import { OrderModalComponent } from '../orders-realtime/ui/order-modal/order-modal.component';
 
 type EstadoOrden = '' | 'Ingresada' | 'Preparación' | 'Cerrada';
 
@@ -21,7 +22,8 @@ type EstadoOrden = '' | 'Ingresada' | 'Preparación' | 'Cerrada';
     // EcuadorTimePipe,
     NgxPaginationModule,
     FormsModule, ButtonComponent,
-    RouterModule
+    RouterModule,
+    OrderModalComponent
   ],
   templateUrl: './orders.component.html',
   styleUrl: './orders.component.css'
@@ -176,6 +178,8 @@ export class OrdersComponent implements OnInit {
   }
 
   isCerrada(order: any): boolean {
+    console.log('order', order);
+    console.log('order?.status', order?.status);
     return this.getCanonicalStatus(order?.status) === 'Cerrada';
   }
 
@@ -190,12 +194,43 @@ export class OrdersComponent implements OnInit {
 
   toggleOrderDetail(order: any) {
     this.activeTab = 'info';
-    this.orderSelected = order || null;
+    this.orderSelected = this.normalizeOrderForModal(order || {});
     console.log('orderSelected', this.orderSelected);
     this.mostrarModal = true;
   }
 
   cerrarModal() { this.mostrarModal = false; }
+
+  openClosedOrderDetail(order: any): void {
+    if (!order?.name) return;
+
+    this.spinner.show();
+    this.ordersService.getById(order.name).subscribe({
+      next: (res: any) => {
+        const detail = res?.data || res?.message || order;
+        this.orderSelected = this.normalizeOrderForModal(detail);
+        this.mostrarModal = true;
+        this.spinner.hide();
+      },
+      error: () => {
+        this.orderSelected = this.normalizeOrderForModal(order);
+        this.mostrarModal = true;
+        this.spinner.hide();
+      }
+    });
+  }
+
+  printFromModal(order: any): void {
+    this.orderSelected = this.normalizeOrderForModal(order || {});
+    const type = String(this.orderSelected?.type || '').toLowerCase();
+
+    if (type.includes('factura') && this.orderSelected?.sri?.invoice) {
+      this.getFacturaPdf();
+      return;
+    }
+
+    this.getNotaVentaPdf();
+  }
 
   getComandaPdf() {
     const order = this.url + this.printService.getComanda(this.orderSelected.name);
@@ -296,6 +331,38 @@ export class OrdersComponent implements OnInit {
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .trim();
+  }
+
+  private normalizeOrderForModal(order: any): any {
+    const customer = order?.customer || {};
+    const sri = order?.sri || {};
+
+    return {
+      name: order?.name || '',
+      status: this.getCanonicalStatus(order?.status) || order?.status || '',
+      type: order?.type || 'Nota Venta',
+      createdAt: order?.createdAt || order?.creation || '',
+      createdAtISO: order?.createdAtISO || '',
+      subtotal: Number(order?.subtotal ?? 0),
+      iva: Number(order?.iva ?? 0),
+      total: Number(order?.total ?? 0),
+      customer: {
+        nombre: customer?.nombre || customer?.fullName || 'Consumidor Final',
+        num_identificacion: customer?.num_identificacion || '',
+        correo: customer?.correo || '',
+        telefono: customer?.telefono || '',
+        direccion: customer?.direccion || '',
+      },
+      sri: {
+        status: sri?.status || order?.estado_sri || 'Sin factura',
+        authorization_datetime: sri?.authorization_datetime || '',
+        access_key: sri?.access_key || '',
+        invoice: sri?.invoice || '',
+        number: sri?.number || '',
+      },
+      items: Array.isArray(order?.items) ? order.items : [],
+      payments: Array.isArray(order?.payments) ? order.payments : [],
+    };
   }
 
 }

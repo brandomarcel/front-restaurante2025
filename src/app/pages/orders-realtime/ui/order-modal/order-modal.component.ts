@@ -13,6 +13,7 @@ export class OrderModalComponent {
   @Input({ required: true }) order!: OrderVM;
   @Input() allowActions = true;
   @Input() kitchenMode = false;
+  @Input() showGoOrder = true;
 
   @Output() close = new EventEmitter<void>();
   @Output() goOrder = new EventEmitter<OrderVM>();
