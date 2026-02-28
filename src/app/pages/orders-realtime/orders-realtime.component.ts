@@ -45,6 +45,7 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   newCount = 0;
   showPrintModal = false;
   pendingPrintOrderId: string | null = null;
+  kitchenOnlyUrgent = false;
 
   total$ = this.rt.streamTotal();
   private sub = new Subscription();
@@ -89,6 +90,7 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   setViewMode(mode: ViewMode) {
     this.viewMode = mode;
     this.statusFilter = mode === 'cocina' ? 'ACTIVAS' : 'ALL';
+    this.kitchenOnlyUrgent = false;
     this.rt.markNewSeen();
   }
 
@@ -203,7 +205,9 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
 
   get headerSubtitle(): string {
     if (this.isCocinaOnly) {
-      return 'Monitor de cocina activo. Prioriza ordenes nuevas y en preparacion.';
+      return this.kitchenOnlyUrgent
+        ? 'Monitor de cocina activo. Mostrando solo ordenes urgentes.'
+        : 'Monitor de cocina activo. Prioriza ordenes nuevas y en preparacion.';
     }
     return `Perfil actual: ${this.roleName} · Vista ${this.modeLabel}.`;
   }
@@ -273,15 +277,38 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   }
 
   get kitchenIngresadas(): OrderVM[] {
-    return this.filteredOrders.filter(o => this.normalizeStatus(o.status) === 'Ingresada');
+    const list = this.filteredOrders.filter(o => this.normalizeStatus(o.status) === 'Ingresada');
+    return this.sortKitchenOrders(this.applyKitchenUrgentFilter(list));
   }
 
   get kitchenPreparacion(): OrderVM[] {
-    return this.filteredOrders.filter(o => this.normalizeStatus(o.status) === 'Preparación');
+    const list = this.filteredOrders.filter(o => this.normalizeStatus(o.status) === 'Preparación');
+    return this.sortKitchenOrders(this.applyKitchenUrgentFilter(list));
   }
 
   get kitchenCerradas(): OrderVM[] {
-    return this.filteredOrders.filter(o => this.normalizeStatus(o.status) === 'Cerrada');
+    const list = this.filteredOrders.filter(o => this.normalizeStatus(o.status) === 'Cerrada');
+    return this.sortKitchenOrders(list);
+  }
+
+  get kitchenActivasCount(): number {
+    return this.kitchenIngresadas.length + this.kitchenPreparacion.length;
+  }
+
+  get kitchenUrgentesCount(): number {
+    const active = this.filteredOrders.filter((o) => {
+      const status = this.normalizeStatus(o.status);
+      return status === 'Ingresada' || status === 'Preparación';
+    });
+    return active.filter((o) => this.isUrgentOrder(o)).length;
+  }
+
+  get kitchenOnlyUrgentLabel(): string {
+    return this.kitchenOnlyUrgent ? 'Ver todas' : 'Solo urgentes';
+  }
+
+  toggleKitchenUrgent() {
+    this.kitchenOnlyUrgent = !this.kitchenOnlyUrgent;
   }
 
   private matchStatus(status: string, filter: StatusFilter): boolean {
@@ -302,6 +329,27 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
 
   private normalize(value: any): string {
     return String(value ?? '').trim().toLowerCase();
+  }
+
+  private sortKitchenOrders(list: OrderVM[]): OrderVM[] {
+    return [...list].sort((a, b) => this.getOrderAgeMinutes(b) - this.getOrderAgeMinutes(a));
+  }
+
+  private applyKitchenUrgentFilter(list: OrderVM[]): OrderVM[] {
+    if (!this.kitchenOnlyUrgent) return list;
+    return list.filter((o) => this.isUrgentOrder(o));
+  }
+
+  private isUrgentOrder(order: OrderVM): boolean {
+    return this.getOrderAgeMinutes(order) >= 20;
+  }
+
+  private getOrderAgeMinutes(order: OrderVM): number {
+    const raw = order.createdAtISO || order.createdAt;
+    if (!raw) return 0;
+    const time = new Date(raw).getTime();
+    if (!Number.isFinite(time)) return 0;
+    return Math.max(0, Math.floor((Date.now() - time) / 60000));
   }
 
   private detectRole(): RoleName {

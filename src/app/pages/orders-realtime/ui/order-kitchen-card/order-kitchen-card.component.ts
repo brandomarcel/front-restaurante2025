@@ -65,6 +65,12 @@ export class OrderKitchenCardComponent implements OnInit, OnDestroy {
     return 'text-emerald-700';
   }
 
+  urgencyPillClass(): string {
+    if (this.minutes >= 20) return 'bg-rose-100 text-rose-700 border-rose-200';
+    if (this.minutes >= 10) return 'bg-amber-100 text-amber-700 border-amber-200';
+    return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+  }
+
   // fallback por si el socket manda items con qty/rate/product
   getItemQty(it: any): number {
     return Number(it?.quantity ?? it?.qty ?? 1);

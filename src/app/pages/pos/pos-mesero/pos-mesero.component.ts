@@ -34,6 +34,8 @@ export class PosMeseroComponent implements OnInit {
   cartExpanded = false;
   isSubmittingOrder = false;
   isLoadingProducts = false;
+  private readonly favoritesStorageKey = 'pos_mesero_favorites_v1';
+  private favoriteProductKeys = new Set<string>();
 
   constructor(
     public cartService: CartService,
@@ -45,6 +47,7 @@ export class PosMeseroComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.loadFavorites();
     this.loadProducts();
     this.loadCategories();
   }
@@ -112,7 +115,7 @@ export class PosMeseroComponent implements OnInit {
     const term = this.normalize(this.searchTerm);
     const selectedCat = this.normalize(this.selectedCategory);
 
-    this.filteredProductList = (this.products || []).filter((product: any) => {
+    const filtered = (this.products || []).filter((product: any) => {
       const productCategory = this.normalize(this.getProductCategoryName(product));
       const matchCategory = !selectedCat || productCategory === selectedCat;
 
@@ -123,6 +126,18 @@ export class PosMeseroComponent implements OnInit {
       const desc = this.normalize(product?.description ?? product?.descripcion);
       return name.includes(term) || desc.includes(term);
     });
+
+    this.filteredProductList = filtered
+      .map((product: any, index: number) => ({ product, index }))
+      .sort((a, b) => {
+        const aFav = this.isFavorite(a.product) ? 1 : 0;
+        const bFav = this.isFavorite(b.product) ? 1 : 0;
+        if (bFav !== aFav) {
+          return bFav - aFav;
+        }
+        return a.index - b.index;
+      })
+      .map((entry) => entry.product);
   }
 
   addProduct(product: any): void {
@@ -134,6 +149,25 @@ export class PosMeseroComponent implements OnInit {
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate(50);
     }
+  }
+
+  toggleFavorite(product: any): void {
+    const key = this.getProductKey(product);
+    if (!key) return;
+
+    if (this.favoriteProductKeys.has(key)) {
+      this.favoriteProductKeys.delete(key);
+    } else {
+      this.favoriteProductKeys.add(key);
+    }
+
+    this.persistFavorites();
+    this.applyFilters();
+  }
+
+  isFavorite(product: any): boolean {
+    const key = this.getProductKey(product);
+    return !!key && this.favoriteProductKeys.has(key);
   }
 
   increase(item: any): void {
@@ -251,5 +285,25 @@ export class PosMeseroComponent implements OnInit {
 
   private getProductCategoryName(p: any): string {
     return p?.categoria || p?.category?.name || p?.category?.nombre || '';
+  }
+
+  private loadFavorites(): void {
+    try {
+      const raw = JSON.parse(localStorage.getItem(this.favoritesStorageKey) || '[]');
+      if (!Array.isArray(raw)) return;
+      this.favoriteProductKeys = new Set(
+        raw.map((x: any) => String(x || '').trim()).filter((x: string) => !!x)
+      );
+    } catch {
+      this.favoriteProductKeys = new Set<string>();
+    }
+  }
+
+  private persistFavorites(): void {
+    localStorage.setItem(this.favoritesStorageKey, JSON.stringify(Array.from(this.favoriteProductKeys)));
+  }
+
+  private getProductKey(product: any): string {
+    return String(product?.name || product?.id || product?.codigo || product?.nombre || '').trim();
   }
 }

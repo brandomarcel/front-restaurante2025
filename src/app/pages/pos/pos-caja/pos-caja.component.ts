@@ -47,6 +47,7 @@ export class PosCajaComponent implements OnInit {
 
   products: any[] = [];
   filteredProductList: any[] = [];
+  favoriteProducts: any[] = [];
   categories: any[] = [];
   payments: any[] = [];
 
@@ -64,6 +65,8 @@ export class PosCajaComponent implements OnInit {
   private pendingOrderId: string | null = null;
   private today = '';
   private readonly url = environment.URL;
+  private readonly favoritesStorageKey = 'pos_caja_favorites_v1';
+  private favoriteProductKeys = new Set<string>();
 
   submitted = false;
   clienteForm!: FormGroup;
@@ -86,6 +89,7 @@ export class PosCajaComponent implements OnInit {
   ngOnInit(): void {
     this.ambiente = localStorage.getItem('ambiente') ?? '---';
     this.today = this.buildEcuadorIsoDate();
+    this.loadFavorites();
     this.initClienteForm();
     this.loadInitialData();
   }
@@ -226,7 +230,7 @@ export class PosCajaComponent implements OnInit {
     const term = this.normalize(this.searchTerm);
     const selectedCat = this.normalize(this.selectedCategory);
 
-    this.filteredProductList = (this.products || []).filter((product: any) => {
+    const filtered = (this.products || []).filter((product: any) => {
       const prodCat = this.normalize(this.getProductCategoryName(product));
       const okCat = !selectedCat || prodCat === selectedCat;
       if (!term) return okCat;
@@ -235,6 +239,20 @@ export class PosCajaComponent implements OnInit {
       const desc = this.normalize(product?.description ?? product?.descripcion);
       return okCat && (name.includes(term) || desc.includes(term));
     });
+
+    this.filteredProductList = filtered
+      .map((product: any, index: number) => ({ product, index }))
+      .sort((a, b) => {
+        const aFav = this.isFavorite(a.product) ? 1 : 0;
+        const bFav = this.isFavorite(b.product) ? 1 : 0;
+        if (bFav !== aFav) {
+          return bFav - aFav;
+        }
+        return a.index - b.index;
+      })
+      .map((entry) => entry.product);
+
+    this.syncFavoriteProducts();
   }
 
   addProduct(product: any): void {
@@ -413,6 +431,25 @@ export class PosCajaComponent implements OnInit {
     this.applyFilters();
   }
 
+  toggleFavorite(product: any): void {
+    const key = this.getProductKey(product);
+    if (!key) return;
+
+    if (this.favoriteProductKeys.has(key)) {
+      this.favoriteProductKeys.delete(key);
+    } else {
+      this.favoriteProductKeys.add(key);
+    }
+
+    this.persistFavorites();
+    this.applyFilters();
+  }
+
+  isFavorite(product: any): boolean {
+    const key = this.getProductKey(product);
+    return !!key && this.favoriteProductKeys.has(key);
+  }
+
   onSearchTermChanged(term: string): void {
     this.searchTerm = term;
     this.applyFilters();
@@ -463,6 +500,7 @@ export class PosCajaComponent implements OnInit {
   }
 
   trackByProductId = (_: number, p: any) => p?.id || p?._id || p?.codigo || p?.name || p?.nombre;
+  trackByFavorite = (_: number, p: any) => this.getProductKey(p);
 
   private initClienteForm(): void {
     this.clienteForm = this.fb.group({
@@ -622,5 +660,29 @@ export class PosCajaComponent implements OnInit {
 
   private getProductCategoryName(p: any): string {
     return p?.categoria || p?.category?.name || p?.category?.nombre || '';
+  }
+
+  private loadFavorites(): void {
+    try {
+      const raw = JSON.parse(localStorage.getItem(this.favoritesStorageKey) || '[]');
+      if (!Array.isArray(raw)) return;
+      this.favoriteProductKeys = new Set(
+        raw.map((x: any) => String(x || '').trim()).filter((x: string) => !!x)
+      );
+    } catch {
+      this.favoriteProductKeys = new Set<string>();
+    }
+  }
+
+  private persistFavorites(): void {
+    localStorage.setItem(this.favoritesStorageKey, JSON.stringify(Array.from(this.favoriteProductKeys)));
+  }
+
+  private syncFavoriteProducts(): void {
+    this.favoriteProducts = this.filteredProductList.filter((product: any) => this.isFavorite(product));
+  }
+
+  private getProductKey(product: any): string {
+    return String(product?.name || product?.id || product?.codigo || product?.nombre || '').trim();
   }
 }
