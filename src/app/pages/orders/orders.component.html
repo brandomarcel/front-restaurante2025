@@ -192,6 +192,11 @@
       </section>
     </ng-template>
 
+    <div class="pager">
+      <button class="pager-btn" (click)="prevPage()" [disabled]="page === 1">« Anterior</button>
+      <span class="text-sm">Pagina {{ page }} de {{ totalPages }}</span>
+      <button class="pager-btn" (click)="nextPage()" [disabled]="page === totalPages">Siguiente »</button>
+    </div>
 
   </ng-container>
 
