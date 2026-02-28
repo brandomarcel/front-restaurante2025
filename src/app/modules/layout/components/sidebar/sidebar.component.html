@@ -1,6 +1,6 @@
 <nav
-  [ngClass]="menuService.showSideBar ? 'w-[210px] xl:w-[280px] min-w-[210px] xl:min-w-[280px]' : 'w-[70px] min-w-[70px]'"
-  class="bg-background hidden h-full min-h-0 flex-col justify-between pt-3 transition-[width] duration-300 motion-reduce:transition-none lg:flex"
+  [ngClass]="menuService.showSideBar ? 'w-[240px] 2xl:w-[304px] min-w-[240px] 2xl:min-w-[304px]' : 'w-[76px] min-w-[76px]'"
+  class="hidden h-full min-h-0 flex-col justify-between border-r border-slate-200 bg-background pt-3 transition-[width] duration-300 motion-reduce:transition-none xl:flex"
   role="navigation"
   aria-label="Sidebar"
 >
@@ -30,7 +30,7 @@
       <button
         type="button"
         (click)="toggleSidebar()"
-        class="text-muted-foreground/50 hover:text-muted-foreground flex items-center justify-center rounded-md p-2 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
+        class="text-muted-foreground/50 hover:bg-slate-100 hover:text-muted-foreground flex items-center justify-center rounded-md p-2 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
         [ngClass]="{ 'rotate-180': !menuService.showSideBar }"
         [attr.aria-expanded]="menuService.showSideBar ? 'true' : 'false'"
         [attr.aria-controls]="'sidebar-menu'"
@@ -48,7 +48,7 @@
   </div>
 
   <div class="mx-4 my-4 space-y-1 shrink-0">
-    <a class="rounded-sm hover:bg-card group relative flex h-9 cursor-pointer items-center justify-start p-2">
+    <div class="rounded-sm hover:bg-card group relative flex h-9 cursor-default items-center justify-start p-2">
       <svg-icon src="assets/icons/heroicons/outline/information-circle.svg" [svgClass]="'h-5 w-5 text-muted-foreground/50'"></svg-icon>
       <div class="ml-3 truncate text-[10px] font-semibold tracking-wide focus:outline-none">
         <span class="bg-primary/10 text-primary px-2 font-semibold">v{{ appJson.version }}</span>
@@ -60,11 +60,11 @@
           v{{ appJson.version }}
         </span>
       </div>
-    </a>
+    </div>
   </div>
 </nav>
 
-<div *ngIf="menuService.showMobileMenu" class="fixed inset-0 z-[100] lg:hidden" aria-modal="true" role="dialog">
+<div *ngIf="menuService.showMobileMenu" class="fixed inset-0 z-[100] xl:hidden" aria-modal="true" role="dialog">
   <button
     type="button"
     class="absolute inset-0 bg-black/45"

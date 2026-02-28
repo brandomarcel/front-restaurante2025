@@ -18,9 +18,9 @@ export class CajaAbiertaGuard implements CanActivate {
 
   canActivate(_route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<boolean | UrlTree> {
     const user = this.readCurrentUser();
-    const isManager = this.isManagerRole(user?.roles);
+    const roles = this.readNormalizedRoles(user?.roles);
 
-    if (isManager) {
+    if (!this.requiresCajaValidation(roles)) {
       return of(true);
     }
 
@@ -65,14 +65,19 @@ export class CajaAbiertaGuard implements CanActivate {
     }
   }
 
-  private isManagerRole(roles: unknown): boolean {
+  private readNormalizedRoles(roles: unknown): string[] {
     if (!Array.isArray(roles)) {
-      return false;
+      return [];
     }
 
     return roles
       .map((role) => this.normalizeText(String(role || '')))
-      .some((role) => role.includes('gerente') || role.includes('admin'));
+      .filter((role) => !!role);
+  }
+
+  private requiresCajaValidation(roles: string[]): boolean {
+    // Solo roles operativos de caja requieren apertura obligatoria.
+    return roles.some((role) => role.includes('cajero'));
   }
 
   private normalizeText(value: string): string {

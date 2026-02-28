@@ -1,26 +1,26 @@
-<div class="flex h-screen w-full overflow-hidden">
+<div class="flex h-[100dvh] w-full overflow-hidden bg-slate-100/70">
+  <app-sidebar *ngIf="!menuService.isPosMode"></app-sidebar>
 
-  <app-sidebar></app-sidebar>
+  <div class="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-card">
+    <app-navbar class="sticky top-0 z-[95] flex-shrink-0"></app-navbar>
 
-  <!-- CONTENEDOR DERECHO -->
-  <div class="flex flex-1 flex-col min-h-0 overflow-hidden bg-card">
-
-    <!-- NAVBAR -->
-    <app-navbar class="flex-shrink-0"></app-navbar>
-
-    <!-- MAIN (SCROLL SOLO AQUÍ) -->
-    <div
+    <main
       id="main-content"
-      class="flex-1 min-h-0 overflow-y-auto">
-
-      <div class="mx-auto w-full max-w-[1600px] px-3 sm:px-6 py-4">
+      class="flex-1 min-h-0"
+      [ngClass]="menuService.isPosMode ? 'overflow-hidden bg-slate-100' : 'overflow-y-auto bg-card'"
+    >
+      <div
+        [ngClass]="
+          menuService.isPosMode
+            ? 'h-full w-full min-h-0'
+            : 'mx-auto w-full max-w-[1720px] px-3 py-4 pb-24 sm:px-5 lg:px-6 lg:pb-6'
+        "
+      >
         <router-outlet></router-outlet>
       </div>
+    </main>
 
-    </div>
-
-    <!-- FOOTER (NO EMPUJA) -->
-    <app-footer class="flex-shrink-0"></app-footer>
-
+    <app-bottom-navbar *ngIf="!menuService.isPosMode" class="xl:hidden"></app-bottom-navbar>
+    <app-footer *ngIf="!menuService.isPosMode" class="hidden flex-shrink-0 xl:block"></app-footer>
   </div>
 </div>

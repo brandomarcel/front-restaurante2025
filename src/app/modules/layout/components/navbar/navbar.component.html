@@ -1,49 +1,69 @@
-<div class="bg-background relative z-[90]">
-  <div class="mx-auto px-3 md:px-5">
-    <div class="flex items-center gap-2 md:gap-4 py-2.5 md:py-3.5">
-      <div class="lg:hidden">
-        <button
-          (click)="toggleMobileMenu()"
-          type="button"
-          class="bg-muted text-muted-foreground hover:bg-muted-foreground hover:text-muted inline-flex items-center justify-center rounded-md p-2 focus:outline-hidden focus:ring-2 focus:ring-inset focus:ring-primary min-h-[44px] min-w-[44px]"
-          [attr.aria-expanded]="menuService.showMobileMenu ? 'true' : 'false'"
-          aria-controls="sidebar-mobile-menu"
-          aria-label="Abrir menú">
-          <svg-icon src="assets/icons/heroicons/outline/menu.svg" [svgClass]="'h-6 w-6'"></svg-icon>
-        </button>
+<header class="border-b border-slate-200/80 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+  <div class="mx-auto flex min-h-[70px] w-full max-w-[1720px] items-center gap-2 px-3 py-2 sm:px-5 lg:px-6">
+    <button
+      *ngIf="!isPosMode"
+      (click)="toggleMobileMenu()"
+      type="button"
+      class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-100 xl:hidden"
+      [attr.aria-expanded]="menuService.showMobileMenu ? 'true' : 'false'"
+      aria-controls="sidebar-mobile-menu"
+      aria-label="Abrir menú"
+    >
+      <svg-icon src="assets/icons/heroicons/outline/menu.svg" [svgClass]="'h-6 w-6'"></svg-icon>
+    </button>
+
+    <div class="min-w-0 flex-1">
+      <div class="flex items-center gap-2">
+        <h1 class="truncate text-base font-semibold text-slate-900 sm:text-lg">{{ currentTitle }}</h1>
+        <span
+          *ngIf="isPosMode"
+          class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700"
+        >
+          Modo POS
+        </span>
       </div>
-
-  <!-- <div class="flex items-center gap-2 ltr:md:mr-10 rtl:md:ml-10 lg:hidden">
-  <a
-    class="bg-primary/90 hover:bg-primary transition flex items-center justify-center rounded-sm p-1.5 focus:outline-hidden focus:ring-1 focus:ring-primary/60"
-    aria-label="Inicio">
-    <img *ngIf="logoPreview; else defaultLogo"
-         [src]="logoPreview"
-         alt="FA"
-         class="mx-auto h-8 w-auto sm:h-10 object-contain"
-         loading="lazy" />
-    <ng-template #defaultLogo>
-      <img src="./assets/images/only_logo_FA.png"
-           alt="FA"
-           class="mx-auto h-8 w-auto sm:h-10 object-contain"
-           loading="lazy" />
-    </ng-template>
-  </a>
-  <b class="text-foreground text-sm font-bold">FacturADA</b>
-</div> -->
-
-
-      <div class="hidden lg:flex lg:ml-10 space-x-10">
-        <app-navbar-menu></app-navbar-menu>
-      </div>
-
-      <div class="hidden lg:block flex-1"></div>
-
-      <div class="ml-auto lg:ml-0">
-        <app-profile-menu></app-profile-menu>
-      </div>
+      <p class="truncate text-xs text-slate-500">
+        {{ localizedDate }}
+      </p>
     </div>
+
+    <div class="hidden items-center gap-2 xl:flex" *ngIf="!isPosMode">
+      <a
+        *ngFor="let item of quickActions"
+        [routerLink]="item.route || '/dashboard/main'"
+        class="inline-flex min-h-[38px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-primary/30 hover:text-primary"
+        [ngClass]="menuService.isActive(item.route) ? 'border-primary/40 bg-primary/5 text-primary' : ''"
+      >
+        <svg-icon *ngIf="item.icon" [src]="item.icon" [svgClass]="'h-4 w-4'"></svg-icon>
+        <span class="max-w-[130px] truncate">{{ item.label }}</span>
+      </a>
+    </div>
+
+    <div class="flex items-center gap-2" *ngIf="isPosMode">
+      <a
+        class="hidden min-h-[40px] items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 sm:inline-flex"
+        [routerLink]="['/dashboard/orders']"
+      >
+        Órdenes
+      </a>
+      <a
+        *ngIf="canOpenCaja"
+        class="hidden min-h-[40px] items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 sm:inline-flex"
+        [routerLink]="['/caja/apertura']"
+      >
+        Caja
+      </a>
+      <button
+        type="button"
+        (click)="closePosMode()"
+        class="inline-flex min-h-[38px] items-center rounded-lg bg-slate-900 px-2.5 text-[11px] font-semibold text-white transition hover:bg-slate-700 sm:min-h-[40px] sm:px-3 sm:text-xs"
+      >
+        Salir POS
+      </button>
+    </div>
+
+    <app-profile-menu></app-profile-menu>
   </div>
-</div>
+</header>
 
 

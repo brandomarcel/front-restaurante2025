@@ -1,12 +1,12 @@
 <div class="space-y-3">
   <div *ngFor="let menu of menuService.pagesMenu" class="space-y-1">
     <div *ngIf="menuService.showSideBar || mobile" class="px-2 pt-1">
-      <small class="text-muted-foreground/60 text-[10px] font-semibold uppercase tracking-[0.12em]">
+      <small class="text-muted-foreground/60 text-[10px] font-semibold uppercase tracking-[0.14em]">
         {{ menu.group }}
       </small>
     </div>
 
-    <ul class="flex flex-col gap-0.5 text-xs">
+    <ul class="flex flex-col gap-1 text-xs">
       <li *ngFor="let item of menu.items">
         <div
           (click)="onItemClick(item)"
@@ -19,7 +19,7 @@
             'text-muted-foreground hover:bg-card hover:text-foreground': !(item.active || item.expanded),
             'justify-center px-0': !mobile && !menuService.showSideBar
           }"
-          class="group relative flex min-h-10 items-center gap-3 rounded-lg px-2.5 py-1.5 transition-all duration-200"
+          class="group relative flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 transition-all duration-200"
         >
           <span
             [ngClass]="(item.active || item.expanded) ? 'text-primary' : 'text-muted-foreground/60 group-hover:text-foreground'"

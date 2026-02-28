@@ -18,6 +18,11 @@ export class Menu {
           label: 'POS',
           route: '/dashboard/pos',
         },
+        {
+          icon: 'assets/icons/tablericons/chart-donut-3.svg',
+          label: 'Ordenes en vivo',
+          route: '/dashboard/orders-realtime',
+        },
       ],
     },
 
@@ -140,6 +145,19 @@ export class Menu {
           route: '/dashboard/pos',
         },
 
+      ],
+    },
+
+    {
+      group: 'Produccion',
+      separator: false,
+      allowedRoles: ['COCINA'],
+      items: [
+        {
+          icon: 'assets/icons/tablericons/chart-donut-3.svg',
+          label: 'Ordenes en vivo',
+          route: '/dashboard/orders-realtime',
+        },
       ],
     },
   ];

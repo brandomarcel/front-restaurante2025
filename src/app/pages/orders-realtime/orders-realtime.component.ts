@@ -193,6 +193,21 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     return this.roleName !== 'Mesero';
   }
 
+  get isCocinaOnly(): boolean {
+    return this.roleName === 'Cocina';
+  }
+
+  get canSwitchView(): boolean {
+    return !this.isCocinaOnly;
+  }
+
+  get headerSubtitle(): string {
+    if (this.isCocinaOnly) {
+      return 'Monitor de cocina activo. Prioriza ordenes nuevas y en preparacion.';
+    }
+    return `Perfil actual: ${this.roleName} · Vista ${this.modeLabel}.`;
+  }
+
   get modeLabel(): string {
     return this.viewMode === 'cocina' ? 'Cocina' : 'Caja';
   }

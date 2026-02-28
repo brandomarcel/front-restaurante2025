@@ -1,173 +1,220 @@
-<div class="relative flex h-full flex-col bg-slate-50">
+<div class="relative flex h-full w-full min-h-0 flex-col overflow-hidden bg-slate-100">
   <header class="sticky top-0 z-20 border-b border-primary/10 bg-white/95 px-3 py-3 shadow-sm backdrop-blur">
-    <div class="space-y-3">
-      <div class="flex items-center justify-between">
+    <div class="rounded-2xl border border-primary/10 bg-white/90 p-3 shadow-sm">
+      <div class="flex items-start justify-between gap-3">
         <div>
           <h2 class="text-base font-bold text-primary">Toma de pedido</h2>
+          <p class="text-[11px] text-slate-500">Registra la comanda y envia a cocina en segundos.</p>
         </div>
-        <span class="badge badge-gray">{{ totalItems }} item{{ totalItems === 1 ? '' : 's' }}</span>
+        <div class="flex flex-col items-end gap-1 text-right">
+          <span class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+            {{ totalItems }} item{{ totalItems === 1 ? '' : 's' }}
+          </span>
+          <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+            {{ filteredProductList.length }} productos
+          </span>
+        </div>
       </div>
 
-      <input
-        type="text"
-        [(ngModel)]="alias"
-        (input)="alias = alias.toUpperCase()"
-        maxlength="20"
-        class="w-full rounded-xl border border-primary/20 px-3 py-3 text-sm font-medium uppercase outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-        placeholder="Mesa o alias (ej: MESA 4)" />
-
-      <div class="grid grid-cols-3 gap-2">
-        <button
-          type="button"
-          class="btn text-xs"
-          [ngClass]="orderType === 'Servirse' ? 'btn-primary' : 'btn-outline'"
-          (click)="setOrderType('Servirse')">
-          Servirse
-        </button>
-
-        <button
-          type="button"
-          class="btn text-xs"
-          [ngClass]="orderType === 'Llevar' ? 'btn-primary' : 'btn-outline'"
-          (click)="setOrderType('Llevar')">
-          Llevar
-        </button>
-
-        <button
-          type="button"
-          class="btn text-xs"
-          [ngClass]="orderType === 'Domicilio' ? 'btn-primary' : 'btn-outline'"
-          (click)="setOrderType('Domicilio')">
-          Domicilio
-        </button>
-      </div>
-
-      <div *ngIf="orderType === 'Domicilio'" class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div class="mt-3 space-y-3">
         <input
           type="text"
-          [(ngModel)]="deliveryAddress"
-          class="w-full rounded-xl border border-primary/20 px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-          placeholder="Direccion entrega" />
+          [(ngModel)]="alias"
+          (input)="alias = alias.toUpperCase()"
+          maxlength="20"
+          class="w-full rounded-xl border border-primary/20 bg-white px-3 py-3 text-sm font-medium uppercase outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+          placeholder="Mesa o alias (ej: MESA 4)" />
 
-        <input
-          type="text"
-          [(ngModel)]="deliveryPhone"
-          maxlength="15"
-          class="w-full rounded-xl border border-primary/20 px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-          placeholder="Telefono contacto" />
-      </div>
+        <div class="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            class="rounded-xl px-2 py-2 text-xs font-semibold transition min-h-[38px]"
+            [ngClass]="orderType === 'Servirse' ? 'bg-primary text-white shadow-sm' : 'border border-primary/20 bg-white text-slate-700 hover:bg-slate-50'"
+            (click)="setOrderType('Servirse')">
+            Servirse
+          </button>
 
-      <div class="flex gap-2">
-        <input
-          type="text"
-          [(ngModel)]="searchTerm"
-          (ngModelChange)="applyFilters()"
-          placeholder="Buscar producto..."
-          class="w-full rounded-xl border border-primary/20 px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25" />
+          <button
+            type="button"
+            class="rounded-xl px-2 py-2 text-xs font-semibold transition min-h-[38px]"
+            [ngClass]="orderType === 'Llevar' ? 'bg-primary text-white shadow-sm' : 'border border-primary/20 bg-white text-slate-700 hover:bg-slate-50'"
+            (click)="setOrderType('Llevar')">
+            Llevar
+          </button>
 
-        <button type="button" (click)="clearSearch()" class="btn btn-outline !px-3">Limpiar</button>
-      </div>
+          <button
+            type="button"
+            class="rounded-xl px-2 py-2 text-xs font-semibold transition min-h-[38px]"
+            [ngClass]="orderType === 'Domicilio' ? 'bg-primary text-white shadow-sm' : 'border border-primary/20 bg-white text-slate-700 hover:bg-slate-50'"
+            (click)="setOrderType('Domicilio')">
+            Domicilio
+          </button>
+        </div>
 
-      <div class="flex gap-2 overflow-x-auto pb-1">
-        <button
-          type="button"
-          class="whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition"
-          [ngClass]="selectedCategory === '' ? 'border-primary bg-primary text-white' : 'border-primary/20 bg-white text-gray-700'"
-          (click)="onCategorySelected('')">
-          Todas
-        </button>
+        <div *ngIf="orderType === 'Domicilio'" class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <input
+            type="text"
+            [(ngModel)]="deliveryAddress"
+            class="w-full rounded-xl border border-primary/20 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+            placeholder="Direccion entrega" />
 
-        <button
-          *ngFor="let category of categories"
-          type="button"
-          class="whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition"
-          [ngClass]="selectedCategory === category.name ? 'border-primary bg-primary text-white' : 'border-primary/20 bg-white text-gray-700'"
-          (click)="onCategorySelected(category.name)">
-          {{ category.nombre || category.name }}
-        </button>
+          <input
+            type="text"
+            [(ngModel)]="deliveryPhone"
+            maxlength="15"
+            class="w-full rounded-xl border border-primary/20 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+            placeholder="Telefono contacto" />
+        </div>
+
+        <div class="flex gap-2">
+          <input
+            type="text"
+            [(ngModel)]="searchTerm"
+            (ngModelChange)="applyFilters()"
+            placeholder="Buscar producto..."
+            class="w-full rounded-xl border border-primary/20 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25" />
+
+          <button type="button" (click)="clearSearch()" class="rounded-xl border border-primary/20 bg-white px-3 py-2.5 text-xs font-semibold text-slate-600">
+            Limpiar
+          </button>
+        </div>
+
+        <div class="flex items-center justify-between gap-2">
+          <p class="text-[11px] text-slate-500">Categoria: {{ selectedCategory || 'Todas' }}</p>
+          <p class="text-[11px] font-semibold text-slate-500">Vista mesero</p>
+        </div>
+
+        <div class="flex gap-2 overflow-x-auto pb-1">
+          <button
+            type="button"
+            class="whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition"
+            [ngClass]="selectedCategory === '' ? 'border-primary bg-primary text-white' : 'border-primary/20 bg-white text-slate-700'"
+            (click)="onCategorySelected('')">
+            Todas
+          </button>
+
+          <button
+            *ngFor="let category of categories"
+            type="button"
+            class="whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition"
+            [ngClass]="selectedCategory === category.name ? 'border-primary bg-primary text-white' : 'border-primary/20 bg-white text-slate-700'"
+            (click)="onCategorySelected(category.name)">
+            {{ category.nombre || category.name }}
+          </button>
+        </div>
       </div>
     </div>
   </header>
 
-  <main class="flex-1 overflow-y-auto px-3 pb-72 pt-3 md:pb-80">
-    <div *ngIf="isLoadingProducts" class="rounded-xl border border-primary/10 bg-white p-6 text-center text-sm text-muted-foreground">
-      Cargando productos...
-    </div>
-
-    <div *ngIf="!isLoadingProducts" class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-      <article
-        *ngFor="let product of filteredProductList; trackBy: trackByProduct"
-        class="rounded-2xl border border-primary/10 bg-white p-3 shadow-sm transition hover:shadow-md">
-        <p class="line-clamp-2 text-sm font-semibold text-gray-900">{{ product.nombre || product.name }}</p>
-        <p *ngIf="product.descripcion" class="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{{ product.descripcion }}</p>
-
-        <div class="mt-2 flex items-center justify-between">
-          <span class="badge badge-gray text-[10px]">{{ product.tax_value || 0 }}% IVA</span>
-          <span class="text-[11px] font-medium text-muted-foreground">Comanda</span>
-        </div>
-
-        <button
-          type="button"
-          class="mt-3 w-full rounded-xl bg-primary px-3 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-[0.98]"
-          [disabled]="product?.is_out_of_stock"
-          [ngClass]="{ 'opacity-40 cursor-not-allowed': product?.is_out_of_stock }"
-          (click)="addProduct(product)">
-          {{ product?.is_out_of_stock ? 'Agotado' : 'Agregar' }}
-        </button>
-      </article>
-
-      <div *ngIf="filteredProductList.length === 0" class="col-span-full rounded-xl border border-dashed border-primary/20 bg-white p-6 text-center text-sm text-muted-foreground">
-        No hay productos para este filtro.
+  <main class="flex-1 overflow-y-auto px-3 pt-3" [ngClass]="cartExpanded ? 'pb-[24rem] sm:pb-[22rem]' : 'pb-44 sm:pb-48'">
+    <section class="rounded-2xl border border-primary/10 bg-white/70 p-2 shadow-sm sm:p-3">
+      <div *ngIf="isLoadingProducts" class="rounded-xl border border-primary/10 bg-white p-6 text-center text-sm text-slate-500">
+        Cargando productos...
       </div>
-    </div>
+
+      <div *ngIf="!isLoadingProducts" class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+        <article
+          *ngFor="let product of filteredProductList; trackBy: trackByProduct"
+          class="group relative flex flex-col rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition hover:border-primary/30 hover:shadow-md">
+          <span
+            *ngIf="product?.is_out_of_stock"
+            class="absolute right-2 top-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+            Agotado
+          </span>
+
+          <div class="mb-1 flex items-start justify-between gap-2">
+            <p class="line-clamp-2 text-sm font-semibold text-slate-900">{{ product.nombre || product.name }}</p>
+            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+              {{ product.tax_value || 0 }}% IVA
+            </span>
+          </div>
+
+          <p *ngIf="product.descripcion" class="line-clamp-2 text-[11px] text-slate-500">{{ product.descripcion }}</p>
+          <p *ngIf="!product.descripcion" class="text-[11px] text-slate-400">Sin descripcion</p>
+
+          <div class="mt-3 flex items-end justify-between gap-2">
+            <div>
+              <p class="text-[10px] uppercase tracking-wide text-slate-400">Precio</p>
+              <p class="text-base font-bold text-slate-900">${{ (product.precio ?? product.price ?? 0) | number:'1.2-2' }}</p>
+            </div>
+
+            <button
+              type="button"
+              class="min-h-[38px] rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90 active:scale-[0.98]"
+              [disabled]="product?.is_out_of_stock"
+              [ngClass]="{ 'opacity-40 cursor-not-allowed': product?.is_out_of_stock }"
+              (click)="addProduct(product)">
+              Agregar
+            </button>
+          </div>
+        </article>
+
+        <div *ngIf="filteredProductList.length === 0" class="col-span-full rounded-xl border border-dashed border-primary/20 bg-white p-6 text-center text-sm text-slate-500">
+          No hay productos para este filtro.
+        </div>
+      </div>
+    </section>
   </main>
 
-  <footer class="fixed bottom-0 left-0 right-0 z-30 border-t border-primary/10 bg-white p-3 shadow-[0_-6px_16px_rgba(0,0,0,0.08)]">
-    <div class="space-y-3">
-      <div class="rounded-xl bg-primary/5 px-3 py-2.5">
-        <div class="flex items-center justify-between">
-          <p class="text-xs font-semibold text-gray-700">Comanda: {{ alias || 'Sin mesa' }}</p>
+  <footer class="fixed bottom-0 left-0 right-0 z-30 border-t border-primary/10 bg-white/95 shadow-[0_-6px_16px_rgba(0,0,0,0.08)] backdrop-blur">
+    <div class="mx-auto w-full max-w-[980px] space-y-3 px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-3">
+      <div class="rounded-2xl border border-primary/10 bg-slate-50/90 px-3 py-2.5">
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <p class="truncate text-xs font-semibold text-slate-700">Comanda: {{ alias || 'Sin mesa' }}</p>
+            <p class="mt-0.5 text-[11px] text-slate-500">{{ totalItems }} item{{ totalItems === 1 ? '' : 's' }} en pedido</p>
+          </div>
+
+          <div class="text-right">
+            <p class="text-[10px] uppercase tracking-wide text-slate-400">Total estimado</p>
+            <p class="text-lg font-bold text-primary">${{ total | number:'1.2-2' }}</p>
+          </div>
+        </div>
+
+        <div class="mt-2 flex items-center justify-between">
+          <span class="rounded-full bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">{{ orderType }}</span>
           <button type="button" class="text-xs font-semibold text-primary underline" (click)="toggleCartDetails()">
             {{ cartExpanded ? 'Ocultar detalle' : 'Ver detalle' }}
           </button>
-        </div>
-        <div class="mt-1 flex items-center justify-between text-xs text-muted-foreground">
-          <p>{{ totalItems }} item{{ totalItems === 1 ? '' : 's' }}</p>
-          <p class="font-semibold text-gray-500">Solo comanda</p>
         </div>
       </div>
 
       <div *ngIf="cartExpanded" class="max-h-44 space-y-2 overflow-y-auto rounded-xl border border-primary/10 bg-white p-2">
         <div
           *ngFor="let item of cartService.cart; trackBy: trackByCart"
-          class="flex items-center justify-between rounded-lg border border-gray-100 p-2">
+          class="flex items-center justify-between gap-2 rounded-lg border border-slate-100 p-2">
           <div class="min-w-0">
-            <p class="truncate text-xs font-semibold text-gray-800">{{ item.nombre || item.name }}</p>
-            <p class="text-[11px] text-muted-foreground">Cantidad: {{ item.quantity }}</p>
+            <p class="truncate text-xs font-semibold text-slate-800">{{ item.nombre || item.name }}</p>
+            <p class="text-[11px] text-slate-500">x{{ item.quantity }} | ${{ item.total | number:'1.2-2' }}</p>
           </div>
 
           <div class="flex items-center gap-1">
-            <button type="button" class="h-8 w-8 rounded-lg border text-sm font-bold text-gray-700" (click)="decrease(item)">-</button>
-            <span class="w-7 text-center text-sm font-semibold">{{ item.quantity }}</span>
-            <button type="button" class="h-8 w-8 rounded-lg border text-sm font-bold text-gray-700" (click)="increase(item)">+</button>
-            <button type="button" class="ml-1 h-8 rounded-lg border border-red-200 px-2 text-xs font-semibold text-red-600" (click)="remove(item)">Quitar</button>
+            <button type="button" class="h-8 w-8 rounded-lg border border-slate-200 text-sm font-bold text-slate-700" (click)="decrease(item)">-</button>
+            <span class="w-7 text-center text-sm font-semibold text-slate-700">{{ item.quantity }}</span>
+            <button type="button" class="h-8 w-8 rounded-lg border border-slate-200 text-sm font-bold text-slate-700" (click)="increase(item)">+</button>
+            <button type="button" class="ml-1 h-8 rounded-lg border border-red-200 px-2 text-xs font-semibold text-red-600" (click)="remove(item)">
+              Quitar
+            </button>
           </div>
         </div>
 
-        <p *ngIf="cartService.cart.length === 0" class="py-3 text-center text-xs text-muted-foreground">
+        <p *ngIf="cartService.cart.length === 0" class="py-3 text-center text-xs text-slate-500">
           Aun no has agregado productos.
         </p>
-
       </div>
 
       <div class="grid grid-cols-3 gap-2">
-        <button type="button" class="btn btn-outline col-span-1" (click)="clearCart()" [disabled]="cartService.cart.length === 0">
+        <button
+          type="button"
+          class="col-span-1 min-h-[42px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700"
+          (click)="clearCart()"
+          [disabled]="cartService.cart.length === 0">
           Vaciar
         </button>
 
         <button
           type="button"
-          class="col-span-2 rounded-xl bg-primary px-3 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          class="col-span-2 min-h-[42px] rounded-xl bg-primary px-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           [disabled]="!canSubmitOrder"
           (click)="saveOrderMesero()">
           {{ isSubmittingOrder ? 'Enviando...' : 'Enviar comanda' }}

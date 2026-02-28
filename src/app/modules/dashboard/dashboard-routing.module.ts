@@ -18,6 +18,7 @@ import { CreditNoteDetailPageComponent } from 'src/app/pages/credit-note-detail-
 import { OrdersRealtimeComponent } from 'src/app/pages/orders-realtime/orders-realtime.component';
 import { PosShellComponent } from 'src/app/pages/pos/pos-shell/pos-shell.component';
 import { CajaAbiertaGuard } from 'src/app/core/guards/caja-abierta.guard';
+import { RoleAccessGuard } from 'src/app/core/guards/role-access.guard';
 
 const routes: Routes = [
   {
@@ -46,7 +47,12 @@ const routes: Routes = [
       { path: 'credit-notes', component: CreditNotesComponent },
       { path: 'credit-note/:id', component: CreditNoteDetailPageComponent },
 
-      { path: 'orders-realtime', component: OrdersRealtimeComponent, canActivate: [CajaAbiertaGuard] },
+      {
+        path: 'orders-realtime',
+        component: OrdersRealtimeComponent,
+        canActivate: [RoleAccessGuard],
+        data: { deniedRoles: ['MESERO'] }
+      },
 
       { path: '**', redirectTo: 'errors/404' },
     ],

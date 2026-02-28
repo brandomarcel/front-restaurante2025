@@ -32,7 +32,8 @@ import { CartService } from '../services/cart.service';
   selector: 'app-pos-caja',
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, OnlyNumbersDirective],
-  templateUrl: './pos-caja.component.html'
+  templateUrl: './pos-caja.component.html',
+  styles: [':host { display: block; height: 100%; min-height: 0; }']
 })
 export class PosCajaComponent implements OnInit {
   ambiente = '';

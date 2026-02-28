@@ -9,9 +9,9 @@ type RoleName = 'Cajero' | 'Mesero' | 'Gerente' | 'Desconocido';
 @Component({
   selector: 'app-pos-shell',
   standalone: true,
-  imports: [CommonModule,PosMeseroComponent,PosCajaComponent],
+  imports: [CommonModule, PosMeseroComponent, PosCajaComponent],
   templateUrl: './pos-shell.component.html',
-
+  styles: [':host { display: block; height: 100%; min-height: 0; }'],
 })
 export class PosShellComponent implements OnInit {
 

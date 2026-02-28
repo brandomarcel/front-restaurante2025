@@ -72,9 +72,14 @@ export class SignInComponent implements OnInit {
         this.menu.setMenuForRole(role.roles[0]) ;
         this.spinner.hide();
         this.isSubmitting = false;
+        const roles = Array.isArray(role?.roles) ? role.roles.map((r: string) => String(r || '').toLowerCase()) : [];
 
-        if (role.roles.includes('Mesero')) {
+        if (roles.some((r: string) => r.includes('mesero'))) {
           this._router.navigate(['/dashboard/pos']);
+          return;
+        }
+        if (roles.some((r: string) => r.includes('cocina') || r.includes('chef') || r.includes('kitchen'))) {
+          this._router.navigate(['/dashboard/orders-realtime']);
           return;
         }
         this._router.navigate(['/dashboard']); // Ruta protegida del POS

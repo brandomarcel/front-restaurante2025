@@ -16,7 +16,8 @@ type OrderType = 'Servirse' | 'Llevar' | 'Domicilio';
   selector: 'app-pos-mesero',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './pos-mesero.component.html'
+  templateUrl: './pos-mesero.component.html',
+  styles: [':host { display: block; height: 100%; min-height: 0; }']
 })
 export class PosMeseroComponent implements OnInit {
 

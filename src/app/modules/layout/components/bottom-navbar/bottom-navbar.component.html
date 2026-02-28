@@ -1,24 +1,19 @@
-<!-- <section class="backdrop-blur-xs fixed bottom-0 z-0 block w-full bg-white/50 shadow-sm md:hidden">
-  <div class="flex justify-between text-xs font-semibold text-gray-600">
-    <button class="flex w-full flex-col items-center justify-center pt-3 pb-3 text-center hover:text-gray-800">
-      <svg-icon src="assets/icons/heroicons/outline/bell.svg" [svgClass]="'h-5 w-5'"> </svg-icon>
-      <span class="">Home</span>
-    </button>
-    <button class="flex w-full flex-col items-center justify-center pt-3 pb-3 text-center hover:text-gray-800">
-      <svg-icon src="assets/icons/heroicons/outline/bookmark.svg" [svgClass]="'h-5 w-5'"> </svg-icon>
-      <span class="text-xs">Home</span>
-    </button>
-    <button class="flex w-full flex-col items-center justify-center pt-3 pb-3 text-center hover:text-gray-800">
-      <svg-icon src="assets/icons/heroicons/outline/chart-pie.svg" [svgClass]="'h-5 w-5'"> </svg-icon>
-      <span class="text-xs">Home</span>
-    </button>
-    <button class="flex w-full flex-col items-center justify-center pt-3 pb-3 text-center hover:text-gray-800">
-      <svg-icon src="assets/icons/heroicons/outline/gift.svg" [svgClass]="'h-5 w-5'"> </svg-icon>
-      <span class="text-xs">Home</span>
-    </button>
-    <button class="flex w-full flex-col items-center justify-center pt-3 pb-3 text-center hover:text-gray-800">
-      <svg-icon src="assets/icons/heroicons/outline/information-circle.svg" [svgClass]="'h-5 w-5'"> </svg-icon>
-      <span class="text-xs">Home</span>
-    </button>
+<section
+  *ngIf="items.length > 0"
+  class="fixed bottom-0 left-0 right-0 z-[90] border-t border-slate-200 bg-white/95 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur supports-[backdrop-filter]:bg-white/80"
+>
+  <div
+    class="mx-auto grid max-w-[1720px] gap-1 px-2 pb-[calc(env(safe-area-inset-bottom)+6px)] pt-2"
+    [style.grid-template-columns]="'repeat(' + (items.length > 5 ? 5 : items.length) + ', minmax(0, 1fr))'"
+  >
+    <a
+      *ngFor="let item of items"
+      [routerLink]="item.route || '/dashboard/main'"
+      [ngClass]="menuService.isActive(item.route) ? 'text-primary' : 'text-slate-500'"
+      class="flex min-h-[58px] flex-col items-center justify-center rounded-lg text-center text-[11px] font-semibold transition hover:bg-slate-100"
+    >
+      <svg-icon *ngIf="item.icon" [src]="item.icon" [svgClass]="'h-5 w-5 mb-1'"></svg-icon>
+      <span class="max-w-[70px] truncate">{{ item.label }}</span>
+    </a>
   </div>
-</section> -->
+</section>

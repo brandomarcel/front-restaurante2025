@@ -4,7 +4,7 @@
       <div>
         <h2 class="text-xl font-bold">Ordenes en tiempo real</h2>
         <p class="text-xs text-primary-foreground/80">
-          Perfil actual: {{ roleName }} · Vista {{ modeLabel }}.
+          {{ headerSubtitle }}
         </p>
       </div>
 
@@ -18,16 +18,18 @@
         </span>
 
         <button
+          *ngIf="canSwitchView"
           type="button"
-          class="btn bg-white/20 text-white hover:bg-white/30"
+          class="btn min-h-[44px] bg-white/20 text-white hover:bg-white/30"
           [ngClass]="{ '!bg-white !text-primary': viewMode === 'normal' }"
           (click)="setViewMode('normal')">
           Vista Caja
         </button>
 
         <button
+          *ngIf="canSwitchView"
           type="button"
-          class="btn bg-white/20 text-white hover:bg-white/30"
+          class="btn min-h-[44px] bg-white/20 text-white hover:bg-white/30"
           [ngClass]="{ '!bg-white !text-primary': viewMode === 'cocina' }"
           (click)="setViewMode('cocina')">
           Vista Cocina
@@ -35,7 +37,7 @@
 
         <button
           type="button"
-          class="btn bg-white/20 text-white hover:bg-white/30"
+          class="btn min-h-[44px] bg-white/20 text-white hover:bg-white/30"
           (click)="refreshRealtime()">
           Recargar
         </button>
@@ -50,9 +52,9 @@
           class="input"
           type="text"
           [(ngModel)]="search"
-          placeholder="Buscar por #orden, alias, cliente, identificacion, SRI o usuario..." />
+          [placeholder]="isCocinaOnly ? 'Buscar por #orden, alias o cliente...' : 'Buscar por #orden, alias, cliente, identificacion, SRI o usuario...'" />
 
-        <select class="select sm:max-w-[220px]" [(ngModel)]="statusFilter">
+        <select *ngIf="!isCocinaOnly" class="select sm:max-w-[220px]" [(ngModel)]="statusFilter">
           <option *ngFor="let opt of statusFilters" [ngValue]="opt.value">
             {{ opt.label }}
           </option>
@@ -70,7 +72,7 @@
       <span class="badge badge-red">Ingresadas: {{ countIngresadas }}</span>
       <span class="badge badge-yellow">Preparacion: {{ countPreparacion }}</span>
       <span class="badge badge-green">Cerradas: {{ countCerradas }}</span>
-      <span class="badge badge-gray">Venta: {{ totalSales | currency:'USD':'symbol':'1.2-2' }}</span>
+      <span *ngIf="!isCocinaOnly" class="badge badge-gray">Venta: {{ totalSales | currency:'USD':'symbol':'1.2-2' }}</span>
     </div>
   </section>
 

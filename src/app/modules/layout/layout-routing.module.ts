@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+import { RoleAccessGuard } from 'src/app/core/guards/role-access.guard';
 import { LayoutComponent } from './layout.component';
 
 const routes: Routes = [
@@ -17,6 +18,8 @@ const routes: Routes = [
 {
   path: 'caja',
   component: LayoutComponent,
+  canActivate: [RoleAccessGuard],
+  data: { allowedRoles: ['GERENTE', 'CAJERO'] },
   loadChildren: () => import('../caja/caja.module').then((m) => m.CajaModule),
 },
 

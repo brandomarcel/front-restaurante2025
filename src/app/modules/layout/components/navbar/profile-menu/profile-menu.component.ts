@@ -79,7 +79,7 @@ export class ProfileMenuComponent implements OnInit {
   public themeDirection = ['ltr', 'rtl'];
 
   public user: any = {};
-  public roleUpper: Role | null = null; // 'GERENTE' | 'CAJERO' | null
+  public roleUpper: Role | null = null; // 'GERENTE' | 'CAJERO' | 'MESERO' | 'COCINA'
 
   constructor(public themeService: ThemeService, private authService: AuthService) {}
 
@@ -95,7 +95,9 @@ export class ProfileMenuComponent implements OnInit {
       '';
 
     const r = String(rawRole).trim().toUpperCase();
-    this.roleUpper = r === 'GERENTE' || r === 'CAJERO' || r === 'MESERO' ? (r as Role) : null;
+    this.roleUpper = r === 'GERENTE' || r === 'CAJERO' || r === 'MESERO' || r === 'COCINA'
+      ? (r as Role)
+      : null;
 
     // Filtra los ítems del menú en base al rol
     this.visibleProfileMenu = this.profileMenu.filter(item =>
@@ -136,6 +138,7 @@ export class ProfileMenuComponent implements OnInit {
     if (this.roleUpper === 'GERENTE') return 'Gerente';
     if (this.roleUpper === 'CAJERO') return 'Cajero';
     if (this.roleUpper === 'MESERO') return 'Mesero';
+    if (this.roleUpper === 'COCINA') return 'Cocina';
     return 'Usuario';
   }
 
@@ -143,6 +146,7 @@ export class ProfileMenuComponent implements OnInit {
     if (this.roleUpper === 'GERENTE') return 'bg-emerald-100 text-emerald-700';
     if (this.roleUpper === 'CAJERO') return 'bg-sky-100 text-sky-700';
     if (this.roleUpper === 'MESERO') return 'bg-violet-100 text-violet-700';
+    if (this.roleUpper === 'COCINA') return 'bg-amber-100 text-amber-700';
     return 'bg-gray-100 text-gray-700';
   }
 }
