@@ -229,6 +229,7 @@ export class PosCajaComponent implements OnInit {
   applyFilters(): void {
     const term = this.normalize(this.searchTerm);
     const selectedCat = this.normalize(this.selectedCategory);
+    this.sanitizeFavorites();
 
     const filtered = (this.products || []).filter((product: any) => {
       const prodCat = this.normalize(this.getProductCategoryName(product));
@@ -243,6 +244,12 @@ export class PosCajaComponent implements OnInit {
     this.filteredProductList = filtered
       .map((product: any, index: number) => ({ product, index }))
       .sort((a, b) => {
+        const aOut = a.product?.is_out_of_stock ? 1 : 0;
+        const bOut = b.product?.is_out_of_stock ? 1 : 0;
+        if (aOut !== bOut) {
+          return aOut - bOut;
+        }
+
         const aFav = this.isFavorite(a.product) ? 1 : 0;
         const bFav = this.isFavorite(b.product) ? 1 : 0;
         if (bFav !== aFav) {
@@ -434,8 +441,14 @@ export class PosCajaComponent implements OnInit {
   toggleFavorite(product: any): void {
     const key = this.getProductKey(product);
     if (!key) return;
+    const alreadyFavorite = this.favoriteProductKeys.has(key);
 
-    if (this.favoriteProductKeys.has(key)) {
+    if (!alreadyFavorite && product?.is_out_of_stock) {
+      toast.warning('No puedes marcar como favorito un producto agotado.');
+      return;
+    }
+
+    if (alreadyFavorite) {
       this.favoriteProductKeys.delete(key);
     } else {
       this.favoriteProductKeys.add(key);
@@ -679,10 +692,30 @@ export class PosCajaComponent implements OnInit {
   }
 
   private syncFavoriteProducts(): void {
+    this.sanitizeFavorites();
     this.favoriteProducts = this.filteredProductList.filter((product: any) => this.isFavorite(product));
   }
 
   private getProductKey(product: any): string {
     return String(product?.name || product?.id || product?.codigo || product?.nombre || '').trim();
+  }
+
+  private sanitizeFavorites(): void {
+    const availableKeys = new Set(
+      (this.products || [])
+        .filter((product: any) => !product?.is_out_of_stock)
+        .map((product: any) => this.getProductKey(product))
+        .filter((key: string) => !!key)
+    );
+
+    let changed = false;
+    for (const key of Array.from(this.favoriteProductKeys)) {
+      if (!availableKeys.has(key)) {
+        this.favoriteProductKeys.delete(key);
+        changed = true;
+      }
+    }
+
+    if (changed) this.persistFavorites();
   }
 }
