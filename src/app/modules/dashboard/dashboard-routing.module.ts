@@ -17,6 +17,7 @@ import { CreditNotesComponent } from 'src/app/pages/credit-notes/credit-notes.co
 import { CreditNoteDetailPageComponent } from 'src/app/pages/credit-note-detail-page/credit-note-detail-page.component';
 import { OrdersRealtimeComponent } from 'src/app/pages/orders-realtime/orders-realtime.component';
 import { PosShellComponent } from 'src/app/pages/pos/pos-shell/pos-shell.component';
+import { CajaAbiertaGuard } from 'src/app/core/guards/caja-abierta.guard';
 
 const routes: Routes = [
   {
@@ -26,18 +27,18 @@ const routes: Routes = [
       { path: '', redirectTo: 'main', pathMatch: 'full' },
       { path: 'main', component: NftComponent },
       // { path: 'pos', component: PosComponent },
-      { path: 'pos', component: PosShellComponent },
+      { path: 'pos', component: PosShellComponent, canActivate: [CajaAbiertaGuard] },
       { path: 'customers', component: CustomersComponent },
       { path: 'products', component: ProductsComponent },
       { path: 'company', component: CompanyComponent },
       { path: 'orders', component: OrdersComponent },
-      { path: 'orders/:id', component: OrderDetailPageComponent },
+      { path: 'orders/:id', component: OrderDetailPageComponent, canActivate: [CajaAbiertaGuard] },
 
       { path: 'categories', component: CategorysComponent },
       { path: 'users', component: UsersComponent },
       
-      { path: 'invoicing',component: InvoicingComponent},
-      { path: 'invoicing/:order_name',component: InvoicingComponent},
+      { path: 'invoicing', component: InvoicingComponent, canActivate: [CajaAbiertaGuard] },
+      { path: 'invoicing/:order_name', component: InvoicingComponent, canActivate: [CajaAbiertaGuard] },
 
       { path: 'invoices', component: InvoicesComponent },
       { path: 'invoices/:id', component: InvoiceDetailPageComponent },
@@ -45,7 +46,7 @@ const routes: Routes = [
       { path: 'credit-notes', component: CreditNotesComponent },
       { path: 'credit-note/:id', component: CreditNoteDetailPageComponent },
 
-      { path: 'orders-realtime', component: OrdersRealtimeComponent },
+      { path: 'orders-realtime', component: OrdersRealtimeComponent, canActivate: [CajaAbiertaGuard] },
 
       { path: '**', redirectTo: 'errors/404' },
     ],
