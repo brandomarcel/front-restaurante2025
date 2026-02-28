@@ -43,9 +43,6 @@
             <!-- <svg-icon src="assets/icons/heroicons/outline/chevron-down.svg" svgClass="h-4 w-4"></svg-icon> -->
           </button>
 
-          <div *ngIf="!mobile && !menuService.showSideBar" class="menu-tooltip">
-            {{ item.label }}
-          </div>
         </div>
 
         <app-sidebar-submenu [submenu]="item" [mobile]="mobile"></app-sidebar-submenu>

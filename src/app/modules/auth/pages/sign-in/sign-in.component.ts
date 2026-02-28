@@ -64,9 +64,13 @@ export class SignInComponent implements OnInit {
     this.submitted = true;
 
     if (this.form.invalid) return;
+    const username = String(this.form.value.email || '').trim();
+    const password = String(this.form.value.password || '');
+    if (!username || !password) return;
+
     this.isSubmitting = true;
     this.spinner.show();
-    this.authService.login(this.form.value.email, this.form.value.password).subscribe({
+    this.authService.login(username, password).subscribe({
       next: (res:any) => {
         const role: any = this.auth.getCurrentUser();
         this.menu.setMenuForRole(role.roles[0]) ;

@@ -7,3 +7,7 @@
 .is__invalid-error {
   @apply px-1 pt-1 text-xs text-destructive;
 }
+
+.input-icon {
+  @apply text-muted-foreground pointer-events-none absolute left-3 top-2.5 z-20;
+}

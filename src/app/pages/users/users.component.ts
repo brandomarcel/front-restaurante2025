@@ -1,29 +1,24 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { NgxPaginationModule } from 'ngx-pagination';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { RoleKey, UserItem } from 'src/app/core/models/user_item';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { UserService } from 'src/app/services/user.service';
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
-import { state } from '@angular/animations';
 import { AuthService } from '../../services/auth.service';
 
 
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, NgxPaginationModule, FormsModule, ButtonComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, ButtonComponent],
   templateUrl: './users.component.html',
 })
 export class UsersComponent implements OnInit {
   users: UserItem[] = [];
   filtered: UserItem[] = [];
-
-  page = 1;
-  pageSize = 10;
 
   mostrarModal = false;
   editando: UserItem | null = null;
@@ -31,11 +26,14 @@ export class UsersComponent implements OnInit {
   form!: FormGroup;
 
   userLoged: any;
+  roleFilter: 'all' | RoleKey = 'all';
 
   // filtro rápido
   private _search = '';
   get search() { return this._search; }
   set search(v: string) { this._search = v || ''; this.filtrar(); }
+  get activeCount() { return this.filtered.filter(u => !!u.enabled).length; }
+  get inactiveCount() { return this.filtered.length - this.activeCount; }
 
   roles: { value: RoleKey; label: string }[] = [
     { value: 'gerente', label: 'Gerente' },
@@ -55,7 +53,6 @@ export class UsersComponent implements OnInit {
     this.cargar();
     this.initForm();
     this.userLoged = JSON.parse(localStorage.getItem('user') || '{}');
-    console.log('userLoged', this.userLoged.email);
   }
 
   initForm() {
@@ -77,10 +74,8 @@ export class UsersComponent implements OnInit {
       limit: 1000
     }).subscribe({
       next: (rows) => {
-        console.log('rows', rows);
         this.spinner.hide();
         this.users = rows;
-        console.log('users', this.users);
         this.filtrar();
       },
       error: () => this.spinner.hide()
@@ -112,13 +107,19 @@ export class UsersComponent implements OnInit {
 
   filtrar() {
     const t = (this._search || '').toLowerCase();
-    this.filtered = (this.users || []).filter(u =>
-      (u.email && u.email.toLowerCase().includes(t)) ||
-      (u.first_name && u.first_name.toLowerCase().includes(t)) ||
-      (u.last_name && u.last_name.toLowerCase().includes(t))
-    );
-    console.log('filtered', this.filtered);
-    this.page = 1;
+    this.filtered = (this.users || []).filter(u => {
+      const matchesSearch =
+        (u.email && u.email.toLowerCase().includes(t)) ||
+        (u.first_name && u.first_name.toLowerCase().includes(t)) ||
+        (u.last_name && u.last_name.toLowerCase().includes(t));
+      const matchesRole = this.roleFilter === 'all' || u.role_key === this.roleFilter;
+      return !!matchesSearch && matchesRole;
+    });
+  }
+
+  setRoleFilter(role: 'all' | RoleKey) {
+    this.roleFilter = role;
+    this.filtrar();
   }
 
   guardar() {
@@ -166,22 +167,17 @@ export class UsersComponent implements OnInit {
   }
 
   async toggleEnabled(u: UserItem) {
-
-    console.log('toggleEnabled', u);
     const estado = u.enabled ? 'deshabilitar' : 'habilitar';
     this.alertService.confirm(`¿Desea ${estado} al usuario ${u.email}?`).then(res => {
-      console.log('res', res);
       if (res.isConfirmed) {
 
         const desired = !(u.enabled ?? 1);
         this.usersService.setEnabled(u.email, desired).subscribe({
           next: (response) => {
-            console.log('response', response);
-            const res = response?.message;
+            const server = response?.message;
             u.enabled = desired ? 1 : 0;
             toast.success(desired ? 'Usuario habilitado' : 'Usuario deshabilitado');
-            if (!res.enabled && this.userLoged.email === res.user) {
-              console.log('logout');
+            if (server && !server.enabled && this.userLoged.email === server.user) {
               this.authService.goLogin();
             }
           }

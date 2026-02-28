@@ -4,20 +4,21 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractContro
 import { Router, RouterLink } from '@angular/router';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
 import { RegisterCompanyService } from 'src/app/services/register-company.service';
-import { CompanyInfo } from 'src/app/services/company.service';
 import { toast } from 'ngx-sonner';
-import { OnlyNumbersDirective } from "src/app/core/directives/only-numbers.directive"; // si usas ngx-sonner
+import { OnlyNumbersDirective } from 'src/app/core/directives/only-numbers.directive';
 @Component({
   selector: 'app-register-company',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, NgxSpinnerModule, RouterLink, OnlyNumbersDirective],
-  templateUrl: './register-company.component.html'
+  templateUrl: './register-company.component.html',
+  styleUrls: ['./register-company.component.css']
 })
 export class RegisterCompanyComponent {
   form: FormGroup;
   step = 1;
   submitted = false;
   showPass = false;
+  isSubmitting = false;
 
   // Logo
   logoFile: File | null = null;
@@ -123,6 +124,7 @@ export class RegisterCompanyComponent {
 
 
 submit() {
+  if (this.isSubmitting) return;
   this.submitted = true;
 
   // Si intentan enviar antes del último paso, valida y detente.
@@ -168,6 +170,7 @@ submit() {
     ? { filename: this.logoFile.name, data: this.logoPreview, is_private: 0 as 0 | 1 }
     : undefined;
 
+  this.isSubmitting = true;
   this.spinner.show();
 
   this.registerSvc.registerTenantOpen({
@@ -177,6 +180,7 @@ submit() {
     add_permission: true
   }).subscribe({
     next: (res: any) => {
+      this.isSubmitting = false;
       this.spinner.hide();
       const companyName = res?.company || companyPayload.businessname;
       const userName = res?.user || userPayload.email;
@@ -193,9 +197,10 @@ submit() {
       this.logoPreview = null;
 
       // Redirige (ajusta ruta según tu app)
-      this.router.navigate(['/auth/login']);
+      this.router.navigate(['/auth/sign-in']);
     },
     error: (err) => {
+      this.isSubmitting = false;
       this.spinner.hide();
       const msg = this.parseFrappeError(err);
       toast.error(msg);

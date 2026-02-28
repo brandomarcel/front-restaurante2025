@@ -1,6 +1,6 @@
 <nav
   [ngClass]="menuService.showSideBar ? 'w-[240px] 2xl:w-[304px] min-w-[240px] 2xl:min-w-[304px]' : 'w-[76px] min-w-[76px]'"
-  class="hidden h-full min-h-0 flex-col justify-between border-r border-slate-200 bg-background pt-3 transition-[width] duration-300 motion-reduce:transition-none xl:flex"
+  class="hidden h-full min-h-0 flex-col justify-between overflow-x-hidden border-r border-slate-200 bg-background pt-3 transition-[width] duration-300 motion-reduce:transition-none xl:flex"
   role="navigation"
   aria-label="Sidebar"
 >
@@ -41,24 +41,23 @@
 
     <div
       id="sidebar-menu"
-      class="flex-1 min-h-0 overflow-auto px-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400"
+      class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400"
     >
       <app-sidebar-menu></app-sidebar-menu>
     </div>
   </div>
 
   <div class="mx-4 my-4 space-y-1 shrink-0">
-    <div class="rounded-sm hover:bg-card group relative flex h-9 cursor-default items-center justify-start p-2">
+    <div
+      class="rounded-sm hover:bg-card group relative flex h-9 cursor-default items-center justify-start p-2"
+      [attr.title]="!menuService.showSideBar ? ('Version v' + appJson.version) : null"
+    >
       <svg-icon src="assets/icons/heroicons/outline/information-circle.svg" [svgClass]="'h-5 w-5 text-muted-foreground/50'"></svg-icon>
-      <div class="ml-3 truncate text-[10px] font-semibold tracking-wide focus:outline-none">
+      <div
+        class="ml-3 truncate text-[10px] font-semibold tracking-wide focus:outline-none"
+        [ngClass]="{ 'hidden': !menuService.showSideBar }"
+      >
         <span class="bg-primary/10 text-primary px-2 font-semibold">v{{ appJson.version }}</span>
-      </div>
-      <div class="absolute left-12 -top-4" *ngIf="!menuService.showSideBar">
-        <span
-          class="bg-foreground text-background w-max origin-left scale-0 p-2 text-xs font-bold shadow-md transition-transform duration-200 group-hover:scale-100 pointer-events-none z-10"
-        >
-          v{{ appJson.version }}
-        </span>
       </div>
     </div>
   </div>
@@ -96,7 +95,7 @@
       </button>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-auto px-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
+    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
       <app-sidebar-menu [mobile]="true"></app-sidebar-menu>
     </div>
 

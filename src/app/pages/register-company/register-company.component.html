@@ -2,66 +2,61 @@
 <ngx-spinner bdColor="rgba(0,0,0,0.75)" size="large" color="#001c71" type="ball-scale-multiple" [fullScreen]="true">
     <p style="color:#f5ae1c">Cargando...</p>
 </ngx-spinner>
-<!-- Fondo a pantalla completa -->
-<div class="min-h-screen relative bg-gradient-to-br from-primary/10 via-background to-background">
-    <!-- Header con volver -->
-    <header class="container mx-auto flex items-center justify-between px-4 py-4 text-xs">
-        <a routerLink="/" class="flex items-center gap-2 font-semibold text-foreground">
-            <span
-                class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">FA</span>
-            FacturADA
-        </a>
+<div class="register-page">
+    <header class="register-topbar">
+        <div class="register-topbar-inner">
+            <a routerLink="/" class="flex items-center gap-2 font-semibold text-foreground">
+                <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">FA</span>
+                FacturADA
+            </a>
 
-        <a routerLink="/auth/login"
-            class="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 hover:bg-foreground/5 transition">
-            ← Volver al login
-        </a>
+            <a routerLink="/auth/sign-in" class="btn btn-light">
+                ← Volver al login
+            </a>
+        </div>
     </header>
 
-    <!-- Card central SOLO con el formulario -->
-    <div class="container mx-auto px-4 pb-10">
-        <main class="mx-auto w-full max-w-7xl overflow-hidden rounded-2xl border border-black/5 bg-white shadow-2xl">
-            <div class="p-5 md:p-8">
-
-                <!-- Título -->
+    <div class="register-content">
+        <main class="register-card">
+            <div class="register-card-body">
                 <div class="mb-4">
-                    <h2 class="text-lg font-semibold text-primary">Crear cuenta y empresa</h2>
-                    <p class="text-muted-foreground text-[11px]">Configura tu usuario, la compañía y SRI</p>
+                    <h2 class="register-title">Crear cuenta y empresa</h2>
+                    <p class="register-subtitle">Configura tu usuario, la compañía y facturación inicial.</p>
                 </div>
 
-                <!-- Stepper full width -->
-                <ol class="mb-5 grid grid-cols-2 gap-3 text-[11px] sm:grid-cols-4">
-                    <li class="flex items-center gap-2">
-                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full"
-                            [ngClass]="step>=1 ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-600'">1</span>
-                        <span [class.text-gray-400]="step!==1">Cuenta</span>
-                    </li>
-                    <li class="flex items-center gap-2">
-                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full"
-                            [ngClass]="step>=2 ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-600'">2</span>
-                        <span [class.text-gray-400]="step!==2">Compañía</span>
-                    </li>
-                    <li class="flex items-center gap-2">
-                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full"
-                            [ngClass]="step>=3 ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-600'">3</span>
-                        <span [class.text-gray-400]="step!==3">SRI y Secuencias</span>
-                    </li>
-                    <li class="flex items-center gap-2">
-                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full"
-                            [ngClass]="step>=4 ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-600'">4</span>
-                        <span [class.text-gray-400]="step!==4">Revisión</span>
-                    </li>
-                </ol>
+                <div class="stepper-wrap">
+                    <div class="step-progress-track">
+                        <div class="step-progress-fill" [style.width.%]="step * 25"></div>
+                    </div>
+                    <ol class="stepper">
+                        <li class="stepper-item" [ngClass]="{ 'is-active': step===1, 'is-done': step>1 }">
+                            <span class="stepper-dot">1</span>
+                            <span class="stepper-text">Cuenta</span>
+                        </li>
+                        <li class="stepper-item" [ngClass]="{ 'is-active': step===2, 'is-done': step>2 }">
+                            <span class="stepper-dot">2</span>
+                            <span class="stepper-text">Compañía</span>
+                        </li>
+                        <li class="stepper-item" [ngClass]="{ 'is-active': step===3, 'is-done': step>3 }">
+                            <span class="stepper-dot">3</span>
+                            <span class="stepper-text">SRI y Secuencias</span>
+                        </li>
+                        <li class="stepper-item" [ngClass]="{ 'is-active': step===4, 'is-done': step>4 }">
+                            <span class="stepper-dot">4</span>
+                            <span class="stepper-text">Revisión</span>
+                        </li>
+                    </ol>
+                </div>
 
 
 
                 <!-- FORM (tus mismos controles) -->
-                <form [formGroup]="form" (ngSubmit)="submit()">
+                <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-4">
 
                     <!-- PASO 1 -->
-                    <div *ngIf="step===1" class="grid gap-3 md:grid-cols-2">
+                    <div *ngIf="step===1" class="form-step grid gap-3 md:grid-cols-2">
                         <div class="md:col-span-2">
-                            <h3 class="text-sm font-semibold text-gray-700">Cuenta del administrador</h3>
+                            <h3 class="section-title">Cuenta del administrador</h3>
                         </div>
 
                         <div>
@@ -82,7 +77,13 @@
 
                         <div>
                             <label class="block mb-1 font-medium">Contraseña</label>
-                            <input autocomplete="new-password" [type]="showPass ? 'text':'password'" class="input" formControlName="password" />
+                            <div class="relative">
+                                <input autocomplete="new-password" [type]="showPass ? 'text':'password'" class="input pr-20" formControlName="password" />
+                                <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-100"
+                                    (click)="showPass=!showPass">
+                                    {{ showPass ? 'Ocultar' : 'Mostrar' }}
+                                </button>
+                            </div>
                             <small *ngIf="submitted && f['password'].invalid" class="text-red-600">Mínimo 8
                                 caracteres</small>
                         </div>
@@ -107,9 +108,9 @@
                     </div>
 
                     <!-- PASO 2 -->
-                    <div *ngIf="step===2" class="grid gap-3 md:grid-cols-2">
+                    <div *ngIf="step===2" class="form-step grid gap-3 md:grid-cols-2">
                         <div class="md:col-span-2">
-                            <h3 class="text-sm font-semibold text-gray-700">Datos de la empresa</h3>
+                            <h3 class="section-title">Datos de la empresa</h3>
                         </div>
 
                         <div>
@@ -121,7 +122,7 @@
 
                         <div>
                             <label class="block mb-1 font-medium">RUC</label>
-                            <input class="input no-spinner" formControlName="ruc" maxlength="13" />
+                            <input class="input no-spinner" formControlName="ruc" maxlength="13" appOnlyNumbers />
                             <small *ngIf="submitted && f['ruc'].errors?.['required']" class="text-red-600">Campo
                                 requerido</small>
                             <small *ngIf="submitted && f['ruc'].errors?.['pattern']" class="text-red-600">Debe tener 13
@@ -137,7 +138,7 @@
 
                         <div>
                             <label class="block mb-1 font-medium">Teléfono</label>
-                            <input class="input" formControlName="company_phone" />
+                            <input class="input no-spinner" formControlName="company_phone" maxlength="10" appOnlyNumbers />
                             <small *ngIf="submitted && f['company_phone'].invalid" class="text-red-600">Campo
                                 requerido</small>
                         </div>
@@ -157,12 +158,12 @@
                             <div class="flex flex-wrap items-center gap-2">
                                 <input #logoInput type="file" accept="image/*" class="sr-only"
                                     (change)="onLogoSelected($event)" />
-                                <button type="button" class="rounded-md border px-3 py-1.5 hover:bg-gray-50"
+                                <button type="button" class="btn btn-outline"
                                     (click)="logoInput.click()">Seleccionar logo</button>
                                 <span class="text-gray-600 truncate max-w-[240px]">
                                     {{ logoFileName || 'Ningún archivo seleccionado' }}
                                 </span>
-                                <button type="button" class="rounded-md px-3 py-1.5 hover:bg-gray-50"
+                                <button type="button" class="btn btn-light"
                                     (click)="removeLogo()" [disabled]="!logoPreview && !logoFileName">
                                     Quitar logo
                                 </button>
@@ -175,8 +176,8 @@
                     </div>
 
                     <!-- PASO 3 -->
-                    <div *ngIf="step===3" class="space-y-3">
-                        <h3 class="text-sm font-semibold text-gray-700">SRI y Secuencias</h3>
+                    <div *ngIf="step===3" class="form-step space-y-3">
+                        <h3 class="section-title">SRI y Secuencias</h3>
 
                         <label class="inline-flex items-center cursor-pointer relative">
                             <input type="checkbox" class="sr-only peer" formControlName="ambiente_bool"
@@ -228,14 +229,14 @@
                             </div>
 
                             <div>
-                                <label class="block mb-1 font-medium">Secuencia Nota de Creditol (PRODUCCIÓN)</label>
+                                <label class="block mb-1 font-medium">Secuencia Nota de Crédito (PRODUCCIÓN)</label>
                                 <input type="number" class="input no-spinner" formControlName="ncseq_prod" />
                                 <small *ngIf="submitted && f['ncseq_prod'].invalid" class="text-red-600">Campo
                                     requerido</small>
                             </div>
 
                             <div>
-                                <label class="block mb-1 font-medium">Secuencial Nota de Credito (PRUEBAS)</label>
+                                <label class="block mb-1 font-medium">Secuencial Nota de Crédito (PRUEBAS)</label>
                                 <input type="number" class="input no-spinner" formControlName="ncseq_pruebas" />
                                 <small *ngIf="submitted && f['ncseq_pruebas'].invalid" class="text-red-600">Campo
                                     requerido</small>
@@ -245,8 +246,8 @@
                     </div>
 
                     <!-- PASO 4 -->
-                    <div *ngIf="step===4" class="space-y-3">
-                        <h3 class="text-sm font-semibold text-gray-700">Revisión</h3>
+                    <div *ngIf="step===4" class="form-step space-y-3">
+                        <h3 class="section-title">Revisión</h3>
 
                         <div class="grid md:grid-cols-2 gap-3">
                             <div class="rounded-lg border p-4">
@@ -272,28 +273,30 @@
                                         Emisión:</strong> {{ form.value.emissionpoint }}</div>
                                 <div><strong>Sec. Factura (PRODUCCIÓN):</strong> {{ form.value.invoiceseq_prod }}</div>
                                 <div><strong>Sec. Factura (PRUEBAS):</strong> {{ form.value.invoiceseq_pruebas }}</div>
-                                <div><strong>Sec. Nota de Credito (PRODUCCIÓN) :</strong> {{ form.value.ncseq_prod }}</div>
-                                 <div><strong>Sec. Nota de Credito (PRUEBAS) :</strong> {{ form.value.ncseq_pruebas }}</div>
+                                <div><strong>Sec. Nota de Crédito (PRODUCCIÓN) :</strong> {{ form.value.ncseq_prod }}</div>
+                                 <div><strong>Sec. Nota de Crédito (PRUEBAS) :</strong> {{ form.value.ncseq_pruebas }}</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Controles -->
-                    <div class="mt-5 flex items-center justify-between">
-                        <button type="button" class="rounded-md px-3 py-1.5 hover:bg-gray-50 border"
-                            (click)="prevStep()" [disabled]="step===1">
+                    <div class="actions-bar">
+                        <button type="button" class="btn btn-outline"
+                            (click)="prevStep()" [disabled]="step===1 || isSubmitting">
                             Atrás
                         </button>
 
-                        <div class="flex gap-2">
-                            <a routerLink="/auth/login"
-                                class="rounded-md px-3 py-1.5 hover:bg-gray-50 border">Cancelar</a>
+                        <div class="actions-right">
+                            <a routerLink="/auth/sign-in"
+                                class="btn btn-light">Cancelar</a>
                             <button *ngIf="step<4" type="button"
-                                class="rounded-md px-3 py-1.5 text-white bg-primary hover:opacity-90"
+                                class="btn btn-primary"
+                                [disabled]="isSubmitting"
                                 (click)="nextStep()">Siguiente</button>
                             <button *ngIf="step===4" type="submit"
-                                class="rounded-md px-3 py-1.5 text-white bg-primary hover:opacity-90">
-                                Crear cuenta y empresa
+                                [disabled]="isSubmitting"
+                                class="btn btn-primary">
+                                {{ isSubmitting ? 'Creando...' : 'Crear cuenta y empresa' }}
                             </button>
                         </div>
                     </div>

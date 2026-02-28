@@ -1,0 +1,127 @@
+@import '../../../styles.css';
+
+:host {
+  @apply block h-full;
+}
+
+.register-page {
+  @apply relative h-screen overflow-y-auto bg-gradient-to-br from-primary/10 via-background to-background;
+}
+
+.register-topbar {
+  @apply sticky top-0 z-20 border-b border-black/5 bg-white/90 backdrop-blur;
+}
+
+.register-topbar-inner {
+  @apply mx-auto flex max-w-7xl items-center justify-between px-4 py-3 text-xs;
+}
+
+.register-content {
+  @apply mx-auto max-w-7xl px-4 py-6;
+}
+
+.register-card {
+  @apply rounded-2xl border border-black/5 bg-white shadow-xl;
+}
+
+.register-card-body {
+  @apply p-5 md:p-7;
+}
+
+.register-title {
+  @apply text-lg font-semibold text-primary;
+}
+
+.register-subtitle {
+  @apply text-[11px] text-muted-foreground;
+}
+
+.stepper-wrap {
+  @apply mb-5;
+}
+
+.step-progress-track {
+  @apply mb-3 h-1.5 rounded-full bg-slate-200;
+}
+
+.step-progress-fill {
+  @apply h-full rounded-full bg-primary transition-all duration-300;
+}
+
+.stepper {
+  @apply grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4;
+}
+
+.stepper-item {
+  @apply flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-slate-500;
+}
+
+.stepper-dot {
+  @apply inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[11px] font-semibold text-slate-700;
+}
+
+.stepper-text {
+  @apply truncate font-medium;
+}
+
+.stepper-item.is-active {
+  @apply border-primary/40 bg-primary/5 text-slate-900;
+}
+
+.stepper-item.is-active .stepper-dot {
+  @apply bg-primary text-white;
+}
+
+.stepper-item.is-done {
+  @apply border-emerald-300 bg-emerald-50 text-slate-900;
+}
+
+.stepper-item.is-done .stepper-dot {
+  @apply bg-emerald-500 text-white;
+}
+
+.form-step {
+  @apply rounded-xl border border-slate-200 bg-slate-50/40 p-4;
+}
+
+.section-title {
+  @apply text-sm font-semibold text-slate-700;
+}
+
+.actions-bar {
+  @apply mt-2 flex items-center justify-between border-t border-slate-200 pt-4;
+}
+
+.actions-right {
+  @apply flex gap-2;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-xs font-medium transition;
+}
+
+.btn:disabled {
+  @apply cursor-not-allowed opacity-60;
+}
+
+.btn-primary {
+  @apply border-primary bg-primary text-white hover:opacity-90;
+}
+
+.btn-outline {
+  @apply border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+}
+
+.btn-light {
+  @apply border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+}
+
+@media (max-width: 640px) {
+  .actions-bar {
+    @apply flex-col items-stretch gap-2;
+  }
+
+  .actions-right {
+    @apply w-full justify-end;
+  }
+}

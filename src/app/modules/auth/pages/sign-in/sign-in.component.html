@@ -3,29 +3,26 @@
 <ngx-spinner bdColor="rgba(0, 0, 0, 0.8)" size="large" color="#001c71" type="ball-scale-multiple" [fullScreen]="true">
   <p style="color: #f5ae1c"> Cargando... </p>
 </ngx-spinner>
-<form class="my-8 space-y-6" [formGroup]="form" (ngSubmit)="onSubmit()">
-  <div class="text-center">
-    <h2 class="text-foreground mb-1 text-3xl font-semibold">Iniciar sesión <span class="text-primary">POS</span></h2>
-    <p class="text-muted-foreground text-sm">Accede para facturar, cobrar y controlar tu caja.</p>
+<form class="my-6 space-y-5" [formGroup]="form" (ngSubmit)="onSubmit()">
+  <div class="space-y-2 text-center">
+    <h2 class="text-foreground text-3xl font-semibold">Iniciar sesión</h2>
+    <p class="text-muted-foreground text-sm">Ingresa tus credenciales para continuar.</p>
   </div>
 
-  <!-- <div class="grid grid-cols-3 gap-2 rounded-lg bg-primary/5 p-2 text-center text-[11px] font-medium">
-    <div class="rounded-md bg-white py-1 text-primary ring-1 ring-primary/15">Facturación</div>
-    <div class="rounded-md bg-white py-1 text-primary ring-1 ring-primary/15">POS</div>
-    <div class="rounded-md bg-white py-1 text-primary ring-1 ring-primary/15">Caja</div>
-  </div> -->
-
-  <div class="space-y-3 text-left">
+  <div class="space-y-4 text-left">
     <div class="form__group">
       <div class="relative">
+        <span class="input-icon">
+          <svg-icon src="assets/icons/heroicons/outline/user-circle.svg" [svgClass]="'h-5 w-5'"></svg-icon>
+        </span>
         <input
-          type="email"
+          type="text"
           id="email"
           [ngClass]="{ 'is__invalid-input': submitted && f['email'].errors }"
-          class="peer block"
+          class="peer block ps-10"
           placeholder=" "
           formControlName="email"
-          autocomplete="email" />
+          autocomplete="username" />
         <label
           for="email"
           [ngClass]="{ 'peer-focus:text-destructive!': submitted && f['email'].errors }"
@@ -35,17 +32,19 @@
       </div>
       <div *ngIf="submitted && f['email'].errors" class="is__invalid-error">
         <div *ngIf="f['email'].errors['required']">Campo obligatorio</div>
-        <div *ngIf="f['email'].errors['email']">Debe ser un correo electrónico válido</div>
       </div>
     </div>
 
     <div class="form__group">
       <div class="relative">
+        <span class="input-icon">
+          <svg-icon src="assets/icons/heroicons/outline/lock-closed.svg" [svgClass]="'h-5 w-5'"></svg-icon>
+        </span>
         <input
           [type]="passwordTextType ? 'text' : 'password'"
           id="password"
           [ngClass]="{ 'is__invalid-input': submitted && f['password'].errors }"
-          class="peer block"
+          class="peer block ps-10"
           placeholder=" "
           formControlName="password"
           autocomplete="current-password" />
@@ -55,9 +54,11 @@
           class="bg-background text-muted-foreground peer-focus:text-primary absolute top-2 z-10 origin-[0] -translate-y-4 scale-95 transform px-2 text-sm duration-300 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-95 peer-focus:px-2 ltr:left-1 rtl:right-1">
           Contraseña
         </label>
-        <span
-          class="text-muted-foreground absolute top-2 cursor-pointer ltr:right-3 rtl:left-3"
-          (click)="togglePasswordTextType()">
+        <button
+          type="button"
+          class="text-muted-foreground absolute top-2 rounded p-1 transition hover:bg-slate-100 ltr:right-2 rtl:left-2"
+          (click)="togglePasswordTextType()"
+          aria-label="Mostrar u ocultar contraseña">
           <svg-icon
             [src]="
               !passwordTextType
@@ -66,7 +67,7 @@
             "
             [svgClass]="'h-5 w-5'">
           </svg-icon>
-        </span>
+        </button>
       </div>
       <div *ngIf="submitted && f['password'].errors" class="is__invalid-error">
         <div *ngIf="f['password'].errors['required']">Campo obligatorio</div>
@@ -74,11 +75,9 @@
     </div>
   </div>
 
-  <!-- <div class="flex items-center justify-end">
-    <a routerLink="/auth/forgot-password" class="text-xs font-medium text-primary hover:underline">
-      ¿Olvidaste tu contraseña?
-    </a>
-  </div> -->
+  <div *ngIf="submitted && form.invalid" class="rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+    Verifica usuario y contraseña para continuar.
+  </div>
 
   <div>
     <app-button full impact="bold" tone="primary" shape="rounded" size="medium" [disabled]="isSubmitting">
@@ -86,11 +85,10 @@
     </app-button>
   </div>
 
-  <div class="text-muted-foreground flex items-center justify-center text-sm">
-    ¿No tienes una cuenta?
-    <app-button type="button" routerLink="/register-company" impact="none" tone="primary" shape="rounded"
-      size="small">
-      Registrate
+  <div class="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+    <span>¿No tienes una cuenta?</span>
+    <app-button type="button" routerLink="/register-company" impact="none" tone="primary" shape="rounded" size="small">
+      Regístrate
     </app-button>
   </div>
 </form>
