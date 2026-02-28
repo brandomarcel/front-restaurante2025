@@ -10,6 +10,7 @@ import { takeUntil } from 'rxjs/operators';
 import { isNullOrEmpty } from 'src/app/shared/utils/validation';
 import { AvisosComponent } from "src/app/shared/components/avisos/avisos.component";
 import { diasRestantes } from 'src/app/shared/utils/date.utils';
+import { NgApexchartsModule } from 'ng-apexcharts';
 
 // Interfaz para los avisos
 interface Aviso {
@@ -34,7 +35,7 @@ interface CompanyData {
   selector: 'app-nft',
   templateUrl: './nft.component.html',
   standalone: true,
-  imports: [CommonModule, RouterModule, AvisosComponent]
+  imports: [CommonModule, RouterModule, AvisosComponent, NgApexchartsModule]
 })
 export class NftComponent implements OnInit, OnDestroy {
 
@@ -53,6 +54,9 @@ export class NftComponent implements OnInit, OnDestroy {
   userData?: UserData | null;
   companyData?: CompanyData;
   avisos: Aviso[] = [];
+  topProductsBarOptions: any = null;
+  cashFlowDonutOptions: any = null;
+  moneyBarsOptions: any = null;
 
   private destroy$ = new Subject<void>();
   private avisoCounter = 0;
@@ -64,6 +68,7 @@ export class NftComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit(): void {
+    this.actualizarVisualizaciones();
     this.loadData();
   }
 
@@ -106,6 +111,7 @@ export class NftComponent implements OnInit, OnDestroy {
       this.montoApertura = data.monto_apertura || 0;
       this.totalRetiros = data.total_retiros || 0;
       this.efectivoSistema = data.efectivo_sistema || 0;
+      this.actualizarVisualizaciones();
  
   }
 
@@ -116,6 +122,7 @@ export class NftComponent implements OnInit, OnDestroy {
         this.totalOrdersToday = data.total_orders_today || 0;
         this.total_sales_today = data.total_sales_today || 0;
         this.topProducts = data.top_products || [];
+        this.actualizarVisualizaciones();
       }
     } catch (error) {
       console.error('Error procesando dashboard:', error);
@@ -379,5 +386,264 @@ export class NftComponent implements OnInit, OnDestroy {
     const currentHour = new Date().getHours();
     const elapsedHours = Math.max(currentHour + 1, 1);
     return this.totalOrdersToday / elapsedHours;
+  }
+
+  get diferenciaCajaAbs(): number {
+    return Math.abs(this.diferenciaCaja);
+  }
+
+  get estadoTurnoLabel(): string {
+    if (!this.cajaAbierta) {
+      return 'Atencion requerida';
+    }
+    if (this.diferenciaCajaAbs > 20) {
+      return 'Revisar caja';
+    }
+    if (!this.totalOrdersToday) {
+      return 'Sin movimiento';
+    }
+    return 'Operacion estable';
+  }
+
+  get estadoTurnoClasses(): string {
+    if (!this.cajaAbierta || this.diferenciaCajaAbs > 20) {
+      return 'bg-red-100 text-red-700';
+    }
+    if (!this.totalOrdersToday) {
+      return 'bg-amber-100 text-amber-700';
+    }
+    return 'bg-emerald-100 text-emerald-700';
+  }
+
+  get resumenVentasClaro(): string {
+    if (!this.totalOrdersToday) {
+      return 'Aun no hay pedidos registrados hoy.';
+    }
+    return `Llevas ${this.totalOrdersToday} pedidos por ${this.total_sales_today.toFixed(2)} USD.`;
+  }
+
+  get resumenCajaClaro(): string {
+    if (!this.cajaAbierta) {
+      return 'No hay apertura de caja activa en este turno.';
+    }
+    if (this.diferenciaCajaAbs < 0.01) {
+      return 'La caja esta cuadrada con el valor esperado.';
+    }
+    if (this.diferenciaCaja > 0) {
+      return `Hay un sobrante de ${this.diferenciaCajaAbs.toFixed(2)} USD frente a lo esperado.`;
+    }
+    return `Hay un faltante de ${this.diferenciaCajaAbs.toFixed(2)} USD frente a lo esperado.`;
+  }
+
+  get resumenProductosClaro(): string {
+    if (!this.topProducts.length) {
+      return 'Sin ventas de productos para mostrar ranking.';
+    }
+    return `${this.topProductName} lidera las ventas con ${this.topProductCount} unidades.`;
+  }
+
+  get accionesSugeridas(): string[] {
+    const acciones: string[] = [];
+
+    if (!this.cajaAbierta) {
+      acciones.push('Realizar apertura de caja para iniciar el turno.');
+    }
+    if (this.companyData?.firma) {
+      acciones.push('Registrar firma electronica para habilitar facturacion.');
+    }
+    if (this.certDaysLeft !== null && this.certDaysLeft <= 30) {
+      acciones.push(`Renovar certificado de firma (${this.certDaysLeft} dia(s) restantes).`);
+    }
+    if (this.diferenciaCajaAbs > 20) {
+      acciones.push('Verificar retiros y movimientos de caja por diferencia alta.');
+    }
+    if (this.totalOrdersToday === 0) {
+      acciones.push('Confirmar que POS y toma de pedidos esten operativos.');
+    }
+
+    if (!acciones.length) {
+      acciones.push('Mantener operacion actual y monitorear cierres de pedidos.');
+    }
+
+    return acciones;
+  }
+
+  get saludCajaPercent(): number {
+    const base = Math.max(Math.abs(this.efectivoEsperado), 1);
+    const desvio = (Math.abs(this.diferenciaCaja) / base) * 100;
+    return Math.max(0, Math.min(100, 100 - desvio));
+  }
+
+  get retirosSobreVentasPercentSafe(): number {
+    return Math.max(0, Math.min(this.retirosVsVentasPercent, 100));
+  }
+
+  private actualizarVisualizaciones(): void {
+    this.construirChartTopProductos();
+    this.construirChartFlujoCaja();
+    this.construirChartResumenMonetario();
+  }
+
+  private construirChartTopProductos(): void {
+    const top = this.topProducts.slice(0, 8);
+    const categorias = top.length ? top.map((item: any) => String(item?.name || 'Sin nombre')) : ['Sin ventas'];
+    const values = top.length ? top.map((item: any) => Number(item?.count) || 0) : [0];
+
+    this.topProductsBarOptions = {
+      series: [
+        {
+          name: 'Unidades',
+          data: values
+        }
+      ],
+      chart: {
+        type: 'bar',
+        height: 360,
+        toolbar: { show: false },
+        animations: { enabled: true, easing: 'easeinout', speed: 550 }
+      },
+      plotOptions: {
+        bar: {
+          horizontal: true,
+          barHeight: '58%',
+          borderRadius: 6,
+          distributed: true
+        }
+      },
+      dataLabels: { enabled: false },
+      xaxis: {
+        categories: categorias,
+        labels: {
+          style: { colors: '#64748b' }
+        }
+      },
+      yaxis: {
+        labels: {
+          style: { colors: '#334155', fontWeight: 600 }
+        }
+      },
+      colors: ['#2563eb', '#0ea5e9', '#14b8a6', '#22c55e', '#84cc16', '#f59e0b', '#f97316', '#ef4444'],
+      grid: {
+        borderColor: '#e2e8f0',
+        strokeDashArray: 4
+      },
+      tooltip: {
+        y: {
+          formatter: (value: number) => `${value} vendidos`
+        }
+      }
+    };
+  }
+
+  private construirChartFlujoCaja(): void {
+    const series = [
+      Number(this.montoApertura) || 0,
+      Number(this.total_sales_today) || 0,
+      Number(this.totalRetiros) || 0
+    ];
+
+    this.cashFlowDonutOptions = {
+      series,
+      chart: {
+        type: 'donut',
+        height: 330,
+        toolbar: { show: false }
+      },
+      labels: ['Apertura', 'Ventas', 'Retiros'],
+      colors: ['#f59e0b', '#10b981', '#f43f5e'],
+      legend: {
+        show: false
+      },
+      dataLabels: {
+        enabled: true,
+        formatter: (val: number) => `${val.toFixed(0)}%`
+      },
+      stroke: { width: 0 },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '66%',
+            labels: {
+              show: true,
+              total: {
+                show: true,
+                label: 'Movimiento',
+                formatter: () => `$${series.reduce((acc: number, current: number) => acc + current, 0).toFixed(0)}`
+              }
+            }
+          }
+        }
+      },
+      tooltip: {
+        y: {
+          formatter: (value: number) => `$${(Number(value) || 0).toFixed(2)}`
+        }
+      },
+      responsive: [
+        {
+          breakpoint: 1280,
+          options: {
+            chart: { height: 300 }
+          }
+        }
+      ]
+    };
+  }
+
+  private construirChartResumenMonetario(): void {
+    const diferenciaColor = this.diferenciaCaja >= 0 ? '#16a34a' : '#dc2626';
+    const values = [
+      Number(this.total_sales_today) || 0,
+      Number(this.totalRetiros) || 0,
+      Number(this.efectivoSistema) || 0,
+      Number(this.efectivoEsperado) || 0,
+      Number(this.diferenciaCaja) || 0
+    ];
+
+    this.moneyBarsOptions = {
+      series: [
+        {
+          name: 'USD',
+          data: values
+        }
+      ],
+      chart: {
+        type: 'bar',
+        height: 340,
+        toolbar: { show: false },
+        animations: { enabled: true, easing: 'easeinout', speed: 550 }
+      },
+      plotOptions: {
+        bar: {
+          horizontal: false,
+          borderRadius: 6,
+          columnWidth: '48%',
+          distributed: true
+        }
+      },
+      dataLabels: { enabled: false },
+      xaxis: {
+        categories: ['Ventas', 'Retiros', 'Efectivo', 'Esperado', 'Diferencia'],
+        labels: {
+          style: { colors: '#64748b' }
+        }
+      },
+      yaxis: {
+        labels: {
+          formatter: (val: number) => `${Math.round(val)}`,
+          style: { colors: '#64748b' }
+        }
+      },
+      colors: ['#10b981', '#f43f5e', '#2563eb', '#0ea5e9', diferenciaColor],
+      grid: {
+        borderColor: '#e2e8f0',
+        strokeDashArray: 4
+      },
+      tooltip: {
+        y: {
+          formatter: (value: number) => `$${(Number(value) || 0).toFixed(2)}`
+        }
+      }
+    };
   }
 }

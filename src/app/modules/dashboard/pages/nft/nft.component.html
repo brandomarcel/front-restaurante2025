@@ -1,10 +1,10 @@
-<div class="min-h-full bg-primary-foreground p-4 lg:p-6">
-  <section class="mb-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg lg:px-6">
+<div class="min-h-full bg-slate-50 p-4 lg:p-6">
+  <section class="mb-4 rounded-2xl bg-gradient-to-r from-slate-900 via-primary to-sky-700 px-4 py-5 text-white shadow-lg lg:px-6">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div>
-        <!-- <p class="text-xs uppercase tracking-widest text-primary-foreground/80">Dashboard Operativo</p> -->
+        <p class="text-xs uppercase tracking-[0.25em] text-white/70">Dashboard operativo</p>
         <h1 class="mt-1 text-2xl font-bold">Bienvenido, {{ userData?.fullName || 'Equipo' }}</h1>
-        <p class="mt-1 text-sm text-primary-foreground/80">Resumen de operación de hoy: {{ today | date:'dd/MM/yyyy' }}</p>
+        <p class="mt-1 text-sm text-white/80">Resumen principal del restaurante: {{ today | date:'dd/MM/yyyy' }}</p>
       </div>
 
       <div class="flex flex-wrap gap-2">
@@ -21,110 +21,190 @@
 
   <app-avisos [avisos]="avisos" (eliminar)="eliminarAviso($event)" class="mb-4 block"></app-avisos>
 
-  <section class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-    <article class="rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white p-4 shadow-sm">
-      <div class="mb-2 flex items-center justify-between">
-        <p class="text-xs font-semibold uppercase tracking-wide text-indigo-700">Pedidos del dia</p>
-        <span class="rounded-md bg-indigo-100 px-2 py-1 text-[10px] font-bold text-indigo-700">ORD</span>
+  <section class="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-12">
+    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-7">
+      <div class="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-semibold text-slate-900">Panorama del turno</h2>
+          <p class="text-xs text-slate-500">Resumen en lenguaje simple para operar rapido</p>
+        </div>
+        <span class="rounded-full px-3 py-1 text-xs font-semibold" [ngClass]="estadoTurnoClasses">
+          {{ estadoTurnoLabel }}
+        </span>
       </div>
-      <p class="text-2xl font-extrabold text-indigo-800">{{ totalOrdersToday }}</p>
-      <div class="mt-2 h-1.5 rounded-full bg-indigo-100">
-        <div class="h-1.5 w-3/5 rounded-full bg-indigo-500"></div>
+
+      <div class="space-y-2 text-sm">
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Ventas de hoy</p>
+          <p class="mt-1 font-medium text-slate-800">{{ resumenVentasClaro }}</p>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Situacion de caja</p>
+          <p class="mt-1 font-medium text-slate-800">{{ resumenCajaClaro }}</p>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Producto destacado</p>
+          <p class="mt-1 font-medium text-slate-800">{{ resumenProductosClaro }}</p>
+        </div>
       </div>
     </article>
 
-    <article class="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-4 shadow-sm">
-      <div class="mb-2 flex items-center justify-between">
-        <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Ventas del dia</p>
-        <span class="rounded-md bg-emerald-100 px-2 py-1 text-[10px] font-bold text-emerald-700">USD</span>
-      </div>
-      <p class="text-2xl font-extrabold text-emerald-800">{{ total_sales_today | currency:'USD':'symbol':'1.0-0' }}</p>
-      <div class="mt-2 h-1.5 rounded-full bg-emerald-100">
-        <div class="h-1.5 w-4/5 rounded-full bg-emerald-500"></div>
-      </div>
-    </article>
+    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-5">
+      <h2 class="text-base font-semibold text-slate-900">Que revisar ahora</h2>
+      <p class="mb-3 text-xs text-slate-500">Acciones recomendadas para el responsable del turno</p>
 
-    <article class="rounded-xl border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-4 shadow-sm">
-      <div class="mb-2 flex items-center justify-between">
-        <p class="text-xs font-semibold uppercase tracking-wide text-sky-700">Estado de firma</p>
-        <span class="rounded-md bg-sky-100 px-2 py-1 text-[10px] font-bold text-sky-700">SRI</span>
-      </div>
-      <p class="text-lg font-extrabold text-sky-800">{{ firmaLabel }}</p>
-      <p class="mt-1 text-xs text-sky-700">
-        Vence: {{ companyData?.cert_not_after ? (companyData?.cert_not_after | date:'dd/MM/yyyy') : 'Sin certificado' }}
-      </p>
-      <div class="mt-2 h-1.5 rounded-full bg-sky-100">
-        <div class="h-1.5 w-3/4 rounded-full bg-sky-500"></div>
-      </div>
-    </article>
+      <ul class="space-y-2">
+        <li *ngFor="let accion of accionesSugeridas" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+          {{ accion }}
+        </li>
+      </ul>
 
-    <article class="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-4 shadow-sm">
-      <div class="mb-2 flex items-center justify-between">
-        <p class="text-xs font-semibold uppercase tracking-wide text-amber-700">Apertura de caja</p>
-        <span class="rounded-md bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-700">INICIO</span>
-      </div>
-      <p class="text-2xl font-extrabold text-amber-800">{{ montoApertura | currency:'USD':'symbol':'1.0-0' }}</p>
-      <p class="mt-1 text-xs text-amber-700">ID: {{ idApertura || 'No disponible' }}</p>
-      <div class="mt-2 h-1.5 rounded-full bg-amber-100">
-        <div class="h-1.5 w-3/4 rounded-full bg-amber-500"></div>
-      </div>
-    </article>
-
-    <article class="rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-white p-4 shadow-sm">
-      <div class="mb-2 flex items-center justify-between">
-        <p class="text-xs font-semibold uppercase tracking-wide text-rose-700">Retiros del turno</p>
-        <span class="rounded-md bg-rose-100 px-2 py-1 text-[10px] font-bold text-rose-700">SALIDA</span>
-      </div>
-      <p class="text-2xl font-extrabold text-rose-800">{{ totalRetiros | currency:'USD':'symbol':'1.0-0' }}</p>
-      <div class="mt-2 h-1.5 rounded-full bg-rose-100">
-        <div class="h-1.5 w-1/2 rounded-full bg-rose-500"></div>
+      <div class="mt-4 grid grid-cols-2 gap-2 text-xs">
+        <div class="rounded-lg bg-emerald-50 p-2 text-emerald-700">
+          <p class="uppercase tracking-wide">Pedidos</p>
+          <p class="mt-1 text-lg font-bold">{{ totalOrdersToday }}</p>
+        </div>
+        <div class="rounded-lg bg-sky-50 p-2 text-sky-700">
+          <p class="uppercase tracking-wide">Ventas</p>
+          <p class="mt-1 text-lg font-bold">{{ total_sales_today | currency:'USD':'symbol':'1.0-0' }}</p>
+        </div>
+        <div class="rounded-lg bg-amber-50 p-2 text-amber-700">
+          <p class="uppercase tracking-wide">Efectivo esperado</p>
+          <p class="mt-1 text-lg font-bold">{{ efectivoEsperado | currency:'USD':'symbol':'1.0-0' }}</p>
+        </div>
+        <div class="rounded-lg p-2" [ngClass]="diferenciaCaja >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'">
+          <p class="uppercase tracking-wide">Diferencia</p>
+          <p class="mt-1 text-lg font-bold">{{ diferenciaCaja | currency:'USD':'symbol':'1.0-0' }}</p>
+        </div>
       </div>
     </article>
   </section>
 
-  <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
-    <article class="rounded-xl border border-primary/20 bg-white p-4 shadow-sm xl:col-span-2">
-      <div class="mb-3 flex items-center justify-between">
-        <h2 class="text-sm font-semibold text-primary">Control de caja</h2>
-        <span class="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Turno actual</span>
+  <section class="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-12">
+    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-8">
+      <div class="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-semibold text-slate-900">Top productos vendidos</h2>
+          <p class="text-xs text-slate-500">Ranking por unidades del día</p>
+        </div>
+        <span class="rounded-full bg-slate-900 px-3 py-1 text-[11px] font-semibold text-white">{{ topProductName }}</span>
       </div>
 
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div class="rounded-lg bg-primary/5 p-3 ring-1 ring-primary/10">
-          <p class="text-xs text-gray-600">Monto apertura</p>
-          <p class="mt-1 text-lg font-bold text-primary">{{ montoApertura | currency:'USD':'symbol':'1.0-0' }}</p>
+      <apx-chart
+        *ngIf="topProductsBarOptions?.chart"
+        [series]="topProductsBarOptions.series"
+        [chart]="topProductsBarOptions.chart"
+        [plotOptions]="topProductsBarOptions.plotOptions"
+        [dataLabels]="topProductsBarOptions.dataLabels"
+        [xaxis]="topProductsBarOptions.xaxis"
+        [yaxis]="topProductsBarOptions.yaxis"
+        [colors]="topProductsBarOptions.colors"
+        [grid]="topProductsBarOptions.grid"
+        [tooltip]="topProductsBarOptions.tooltip">
+      </apx-chart>
+    </article>
+
+    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-4">
+      <div class="mb-3">
+        <h2 class="text-base font-semibold text-slate-900">Flujo de caja</h2>
+        <p class="text-xs text-slate-500">Distribución de movimientos en el turno</p>
+      </div>
+
+      <apx-chart
+        *ngIf="cashFlowDonutOptions?.chart"
+        [series]="cashFlowDonutOptions.series"
+        [chart]="cashFlowDonutOptions.chart"
+        [labels]="cashFlowDonutOptions.labels"
+        [colors]="cashFlowDonutOptions.colors"
+        [legend]="cashFlowDonutOptions.legend"
+        [dataLabels]="cashFlowDonutOptions.dataLabels"
+        [plotOptions]="cashFlowDonutOptions.plotOptions"
+        [stroke]="cashFlowDonutOptions.stroke"
+        [tooltip]="cashFlowDonutOptions.tooltip"
+        [responsive]="cashFlowDonutOptions.responsive">
+      </apx-chart>
+
+      <div class="mt-3 space-y-2 text-xs">
+        <div class="flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 text-amber-700">
+          <span>Apertura</span>
+          <span class="font-bold">{{ montoApertura | currency:'USD':'symbol':'1.0-0' }}</span>
         </div>
-        <div class="rounded-lg bg-primary/5 p-3 ring-1 ring-primary/10">
-          <p class="text-xs text-gray-600">Retiros acumulados</p>
-          <p class="mt-1 text-lg font-bold text-primary">{{ totalRetiros | currency:'USD':'symbol':'1.0-0' }}</p>
+        <div class="flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2 text-emerald-700">
+          <span>Ventas</span>
+          <span class="font-bold">{{ total_sales_today | currency:'USD':'symbol':'1.0-0' }}</span>
         </div>
-        <div class="rounded-lg bg-emerald-50 p-3 ring-1 ring-emerald-200">
-          <p class="text-xs text-emerald-700">Efectivo en sistema</p>
-          <p class="mt-1 text-lg font-bold text-emerald-800">{{ efectivoSistema | currency:'USD':'symbol':'1.0-0' }}</p>
+        <div class="flex items-center justify-between rounded-lg bg-rose-50 px-3 py-2 text-rose-700">
+          <span>Retiros</span>
+          <span class="font-bold">{{ totalRetiros | currency:'USD':'symbol':'1.0-0' }}</span>
         </div>
       </div>
     </article>
+  </section>
 
-    <article class="rounded-xl border border-primary/20 bg-white p-4 shadow-sm">
-      <div class="mb-3 flex items-center justify-between">
-        <h2 class="text-sm font-semibold text-primary">Top productos del dia</h2>
-        <span class="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold text-primary">RANKING</span>
+  <section class="grid grid-cols-1 gap-4 xl:grid-cols-12">
+    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-8">
+      <div class="mb-3">
+        <h2 class="text-base font-semibold text-slate-900">Comparativo monetario</h2>
+        <p class="text-xs text-slate-500">Ventas, retiros, efectivo actual, esperado y diferencia</p>
       </div>
 
-      <ul class="space-y-2 text-xs">
-        <li *ngFor="let product of topProducts; let i = index" class="rounded-lg bg-primary/5 p-2 ring-1 ring-primary/10">
-          <div class="mb-1 flex items-center justify-between gap-2">
-            <span class="truncate font-medium text-gray-700">{{ i + 1 }}. {{ product.name }}</span>
-            <span class="font-semibold text-primary">{{ product.count }}</span>
+      <apx-chart
+        *ngIf="moneyBarsOptions?.chart"
+        [series]="moneyBarsOptions.series"
+        [chart]="moneyBarsOptions.chart"
+        [plotOptions]="moneyBarsOptions.plotOptions"
+        [dataLabels]="moneyBarsOptions.dataLabels"
+        [xaxis]="moneyBarsOptions.xaxis"
+        [yaxis]="moneyBarsOptions.yaxis"
+        [colors]="moneyBarsOptions.colors"
+        [grid]="moneyBarsOptions.grid"
+        [tooltip]="moneyBarsOptions.tooltip">
+      </apx-chart>
+    </article>
+
+    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-4">
+      <h2 class="text-base font-semibold text-slate-900">Pulso operativo</h2>
+      <p class="mb-4 text-xs text-slate-500">Lectura rápida de salud del turno</p>
+
+      <div class="space-y-3">
+        <div>
+          <div class="mb-1 flex items-center justify-between text-xs">
+            <span class="text-slate-600">Salud de caja</span>
+            <span class="font-semibold text-slate-900">{{ saludCajaPercent | number:'1.0-0' }}%</span>
           </div>
-          <div class="h-1.5 rounded-full bg-primary/20">
-            <div class="h-1.5 rounded-full bg-primary" [style.width.%]="getProductShare(product.count)"></div>
+          <div class="h-2 rounded-full bg-slate-200">
+            <div class="h-2 rounded-full bg-emerald-500" [style.width.%]="saludCajaPercent"></div>
           </div>
-        </li>
-        <li *ngIf="topProducts.length === 0" class="rounded-lg bg-primary/5 py-3 text-center text-gray-400 ring-1 ring-primary/10">
-          Sin ventas registradas aun.
-        </li>
-      </ul>
+        </div>
+
+        <div>
+          <div class="mb-1 flex items-center justify-between text-xs">
+            <span class="text-slate-600">Retiros sobre ventas</span>
+            <span class="font-semibold text-slate-900">{{ retirosVsVentasPercent | number:'1.0-1' }}%</span>
+          </div>
+          <div class="h-2 rounded-full bg-slate-200">
+            <div class="h-2 rounded-full bg-rose-500" [style.width.%]="retirosSobreVentasPercentSafe"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="mb-1 flex items-center justify-between text-xs">
+            <span class="text-slate-600">Concentración top 3</span>
+            <span class="font-semibold text-slate-900">{{ top3ShareInTop | number:'1.0-1' }}%</span>
+          </div>
+          <div class="h-2 rounded-full bg-slate-200">
+            <div class="h-2 rounded-full bg-indigo-500" [style.width.%]="top3ShareInTop"></div>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p class="text-xs text-slate-600">Diferencia de caja</p>
+          <p class="mt-1 text-xl font-bold" [ngClass]="diferenciaCaja >= 0 ? 'text-emerald-700' : 'text-red-700'">
+            {{ diferenciaCaja | currency:'USD':'symbol':'1.0-0' }}
+          </p>
+          <p class="text-xs text-slate-500">{{ diferenciaCajaLabel }} frente al esperado</p>
+        </div>
+      </div>
     </article>
   </section>
 </div>
