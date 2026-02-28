@@ -68,8 +68,8 @@ export class OrdersComponent implements OnInit {
     this.spinner.show();
     const offset = (this.page - 1) * this.pageSize;
     const today = String(this.utils.getSoloFechaEcuador());
-    const createdFrom = this.isMesero ? today : undefined;
-    const createdTo = this.isMesero ? today : undefined;
+    const createdFrom = this.isMeseroOrCajero ? today : undefined;
+    const createdTo = this.isMeseroOrCajero ? today : undefined;
 
     this.ordersService.getAll(this.pageSize, offset, createdFrom, createdTo).subscribe({
       next: (res: any) => {
@@ -304,8 +304,8 @@ export class OrdersComponent implements OnInit {
     }
   }
 
-  get isMesero(): boolean {
-    return this.roleName === 'Mesero';
+  get isMeseroOrCajero(): boolean {
+    return this.roleName === 'Mesero' || this.roleName === 'Cajero';
   }
 
   private detectRole(): 'Gerente' | 'Cajero' | 'Mesero' | 'Desconocido' {

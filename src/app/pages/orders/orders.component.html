@@ -4,7 +4,7 @@
       <div>
         <h2 class="text-xl font-bold">Ordenes</h2>
         <p class="text-xs text-primary-foreground/80">
-          {{ isMesero ? 'Tus ordenes del dia actual.' : 'Listado unificado de ordenes del sistema.' }}
+          {{ isMeseroOrCajero ? 'Ordenes del dia actual.' : 'Listado unificado de ordenes del sistema.' }}
         </p>
       </div>
       <div class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
@@ -15,7 +15,7 @@
 
   <section class="rounded-xl border border-primary/15 bg-white p-4 shadow-sm">
     <div class="toolbar !mb-0">
-      <ng-container *ngIf="isMesero; else defaultFilters">
+      <ng-container *ngIf="isMeseroOrCajero; else defaultFilters">
         <div class="flex w-full flex-col gap-3">
           <input class="input" type="text" [(ngModel)]="searchTerm"
             placeholder="Buscar por #orden, alias, cliente o cedula..." />
@@ -87,7 +87,7 @@
   </section>
 
   <ng-container *ngIf="ordersFiltradosList.length > 0; else emptyOrders">
-    <ng-container *ngIf="isMesero; else defaultTableView">
+    <ng-container *ngIf="isMeseroOrCajero; else defaultTableView">
       <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <article *ngFor="let order of ordersFiltradosList"
           class="rounded-xl border border-gray-200 bg-white p-3 shadow-sm transition hover:border-primary/30 hover:shadow-md">

@@ -61,6 +61,12 @@ export class Menu {
             
           ],
         },
+        {
+          allowedRoles: ['CAJERO'],
+          icon: 'assets/icons/tablericons/shopping-bag.svg',
+          label: 'Lista Órdenes',
+          route: '/dashboard/orders',
+        },
       ],
     },
 

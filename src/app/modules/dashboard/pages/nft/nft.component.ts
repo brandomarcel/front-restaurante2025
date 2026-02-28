@@ -75,7 +75,6 @@ export class NftComponent implements OnInit, OnDestroy {
   async loadData() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     this.userData = user;
-    const userEmail: string = String(this.userData?.email || '');
     this.getDatosCierre();
 
     forkJoin({
@@ -262,7 +261,7 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   get cajaAbierta(): boolean {
-    return this.idApertura != null;
+    return !!this.idApertura;
   }
 
   get ticketPromedio(): number {
@@ -304,5 +303,81 @@ export class NftComponent implements OnInit, OnDestroy {
       return 0;
     }
     return ((Number(count) || 0) / maxCount) * 100;
+  }
+
+  get topProductName(): string {
+    if (!this.topProducts.length) {
+      return 'Sin datos';
+    }
+    return String(this.topProducts[0]?.name || 'Sin nombre');
+  }
+
+  get topProductCount(): number {
+    if (!this.topProducts.length) {
+      return 0;
+    }
+    return Number(this.topProducts[0]?.count) || 0;
+  }
+
+  get totalTopProductsUnits(): number {
+    return this.topProducts.reduce((acc: number, item: any) => acc + (Number(item?.count) || 0), 0);
+  }
+
+  get topProductShareInTop(): number {
+    if (!this.totalTopProductsUnits) {
+      return 0;
+    }
+    return (this.topProductCount / this.totalTopProductsUnits) * 100;
+  }
+
+  get top3ShareInTop(): number {
+    if (!this.totalTopProductsUnits) {
+      return 0;
+    }
+    const top3Units = this.topProducts
+      .slice(0, 3)
+      .reduce((acc: number, item: any) => acc + (Number(item?.count) || 0), 0);
+    return (top3Units / this.totalTopProductsUnits) * 100;
+  }
+
+  get retirosVsVentasPercent(): number {
+    if (!this.total_sales_today) {
+      return 0;
+    }
+    return (this.totalRetiros / this.total_sales_today) * 100;
+  }
+
+  get efectivoEsperado(): number {
+    return this.montoApertura + this.total_sales_today - this.totalRetiros;
+  }
+
+  get diferenciaCaja(): number {
+    return this.efectivoSistema - this.efectivoEsperado;
+  }
+
+  get diferenciaCajaLabel(): string {
+    if (Math.abs(this.diferenciaCaja) < 0.01) {
+      return 'Sin diferencia';
+    }
+    if (this.diferenciaCaja > 0) {
+      return 'Sobrante';
+    }
+    return 'Faltante';
+  }
+
+  get diferenciaCajaClasses(): string {
+    if (Math.abs(this.diferenciaCaja) < 0.01) {
+      return 'bg-slate-100 text-slate-700';
+    }
+    if (this.diferenciaCaja > 0) {
+      return 'bg-emerald-100 text-emerald-700';
+    }
+    return 'bg-red-100 text-red-700';
+  }
+
+  get ordersPerHour(): number {
+    const currentHour = new Date().getHours();
+    const elapsedHours = Math.max(currentHour + 1, 1);
+    return this.totalOrdersToday / elapsedHours;
   }
 }
