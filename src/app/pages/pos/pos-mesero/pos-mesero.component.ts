@@ -144,7 +144,6 @@ export class PosMeseroComponent implements OnInit {
     if (product?.is_out_of_stock) return;
 
     this.cartService.addProduct(product);
-    this.cartExpanded = true;
 
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate(50);
@@ -307,3 +306,4 @@ export class PosMeseroComponent implements OnInit {
     return String(product?.name || product?.id || product?.codigo || product?.nombre || '').trim();
   }
 }
+

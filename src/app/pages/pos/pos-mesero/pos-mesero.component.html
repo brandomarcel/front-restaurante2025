@@ -1,236 +1,213 @@
 <div class="relative flex h-full w-full min-h-0 flex-col overflow-hidden bg-slate-100">
-  <header class="sticky top-0 z-20 border-b border-primary/10 bg-white/95 px-3 py-3 shadow-sm backdrop-blur">
-    <div class="rounded-2xl border border-primary/10 bg-white/90 p-3 shadow-sm">
-      <div class="flex items-start justify-between gap-3">
-        <div>
-          <h2 class="text-base font-bold text-primary">Toma de pedido</h2>
-          <p class="text-[11px] text-slate-500">Registra la comanda y envia a cocina en segundos.</p>
-        </div>
-        <div class="flex flex-col items-end gap-1 text-right">
-          <span class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
-            {{ totalItems }} item{{ totalItems === 1 ? '' : 's' }}
-          </span>
-          <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-            {{ filteredProductList.length }} productos
-          </span>
-        </div>
-      </div>
-
-      <div class="mt-3 space-y-3">
+  <header class="sticky top-0 z-30 border-b border-primary/10 bg-white/95 px-3 py-1.5 shadow-sm backdrop-blur">
+    <div class="mx-auto w-full max-w-[980px] space-y-1.5">
+      <div class="flex items-center gap-2">
         <input
           type="text"
           [(ngModel)]="alias"
           (input)="alias = alias.toUpperCase()"
           maxlength="20"
-          class="w-full rounded-xl border border-primary/20 bg-white px-3 py-3 text-sm font-medium uppercase outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-          placeholder="Mesa o alias (ej: MESA 4)" />
+          class="h-9 w-full rounded-lg border border-primary/20 bg-white px-2.5 text-xs font-semibold uppercase outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+          placeholder="Mesa o alias" />
 
-        <div class="grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            class="rounded-xl px-2 py-2 text-xs font-semibold transition min-h-[38px]"
-            [ngClass]="orderType === 'Servirse' ? 'bg-primary text-white shadow-sm' : 'border border-primary/20 bg-white text-slate-700 hover:bg-slate-50'"
-            (click)="setOrderType('Servirse')">
-            Servirse
-          </button>
+        <button
+          type="button"
+          class="relative flex h-9 min-w-[82px] items-center justify-center rounded-lg border border-primary/20 bg-white px-2 text-[11px] font-semibold text-primary"
+          (click)="toggleCartDetails()">
+          Cart
+          <span class="ml-1 rounded-full bg-primary px-1.5 py-0.5 text-[10px] text-white">{{ totalItems }}</span>
+        </button>
+      </div>
 
-          <button
-            type="button"
-            class="rounded-xl px-2 py-2 text-xs font-semibold transition min-h-[38px]"
-            [ngClass]="orderType === 'Llevar' ? 'bg-primary text-white shadow-sm' : 'border border-primary/20 bg-white text-slate-700 hover:bg-slate-50'"
-            (click)="setOrderType('Llevar')">
-            Llevar
-          </button>
+      <div class="flex gap-1.5 overflow-x-auto pb-0.5">
+        <button
+          type="button"
+          class="h-8 whitespace-nowrap rounded-full px-3 text-[11px] font-semibold transition"
+          [ngClass]="orderType === 'Servirse' ? 'bg-primary text-white' : 'border border-primary/20 bg-white text-slate-700'"
+          (click)="setOrderType('Servirse')">
+          Servirse
+        </button>
+        <button
+          type="button"
+          class="h-8 whitespace-nowrap rounded-full px-3 text-[11px] font-semibold transition"
+          [ngClass]="orderType === 'Llevar' ? 'bg-primary text-white' : 'border border-primary/20 bg-white text-slate-700'"
+          (click)="setOrderType('Llevar')">
+          Llevar
+        </button>
+        <button
+          type="button"
+          class="h-8 whitespace-nowrap rounded-full px-3 text-[11px] font-semibold transition"
+          [ngClass]="orderType === 'Domicilio' ? 'bg-primary text-white' : 'border border-primary/20 bg-white text-slate-700'"
+          (click)="setOrderType('Domicilio')">
+          Domicilio
+        </button>
+      </div>
 
-          <button
-            type="button"
-            class="rounded-xl px-2 py-2 text-xs font-semibold transition min-h-[38px]"
-            [ngClass]="orderType === 'Domicilio' ? 'bg-primary text-white shadow-sm' : 'border border-primary/20 bg-white text-slate-700 hover:bg-slate-50'"
-            (click)="setOrderType('Domicilio')">
-            Domicilio
-          </button>
-        </div>
+      <div *ngIf="orderType === 'Domicilio'" class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <input
+          type="text"
+          [(ngModel)]="deliveryAddress"
+          class="h-9 rounded-lg border border-primary/20 bg-white px-2.5 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+          placeholder="Direccion entrega" />
+        <input
+          type="text"
+          [(ngModel)]="deliveryPhone"
+          maxlength="15"
+          class="h-9 rounded-lg border border-primary/20 bg-white px-2.5 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+          placeholder="Telefono" />
+      </div>
 
-        <div *ngIf="orderType === 'Domicilio'" class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <input
-            type="text"
-            [(ngModel)]="deliveryAddress"
-            class="w-full rounded-xl border border-primary/20 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-            placeholder="Direccion entrega" />
+      <div class="flex gap-2">
+        <input
+          type="text"
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="applyFilters()"
+          placeholder="Buscar producto..."
+          class="h-9 w-full rounded-lg border border-primary/20 bg-white px-2.5 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/25" />
+        <button
+          type="button"
+          (click)="clearSearch()"
+          class="h-9 rounded-lg border border-primary/20 bg-white px-2.5 text-[11px] font-semibold text-slate-600">
+          Limpiar
+        </button>
+      </div>
 
-          <input
-            type="text"
-            [(ngModel)]="deliveryPhone"
-            maxlength="15"
-            class="w-full rounded-xl border border-primary/20 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-            placeholder="Telefono contacto" />
-        </div>
+      <div class="flex gap-1.5 overflow-x-auto pb-0.5">
+        <button
+          type="button"
+          class="whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold"
+          [ngClass]="selectedCategory === '' ? 'border-primary bg-primary text-white' : 'border-primary/20 bg-white text-slate-700'"
+          (click)="onCategorySelected('')">
+          Todas
+        </button>
 
-        <div class="flex gap-2">
-          <input
-            type="text"
-            [(ngModel)]="searchTerm"
-            (ngModelChange)="applyFilters()"
-            placeholder="Buscar producto..."
-            class="w-full rounded-xl border border-primary/20 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25" />
-
-          <button type="button" (click)="clearSearch()" class="rounded-xl border border-primary/20 bg-white px-3 py-2.5 text-xs font-semibold text-slate-600">
-            Limpiar
-          </button>
-        </div>
-
-        <div class="flex items-center justify-between gap-2">
-          <p class="text-[11px] text-slate-500">Categoria: {{ selectedCategory || 'Todas' }}</p>
-          <p class="text-[11px] font-semibold text-slate-500">Vista mesero</p>
-        </div>
-
-        <div class="flex gap-2 overflow-x-auto pb-1">
-          <button
-            type="button"
-            class="whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition"
-            [ngClass]="selectedCategory === '' ? 'border-primary bg-primary text-white' : 'border-primary/20 bg-white text-slate-700'"
-            (click)="onCategorySelected('')">
-            Todas
-          </button>
-
-          <button
-            *ngFor="let category of categories"
-            type="button"
-            class="whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition"
-            [ngClass]="selectedCategory === category.name ? 'border-primary bg-primary text-white' : 'border-primary/20 bg-white text-slate-700'"
-            (click)="onCategorySelected(category.name)">
-            {{ category.nombre || category.name }}
-          </button>
-        </div>
+        <button
+          *ngFor="let category of categories"
+          type="button"
+          class="whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold"
+          [ngClass]="selectedCategory === category.name ? 'border-primary bg-primary text-white' : 'border-primary/20 bg-white text-slate-700'"
+          (click)="onCategorySelected(category.name)">
+          {{ category.nombre || category.name }}
+        </button>
       </div>
     </div>
   </header>
 
-  <main class="flex-1 overflow-y-auto px-3 pt-3" [ngClass]="cartExpanded ? 'pb-[24rem] sm:pb-[22rem]' : 'pb-44 sm:pb-48'">
-    <section class="rounded-2xl border border-primary/10 bg-white/70 p-2 shadow-sm sm:p-3">
+  <main class="flex-1 overflow-y-auto px-3 pb-24 pt-2">
+    <div class="mx-auto w-full max-w-[980px]">
       <div *ngIf="isLoadingProducts" class="rounded-xl border border-primary/10 bg-white p-6 text-center text-sm text-slate-500">
         Cargando productos...
       </div>
 
-      <div *ngIf="!isLoadingProducts" class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+      <div *ngIf="!isLoadingProducts" class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         <article
           *ngFor="let product of filteredProductList; trackBy: trackByProduct"
-          class="group relative flex flex-col rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition hover:border-primary/30 hover:shadow-md">
+          class="flex min-h-[136px] flex-col rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
+          <p class="line-clamp-2 min-h-[30px] text-[12px] font-semibold leading-4 text-slate-900">
+            {{ product.nombre || product.name }}
+          </p>
+
+          <p class="mt-1 text-base font-bold leading-5 text-primary">
+            ${{ (product.precio ?? product.price ?? 0) | number:'1.2-2' }}
+          </p>
+
           <span
             *ngIf="product?.is_out_of_stock"
-            class="absolute right-2 top-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+            class="mt-1 inline-flex w-fit rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600">
             Agotado
           </span>
 
-          <div class="mb-1 flex items-start justify-between gap-2">
-            <p class="line-clamp-2 text-sm font-semibold text-slate-900">{{ product.nombre || product.name }}</p>
-            <div class="flex items-center gap-1.5">
-              <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-                {{ product.tax_value || 0 }}% IVA
-              </span>
-              <button
-                type="button"
-                class="h-7 w-7 rounded-full border text-xs transition"
-                [ngClass]="isFavorite(product) ? 'border-amber-300 bg-amber-100 text-amber-700' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-100'"
-                (click)="toggleFavorite(product)">
-                ★
-              </button>
-            </div>
-          </div>
-
-          <p *ngIf="product.descripcion" class="line-clamp-2 text-[11px] text-slate-500">{{ product.descripcion }}</p>
-          <p *ngIf="!product.descripcion" class="text-[11px] text-slate-400">Sin descripcion</p>
-
-          <div class="mt-3 flex items-end justify-between gap-2">
-            <div>
-              <p class="text-[10px] uppercase tracking-wide text-slate-400">Precio</p>
-              <p class="text-base font-bold text-slate-900">${{ (product.precio ?? product.price ?? 0) | number:'1.2-2' }}</p>
-            </div>
-          </div>
-
-          <div class="mt-3">
-            <button
-              type="button"
-              class="min-h-[38px] w-full rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90 active:scale-[0.98]"
-              [disabled]="product?.is_out_of_stock"
-              [ngClass]="{ 'opacity-40 cursor-not-allowed': product?.is_out_of_stock }"
-              (click)="addProduct(product)">
+          <button
+            type="button"
+            class="mt-auto h-8 w-full rounded-lg bg-primary px-2 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+            [disabled]="product?.is_out_of_stock"
+            (click)="addProduct(product)">
               Agregar
-            </button>
-          </div>
+          </button>
         </article>
 
         <div *ngIf="filteredProductList.length === 0" class="col-span-full rounded-xl border border-dashed border-primary/20 bg-white p-6 text-center text-sm text-slate-500">
           No hay productos para este filtro.
         </div>
       </div>
-    </section>
+    </div>
   </main>
 
-  <footer class="fixed bottom-0 left-0 right-0 z-30 border-t border-primary/10 bg-white/95 shadow-[0_-6px_16px_rgba(0,0,0,0.08)] backdrop-blur">
-    <div class="mx-auto w-full max-w-[980px] space-y-3 px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-3">
-      <div class="rounded-2xl border border-primary/10 bg-slate-50/90 px-3 py-2.5">
-        <div class="flex items-center justify-between gap-3">
-          <div class="min-w-0">
-            <p class="truncate text-xs font-semibold text-slate-700">Comanda: {{ alias || 'Sin mesa' }}</p>
-            <p class="mt-0.5 text-[11px] text-slate-500">{{ totalItems }} item{{ totalItems === 1 ? '' : 's' }} en pedido</p>
-          </div>
+  <footer class="fixed bottom-0 left-0 right-0 z-20 border-t border-primary/10 bg-white/95 px-3 py-2 backdrop-blur">
+    <div class="mx-auto flex w-full max-w-[980px] items-center gap-2">
+      <button
+        type="button"
+        class="h-11 min-w-[112px] rounded-xl border border-primary/20 bg-white px-3 text-xs font-semibold text-primary"
+        (click)="toggleCartDetails()">
+        Ver carrito ({{ totalItems }})
+      </button>
 
-          <div class="text-right">
-            <p class="text-[10px] uppercase tracking-wide text-slate-400">Total estimado</p>
-            <p class="text-lg font-bold text-primary">${{ total | number:'1.2-2' }}</p>
-          </div>
-        </div>
-
-        <div class="mt-2 flex items-center justify-between">
-          <span class="rounded-full bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">{{ orderType }}</span>
-          <button type="button" class="text-xs font-semibold text-primary underline" (click)="toggleCartDetails()">
-            {{ cartExpanded ? 'Ocultar detalle' : 'Ver detalle' }}
-          </button>
-        </div>
-      </div>
-
-      <div *ngIf="cartExpanded" class="max-h-44 space-y-2 overflow-y-auto rounded-xl border border-primary/10 bg-white p-2">
-        <div
-          *ngFor="let item of cartService.cart; trackBy: trackByCart"
-          class="flex items-center justify-between gap-2 rounded-lg border border-slate-100 p-2">
-          <div class="min-w-0">
-            <p class="truncate text-xs font-semibold text-slate-800">{{ item.nombre || item.name }}</p>
-            <p class="text-[11px] text-slate-500">x{{ item.quantity }} | ${{ item.total | number:'1.2-2' }}</p>
-          </div>
-
-          <div class="flex items-center gap-1">
-            <button type="button" class="h-8 w-8 rounded-lg border border-slate-200 text-sm font-bold text-slate-700" (click)="decrease(item)">-</button>
-            <span class="w-7 text-center text-sm font-semibold text-slate-700">{{ item.quantity }}</span>
-            <button type="button" class="h-8 w-8 rounded-lg border border-slate-200 text-sm font-bold text-slate-700" (click)="increase(item)">+</button>
-            <button type="button" class="ml-1 h-8 rounded-lg border border-red-200 px-2 text-xs font-semibold text-red-600" (click)="remove(item)">
-              Quitar
-            </button>
-          </div>
-        </div>
-
-        <p *ngIf="cartService.cart.length === 0" class="py-3 text-center text-xs text-slate-500">
-          Aun no has agregado productos.
-        </p>
-      </div>
-
-      <div class="grid grid-cols-3 gap-2">
-        <button
-          type="button"
-          class="col-span-1 min-h-[42px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700"
-          (click)="clearCart()"
-          [disabled]="cartService.cart.length === 0">
-          Vaciar
-        </button>
-
-        <button
-          type="button"
-          class="col-span-2 min-h-[42px] rounded-xl bg-primary px-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-          [disabled]="!canSubmitOrder"
-          (click)="saveOrderMesero()">
-          {{ isSubmittingOrder ? 'Enviando...' : 'Enviar comanda' }}
-        </button>
-      </div>
+      <button
+        type="button"
+        class="h-11 w-full rounded-xl bg-primary px-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+        [disabled]="!canSubmitOrder"
+        (click)="saveOrderMesero()">
+        {{ isSubmittingOrder ? 'Enviando...' : ('Enviar comanda - $' + (total | number:'1.2-2')) }}
+      </button>
     </div>
   </footer>
+
+  <div *ngIf="cartExpanded" class="fixed inset-0 z-40 flex items-end bg-slate-900/45" (click)="toggleCartDetails()">
+    <section
+      class="max-h-[82vh] w-full rounded-t-2xl bg-white p-3 shadow-2xl"
+      (click)="$event.stopPropagation()">
+      <div class="mx-auto w-full max-w-[980px]">
+        <div class="mb-3 flex items-center justify-between gap-2">
+          <div>
+            <p class="text-sm font-bold text-slate-900">Carrito de pedido</p>
+            <p class="text-xs text-slate-500">{{ alias || 'Sin mesa' }} | {{ orderType }}</p>
+          </div>
+          <button type="button" class="h-9 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700" (click)="toggleCartDetails()">
+            Cerrar
+          </button>
+        </div>
+
+        <div class="max-h-[48vh] space-y-2 overflow-y-auto pr-1">
+          <div
+            *ngFor="let item of cartService.cart; trackBy: trackByCart"
+            class="flex items-center justify-between gap-2 rounded-lg border border-slate-100 p-2">
+            <div class="min-w-0">
+              <p class="truncate text-xs font-semibold text-slate-800">{{ item.nombre || item.name }}</p>
+              <p class="text-[11px] text-slate-500">x{{ item.quantity }} | ${{ item.total | number:'1.2-2' }}</p>
+            </div>
+
+            <div class="flex items-center gap-1">
+              <button type="button" class="h-8 w-8 rounded-lg border border-slate-200 text-sm font-bold text-slate-700" (click)="decrease(item)">-</button>
+              <span class="w-7 text-center text-sm font-semibold text-slate-700">{{ item.quantity }}</span>
+              <button type="button" class="h-8 w-8 rounded-lg border border-slate-200 text-sm font-bold text-slate-700" (click)="increase(item)">+</button>
+              <button type="button" class="ml-1 h-8 rounded-lg border border-red-200 px-2 text-xs font-semibold text-red-600" (click)="remove(item)">
+                Quitar
+              </button>
+            </div>
+          </div>
+
+          <p *ngIf="cartService.cart.length === 0" class="py-6 text-center text-sm text-slate-500">
+            Aun no has agregado productos.
+          </p>
+        </div>
+
+        <div class="mt-3 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3">
+          <button
+            type="button"
+            class="col-span-1 h-10 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700"
+            (click)="clearCart()"
+            [disabled]="cartService.cart.length === 0">
+            Vaciar
+          </button>
+
+          <div class="col-span-2 flex items-center justify-end rounded-lg bg-slate-50 px-3 text-right">
+            <div>
+              <p class="text-[10px] uppercase tracking-wide text-slate-400">Total</p>
+              <p class="text-base font-bold text-primary">${{ total | number:'1.2-2' }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
 </div>
