@@ -9,7 +9,7 @@
       <p class="text-[10px] text-muted-foreground">{{ order.name }}</p>
     </div>
 
-    <div class="rounded-lg border px-2 py-1 text-right" [ngClass]="urgencyPillClass()">
+    <div *ngIf="showUrgencyPill" class="rounded-lg border px-2 py-1 text-right" [ngClass]="urgencyPillClass()">
       <p class="text-lg font-extrabold leading-none">{{ minutes }}<span class="ml-1 text-[10px] font-semibold">min</span></p>
       <p class="text-[10px] font-semibold">{{ urgencyText() }}</p>
     </div>

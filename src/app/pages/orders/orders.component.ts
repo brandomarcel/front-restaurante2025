@@ -173,8 +173,22 @@ export class OrdersComponent implements OnInit {
     return lista.filter((o: any) => this.getCanonicalStatus(o?.status) === value).length;
   }
 
+  countByTipo(value: '' | 'Factura' | 'Nota Venta'): number {
+    const lista = Array.isArray(this.orders) ? this.orders : [];
+    if (!value) return lista.length;
+    return lista.filter((o: any) => String(o?.type || '') === value).length;
+  }
+
   isEstadoActivo(value: EstadoOrden): boolean {
     return this.estadoFiltro === value;
+  }
+
+  getEstadoBadgeClass(value: any): string {
+    const st = this.getCanonicalStatus(value);
+    if (st === 'Ingresada') return 'badge-red';
+    if (st === 'PreparaciÃ³n') return 'badge-yellow';
+    if (st === 'Cerrada') return 'badge-green';
+    return 'badge-gray';
   }
 
   isCerrada(order: any): boolean {

@@ -260,12 +260,34 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     });
   }
 
+  get kitchenBaseOrders(): OrderVM[] {
+    const term = this.normalize(this.search);
+
+    return this.orders.filter((o) => {
+      if (!term) return true;
+
+      const customer = this.normalize(o.customer?.nombre);
+      const customerId = this.normalize(o.customer?.num_identificacion);
+      const alias = this.normalize(o.alias);
+      const usuario = this.normalize(o.usuario);
+      const name = this.normalize(o.name);
+
+      return (
+        name.includes(term) ||
+        alias.includes(term) ||
+        customer.includes(term) ||
+        customerId.includes(term) ||
+        usuario.includes(term)
+      );
+    });
+  }
+
   get totalSales(): number {
     return this.orders.reduce((sum, o) => sum + Number(o.total ?? 0), 0);
   }
 
   get countIngresadas(): number {
-    return this.orders.filter(o => this.normalizeStatus(o.status) === 'Ingresada').length;
+    return this.orders.filter(o => this.isIngresadaStatus(o.status)).length;
   }
 
   get countPreparacion(): number {
@@ -277,7 +299,7 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   }
 
   get kitchenIngresadas(): OrderVM[] {
-    const list = this.filteredOrders.filter(o => this.normalizeStatus(o.status) === 'Ingresada');
+    const list = this.kitchenBaseOrders.filter(o => this.normalizeStatus(o.status) === 'Ingresada');
     return this.sortKitchenOrders(this.applyKitchenUrgentFilter(list));
   }
 
@@ -287,16 +309,26 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   }
 
   get kitchenCerradas(): OrderVM[] {
-    const list = this.filteredOrders.filter(o => this.normalizeStatus(o.status) === 'Cerrada');
+    const list = this.kitchenBaseOrders.filter(o => this.normalizeStatus(o.status) === 'Cerrada');
     return this.sortKitchenOrders(list);
   }
 
+  get kitchenPreparacionVisible(): OrderVM[] {
+    const list = this.kitchenBaseOrders.filter(o => this.normalizeStatus(o.status) === 'PreparaciÃ³n');
+    return this.sortKitchenOrders(this.applyKitchenUrgentFilter(list));
+  }
+
   get kitchenActivasCount(): number {
-    return this.kitchenIngresadas.length + this.kitchenPreparacion.length;
+    return this.kitchenIngresadas.length + this.kitchenPreparacionSafe.length;
+  }
+
+  get kitchenPreparacionSafe(): OrderVM[] {
+    const list = this.kitchenBaseOrders.filter((o) => this.normalize(o.status).includes('prepar'));
+    return this.sortKitchenOrders(this.applyKitchenUrgentFilter(list));
   }
 
   get kitchenUrgentesCount(): number {
-    const active = this.filteredOrders.filter((o) => {
+    const active = this.kitchenBaseOrders.filter((o) => {
       const status = this.normalizeStatus(o.status);
       return status === 'Ingresada' || status === 'Preparación';
     });
@@ -396,6 +428,19 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     if (!printWindow) {
       toast.error('No se pudo abrir la ventana de impresion.');
     }
+  }
+
+  private isIngresadaStatus(raw?: string): boolean {
+    return this.normalize(raw).includes('ingres');
+  }
+
+  private isPreparacionStatus(raw?: string): boolean {
+    return this.normalize(raw).includes('prepar');
+  }
+
+  private isCerradaStatus(raw?: string): boolean {
+    const value = this.normalize(raw);
+    return value.includes('cerr') || value.includes('lista') || value.includes('entreg');
   }
 
 }

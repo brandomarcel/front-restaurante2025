@@ -61,7 +61,7 @@
             </td>
             <td class="app-td font-mono text-xs text-gray-600">{{ p.codigo || '—' }}</td>
             <td class="app-td">{{ getNameCategory(p.categoria) }}</td>
-            <td class="app-td"><span class="badge badge-gray">{{ p.tax_value || 'IVA-0' }}</span></td>
+            <td class="app-td"><span class="badge badge-gray">{{ p?.tax_value}} %</span></td>
             <td class="app-td text-right font-semibold">{{ p.precio | currency }}</td>
             <td class="app-td">
               <span class="badge" [ngClass]="{ 'badge-green': !p.is_out_of_stock, 'badge-red': p.is_out_of_stock }">

@@ -1,58 +1,83 @@
-<div class="app-container space-y-4">
+<div class="app-container space-y-4 pb-4">
   <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
-    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <div>
-        <h2 class="text-xl font-bold">Ordenes</h2>
+        <h2 class="text-xl font-bold tracking-wide">Panel de ordenes</h2>
         <p class="text-xs text-primary-foreground/80">
-          {{ isMeseroOrCajero ? 'Ordenes del dia actual.' : 'Listado unificado de ordenes del sistema.' }}
+          {{ isMeseroOrCajero ? 'Operacion del dia para atencion en salon y caja.' : 'Control general de ordenes del restaurante.' }}
         </p>
       </div>
-      <div class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
-        Registros: {{ totalOrders }}
+      <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div class="rounded-xl bg-white/20 px-3 py-2 backdrop-blur-sm">
+          <p class="text-[11px] text-primary-foreground/80">Total</p>
+          <p class="text-lg font-bold">{{ totalOrders }}</p>
+        </div>
+        <div class="rounded-xl bg-white/20 px-3 py-2 backdrop-blur-sm">
+          <p class="text-[11px] text-primary-foreground/80">Ingresadas</p>
+          <p class="text-lg font-bold">{{ countByEstado('Ingresada') }}</p>
+        </div>
+        <div class="rounded-xl bg-white/20 px-3 py-2 backdrop-blur-sm">
+          <p class="text-[11px] text-primary-foreground/80">Preparacion</p>
+          <p class="text-lg font-bold">{{ countByEstado('Preparación') }}</p>
+        </div>
+        <div class="rounded-xl bg-white/20 px-3 py-2 backdrop-blur-sm">
+          <p class="text-[11px] text-primary-foreground/80">Cerradas</p>
+          <p class="text-lg font-bold">{{ countByEstado('Cerrada') }}</p>
+        </div>
       </div>
     </div>
   </section>
 
-  <section class="rounded-xl border border-primary/15 bg-white p-4 shadow-sm">
-    <div class="toolbar !mb-0">
+  <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div class="toolbar !mb-0 space-y-3">
       <ng-container *ngIf="isMeseroOrCajero; else defaultFilters">
         <div class="flex w-full flex-col gap-3">
-          <input class="input" type="text" [(ngModel)]="searchTerm"
-            placeholder="Buscar por #orden, alias, cliente o cedula..." />
+          <input
+            class="input h-11 rounded-lg border-slate-300"
+            type="text"
+            [(ngModel)]="searchTerm"
+            placeholder="Buscar por numero, alias, cliente o cedula" />
 
           <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <button class="rounded-lg border px-3 py-2 text-left text-xs font-semibold transition"
+            <button
+              class="rounded-xl border px-3 py-2 text-left text-xs font-semibold transition"
               [ngClass]="isEstadoActivo('') ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 bg-white text-gray-700 hover:border-primary/30'"
               (click)="setEstadoFiltro('')">
-              <span>Todas</span>
-              <span class="ml-1 text-[11px] text-gray-500">({{ countByEstado('') }})</span>
+              Todas ({{ countByEstado('') }})
             </button>
-            <button class="rounded-lg border px-3 py-2 text-left text-xs font-semibold transition"
+            <button
+              class="rounded-xl border px-3 py-2 text-left text-xs font-semibold transition"
               [ngClass]="isEstadoActivo('Ingresada') ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-700 hover:border-red-300'"
               (click)="setEstadoFiltro('Ingresada')">
-              <span>Ingresadas</span>
-              <span class="ml-1 text-[11px] text-gray-500">({{ countByEstado('Ingresada') }})</span>
+              Ingresadas ({{ countByEstado('Ingresada') }})
             </button>
-            <button class="rounded-lg border px-3 py-2 text-left text-xs font-semibold transition"
+            <button
+              class="rounded-xl border px-3 py-2 text-left text-xs font-semibold transition"
               [ngClass]="isEstadoActivo('Preparación') ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-gray-200 bg-white text-gray-700 hover:border-amber-300'"
               (click)="setEstadoFiltro('Preparación')">
-              <span>Preparación</span>
-              <span class="ml-1 text-[11px] text-gray-500">({{ countByEstado('Preparación') }})</span>
+              Preparacion ({{ countByEstado('Preparación') }})
             </button>
-            <button class="rounded-lg border px-3 py-2 text-left text-xs font-semibold transition"
+            <button
+              class="rounded-xl border px-3 py-2 text-left text-xs font-semibold transition"
               [ngClass]="isEstadoActivo('Cerrada') ? 'border-green-300 bg-green-50 text-green-700' : 'border-gray-200 bg-white text-gray-700 hover:border-green-300'"
               (click)="setEstadoFiltro('Cerrada')">
-              <span>Cerradas</span>
-              <span class="ml-1 text-[11px] text-gray-500">({{ countByEstado('Cerrada') }})</span>
+              Cerradas ({{ countByEstado('Cerrada') }})
             </button>
           </div>
 
-          <div class="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
-            <select class="select" [(ngModel)]="tipoFiltro" (ngModelChange)="actualizarOrdenesFiltradas()">
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+            <select class="select h-10 rounded-lg border-slate-300" [(ngModel)]="tipoFiltro" (ngModelChange)="actualizarOrdenesFiltradas()">
               <option value="">Todos los tipos</option>
               <option value="Factura">Factura</option>
               <option value="Nota Venta">Nota de venta</option>
             </select>
+            <div class="hidden sm:flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              <span>Facturas:</span>
+              <span class="font-semibold text-slate-800">{{ countByTipo('Factura') }}</span>
+              <span class="text-slate-300">|</span>
+              <span>Notas:</span>
+              <span class="font-semibold text-slate-800">{{ countByTipo('Nota Venta') }}</span>
+            </div>
             <app-button (click)="limpiarFiltros()" impact="bold" tone="light" shape="rounded" size="small">
               Limpiar
             </app-button>
@@ -61,23 +86,26 @@
       </ng-container>
 
       <ng-template #defaultFilters>
-        <div class="flex w-full flex-col gap-2 sm:flex-row">
-          <input class="input" type="text" [(ngModel)]="searchTerm"
-            placeholder="Buscar por #orden, alias, cliente, cedula, tipo, estado o SRI..." />
-          <select class="select" [(ngModel)]="tipoFiltro" (ngModelChange)="actualizarOrdenesFiltradas()">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-[1.6fr_1fr_1fr_auto]">
+          <input
+            class="input h-11 rounded-lg border-slate-300"
+            type="text"
+            [(ngModel)]="searchTerm"
+            placeholder="Buscar por orden, alias, cliente, estado o SRI" />
+
+          <select class="select h-11 rounded-lg border-slate-300" [(ngModel)]="tipoFiltro" (ngModelChange)="actualizarOrdenesFiltradas()">
             <option value="">Todos los tipos</option>
             <option value="Factura">Factura</option>
             <option value="Nota Venta">Nota de venta</option>
           </select>
-          <select class="select" [(ngModel)]="estadoFiltro" (ngModelChange)="actualizarOrdenesFiltradas()">
+
+          <select class="select h-11 rounded-lg border-slate-300" [(ngModel)]="estadoFiltro" (ngModelChange)="actualizarOrdenesFiltradas()">
             <option value="">Todos los estados</option>
             <option value="Ingresada">Ingresada</option>
-            <option value="Preparación">Preparación</option>
+            <option value="Preparación">Preparacion</option>
             <option value="Cerrada">Cerrada</option>
           </select>
-        </div>
 
-        <div class="flex gap-2">
           <app-button (click)="limpiarFiltros()" impact="bold" tone="light" shape="rounded" size="small">
             Limpiar
           </app-button>
@@ -89,39 +117,39 @@
   <ng-container *ngIf="ordersFiltradosList.length > 0; else emptyOrders">
     <ng-container *ngIf="isMeseroOrCajero; else defaultTableView">
       <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <article *ngFor="let order of ordersFiltradosList"
-          class="rounded-xl border border-gray-200 bg-white p-3 shadow-sm transition hover:border-primary/30 hover:shadow-md">
+        <article
+          *ngFor="let order of ordersFiltradosList"
+          class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-[1px] hover:border-orange-300 hover:shadow-md">
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
-              <p class="truncate text-sm font-semibold text-gray-900">{{ order.name }}</p>
-              <p *ngIf="order.alias" class="truncate text-xs text-muted-foreground">Alias: {{ order.alias }}</p>
+              <p class="truncate text-sm font-bold text-slate-900">{{ order.name }}</p>
+              <p *ngIf="order.alias" class="truncate text-xs text-slate-500">Mesa/Alias: {{ order.alias }}</p>
             </div>
-            <span class="badge"
-              [ngClass]="{
-                'badge-red': getCanonicalStatus(order.status) === 'Ingresada',
-                'badge-yellow': getCanonicalStatus(order.status) === 'Preparación',
-                'badge-green': getCanonicalStatus(order.status) === 'Cerrada',
-                'badge-gray': getCanonicalStatus(order.status) !== 'Ingresada' && getCanonicalStatus(order.status) !== 'Preparación' && getCanonicalStatus(order.status) !== 'Cerrada'
-              }">
-              {{ getCanonicalStatus(order.status) || order.status || '—' }}
+            <span class="badge" [ngClass]="getEstadoBadgeClass(order.status)">
+              {{ getCanonicalStatus(order.status) || order.status || '-' }}
             </span>
           </div>
 
-          <div class="mt-3 grid grid-cols-2 gap-2 text-[11px] text-gray-600">
-            <p class="col-span-2 truncate">Cliente: {{ order.customer?.fullName || order.customer?.nombre || '—' }}</p>
-            <p>Fecha: {{ order.createdAt | date: 'dd/MM/yyyy' }}</p>
-            <p class="text-right">Hora: {{ order.createdAt | date: 'HH:mm' }}</p>
+          <div class="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-[12px] text-slate-600">
+            <p class="truncate">Cliente: {{ order.customer?.fullName || order.customer?.nombre || 'Consumidor final' }}</p>
+            <div class="mt-1 flex items-center justify-between">
+              <span>{{ order.createdAt | date: 'dd/MM/yyyy' }}</span>
+              <span class="font-semibold text-slate-700">{{ order.createdAt | date: 'HH:mm' }}</span>
+            </div>
           </div>
 
-          <div class="mt-3 flex items-center justify-between gap-2 border-t border-gray-100 pt-2">
-            <span class="badge"
-              [ngClass]="{
-                'badge-green': order.type === 'Factura',
-                'badge-yellow': order.type === 'Nota Venta',
-                'badge-gray': order.type !== 'Factura' && order.type !== 'Nota Venta'
-              }">
-              {{ order.type || 'Sin tipo' }}
-            </span>
+          <div class="mt-3 grid grid-cols-2 gap-2">
+            <div class="rounded-lg bg-emerald-50 px-2 py-1.5 text-[11px] text-emerald-700">
+              <p class="text-emerald-600/80">Tipo</p>
+              <p class="font-semibold">{{ order.type || 'Sin tipo' }}</p>
+            </div>
+            <div class="rounded-lg bg-slate-100 px-2 py-1.5 text-right text-[11px] text-slate-700">
+              <p class="text-slate-500">Total</p>
+              <p class="font-bold">{{ (order.total || 0) | currency:'USD':'symbol':'1.2-2' }}</p>
+            </div>
+          </div>
+
+          <div class="mt-3 flex items-center justify-end border-t border-slate-100 pt-2">
             <button
               *ngIf="isCerrada(order); else openOrderButton"
               class="btn btn-outline !px-3 !py-1.5"
@@ -139,11 +167,11 @@
     </ng-container>
 
     <ng-template #defaultTableView>
-      <section class="app-table-wrap">
+      <section class="app-table-wrap rounded-xl border border-slate-200 bg-white shadow-sm">
         <table class="app-table text-xs">
           <thead class="app-thead">
             <tr>
-              <th class="app-th">N° Orden</th>
+              <th class="app-th">Orden</th>
               <th class="app-th">Fecha</th>
               <th class="app-th">Cliente</th>
               <th class="app-th">Estado</th>
@@ -154,23 +182,18 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let order of ordersFiltradosList" class="app-tr">
+            <tr *ngFor="let order of ordersFiltradosList" class="app-tr hover:bg-slate-50/70">
               <td class="app-td">
                 <div class="flex flex-col">
-                  <span class="font-semibold">{{ order.name }}</span>
-                  <span class="text-[11px] text-muted-foreground" *ngIf="order.alias">Alias: {{ order.alias }}</span>
+                  <span class="font-semibold text-slate-900">{{ order.name }}</span>
+                  <span class="text-[11px] text-slate-500" *ngIf="order.alias">Alias: {{ order.alias }}</span>
                 </div>
               </td>
               <td class="app-td">{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
-              <td class="app-td">{{ order.customer?.fullName || order.customer?.nombre || '—' }}</td>
+              <td class="app-td">{{ order.customer?.fullName || order.customer?.nombre || '-' }}</td>
               <td class="app-td">
-                <span class="badge" [ngClass]="{
-                  'badge-red': getCanonicalStatus(order.status) === 'Ingresada',
-                  'badge-yellow': getCanonicalStatus(order.status) === 'Preparación',
-                  'badge-green': getCanonicalStatus(order.status) === 'Cerrada',
-                  'badge-gray': getCanonicalStatus(order.status) !== 'Ingresada' && getCanonicalStatus(order.status) !== 'Preparación' && getCanonicalStatus(order.status) !== 'Cerrada'
-                }">
-                  {{ getCanonicalStatus(order.status) || order.status || '—' }}
+                <span class="badge" [ngClass]="getEstadoBadgeClass(order.status)">
+                  {{ getCanonicalStatus(order.status) || order.status || '-' }}
                 </span>
               </td>
               <td class="app-td text-right">{{ order.iva | currency:'USD':'symbol':'1.2-2' }}</td>
@@ -178,9 +201,10 @@
               <td class="app-td">
                 <span class="badge" [ngClass]="{
                     'badge-green': order.type === 'Factura',
-                    'badge-yellow': order.type == 'Nota Venta'
+                    'badge-yellow': order.type == 'Nota Venta',
+                    'badge-gray': order.type !== 'Factura' && order.type !== 'Nota Venta'
                   }">
-                  {{ order.type }}
+                  {{ order.type || 'Sin tipo' }}
                 </span>
               </td>
               <td class="app-td text-center">
@@ -192,19 +216,17 @@
       </section>
     </ng-template>
 
-    <div class="pager">
-      <button class="pager-btn" (click)="prevPage()" [disabled]="page === 1">« Anterior</button>
-      <span class="text-sm">Pagina {{ page }} de {{ totalPages }}</span>
-      <button class="pager-btn" (click)="nextPage()" [disabled]="page === totalPages">Siguiente »</button>
+    <div class="pager rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+      <button class="pager-btn" (click)="prevPage()" [disabled]="page === 1">Anterior</button>
+      <span class="text-sm font-medium text-slate-700">Pagina {{ page }} de {{ totalPages }}</span>
+      <button class="pager-btn" (click)="nextPage()" [disabled]="page === totalPages">Siguiente</button>
     </div>
-
   </ng-container>
 
   <ng-template #emptyOrders>
-    <div class="app-card">
-      <div class="app-card-body text-center text-gray-500">
-        No hay ordenes para mostrar.
-      </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+      <p class="text-sm font-semibold text-slate-700">No hay ordenes para mostrar</p>
+      <p class="mt-1 text-xs text-slate-500">Ajusta filtros o espera nuevas ordenes del servicio.</p>
     </div>
   </ng-template>
 </div>

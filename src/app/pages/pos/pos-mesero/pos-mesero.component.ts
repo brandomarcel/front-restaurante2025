@@ -225,6 +225,7 @@ export class PosMeseroComponent implements OnInit {
       delivery_address: this.deliveryAddress.trim(),
       delivery_phone: this.deliveryPhone.trim(),
       fecha: this.buildEcuadorIsoDate(),
+      status: 'Ingresada',
       items: this.cartService.cart.map(item => ({
         product: item.name ?? item.nombre,
         qty: item.quantity,

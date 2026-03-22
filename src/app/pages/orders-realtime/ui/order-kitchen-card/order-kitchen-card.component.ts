@@ -71,6 +71,10 @@ export class OrderKitchenCardComponent implements OnInit, OnDestroy {
     return 'bg-emerald-100 text-emerald-700 border-emerald-200';
   }
 
+  get showUrgencyPill(): boolean {
+    return this.order.status !== 'Cerrada';
+  }
+
   // fallback por si el socket manda items con qty/rate/product
   getItemQty(it: any): number {
     return Number(it?.quantity ?? it?.qty ?? 1);

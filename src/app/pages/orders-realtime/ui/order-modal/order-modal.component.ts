@@ -21,10 +21,23 @@ export class OrderModalComponent {
   @Output() toPreparacion = new EventEmitter<OrderVM>();
   @Output() toCerrada = new EventEmitter<OrderVM>();
 
+  get normalizedStatus(): 'Ingresada' | 'Preparación' | 'Cerrada' | string {
+    const value = String(this.order?.status ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+
+    if (value.includes('ingres')) return 'Ingresada';
+    if (value.includes('prepar')) return 'Preparación';
+    if (value.includes('cerr') || value.includes('lista') || value.includes('entreg')) return 'Cerrada';
+    return this.order?.status || 'Ingresada';
+  }
+
   get badgeClass(): string {
-    if (this.order.status === 'Ingresada') return 'bg-sky-100 text-sky-700';
+    if (this.normalizedStatus === 'Ingresada') return 'bg-sky-100 text-sky-700';
     if (this.order.status === 'Preparación') return 'bg-amber-100 text-amber-800';
-    if (this.order.status === 'Cerrada') return 'bg-emerald-100 text-emerald-800';
+    if (this.normalizedStatus === 'Cerrada') return 'bg-emerald-100 text-emerald-800';
     return 'bg-gray-100 text-gray-700';
   }
 
@@ -54,11 +67,16 @@ export class OrderModalComponent {
     return 'badge-yellow';
   }
 
-  get canGoToOrderForInvoice(): boolean {
+  get canGoToOrder(): boolean {
     if (this.kitchenMode) return false;
-    if (this.order.status !== 'Cerrada') return false;
+    return !!String(this.order?.name ?? '').trim();
+  }
 
-    const type = String(this.order?.type ?? '').toLowerCase();
-    return type.includes('nota') || type.includes('venta');
+  get goOrderHint(): string {
+    if (!this.canGoToOrder) return '';
+    if (this.normalizedStatus === 'Cerrada') {
+      return 'Desde la orden puedes facturar, dividir cuentas o revisar el detalle completo.';
+    }
+    return 'Desde la orden puedes editar items, dividir cuentas y continuar el flujo de cobro.';
   }
 }

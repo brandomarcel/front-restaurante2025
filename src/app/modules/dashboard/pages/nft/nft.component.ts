@@ -388,6 +388,58 @@ export class NftComponent implements OnInit, OnDestroy {
     return this.totalOrdersToday / elapsedHours;
   }
 
+  get ticketPromedioLabel(): string {
+    if (!this.totalOrdersToday) {
+      return 'Sin pedidos';
+    }
+    if (this.ticketPromedio >= 15) {
+      return 'Ticket fuerte';
+    }
+    if (this.ticketPromedio >= 8) {
+      return 'Ticket estable';
+    }
+    return 'Ticket bajo';
+  }
+
+  get ticketPromedioClasses(): string {
+    if (!this.totalOrdersToday) {
+      return 'bg-slate-100 text-slate-700';
+    }
+    if (this.ticketPromedio >= 15) {
+      return 'bg-emerald-100 text-emerald-700';
+    }
+    if (this.ticketPromedio >= 8) {
+      return 'bg-sky-100 text-sky-700';
+    }
+    return 'bg-amber-100 text-amber-700';
+  }
+
+  get ritmoTurnoLabel(): string {
+    if (!this.totalOrdersToday) {
+      return 'Sin movimiento';
+    }
+    if (this.ordersPerHour >= 4) {
+      return 'Ritmo alto';
+    }
+    if (this.ordersPerHour >= 2) {
+      return 'Ritmo estable';
+    }
+    return 'Ritmo bajo';
+  }
+
+  get ritmoTurnoClasses(): string {
+    if (!this.totalOrdersToday) {
+      return 'bg-slate-100 text-slate-700';
+    }
+    if (this.ordersPerHour >= 4) {
+      return 'bg-emerald-100 text-emerald-700';
+    }
+    if (this.ordersPerHour >= 2) {
+      return 'bg-sky-100 text-sky-700';
+    }
+    return 'bg-amber-100 text-amber-700';
+  }
+
   get diferenciaCajaAbs(): number {
     return Math.abs(this.diferenciaCaja);
   }
@@ -468,6 +520,52 @@ export class NftComponent implements OnInit, OnDestroy {
     return acciones;
   }
 
+  get mixVentasLabel(): string {
+    if (!this.topProducts.length) {
+      return 'Sin datos';
+    }
+    if (this.topProductShareInTop >= 45) {
+      return 'Alta dependencia';
+    }
+    if (this.top3ShareInTop >= 75) {
+      return 'Mix concentrado';
+    }
+    return 'Mix balanceado';
+  }
+
+  get mixVentasClasses(): string {
+    if (!this.topProducts.length) {
+      return 'bg-slate-100 text-slate-700';
+    }
+    if (this.topProductShareInTop >= 45) {
+      return 'bg-rose-100 text-rose-700';
+    }
+    if (this.top3ShareInTop >= 75) {
+      return 'bg-amber-100 text-amber-700';
+    }
+    return 'bg-emerald-100 text-emerald-700';
+  }
+
+  get mixVentasDetalle(): string {
+    if (!this.topProducts.length) {
+      return 'Todavia no hay suficientes ventas para evaluar el mix de productos.';
+    }
+    if (this.topProductShareInTop >= 45) {
+      return `${this.topProductName} concentra ${this.topProductShareInTop.toFixed(1)}% del top vendido.`;
+    }
+    if (this.top3ShareInTop >= 75) {
+      return `Los 3 productos lideres concentran ${this.top3ShareInTop.toFixed(1)}% de las unidades vendidas.`;
+    }
+    return 'Las ventas se reparten bien entre varios productos del ranking.';
+  }
+
+  get resumenComercialClaro(): string {
+    if (!this.totalOrdersToday) {
+      return 'Aun no hay pedidos suficientes para leer el rendimiento comercial del turno.';
+    }
+    return `Promedio de ${this.ordersPerHour.toFixed(1)} pedidos por hora con un ticket medio de ${this.ticketPromedio.toFixed(2)} USD.`;
+  }
+
   get saludCajaPercent(): number {
     const base = Math.max(Math.abs(this.efectivoEsperado), 1);
     const desvio = (Math.abs(this.diferenciaCaja) / base) * 100;
@@ -482,6 +580,14 @@ export class NftComponent implements OnInit, OnDestroy {
     this.construirChartTopProductos();
     this.construirChartFlujoCaja();
     this.construirChartResumenMonetario();
+  }
+
+  private formatChartDecimal(value: number): string {
+    return (Number(value) || 0).toFixed(2);
+  }
+
+  private formatChartCurrency(value: number): string {
+    return `$${this.formatChartDecimal(value)}`;
   }
 
   private construirChartTopProductos(): void {
@@ -529,7 +635,7 @@ export class NftComponent implements OnInit, OnDestroy {
       },
       tooltip: {
         y: {
-          formatter: (value: number) => `${value} vendidos`
+          formatter: (value: number) => `${this.formatChartDecimal(value)} vendidos`
         }
       }
     };
@@ -556,7 +662,7 @@ export class NftComponent implements OnInit, OnDestroy {
       },
       dataLabels: {
         enabled: true,
-        formatter: (val: number) => `${val.toFixed(0)}%`
+        formatter: (val: number) => `${this.formatChartDecimal(val)}%`
       },
       stroke: { width: 0 },
       plotOptions: {
@@ -565,10 +671,17 @@ export class NftComponent implements OnInit, OnDestroy {
             size: '66%',
             labels: {
               show: true,
+              name: {
+                show: true
+              },
+              value: {
+                show: true,
+                formatter: (value: string) => this.formatChartCurrency(Number(value))
+              },
               total: {
                 show: true,
                 label: 'Movimiento',
-                formatter: () => `$${series.reduce((acc: number, current: number) => acc + current, 0).toFixed(0)}`
+                formatter: () => this.formatChartCurrency(series.reduce((acc: number, current: number) => acc + current, 0))
               }
             }
           }
@@ -576,7 +689,7 @@ export class NftComponent implements OnInit, OnDestroy {
       },
       tooltip: {
         y: {
-          formatter: (value: number) => `$${(Number(value) || 0).toFixed(2)}`
+          formatter: (value: number) => this.formatChartCurrency(value)
         }
       },
       responsive: [
@@ -630,7 +743,7 @@ export class NftComponent implements OnInit, OnDestroy {
       },
       yaxis: {
         labels: {
-          formatter: (val: number) => `${Math.round(val)}`,
+          formatter: (val: number) => this.formatChartDecimal(val),
           style: { colors: '#64748b' }
         }
       },
@@ -641,7 +754,7 @@ export class NftComponent implements OnInit, OnDestroy {
       },
       tooltip: {
         y: {
-          formatter: (value: number) => `$${(Number(value) || 0).toFixed(2)}`
+          formatter: (value: number) => this.formatChartCurrency(value)
         }
       }
     };

@@ -119,7 +119,7 @@
       </article>
       <article class="rounded-xl border border-amber-200 bg-amber-50 p-2.5">
         <p class="text-[11px] font-semibold text-amber-700">En preparacion</p>
-        <p class="mt-1 text-xl font-bold text-amber-800">{{ kitchenPreparacion.length }}</p>
+        <p class="mt-1 text-xl font-bold text-amber-800">{{ kitchenPreparacionSafe.length }}</p>
       </article>
       <article class="rounded-xl border border-emerald-200 bg-emerald-50 p-2.5">
         <p class="text-[11px] font-semibold text-emerald-700">Listas</p>
@@ -157,12 +157,12 @@
       <section class="flex min-h-[360px] flex-col rounded-xl border border-amber-200 bg-white p-2.5 shadow-sm xl:h-[calc(100dvh-360px)]">
         <div class="mb-2 flex items-center justify-between rounded-lg bg-amber-50 px-2 py-1.5">
           <h3 class="text-sm font-semibold text-amber-800">En preparacion</h3>
-          <span class="badge badge-yellow">{{ kitchenPreparacion.length }}</span>
+          <span class="badge badge-yellow">{{ kitchenPreparacionSafe.length }}</span>
         </div>
 
         <div class="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
           <app-order-kitchen-card
-            *ngFor="let o of kitchenPreparacion; trackBy: trackByName"
+            *ngFor="let o of kitchenPreparacionSafe; trackBy: trackByName"
             [order]="o"
             [allowActions]="allowStatusActions"
             (open)="open($event)"
@@ -170,7 +170,7 @@
             (toCerrada)="toCerrada($event)">
           </app-order-kitchen-card>
 
-          <p *ngIf="kitchenPreparacion.length === 0" class="py-4 text-center text-xs text-muted-foreground">
+          <p *ngIf="kitchenPreparacionSafe.length === 0" class="py-4 text-center text-xs text-muted-foreground">
             Sin ordenes en preparacion.
           </p>
         </div>

@@ -455,6 +455,7 @@ export class PosComponent implements OnInit {
       delivery_address: this.deliveryAddress,
       delivery_phone: this.deliveryPhone,
       fecha: this.today,
+      status: 'Cerrada',
       items: this.cart.map(item => ({
         product: item.name ?? item.nombre, // asegúrate que sea el código correcto
         qty: item.quantity,
@@ -529,6 +530,7 @@ export class PosComponent implements OnInit {
       delivery_address: this.deliveryAddress,
       delivery_phone: this.deliveryPhone,
       fecha: this.today,
+      status: 'Cerrada',
       items: this.cart.map(item => ({
         product: item.name ?? item.nombre,
         qty: item.quantity,
