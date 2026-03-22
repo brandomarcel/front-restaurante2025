@@ -145,7 +145,7 @@
       <button
         type="button"
         class="h-11 w-full rounded-xl bg-primary px-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-        [disabled]="!canSubmitOrder"
+        
         (click)="saveOrderMesero()">
         {{ isSubmittingOrder ? 'Enviando...' : ('Enviar comanda - $' + (total | number:'1.2-2')) }}
       </button>
@@ -156,7 +156,7 @@
     <section
       class="max-h-[82vh] w-full rounded-t-2xl bg-white p-3 shadow-2xl"
       (click)="$event.stopPropagation()">
-      <div class="mx-auto w-full max-w-[980px]">
+      <div class="mx-auto w-full max-w-245">
         <div class="mb-3 flex items-center justify-between gap-2">
           <div>
             <p class="text-sm font-bold text-slate-900">Carrito de pedido</p>
