@@ -4,6 +4,7 @@ export const API_ENDPOINT = {
     TOKEN_REFRESH: "/v1/token/refresh/",
   },
   Cliente: "/method/restaurante_app.restaurante_bmarc.doctype.cliente.cliente",
+  Proveedor: "/method/restaurante_app.proveedores_bmarc.doctype.proveedor.proveedor",
   Producto: "/method/restaurante_app.restaurante_bmarc.doctype.producto.producto",
   Orden: "/method/restaurante_app.restaurante_bmarc.doctype.orders.orders",
   Categoria: "/method/restaurante_app.restaurante_bmarc.doctype.categorias.categorias",

@@ -12,12 +12,19 @@ import {
 } from '@angular/forms';
 import { NgxPaginationModule } from 'ngx-pagination';
 import { toast } from 'ngx-sonner';
-import { NgxSpinnerService } from 'ngx-spinner';
-import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
 import { AlertService } from 'src/app/core/services/alert.service';
-import { Supplier } from 'src/app/models/supplier';
+import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
+import {
+  CreateProveedorPayload,
+  Supplier,
+  SupplierIdentificationType,
+  UpdateProveedorPayload,
+} from 'src/app/models/supplier';
 import { SuppliersService } from 'src/app/services/suppliers.service';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
+
+type SupplierModalMode = 'create' | 'edit' | 'view';
+type SupplierStatusFilter = '' | '1' | '0';
 
 @Component({
   selector: 'app-suppliers',
@@ -26,42 +33,55 @@ import { ButtonComponent } from 'src/app/shared/components/button/button.compone
   styleUrl: './suppliers.component.css'
 })
 export class SuppliersComponent implements OnInit {
-  identificationTypes = VARIABLE_CONSTANTS.IDENTIFICATION_TYPE.filter((item) => item.value !== '07 - Consumidor Final');
+  readonly identificationTypes: Array<{ label: string; value: SupplierIdentificationType }> = [
+    { label: 'RUC', value: '04 - RUC' },
+    { label: 'Cedula', value: '05 - Cedula' },
+    { label: 'Pasaporte', value: '06 - Pasaporte' },
+    { label: 'Identificacion del exterior', value: '07 - Identificacion del exterior' },
+  ];
 
   suppliers: Supplier[] = [];
   filteredSuppliersList: Supplier[] = [];
 
-  private _searchTerm = '';
-  get searchTerm() { return this._searchTerm; }
-  set searchTerm(value: string) {
-    this._searchTerm = value || '';
-    this.actualizarProveedoresFiltrados();
-  }
+  searchTerm = '';
+  identificationSearch = '';
+  estadoFiltro: SupplierStatusFilter = '1';
 
-  estadoFiltro: '' | 'activos' | 'inactivos' = '';
+  isLoadingList = false;
+  listError = '';
+  hasLoadedList = false;
+  isLookingUpByIdentification = false;
+  identificationLookupError = '';
 
   mostrarModal = false;
+  modalMode: SupplierModalMode = 'create';
   proveedorEditando: Supplier | null = null;
-  submitted = false;
   proveedorForm!: FormGroup;
+  submitted = false;
+  isSavingSupplier = false;
+  isLoadingSupplierDetail = false;
 
   page = 1;
-  pageSize = VARIABLE_CONSTANTS.PAGE_SIZE || 10;
+  pageSize = 10;
 
   constructor(
     private suppliersService: SuppliersService,
     private fb: FormBuilder,
-    private spinner: NgxSpinnerService,
-    private alertService: AlertService
-  ) { }
+    private alertService: AlertService,
+    private frappeErrorService: FrappeErrorService,
+  ) {}
 
   ngOnInit(): void {
-    this.cargarProveedores();
     this.initForm();
+    this.cargarProveedores();
+  }
+
+  get f() {
+    return this.proveedorForm.controls;
   }
 
   get activeCount(): number {
-    return this.suppliers.filter((item) => !!item.isactive).length;
+    return this.suppliers.filter((item) => this.toBool(item.isactive)).length;
   }
 
   get inactiveCount(): number {
@@ -69,23 +89,49 @@ export class SuppliersComponent implements OnInit {
   }
 
   get creditCount(): number {
-    return this.suppliers.filter((item) => Number(item.dias_credito || 0) > 0).length;
+    return this.suppliers.filter((item) => Number(item.plazo_credito_dias || 0) > 0).length;
+  }
+
+  get isViewMode(): boolean {
+    return this.modalMode === 'view';
+  }
+
+  get modalTitle(): string {
+    switch (this.modalMode) {
+      case 'edit':
+        return 'Editar proveedor';
+      case 'view':
+        return 'Detalle del proveedor';
+      default:
+        return 'Nuevo proveedor';
+    }
+  }
+
+  get modalDescription(): string {
+    switch (this.modalMode) {
+      case 'edit':
+        return 'Actualiza datos fiscales, contacto y condiciones comerciales del proveedor.';
+      case 'view':
+        return 'Consulta la informacion registrada para reutilizarla luego en compras y recepcion.';
+      default:
+        return 'Registra informacion fiscal, contacto y condiciones comerciales de compra.';
+    }
   }
 
   initForm(): void {
     this.proveedorForm = this.fb.group({
       name: [''],
-      codigo: [''],
-      razon_social: ['', Validators.required],
+      nombre: ['', Validators.required],
       nombre_comercial: [''],
+      contacto_principal: [''],
+      telefono: [''],
+      direccion: [''],
       tipo_identificacion: ['04 - RUC', Validators.required],
       num_identificacion: ['', Validators.required],
-      contacto_principal: [''],
       correo: ['', Validators.email],
-      telefono: ['', Validators.required],
-      direccion: ['', Validators.required],
-      dias_credito: [0, [Validators.min(0), Validators.max(365)]],
-      observacion: [''],
+      website: [''],
+      plazo_credito_dias: [0, Validators.min(0)],
+      notas: [''],
       isactive: [true],
     });
 
@@ -95,166 +141,301 @@ export class SuppliersComponent implements OnInit {
     });
   }
 
-  get f() {
-    return this.proveedorForm.controls;
-  }
-
   cargarProveedores(): void {
-    this.spinner.show();
-    this.suppliersService.getAll().subscribe({
-      next: (res) => {
-        this.suppliers = res.message?.data || [];
-        this.actualizarProveedoresFiltrados();
+    this.isLoadingList = true;
+    this.listError = '';
+
+    this.suppliersService.getProveedores({
+      isactive: this.estadoFiltro === '' ? undefined : Number(this.estadoFiltro),
+      search: this.searchTerm || undefined,
+    }).subscribe({
+      next: (res: any) => {
+        this.suppliers = this.extractList(res);
+        this.filteredSuppliersList = [...this.suppliers];
+        this.hasLoadedList = true;
+        this.page = 1;
       },
-      error: () => {
-        this.alertService.error('No se pudieron cargar los proveedores.');
+      error: (error) => {
+        this.suppliers = [];
+        this.filteredSuppliersList = [];
+        this.hasLoadedList = true;
+        this.listError = this.frappeErrorService.handle(error);
       },
       complete: () => {
-        this.spinner.hide();
+        this.isLoadingList = false;
       }
     });
   }
 
-  actualizarProveedoresFiltrados(): void {
-    const term = (this._searchTerm || '').toLowerCase();
-
-    this.filteredSuppliersList = (this.suppliers || []).filter((supplier) => {
-      const matchesSearch =
-        (supplier.razon_social || '').toLowerCase().includes(term) ||
-        (supplier.nombre_comercial || '').toLowerCase().includes(term) ||
-        (supplier.contacto_principal || '').toLowerCase().includes(term) ||
-        (supplier.num_identificacion || '').toLowerCase().includes(term) ||
-        (supplier.codigo || '').toLowerCase().includes(term);
-
-      const matchesStatus =
-        this.estadoFiltro === ''
-          ? true
-          : this.estadoFiltro === 'activos'
-            ? !!supplier.isactive
-            : !supplier.isactive;
-
-      return matchesSearch && matchesStatus;
-    }).sort((a, b) => (a.razon_social || '').localeCompare(b.razon_social || ''));
-
-    if (this.page > 1 && (this.filteredSuppliersList.length || 0) <= ((this.page - 1) * this.pageSize)) {
-      this.page = 1;
-    }
+  aplicarFiltros(): void {
+    this.cargarProveedores();
   }
 
   limpiarFiltros(): void {
-    this._searchTerm = '';
-    this.estadoFiltro = '';
-    this.page = 1;
-    this.actualizarProveedoresFiltrados();
+    this.searchTerm = '';
+    this.identificationSearch = '';
+    this.identificationLookupError = '';
+    this.estadoFiltro = '1';
+    this.cargarProveedores();
   }
 
-  abrirModal(proveedor: Supplier | null = null): void {
-    this.mostrarModal = true;
-    this.submitted = false;
-    this.proveedorEditando = proveedor;
-
-    this.initForm();
-
-    if (proveedor) {
-      this.proveedorForm.patchValue({
-        name: proveedor.name,
-        codigo: proveedor.codigo,
-        razon_social: proveedor.razon_social,
-        nombre_comercial: proveedor.nombre_comercial,
-        tipo_identificacion: proveedor.tipo_identificacion,
-        num_identificacion: proveedor.num_identificacion,
-        contacto_principal: proveedor.contacto_principal,
-        correo: proveedor.correo,
-        telefono: proveedor.telefono,
-        direccion: proveedor.direccion,
-        dias_credito: proveedor.dias_credito,
-        observacion: proveedor.observacion,
-        isactive: proveedor.isactive,
-      });
+  buscarPorIdentificacion(): void {
+    const identification = String(this.identificationSearch || '').trim();
+    if (!identification) {
+      this.identificationLookupError = 'Ingresa una identificacion para buscar.';
+      return;
     }
+
+    this.isLookingUpByIdentification = true;
+    this.identificationLookupError = '';
+
+    this.suppliersService.getProveedorByIdentificacion(identification).subscribe({
+      next: (res: any) => {
+        const supplier = this.extractItem(res);
+        if (!supplier) {
+          this.identificationLookupError = 'No se encontro un proveedor con esa identificacion.';
+          return;
+        }
+
+        this.identificationLookupError = '';
+        this.abrirModalDetalle(supplier);
+      },
+      error: (error) => {
+        this.identificationLookupError = this.frappeErrorService.handle(error);
+      },
+      complete: () => {
+        this.isLookingUpByIdentification = false;
+      }
+    });
+  }
+
+  abrirModalCrear(): void {
+    this.modalMode = 'create';
+    this.proveedorEditando = null;
+    this.submitted = false;
+    this.isLoadingSupplierDetail = false;
+    this.isSavingSupplier = false;
+    this.proveedorForm.enable({ emitEvent: false });
+    this.proveedorForm.reset(this.defaultFormValue());
+    this.mostrarModal = true;
+  }
+
+  abrirModalEditar(supplier: Supplier): void {
+    this.openSupplierById(supplier.name, 'edit');
+  }
+
+  abrirModalDetalle(supplier: Supplier): void {
+    this.openSupplierById(supplier.name, 'view');
   }
 
   cerrarModal(): void {
     this.mostrarModal = false;
+    this.modalMode = 'create';
     this.proveedorEditando = null;
     this.submitted = false;
-    this.proveedorForm.reset({
-      name: '',
-      codigo: '',
-      razon_social: '',
-      nombre_comercial: '',
-      tipo_identificacion: '04 - RUC',
-      num_identificacion: '',
-      contacto_principal: '',
-      correo: '',
-      telefono: '',
-      direccion: '',
-      dias_credito: 0,
-      observacion: '',
-      isactive: true,
-    });
+    this.isSavingSupplier = false;
+    this.isLoadingSupplierDetail = false;
+    this.proveedorForm.enable({ emitEvent: false });
+    this.proveedorForm.reset(this.defaultFormValue());
   }
 
   guardarProveedor(): void {
+    if (this.isViewMode || this.isSavingSupplier) {
+      return;
+    }
+
     this.submitted = true;
     if (this.proveedorForm.invalid) {
       this.proveedorForm.markAllAsTouched();
       return;
     }
 
-    const payload = this.proveedorForm.getRawValue();
-    const request = this.proveedorEditando
-      ? this.suppliersService.update(payload)
-      : this.suppliersService.create(payload);
+    const payload = this.buildPayload();
+    this.isSavingSupplier = true;
 
-    this.spinner.show();
+    const request = this.modalMode === 'edit' && this.proveedorEditando?.name
+      ? this.suppliersService.updateProveedor({
+        name: this.proveedorEditando.name,
+        ...payload,
+      } as UpdateProveedorPayload)
+      : this.suppliersService.createProveedor(payload as CreateProveedorPayload);
+
     request.subscribe({
       next: () => {
-        toast.success(this.proveedorEditando ? 'Proveedor actualizado' : 'Proveedor creado');
+        toast.success(this.modalMode === 'edit' ? 'Proveedor actualizado' : 'Proveedor creado');
         this.cerrarModal();
         this.cargarProveedores();
       },
-      error: () => {
-        this.spinner.hide();
-        this.alertService.error('No se pudo guardar el proveedor.');
+      error: (error) => {
+        this.isSavingSupplier = false;
+        this.alertService.error(this.frappeErrorService.handle(error));
+      },
+      complete: () => {
+        this.isSavingSupplier = false;
       }
     });
   }
 
-  eliminarProveedor(name: string): void {
-    this.alertService.confirm('Se eliminara el proveedor seleccionado.', 'Confirmar').then((result) => {
-      if (!result.isConfirmed) {
-        return;
-      }
+  getPlazoCreditoLabel(supplier: Supplier): string {
+    const days = Number(supplier.plazo_credito_dias || 0);
+    return days > 0 ? `${days} dias` : 'Contado';
+  }
 
-      this.spinner.show();
-      this.suppliersService.delete(name).subscribe({
-        next: () => {
-          toast.success('Proveedor eliminado');
-          this.cargarProveedores();
-        },
-        error: () => {
-          this.spinner.hide();
-          this.alertService.error('No se pudo eliminar el proveedor.');
+  getStatusTone(supplier: Supplier): string {
+    return this.toBool(supplier.isactive) ? 'badge-green' : 'badge-red';
+  }
+
+  getStatusLabel(supplier: Supplier): string {
+    return this.toBool(supplier.isactive) ? 'Activo' : 'Inactivo';
+  }
+
+  getMaxLength(): number | null {
+    const tipo = String(this.f['tipo_identificacion']?.value || '');
+    switch (tipo) {
+      case '05 - Cedula':
+        return 10;
+      case '04 - RUC':
+        return 13;
+      default:
+        return null;
+    }
+  }
+
+  trackByName = (_: number, item: Supplier) => item?.name || item?.num_identificacion || _;
+
+  private openSupplierById(name: string, mode: SupplierModalMode): void {
+    this.mostrarModal = true;
+    this.modalMode = mode;
+    this.proveedorEditando = null;
+    this.submitted = false;
+    this.isSavingSupplier = false;
+    this.isLoadingSupplierDetail = true;
+    this.proveedorForm.reset(this.defaultFormValue());
+
+    if (mode === 'view') {
+      this.proveedorForm.disable({ emitEvent: false });
+    } else {
+      this.proveedorForm.enable({ emitEvent: false });
+    }
+
+    this.suppliersService.getProveedorById(name).subscribe({
+      next: (res: any) => {
+        const supplier = this.extractItem(res);
+        if (!supplier) {
+          this.alertService.error('No se pudo cargar el detalle del proveedor.');
+          this.cerrarModal();
+          return;
         }
-      });
+
+        this.proveedorEditando = supplier;
+        this.proveedorForm.patchValue(this.toFormValue(supplier));
+
+        if (mode === 'view') {
+          this.proveedorForm.disable({ emitEvent: false });
+        } else {
+          this.proveedorForm.enable({ emitEvent: false });
+        }
+      },
+      error: (error) => {
+        this.alertService.error(this.frappeErrorService.handle(error));
+        this.cerrarModal();
+      },
+      complete: () => {
+        this.isLoadingSupplierDetail = false;
+      }
     });
   }
 
-  identificacionLengthValidator(): ValidatorFn {
+  private buildPayload(): Partial<CreateProveedorPayload> {
+    const raw = this.proveedorForm.getRawValue();
+
+    return this.compactPayload({
+      nombre: this.cleanText(raw.nombre),
+      nombre_comercial: this.cleanText(raw.nombre_comercial),
+      contacto_principal: this.cleanText(raw.contacto_principal),
+      telefono: this.cleanText(raw.telefono),
+      direccion: this.cleanText(raw.direccion),
+      tipo_identificacion: raw.tipo_identificacion || undefined,
+      num_identificacion: this.cleanText(raw.num_identificacion),
+      correo: this.cleanText(raw.correo)?.toLowerCase(),
+      website: this.cleanText(raw.website),
+      plazo_credito_dias: raw.plazo_credito_dias === '' || raw.plazo_credito_dias === null
+        ? undefined
+        : Number(raw.plazo_credito_dias || 0),
+      notas: this.cleanText(raw.notas),
+      isactive: !!raw.isactive,
+    });
+  }
+
+  private compactPayload(payload: Record<string, any>): Record<string, any> {
+    return Object.entries(payload).reduce((acc, [key, value]) => {
+      if (value === undefined || value === null || value === '') {
+        return acc;
+      }
+
+      acc[key] = value;
+      return acc;
+    }, {} as Record<string, any>);
+  }
+
+  private cleanText(value: any): string {
+    return String(value ?? '').trim();
+  }
+
+  private toFormValue(supplier: Supplier) {
+    return {
+      name: supplier.name || '',
+      nombre: supplier.nombre || '',
+      nombre_comercial: supplier.nombre_comercial || '',
+      contacto_principal: supplier.contacto_principal || '',
+      telefono: supplier.telefono || '',
+      direccion: supplier.direccion || '',
+      tipo_identificacion: supplier.tipo_identificacion || '04 - RUC',
+      num_identificacion: supplier.num_identificacion || '',
+      correo: supplier.correo || '',
+      website: supplier.website || '',
+      plazo_credito_dias: Number(supplier.plazo_credito_dias || 0),
+      notas: supplier.notas || '',
+      isactive: this.toBool(supplier.isactive),
+    };
+  }
+
+  private defaultFormValue() {
+    return {
+      name: '',
+      nombre: '',
+      nombre_comercial: '',
+      contacto_principal: '',
+      telefono: '',
+      direccion: '',
+      tipo_identificacion: '04 - RUC',
+      num_identificacion: '',
+      correo: '',
+      website: '',
+      plazo_credito_dias: 0,
+      notas: '',
+      isactive: true,
+    };
+  }
+
+  private toBool(value: number | boolean | undefined): boolean {
+    return value === true || value === 1 || value === '1' as any;
+  }
+
+  private identificacionLengthValidator(): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
-      const tipo = this.proveedorForm?.get('tipo_identificacion')?.value || '';
-      const valor: string = control.value || '';
+      const tipo = String(this.proveedorForm?.get('tipo_identificacion')?.value || '');
+      const valor = String(control.value || '').trim();
 
       if (!valor) {
         return null;
       }
 
-      if (tipo.slice(0, 2) === '05' && valor.length !== 10) {
+      if (tipo === '05 - Cedula' && valor.length !== 10) {
         return { cedulaInvalida: true };
       }
 
-      if (tipo.slice(0, 2) === '04' && valor.length !== 13) {
+      if (tipo === '04 - RUC' && valor.length !== 13) {
         return { rucInvalido: true };
       }
 
@@ -262,10 +443,38 @@ export class SuppliersComponent implements OnInit {
     };
   }
 
-  getMaxLength(): number {
-    const tipo = this.proveedorForm?.get('tipo_identificacion')?.value || '';
-    return tipo.slice(0, 2) === '05' ? 10 : 13;
+  private extractList(res: any): Supplier[] {
+    const candidates = [
+      res?.message?.data,
+      res?.data,
+      res?.message?.suppliers,
+      res?.suppliers,
+      res?.message,
+    ];
+
+    const list = candidates.find((item) => Array.isArray(item));
+    return Array.isArray(list) ? list : [];
   }
 
-  trackByName = (_: number, item: Supplier) => item?.name || item?.codigo || _;
+  private extractItem(res: any): Supplier | null {
+    const candidates = [
+      res?.message?.data,
+      res?.data,
+      res?.message?.supplier,
+      res?.supplier,
+      res?.message,
+    ];
+
+    for (const item of candidates) {
+      if (Array.isArray(item) && item.length) {
+        return item[0] as Supplier;
+      }
+
+      if (item && typeof item === 'object' && !Array.isArray(item) && item.name) {
+        return item as Supplier;
+      }
+    }
+
+    return null;
+  }
 }

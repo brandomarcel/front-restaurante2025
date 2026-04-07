@@ -103,11 +103,11 @@ export class Menu {
           label: 'Clientes',
           route: '/dashboard/customers',
         },
-        {
-          icon: 'assets/icons/tablericons/users-plus.svg',
-          label: 'Proveedores',
-          route: '/dashboard/suppliers',
-        },
+        // {
+        //   icon: 'assets/icons/tablericons/users-plus.svg',
+        //   label: 'Proveedores',
+        //   route: '/dashboard/suppliers',
+        // },
         {
           icon: 'assets/icons/tablericons/package.svg',
           label: 'Productos',
