@@ -19,6 +19,8 @@ import { OrdersRealtimeComponent } from 'src/app/pages/orders-realtime/orders-re
 import { PosShellComponent } from 'src/app/pages/pos/pos-shell/pos-shell.component';
 import { CajaAbiertaGuard } from 'src/app/core/guards/caja-abierta.guard';
 import { RoleAccessGuard } from 'src/app/core/guards/role-access.guard';
+import { SuppliersComponent } from 'src/app/pages/suppliers/suppliers.component';
+import { InventoryComponent } from 'src/app/pages/inventory/inventory.component';
 
 const routes: Routes = [
   {
@@ -30,6 +32,8 @@ const routes: Routes = [
       // { path: 'pos', component: PosComponent },
       { path: 'pos', component: PosShellComponent, canActivate: [CajaAbiertaGuard] },
       { path: 'customers', component: CustomersComponent },
+      { path: 'suppliers', component: SuppliersComponent },
+      { path: 'inventory', component: InventoryComponent },
       { path: 'products', component: ProductsComponent },
       { path: 'company', component: CompanyComponent },
       { path: 'orders', component: OrdersComponent },

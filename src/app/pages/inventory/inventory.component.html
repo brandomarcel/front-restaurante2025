@@ -1,0 +1,465 @@
+<div class="app-container space-y-4">
+  <section class="rounded-3xl bg-gradient-to-r from-primary via-primary to-slate-800 px-4 py-5 text-primary-foreground shadow-lg">
+    <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+      <div class="max-w-3xl">
+        <div class="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em]">
+          Inventario central
+        </div>
+        <h2 class="text-2xl font-bold tracking-tight">Stock operativo con vista clara para restaurante y crecimiento futuro</h2>
+        <p class="mt-2 max-w-2xl text-sm text-primary-foreground/80">
+          El backend decide el stock real. Desde aqui solo visualizas estado, registras movimientos manuales y consultas el historial cuando lo necesites.
+        </p>
+      </div>
+
+      <div class="grid gap-2 sm:grid-cols-2 xl:w-[420px]">
+        <button type="button" class="inventory-quick-action" (click)="abrirMovimientoModal()">
+          <span class="inventory-quick-action__label">Accion rapida</span>
+          <span class="inventory-quick-action__title">Crear movimiento</span>
+          <span class="inventory-quick-action__meta">Entrada, salida o ajuste manual</span>
+        </button>
+
+        <button type="button" class="inventory-quick-action" (click)="irAHistorial()">
+          <span class="inventory-quick-action__label">Consulta</span>
+          <span class="inventory-quick-action__title">Ver historial</span>
+          <span class="inventory-quick-action__meta">Audita cambios y referencias</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+    <article class="inventory-stat-card">
+      <p class="inventory-stat-card__label">Productos con control</p>
+      <p class="inventory-stat-card__value">{{ controlledProductsCount }}</p>
+      <p class="inventory-stat-card__hint">Catalogo conectado a stock real</p>
+    </article>
+
+    <article class="inventory-stat-card">
+      <p class="inventory-stat-card__label">Disponibles para venta</p>
+      <p class="inventory-stat-card__value text-emerald-600">{{ availableProductsCount }}</p>
+      <p class="inventory-stat-card__hint">Segun estado devuelto por backend</p>
+    </article>
+
+    <article class="inventory-stat-card inventory-stat-card--warn">
+      <p class="inventory-stat-card__label">Bajo stock</p>
+      <p class="inventory-stat-card__value text-amber-600">{{ lowStockCount }}</p>
+      <p class="inventory-stat-card__hint">Productos que requieren atencion</p>
+    </article>
+
+    <article class="inventory-stat-card inventory-stat-card--danger">
+      <p class="inventory-stat-card__label">Agotados</p>
+      <p class="inventory-stat-card__value text-rose-600">{{ outOfStockCount }}</p>
+      <p class="inventory-stat-card__hint">Bloqueados o en espera de reposicion</p>
+    </article>
+  </section>
+
+  <section class="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+    <div class="flex flex-wrap gap-2">
+      <button
+        *ngFor="let tab of inventoryTabs"
+        type="button"
+        class="inventory-tab"
+        [class.inventory-tab--active]="activeTab === tab.key"
+        (click)="cambiarTab(tab.key)"
+      >
+        {{ tab.label }}
+      </button>
+    </div>
+  </section>
+
+  <ng-container *ngIf="activeTab === 'overview'; else historyTab">
+    <section class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div class="space-y-4">
+        <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h3 class="text-sm font-semibold text-slate-800">Resumen de stock</h3>
+              <p class="text-xs text-slate-500">Busca productos, prioriza bajo stock y consulta disponibilidad sin salir del modulo.</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <app-button impact="bold" tone="primary" shape="rounded" size="small" (click)="aplicarFiltrosInventario()">
+                Actualizar
+              </app-button>
+              <app-button impact="bold" tone="light" shape="rounded" size="small" (click)="abrirMovimientoModal()">
+                Crear movimiento
+              </app-button>
+            </div>
+          </div>
+
+          <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+            <div>
+              <input class="input" type="text" [(ngModel)]="search" placeholder="Buscar por nombre o codigo..." />
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+              <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-700">
+                <input type="checkbox" [(ngModel)]="onlyActive" />
+                Solo activos
+              </label>
+              <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-700">
+                <input type="checkbox" [(ngModel)]="onlyLowStock" />
+                Solo bajo stock
+              </label>
+              <app-button impact="bold" tone="light" shape="rounded" size="small" (click)="limpiarFiltrosInventario()">
+                Limpiar
+              </app-button>
+            </div>
+          </div>
+        </section>
+
+        <section class="app-table-wrap">
+          <table class="app-table text-xs">
+            <thead class="app-thead">
+              <tr>
+                <th class="app-th">Producto</th>
+                <th class="app-th">Codigo</th>
+                <th class="app-th">Estado venta</th>
+                <th class="app-th">Stock actual</th>
+                <th class="app-th">Stock minimo</th>
+                <th class="app-th">Unidad</th>
+                <th class="app-th">Estado</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr *ngFor="let product of inventoryProducts; trackBy: trackByProduct" class="app-tr">
+                <td class="app-td">
+                  <div class="flex flex-col gap-1">
+                    <span class="font-semibold text-slate-900">{{ product.nombre }}</span>
+                    <span class="text-xs text-slate-500">{{ product.descripcion || 'Sin descripcion' }}</span>
+                    <span class="text-[11px] font-medium text-slate-400">{{ getProductStatusSummary(product) }}</span>
+                  </div>
+                </td>
+                <td class="app-td font-mono">{{ product.codigo || '-' }}</td>
+                <td class="app-td">
+                  <span class="badge" [ngClass]="canSell(product) ? 'badge-green' : 'badge-red'">
+                    {{ canSell(product) ? 'Disponible' : 'Bloqueado' }}
+                  </span>
+                </td>
+                <td class="app-td">
+                  <div class="flex flex-col">
+                    <span>{{ formatStock(product) }}</span>
+                    <span *ngIf="hasInventory(product)" class="text-[11px] text-slate-400">
+                      Actualiza cuando ventas u ordenes cambian
+                    </span>
+                  </div>
+                </td>
+                <td class="app-td">{{ hasInventory(product) ? (product.stock_minimo || 0) : '-' }}</td>
+                <td class="app-td">{{ hasInventory(product) ? getInventoryUnit(product) : '-' }}</td>
+                <td class="app-td">
+                  <div class="flex flex-wrap gap-1.5">
+                    <span class="badge" [ngClass]="product.isactive ? 'badge-green' : 'badge-red'">
+                      {{ product.isactive ? 'Activo' : 'Inactivo' }}
+                    </span>
+                    <span *ngIf="!hasInventory(product)" class="badge badge-gray">Sin control</span>
+                    <span *ngIf="isOutOfStock(product)" class="badge badge-red">Agotado</span>
+                    <span *ngIf="isLowStock(product) && !isOutOfStock(product)" class="badge badge-yellow">Bajo stock</span>
+                  </div>
+                </td>
+              </tr>
+
+              <tr *ngIf="inventoryProducts.length === 0">
+                <td colspan="7" class="app-td py-10 text-center">
+                  <div class="mx-auto max-w-sm space-y-2">
+                    <p class="text-sm font-semibold text-slate-700">No encontramos productos para este filtro</p>
+                    <p class="text-xs text-slate-500">Prueba quitando el filtro de bajo stock o ajustando el texto de busqueda.</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+
+      <aside class="space-y-4">
+        <section class="inventory-side-card border-sky-100 bg-sky-50/70">
+          <p class="inventory-side-card__eyebrow">Regla operativa</p>
+          <h3 class="inventory-side-card__title">El stock no se calcula en el cliente</h3>
+          <p class="inventory-side-card__body">
+            Ordenes, ventas y reversas actualizan existencias en backend. Esta vista solo refleja el estado actual para evitar inconsistencias.
+          </p>
+        </section>
+
+        <section class="inventory-side-card border-slate-200 bg-white">
+          <p class="inventory-side-card__eyebrow">Flujo recomendado</p>
+          <h3 class="inventory-side-card__title">Como usar esta pantalla</h3>
+          <div class="space-y-2 text-xs text-slate-600">
+            <p>1. Busca el producto y revisa si esta en bajo stock o agotado.</p>
+            <p>2. Si necesitas correccion manual, crea un movimiento desde aqui.</p>
+            <p>3. Para auditoria o soporte, abre la pestaña de historial.</p>
+          </div>
+        </section>
+
+        <section class="inventory-side-card border-amber-100 bg-amber-50/70">
+          <p class="inventory-side-card__eyebrow">Atencion inmediata</p>
+          <h3 class="inventory-side-card__title">Prioridades de reposicion</h3>
+          <p class="inventory-side-card__body">
+            {{ lowStockCount || 0 }} producto(s) en bajo stock y {{ outOfStockCount || 0 }} agotado(s). Puedes filtrar rapido para enfocarte en lo urgente.
+          </p>
+          <button type="button" class="btn btn-outline mt-3 w-full" (click)="onlyLowStock = true; aplicarFiltrosInventario()">
+            Ver solo bajo stock
+          </button>
+        </section>
+      </aside>
+    </section>
+  </ng-container>
+
+  <ng-template #historyTab>
+    <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="mb-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div>
+          <h3 class="text-sm font-semibold text-slate-800">Historial de movimientos</h3>
+          <p class="text-xs text-slate-500">Consulta entradas, salidas, ajustes y trazabilidad por referencia sin mezclarlo con la operacion diaria.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <app-button impact="bold" tone="light" shape="rounded" size="small" (click)="cargarMovimientos()">
+            Refrescar historial
+          </app-button>
+          <app-button impact="bold" tone="primary" shape="rounded" size="small" (click)="abrirMovimientoModal()">
+            Crear movimiento
+          </app-button>
+        </div>
+      </div>
+
+      <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_180px_auto]">
+        <div>
+          <select class="select !w-full" [(ngModel)]="historyProduct">
+            <option value="">Todos los productos</option>
+            <option *ngFor="let product of productOptions" [value]="product.name">{{ product.nombre }}</option>
+          </select>
+        </div>
+
+        <div>
+          <select class="select !w-full" [(ngModel)]="historyMovementType">
+            <option value="">Todos los tipos</option>
+            <option *ngFor="let type of movementTypes" [value]="type">{{ getMovementOptionLabel(type) }}</option>
+          </select>
+        </div>
+
+        <div>
+          <select class="select !w-full" [(ngModel)]="historyLimit">
+            <option [ngValue]="10">10 por pagina</option>
+            <option [ngValue]="20">20 por pagina</option>
+            <option [ngValue]="30">30 por pagina</option>
+          </select>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <app-button impact="bold" tone="primary" shape="rounded" size="small" (click)="aplicarFiltrosHistorial()">
+            Filtrar
+          </app-button>
+          <app-button impact="bold" tone="light" shape="rounded" size="small" (click)="limpiarFiltrosHistorial()">
+            Limpiar
+          </app-button>
+        </div>
+      </div>
+
+      <div class="mt-4 rounded-2xl border border-slate-100 bg-slate-50/70 px-4 py-3">
+        <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <p class="text-xs text-slate-600">Rango actual: <span class="font-semibold text-slate-800">{{ historyRangeLabel }}</span></p>
+          <p class="text-xs text-slate-500">Expande una fila para revisar stock antes y stock despues por item.</p>
+        </div>
+      </div>
+
+      <div class="app-table-wrap mt-4 !border-0 !shadow-none">
+        <table class="app-table text-xs">
+          <thead class="app-thead">
+            <tr>
+              <th class="app-th">Fecha</th>
+              <th class="app-th">Tipo</th>
+              <th class="app-th">Referencia</th>
+              <th class="app-th">Notas</th>
+              <th class="app-th">Items</th>
+              <th class="app-th">Cantidad</th>
+              <th class="app-th text-center">Detalle</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <ng-container *ngFor="let movement of movements; trackBy: trackByMovement">
+              <tr class="app-tr">
+                <td class="app-td">{{ (movement.creation || movement.posting_date) | date:'short' }}</td>
+                <td class="app-td">
+                  <span class="badge" [ngClass]="getMovementTone(movement.movement_type)">
+                    {{ getMovementOptionLabel(movement.movement_type || 'Sin tipo') }}
+                  </span>
+                </td>
+                <td class="app-td">{{ extractReference(movement) }}</td>
+                <td class="app-td">{{ movement.notes || '-' }}</td>
+                <td class="app-td">{{ movement.total_items || movement.items?.length || 0 }}</td>
+                <td class="app-td">{{ movement.total_quantity || '-' }}</td>
+                <td class="app-td text-center">
+                  <button class="btn btn-outline" (click)="toggleMovementDetail(movement)">
+                    {{ expandedMovementName === (movement.name || movement.creation || '') ? 'Ocultar' : 'Ver' }}
+                  </button>
+                </td>
+              </tr>
+
+              <tr *ngIf="expandedMovementName === (movement.name || movement.creation || '')" class="bg-slate-50">
+                <td colspan="7" class="p-3">
+                  <div class="rounded-xl border border-slate-200 bg-white p-3">
+                    <p class="mb-2 text-xs font-semibold text-slate-700">Detalle por item</p>
+                    <div class="overflow-x-auto">
+                      <table class="min-w-full text-xs">
+                        <thead>
+                          <tr class="border-b border-slate-200 text-left text-slate-500">
+                            <th class="px-2 py-2">Producto</th>
+                            <th class="px-2 py-2">Cantidad</th>
+                            <th class="px-2 py-2">Stock antes</th>
+                            <th class="px-2 py-2">Stock despues</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let item of movement.items || []" class="border-b border-slate-100">
+                            <td class="px-2 py-2">{{ item.product_name || resolveProductName(item.product || '') }}</td>
+                            <td class="px-2 py-2">{{ item.quantity ?? '-' }}</td>
+                            <td class="px-2 py-2">{{ item.stock_before ?? '-' }}</td>
+                            <td class="px-2 py-2">{{ item.stock_after ?? '-' }}</td>
+                          </tr>
+                          <tr *ngIf="!(movement.items || []).length">
+                            <td colspan="4" class="px-2 py-3 text-center text-slate-500">Sin detalle por item.</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </ng-container>
+
+            <tr *ngIf="movements.length === 0">
+              <td colspan="7" class="app-td py-10 text-center">
+                <div class="mx-auto max-w-sm space-y-2">
+                  <p class="text-sm font-semibold text-slate-700">No hay movimientos para mostrar</p>
+                  <p class="text-xs text-slate-500">Ajusta filtros o registra un nuevo movimiento para empezar a construir historial.</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pager">
+        <button class="pager-btn" (click)="prevHistoryPage()" [disabled]="!canGoPrevHistory">« Anterior</button>
+        <span class="text-sm">{{ historyRangeLabel }}</span>
+        <button class="pager-btn" (click)="nextHistoryPage()" [disabled]="!canGoNextHistory">Siguiente »</button>
+      </div>
+    </section>
+  </ng-template>
+
+  <div *ngIf="showMovementModal" class="app-modal-backdrop">
+    <div class="app-modal !max-w-4xl overflow-hidden !rounded-2xl !border-slate-200 !bg-white !shadow-2xl">
+      <div class="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur md:px-5">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h3 class="text-base font-semibold text-slate-800 md:text-lg">Nuevo movimiento de inventario</h3>
+            <p class="mt-0.5 text-xs text-slate-500">Registra un ajuste manual sin recalcular stock en el cliente.</p>
+          </div>
+          <button
+            type="button"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+            (click)="cerrarMovimientoModal()"
+            aria-label="Cerrar modal"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+
+      <form [formGroup]="movementForm" (ngSubmit)="guardarMovimiento()" class="space-y-4 px-4 py-4 text-sm md:px-5 md:py-5">
+        <section class="rounded-xl border border-slate-200 bg-slate-50/60 p-3 md:p-4">
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label class="mb-1 block font-medium">Que paso con este producto</label>
+              <select class="select" formControlName="movement_type">
+                <option *ngFor="let type of movementTypes" [value]="type">{{ getMovementOptionLabel(type) }}</option>
+              </select>
+              <p class="mt-2 text-xs text-slate-500">{{ getMovementOptionDescription(currentMovementType) }}</p>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-500">
+              {{ getMovementHint() }}
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="mb-1 block font-medium">Motivo o detalle(Opcional)</label>
+              <textarea rows="3" class="input" formControlName="notes" placeholder="Ej: ingreso por compra, merma por dano, correccion de conteo"></textarea>
+            </div>
+
+            <div class="md:col-span-2 rounded-xl border border-dashed border-slate-300 bg-white p-3">
+              <button
+                type="button"
+                class="flex w-full items-center justify-between text-left text-sm font-medium text-slate-700"
+                (click)="showOptionalReferenceFields = !showOptionalReferenceFields"
+              >
+                <span>Datos opcionales de referencia</span>
+                <span class="text-xs text-slate-500">
+                  {{ showOptionalReferenceFields ? 'Ocultar' : 'Agregar' }}
+                </span>
+              </button>
+
+              <p class="mt-1 text-xs text-slate-500">
+                Usalos si quieres dejar amarrado el movimiento a una orden, compra o ajuste especifico.
+              </p>
+
+              <div *ngIf="showOptionalReferenceFields" class="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label class="mb-1 block font-medium">Tipo de referencia</label>
+                  <input class="input" type="text" formControlName="reference_doctype" placeholder="Ej: Orden, Compra, Ajuste" />
+                </div>
+
+                <div>
+                  <label class="mb-1 block font-medium">Codigo o numero de referencia</label>
+                  <input class="input" type="text" formControlName="reference_name" placeholder="Opcional" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-xl border border-slate-200 bg-white p-3 md:p-4">
+          <div class="mb-3 flex items-center justify-between">
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Items del movimiento</p>
+            <button type="button" class="btn btn-outline" (click)="agregarFilaMovimiento()">Agregar fila</button>
+          </div>
+
+          <div formArrayName="items" class="space-y-3">
+            <div
+              *ngFor="let itemGroup of movementItems.controls; let i = index"
+              [formGroupName]="i"
+              class="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[minmax(0,1fr)_160px_90px]"
+            >
+              <div>
+                <label class="mb-1 block font-medium">Producto</label>
+                <select class="select !w-full" formControlName="product">
+                  <option value="">Selecciona un producto</option>
+                  <option *ngFor="let product of productOptions" [value]="product.name">{{ product.nombre }}</option>
+                </select>
+                <div *ngIf="submittedMovement && itemGroup.get('product')?.invalid" class="field-error">Producto requerido.</div>
+              </div>
+
+              <div>
+                <label class="mb-1 block font-medium">Cantidad</label>
+                <input class="input no-spinner" type="number" step="1" formControlName="quantity" />
+                <div *ngIf="submittedMovement && itemGroup.get('quantity')?.invalid" class="field-error">Cantidad requerida.</div>
+              </div>
+
+              <div class="flex items-end">
+                <button type="button" class="btn btn-warn w-full" (click)="quitarFilaMovimiento(i)">Quitar</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="sticky bottom-0 -mx-4 border-t border-slate-200 bg-white px-4 py-3 md:-mx-5 md:px-5">
+          <div class="flex justify-end gap-2">
+            <button type="button" class="btn btn-outline" (click)="cerrarMovimientoModal()">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar movimiento</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

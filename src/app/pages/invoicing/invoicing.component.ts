@@ -19,6 +19,7 @@ import { UtilsService } from '../../core/services/utils.service';
 import { Customer } from 'src/app/core/models/customer';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
 import { ActivatedRoute, Router } from '@angular/router';
+import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 
 type Payment = { name: string; codigo: string; nombre: string; };
 type CartItem = {
@@ -275,8 +276,14 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   }
 
   // ------------------ Carrito ------------------
-  addProductToCart(product: Product | null): void {
+  addProductToCart(productSelection: Product | string | null): void {
+    const product = this.resolveProduct(productSelection);
     if (!product) return;
+    if (this.isProductBlocked(product)) {
+      toast.warning('Este producto esta agotado y no se puede agregar.');
+      this.invoiceForm.patchValue({ selectedProduct: null });
+      return;
+    }
 
     const existing = this.cartItems.find(ci => ci.name === product.name);
     if (existing) {
@@ -457,6 +464,30 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   // ------------------ Utilidades ------------------
   trackByIndex = (i: number) => i;
 
+  hasInventory(product: Product | null | undefined): boolean {
+    return hasInventoryControl(product);
+  }
+
+  isLowStock(product: Product | null | undefined): boolean {
+    return isLowStockProduct(product);
+  }
+
+  isOutOfStock(product: Product | null | undefined): boolean {
+    return isOutOfStockProduct(product);
+  }
+
+  isProductBlocked(product: Product | null | undefined): boolean {
+    return !canSellProduct(product);
+  }
+
+  getInventoryLabel(product: Product | null | undefined): string {
+    if (!this.hasInventory(product)) {
+      return 'Sin control';
+    }
+
+    return `${toInventoryNumber(product?.stock_actual, 0)} ${getInventoryUnit(product)}`;
+  }
+
   toUpper(ev: Event) {
     const el = ev.target as HTMLInputElement;
     const value = el.value?.toUpperCase() ?? '';
@@ -515,6 +546,12 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       return Math.max(0, (it.tax_value as number) / 100); // 15 -> 0.15
     }
     return it.tax === 'IVA-15' ? 0.15 : 0;
+  }
+
+  private resolveProduct(productSelection: Product | string | null): Product | null {
+    if (!productSelection) return null;
+    if (typeof productSelection !== 'string') return productSelection;
+    return this.products.find((item) => item.name === productSelection) || null;
   }
 
 

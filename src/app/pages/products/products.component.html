@@ -1,13 +1,25 @@
 <div class="app-container space-y-4">
   <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
-    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <div>
         <h2 class="text-xl font-bold">Productos</h2>
-        <p class="text-xs text-primary-foreground/80">Catalogo de productos para ventas y facturacion.</p>
+        <p class="text-xs text-primary-foreground/80">
+          Catalogo comercial con control visual de inventario conectado al backend.
+        </p>
       </div>
-      <div class="flex items-center gap-2">
+
+      <div class="flex flex-wrap items-center gap-2">
         <div class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
           Registros: {{ productosFiltradosList.length || 0 }}
+        </div>
+        <div class="rounded-full bg-sky-500/20 px-3 py-1 text-xs font-semibold">
+          Con inventario: {{ inventoryControlledCount }}
+        </div>
+        <div class="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-semibold">
+          Bajo stock: {{ lowStockCount }}
+        </div>
+        <div class="rounded-full bg-rose-500/20 px-3 py-1 text-xs font-semibold">
+          Agotados: {{ outOfStockCount }}
         </div>
         <app-button impact="bold" tone="light" shape="rounded" size="small" (click)="abrirModal()">
           Nuevo Producto
@@ -17,17 +29,33 @@
   </section>
 
   <section class="rounded-xl border border-primary/15 bg-white p-4 shadow-sm">
-    <div class="toolbar !mb-0">
-      <div class="flex w-full flex-col gap-2 sm:flex-row">
-        <input class="input" type="text" [(ngModel)]="searchTerm"
-          placeholder="Buscar por nombre o estado (disponible/agotado)..." />
+    <div class="toolbar !mb-0 gap-3">
+      <div class="flex w-full flex-col gap-2 lg:flex-row">
+        <input
+          class="input"
+          type="text"
+          [(ngModel)]="searchTerm"
+          placeholder="Buscar por nombre o codigo..."
+        />
+
         <select class="select" [(ngModel)]="categoriaFiltro" (ngModelChange)="actualizarProductosFiltrados()">
           <option value="">Todas las categorias</option>
           <option *ngFor="let c of categories" [value]="c.name">{{ c.nombre }}</option>
         </select>
       </div>
-      <div class="flex gap-2" (click)="categoriaFiltro=''; searchTerm=''; actualizarProductosFiltrados()">
-        <app-button impact="bold" tone="light" shape="rounded" size="small">
+
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-700">
+          <input type="checkbox" [(ngModel)]="soloActivos" (ngModelChange)="actualizarProductosFiltrados()" />
+          Solo activos
+        </label>
+
+        <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-700">
+          <input type="checkbox" [(ngModel)]="soloBajoStock" (ngModelChange)="actualizarProductosFiltrados()" />
+          Solo bajo stock
+        </label>
+
+        <app-button impact="bold" tone="light" shape="rounded" size="small" (click)="limpiarFiltros()">
           Limpiar
         </app-button>
       </div>
@@ -42,17 +70,21 @@
             <th class="app-th">Producto</th>
             <th class="app-th">Codigo</th>
             <th class="app-th">Categoria</th>
-            <th class="app-th">Impuesto (IVA)</th>
             <th class="app-th text-right">Precio</th>
-            <th class="app-th">Stock</th>
+            <th class="app-th">Inventario</th>
+            <th class="app-th">Stock actual</th>
+            <th class="app-th">Stock minimo</th>
+            <th class="app-th">Unidad</th>
             <th class="app-th">Estado</th>
             <th class="app-th text-center">Acciones</th>
           </tr>
         </thead>
 
         <tbody>
-          <tr *ngFor="let p of productosFiltradosList | paginate: { itemsPerPage: pageSize, currentPage: page }; trackBy: trackByName"
-            class="app-tr">
+          <tr
+            *ngFor="let p of productosFiltradosList | paginate: { itemsPerPage: pageSize, currentPage: page }; trackBy: trackByName"
+            class="app-tr"
+          >
             <td class="app-td">
               <div class="flex flex-col">
                 <span class="font-medium text-gray-900">{{ p.nombre }}</span>
@@ -61,17 +93,41 @@
             </td>
             <td class="app-td font-mono text-xs text-gray-600">{{ p.codigo || '—' }}</td>
             <td class="app-td">{{ getNameCategory(p.categoria) }}</td>
-            <td class="app-td"><span class="badge badge-gray">{{ p?.tax_value}} %</span></td>
             <td class="app-td text-right font-semibold">{{ p.precio | currency }}</td>
             <td class="app-td">
-              <span class="badge" [ngClass]="{ 'badge-green': !p.is_out_of_stock, 'badge-red': p.is_out_of_stock }">
-                {{ p.is_out_of_stock ? 'Agotado' : 'Disponible' }}
+              <span class="badge" [ngClass]="hasInventory(p) ? 'badge-green' : 'badge-gray'">
+                {{ hasInventory(p) ? 'Controlado' : 'No aplica' }}
               </span>
             </td>
             <td class="app-td">
-              <span class="badge" [ngClass]="{ 'badge-green': p.isactive, 'badge-red': !p.isactive }">
-                {{ p.isactive ? 'Activo' : 'Inactivo' }}
-              </span>
+              <div class="flex flex-col" *ngIf="hasInventory(p); else noStockData">
+                <span class="font-semibold">{{ formatStock(p) }}</span>
+                <span *ngIf="isLowStock(p)" class="text-[11px] text-amber-700">Reposicion requerida</span>
+              </div>
+              <ng-template #noStockData>
+                <span class="text-slate-400">—</span>
+              </ng-template>
+            </td>
+            <td class="app-td">
+              <span *ngIf="hasInventory(p); else noMinStock">{{ p.stock_minimo || 0 }}</span>
+              <ng-template #noMinStock>
+                <span class="text-slate-400">—</span>
+              </ng-template>
+            </td>
+            <td class="app-td">
+              <span *ngIf="hasInventory(p); else noUnit">{{ getInventoryUnit(p) }}</span>
+              <ng-template #noUnit>
+                <span class="text-slate-400">—</span>
+              </ng-template>
+            </td>
+            <td class="app-td">
+              <div class="flex flex-wrap gap-1.5">
+                <span class="badge" [ngClass]="{ 'badge-green': p.isactive, 'badge-red': !p.isactive }">
+                  {{ p.isactive ? 'Activo' : 'Inactivo' }}
+                </span>
+                <span *ngIf="isOutOfStock(p)" class="badge badge-red">Agotado</span>
+                <span *ngIf="hasInventory(p) && isLowStock(p) && !isOutOfStock(p)" class="badge badge-yellow">Bajo stock</span>
+              </div>
             </td>
             <td class="app-td text-center">
               <div class="inline-flex gap-2">
@@ -86,8 +142,7 @@
       <div class="pager">
         <button class="pager-btn" (click)="page = page - 1" [disabled]="page === 1">« Anterior</button>
         <span class="text-sm">Pagina {{ page }}</span>
-        <button class="pager-btn" (click)="page = page + 1"
-          [disabled]="(productosFiltradosList.length || 0) <= (page * pageSize)">
+        <button class="pager-btn" (click)="page = page + 1" [disabled]="(productosFiltradosList.length || 0) <= (page * pageSize)">
           Siguiente »
         </button>
       </div>
@@ -102,16 +157,17 @@
     </div>
   </ng-template>
 
-  <!-- Modal Crear/Editar -->
   <div *ngIf="mostrarModal" class="app-modal-backdrop">
-    <div class="app-modal !max-w-3xl overflow-hidden !rounded-2xl !border-slate-200 !bg-white !shadow-2xl">
+    <div class="app-modal !max-w-4xl overflow-hidden !rounded-2xl !border-slate-200 !bg-white !shadow-2xl">
       <div class="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur md:px-5">
         <div class="flex items-start justify-between gap-3">
           <div>
             <h3 class="text-base font-semibold text-slate-800 md:text-lg">
               {{ productoEditando ? 'Editar Producto' : 'Nuevo Producto' }}
             </h3>
-            <p class="mt-0.5 text-xs text-slate-500">Información comercial, stock y facturación del producto.</p>
+            <p class="mt-0.5 text-xs text-slate-500">
+              Informacion comercial y parametros de inventario controlados por backend.
+            </p>
           </div>
           <button
             type="button"
@@ -129,18 +185,18 @@
           <p class="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Datos del producto</p>
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label class="block mb-1 font-medium">Nombre</label>
+              <label class="mb-1 block font-medium">Nombre</label>
               <input type="text" class="input" formControlName="nombre" />
-              <div *ngIf="f['nombre'].touched && f['nombre'].invalid" class="field-error">Nombre es requerido</div>
+              <div *ngIf="submitted && f['nombre'].invalid" class="field-error">Nombre requerido.</div>
             </div>
 
             <div>
-              <label class="block mb-1 font-medium">Código Interno</label>
+              <label class="mb-1 block font-medium">Codigo interno</label>
               <input type="text" class="input" formControlName="codigo" placeholder="Opcional" />
             </div>
 
             <div class="md:col-span-2">
-              <label class="block mb-1 font-medium">Descripción</label>
+              <label class="mb-1 block font-medium">Descripcion</label>
               <textarea rows="3" class="input" formControlName="descripcion" placeholder="Opcional"></textarea>
             </div>
           </div>
@@ -150,27 +206,27 @@
           <p class="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Comercial y fiscal</p>
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label class="block mb-1 font-medium">Precio</label>
-              <input type="number" step="0.01" class="input" formControlName="precio" />
-              <div *ngIf="f['precio'].touched && f['precio'].invalid" class="field-error">Precio inválido</div>
+              <label class="mb-1 block font-medium">Precio</label>
+              <input type="number" step="0.01" class="input no-spinner" formControlName="precio" />
+              <div *ngIf="submitted && f['precio'].invalid" class="field-error">Precio invalido.</div>
             </div>
 
             <div>
-              <label class="block mb-1 font-medium">Impuesto (IVA)</label>
+              <label class="mb-1 block font-medium">Impuesto (IVA)</label>
               <select class="select" formControlName="tax">
                 <option *ngFor="let t of taxes" [value]="t.name">{{ t.value }}</option>
-                <option *ngIf="taxes.length === 0" value="IVA-0" disabled>No hay impuestos disponibles</option>
+                <option *ngIf="taxes.length === 0" value="" disabled>No hay impuestos disponibles</option>
               </select>
-              <div *ngIf="f['tax'].touched && f['tax'].invalid" class="field-error">Impuesto es requerido</div>
+              <div *ngIf="submitted && f['tax'].invalid" class="field-error">Impuesto requerido.</div>
             </div>
 
             <div>
-              <label class="block mb-1 font-medium">Categoría</label>
+              <label class="mb-1 block font-medium">Categoria</label>
               <select class="select" formControlName="categoria">
                 <option *ngFor="let c of categories" [value]="c.name">{{ c.nombre }}</option>
-                <option *ngIf="categories.length === 0" value="" disabled>No hay categorías disponibles</option>
+                <option *ngIf="categories.length === 0" value="" disabled>No hay categorias disponibles</option>
               </select>
-              <div *ngIf="f['categoria'].touched && f['categoria'].invalid" class="field-error">Categoría es requerida</div>
+              <div *ngIf="submitted && f['categoria'].invalid" class="field-error">Categoria requerida.</div>
             </div>
           </div>
         </section>
@@ -181,23 +237,133 @@
               <input type="checkbox" formControlName="isactive" />
               <span class="font-medium text-slate-700">Producto activo</span>
             </label>
+
             <label class="inline-flex items-center gap-2">
-              <input type="checkbox" formControlName="is_out_of_stock" />
-              <span class="font-medium text-slate-700">Marcar como agotado</span>
+              <input type="checkbox" formControlName="controlar_inventario" (change)="onInventoryToggle()" />
+              <span class="font-medium text-slate-700">Controlar inventario</span>
             </label>
           </div>
+        </section>
+
+        <section class="rounded-xl border border-slate-200 bg-white p-3 md:p-4">
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Inventario</p>
+            </div>
+
+            <span class="badge" [ngClass]="f['controlar_inventario'].value ? 'badge-green' : 'badge-gray'">
+              {{ f['controlar_inventario'].value ? 'Habilitado' : 'Deshabilitado' }}
+            </span>
+          </div>
+
+          <ng-container *ngIf="f['controlar_inventario'].value; else inventoryDisabled">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label class="mb-1 block font-medium">Unidad inventario</label>
+                <select class="select" formControlName="unidad_inventario">
+                  <option *ngFor="let unit of inventoryUnitOptions" [value]="unit.value">{{ unit.label }}</option>
+                </select>
+                <div *ngIf="submitted && f['unidad_inventario'].invalid" class="field-error">Unidad requerida.</div>
+              </div>
+
+              <div>
+                <label class="mb-1 block font-medium">Stock minimo</label>
+                <input class="input no-spinner" type="number" min="0" formControlName="stock_minimo" />
+                <div *ngIf="submitted && f['stock_minimo'].invalid" class="field-error">Stock minimo invalido.</div>
+              </div>
+
+              <div>
+                <label class="inline-flex items-center gap-2 pt-7">
+                  <input type="checkbox" formControlName="permitir_stock_negativo" />
+                  <span class="font-medium text-slate-700">Permitir stock negativo</span>
+                </label>
+              </div>
+
+              <div *ngIf="!productoEditando">
+                <label class="mb-1 block font-medium">Stock inicial</label>
+                <input class="input no-spinner" type="number" min="0" formControlName="stock_inicial" />
+                <div *ngIf="submitted && f['stock_inicial'].invalid" class="field-error">Stock inicial invalido.</div>
+              </div>
+
+              <ng-container *ngIf="productoEditando">
+                <div>
+                  <label class="mb-1 block font-medium">Stock actual</label>
+                  <input class="input bg-slate-50" type="number" formControlName="stock_actual" readonly />
+                </div>
+
+                <div>
+                  <label class="mb-1 block font-medium">Ultima actualizacion</label>
+                  <input class="input bg-slate-50" type="text" formControlName="ultima_actualizacion_stock" readonly />
+                </div>
+
+                <div>
+                  <label class="mb-1 block font-medium">Estado de stock</label>
+                  <div class="flex h-9 items-center">
+                    <span class="badge" [ngClass]="f['is_out_of_stock'].value ? 'badge-red' : 'badge-green'">
+                      {{ f['is_out_of_stock'].value ? 'Agotado' : 'Disponible' }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                  <div class="mb-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      class="btn"
+                      [ngClass]="stockEditMode === 'absolute' ? 'btn-primary' : 'btn-outline'"
+                      (click)="setStockMode('absolute')">
+                      Fijar stock final
+                    </button>
+                    <button
+                      type="button"
+                      class="btn"
+                      [ngClass]="stockEditMode === 'delta' ? 'btn-primary' : 'btn-outline'"
+                      (click)="setStockMode('delta')">
+                      Sumar / restar stock
+                    </button>
+                  </div>
+
+                  <div *ngIf="stockEditMode === 'absolute'" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label class="mb-1 block font-medium">Stock final deseado</label>
+                      <input class="input no-spinner" type="number" min="0" formControlName="stock_objetivo" placeholder="Dejar vacio para no cambiar" />
+                      <div *ngIf="submitted && f['stock_objetivo'].invalid" class="field-error">Valor invalido.</div>
+                    </div>
+                    <div class="rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-500">
+                      Usa esta opcion cuando ya contaste el producto y quieres dejar el stock exactamente en ese valor.
+                    </div>
+                  </div>
+
+                  <div *ngIf="stockEditMode === 'delta'" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label class="mb-1 block font-medium">Cantidad a sumar o restar</label>
+                      <input class="input no-spinner" type="number" step="1" formControlName="stock_ajuste" placeholder="Ej: 5 o -3" />
+                    </div>
+                    <div class="rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-500">
+                      Usa positivo para sumar y negativo para restar. Ideal para reposicion, merma o correcciones puntuales.
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+            </div>
+          </ng-container>
+
+          <ng-template #inventoryDisabled>
+            <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-xs text-slate-500">
+              Este producto no tendra control de inventario. Los campos de stock permanecen ocultos.
+            </div>
+          </ng-template>
         </section>
 
         <div class="sticky bottom-0 -mx-4 border-t border-slate-200 bg-white px-4 py-3 md:-mx-5 md:px-5">
           <div class="flex justify-end gap-2">
             <button type="button" class="btn btn-outline" (click)="cerrarModal()">Cancelar</button>
             <button type="submit" class="btn btn-primary">
-              {{ productoEditando ? 'Guardar cambios' : 'Crear' }}
+              {{ productoEditando ? 'Guardar cambios' : 'Crear producto' }}
             </button>
           </div>
         </div>
       </form>
     </div>
   </div>
-
 </div>

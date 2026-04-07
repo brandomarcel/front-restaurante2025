@@ -103,18 +103,24 @@
                 <div class="max-h-[48vh] sm:max-h-[50vh] overflow-y-auto pr-1">
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-3 pb-5">
                         <div *ngFor="let product of filteredProductList ;trackBy: trackByProductId"
-                            (click)="!product.is_out_of_stock && addProduct(product)" [ngClass]="{
+                            (click)="canAddProduct(product) && addProduct(product)" [ngClass]="{
                   'cursor-pointer rounded border p-2 shadow-sm transition text-[12px] sm:text-xs': true,
-                  'hover:bg-muted': !product.is_out_of_stock,
-                  'border-red-500 bg-red-50 opacity-70 pointer-events-none': product.is_out_of_stock
+                  'hover:bg-muted': canAddProduct(product),
+                  'border-red-500 bg-red-50 opacity-70 pointer-events-none': !canAddProduct(product)
                 }">
                             <h3 class="font-semibold text-foreground leading-snug">
                                 {{ product.nombre }}
                             </h3>
 
                             <!-- Etiqueta 'Agotado' -->
-                            <p *ngIf="product.is_out_of_stock" class="text-red-600 text-[10px] italic mb-1">
+                            <p *ngIf="isOutOfStock(product)" class="text-red-600 text-[10px] italic mb-1">
                                 (Agotado)
+                            </p>
+                            <p *ngIf="!isOutOfStock(product) && isLowStock(product)" class="text-amber-600 text-[10px] italic mb-1">
+                                (Bajo stock)
+                            </p>
+                            <p *ngIf="hasInventory(product)" class="text-slate-500 text-[10px] italic mb-1">
+                                (Stock {{ getInventoryLabel(product) }})
                             </p>
 
                             <p class="text-muted-foreground">

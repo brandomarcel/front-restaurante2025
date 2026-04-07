@@ -19,6 +19,7 @@ import { OrderSplitRow, SplitOrderPayload } from 'src/app/services/order-split.t
 import { SplitOrderDialogComponent } from './components/split-order-dialog/split-order-dialog.component';
 import { OrderSplitsTableComponent } from './components/order-splits-table/order-splits-table.component';
 import { PaymentsService } from 'src/app/services/payments.service';
+import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 
 type Product = any; // usa tu modelo si lo tienes
 type OrderItem = {
@@ -216,8 +217,13 @@ export class OrderDetailPageComponent implements OnInit {
   }
 
   // =================== Edición de Ítems ===================
-  addProductToOrder(product: Product | null): void {
+  addProductToOrder(productSelection: Product | string | null): void {
+    const product = this.resolveProduct(productSelection);
     if (!product) return;
+    if (this.isProductBlocked(product)) {
+      toast.warning('Este producto esta agotado y no se puede agregar.');
+      return;
+    }
 
     const existing = this.orderItems.find(oi => oi.productId === product.name);
     if (existing) {
@@ -366,7 +372,13 @@ export class OrderDetailPageComponent implements OnInit {
   };
 
   this.ordersSvc.update(payload).subscribe({
-    next: () => toast.success('Orden actualizada.'),
+    next: () => {
+      toast.success('Orden actualizada.');
+      this.loadProducts();
+      if (this.order?.name) {
+        this.fetch(this.order.name);
+      }
+    },
     error: () => toast.error('Error al actualizar la orden.')
   });
 
@@ -377,6 +389,30 @@ export class OrderDetailPageComponent implements OnInit {
 
   // =================== Helpers ===================
   trackByIndex = (i: number) => i;
+
+  hasInventory(product: Product | null | undefined): boolean {
+    return hasInventoryControl(product);
+  }
+
+  isLowStock(product: Product | null | undefined): boolean {
+    return isLowStockProduct(product);
+  }
+
+  isOutOfStock(product: Product | null | undefined): boolean {
+    return isOutOfStockProduct(product);
+  }
+
+  isProductBlocked(product: Product | null | undefined): boolean {
+    return !canSellProduct(product);
+  }
+
+  getInventoryLabel(product: Product | null | undefined): string {
+    if (!this.hasInventory(product)) {
+      return 'Sin control';
+    }
+
+    return `${toInventoryNumber(product?.stock_actual, 0)} ${getInventoryUnit(product)}`;
+  }
 
   private getTaxPct(it: OrderItem): number {
     if (Number.isFinite(it.tax_value as number)) {
@@ -660,5 +696,11 @@ export class OrderDetailPageComponent implements OnInit {
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .trim();
+  }
+
+  private resolveProduct(productSelection: Product | string | null): Product | null {
+    if (!productSelection) return null;
+    if (typeof productSelection !== 'string') return productSelection;
+    return this.products.find((item) => item.name === productSelection) || null;
   }
 }

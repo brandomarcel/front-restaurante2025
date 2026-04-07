@@ -10,6 +10,7 @@ export const API_ENDPOINT = {
   Caja: "/method/restaurante_app.restaurante_bmarc.doctype.caja.caja",
   CierreCaja: "/method/restaurante_app.restaurante_bmarc.doctype.cierre_de_caja.cierre_de_caja",
   Payments: "/method/restaurante_app.restaurante_bmarc.doctype.payments.payments",
+  Inventory: "/method/restaurante_app.inventarios_bmarc.api.stock",
   Register: "/method/restaurante_app.restaurante_bmarc.api.register",
   AnalyzeFirma: "/method/restaurante_app.restaurante_bmarc.api.analyze_company_firma",
   

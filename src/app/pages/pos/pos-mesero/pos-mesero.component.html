@@ -111,16 +111,28 @@
             ${{ (product.precio ?? product.price ?? 0) | number:'1.2-2' }}
           </p>
 
-          <span
-            *ngIf="product?.is_out_of_stock"
-            class="mt-1 inline-flex w-fit rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600">
-            Agotado
-          </span>
+          <div class="mt-1 flex flex-wrap gap-1">
+            <span
+              *ngIf="isOutOfStock(product)"
+              class="inline-flex w-fit rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+              Agotado
+            </span>
+            <span
+              *ngIf="!isOutOfStock(product) && isLowStock(product)"
+              class="inline-flex w-fit rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+              Bajo stock
+            </span>
+            <span
+              *ngIf="hasInventory(product)"
+              class="inline-flex w-fit rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+              {{ getInventoryLabel(product) }}
+            </span>
+          </div>
 
           <button
             type="button"
             class="mt-auto h-8 w-full rounded-lg bg-primary px-2 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
-            [disabled]="product?.is_out_of_stock"
+            [disabled]="!canAddProduct(product)"
             (click)="addProduct(product)">
               Agregar
           </button>
@@ -137,17 +149,9 @@
     <div class="mx-auto flex w-full max-w-[980px] items-center gap-2">
       <button
         type="button"
-        class="h-11 min-w-[112px] rounded-xl border border-primary/20 bg-white px-3 text-xs font-semibold text-primary"
+        class="h-11 w-full rounded-xl border border-primary/20 bg-white px-3 text-xs font-semibold text-primary"
         (click)="toggleCartDetails()">
         Ver carrito ({{ totalItems }})
-      </button>
-
-      <button
-        type="button"
-        class="h-11 w-full rounded-xl bg-primary px-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-        
-        (click)="saveOrderMesero()">
-        {{ isSubmittingOrder ? 'Enviando...' : ('Enviar comanda - $' + (total | number:'1.2-2')) }}
       </button>
     </div>
   </footer>
@@ -191,20 +195,22 @@
           </p>
         </div>
 
-        <div class="mt-3 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3">
-          <button
-            type="button"
-            class="col-span-1 h-10 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700"
-            (click)="clearCart()"
-            [disabled]="cartService.cart.length === 0">
-            Vaciar
-          </button>
+        <div class="mt-3 border-t border-slate-100 pt-3">
+          <div class="flex items-stretch gap-2">
+            <button
+              type="button"
+              class="h-12 flex-1 rounded-xl bg-primary px-4 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+              [disabled]="!canSubmitOrder"
+              (click)="saveOrderMesero()">
+              {{ isSubmittingOrder ? 'Enviando...' : 'Enviar comanda' }}
+            </button>
 
-          <div class="col-span-2 flex items-center justify-end rounded-lg bg-slate-50 px-3 text-right">
+            <div class="flex min-w-[120px] items-center justify-end rounded-xl bg-slate-50 px-3 py-3 text-right">
             <div>
               <p class="text-[10px] uppercase tracking-wide text-slate-400">Total</p>
               <p class="text-base font-bold text-primary">${{ total | number:'1.2-2' }}</p>
             </div>
+          </div>
           </div>
         </div>
       </div>

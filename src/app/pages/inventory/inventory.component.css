@@ -1,0 +1,134 @@
+.inventory-tab {
+  border: 1px solid rgb(226 232 240);
+  background: rgb(248 250 252);
+  color: rgb(71 85 105);
+  border-radius: 9999px;
+  padding: 0.7rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.inventory-tab:hover {
+  border-color: rgb(59 130 246 / 0.25);
+  background: rgb(239 246 255);
+  color: rgb(30 41 59);
+}
+
+.inventory-tab--active {
+  background: linear-gradient(135deg, rgb(15 23 42), rgb(30 64 175));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 16px 32px -24px rgb(30 64 175 / 0.9);
+}
+
+.inventory-stat-card {
+  border: 1px solid rgb(226 232 240);
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(circle at top right, rgb(59 130 246 / 0.08), transparent 38%),
+    #fff;
+  padding: 1rem;
+  box-shadow: 0 12px 28px -24px rgb(15 23 42 / 0.35);
+}
+
+.inventory-stat-card--warn {
+  background:
+    radial-gradient(circle at top right, rgb(245 158 11 / 0.12), transparent 36%),
+    #fff;
+}
+
+.inventory-stat-card--danger {
+  background:
+    radial-gradient(circle at top right, rgb(244 63 94 / 0.12), transparent 36%),
+    #fff;
+}
+
+.inventory-stat-card__label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(100 116 139);
+}
+
+.inventory-stat-card__value {
+  margin-top: 0.45rem;
+  font-size: 1.9rem;
+  line-height: 1;
+  font-weight: 800;
+  color: rgb(15 23 42);
+}
+
+.inventory-stat-card__hint {
+  margin-top: 0.55rem;
+  font-size: 0.78rem;
+  color: rgb(100 116 139);
+}
+
+.inventory-quick-action {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 0.12);
+  padding: 1rem;
+  text-align: left;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.inventory-quick-action:hover {
+  background: rgb(255 255 255 / 0.18);
+  transform: translateY(-1px);
+}
+
+.inventory-quick-action__label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.68);
+}
+
+.inventory-quick-action__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.inventory-quick-action__meta {
+  font-size: 0.8rem;
+  color: rgb(255 255 255 / 0.75);
+}
+
+.inventory-side-card {
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 1.25rem;
+  padding: 1rem;
+  box-shadow: 0 12px 28px -24px rgb(15 23 42 / 0.25);
+}
+
+.inventory-side-card__eyebrow {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(100 116 139);
+}
+
+.inventory-side-card__title {
+  margin-top: 0.35rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: rgb(15 23 42);
+}
+
+.inventory-side-card__body {
+  margin-top: 0.45rem;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: rgb(71 85 105);
+}

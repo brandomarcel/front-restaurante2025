@@ -105,6 +105,21 @@
                 placeholder="Buscar producto y agregar"
                 [searchable]="true"
                 (change)="addProductToOrder($event)">
+                <ng-template ng-option-tmp let-item="item">
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                      <div class="truncate font-medium text-slate-800">{{ item.nombre }}</div>
+                      <div class="text-[11px] text-slate-500">
+                        {{ item.codigo || 'Sin codigo' }}
+                        <span *ngIf="hasInventory(item)"> | Stock {{ getInventoryLabel(item) }}</span>
+                      </div>
+                    </div>
+                    <div class="flex gap-1">
+                      <span *ngIf="isOutOfStock(item)" class="badge badge-red">Agotado</span>
+                      <span *ngIf="!isOutOfStock(item) && isLowStock(item)" class="badge badge-yellow">Bajo stock</span>
+                    </div>
+                  </div>
+                </ng-template>
               </ng-select>
             </div>
 

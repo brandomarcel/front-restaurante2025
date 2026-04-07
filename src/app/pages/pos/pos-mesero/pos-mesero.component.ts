@@ -9,6 +9,7 @@ import { AlertService } from 'src/app/core/services/alert.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
+import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 
 type OrderType = 'Servirse' | 'Llevar' | 'Domicilio';
 
@@ -130,6 +131,12 @@ export class PosMeseroComponent implements OnInit {
     this.filteredProductList = filtered
       .map((product: any, index: number) => ({ product, index }))
       .sort((a, b) => {
+        const aBlocked = this.canAddProduct(a.product) ? 0 : 1;
+        const bBlocked = this.canAddProduct(b.product) ? 0 : 1;
+        if (aBlocked !== bBlocked) {
+          return aBlocked - bBlocked;
+        }
+
         const aFav = this.isFavorite(a.product) ? 1 : 0;
         const bFav = this.isFavorite(b.product) ? 1 : 0;
         if (bFav !== aFav) {
@@ -141,7 +148,10 @@ export class PosMeseroComponent implements OnInit {
   }
 
   addProduct(product: any): void {
-    if (product?.is_out_of_stock) return;
+    if (!this.canAddProduct(product)) {
+      toast.warning('Este producto esta agotado y no se puede agregar.');
+      return;
+    }
 
     this.cartService.addProduct(product);
 
@@ -252,6 +262,7 @@ export class PosMeseroComponent implements OnInit {
     ).subscribe({
       next: () => {
         toast.success('Orden creada correctamente');
+        this.refreshProductsSilently();
         this.resetOrderForm();
       },
       error: () => toast.error('Error al enviar la comanda.')
@@ -260,6 +271,30 @@ export class PosMeseroComponent implements OnInit {
 
   trackByProduct = (_: number, p: any) => p?.name || p?.nombre;
   trackByCart = (_: number, it: any) => `${it?.name || it?.nombre}-${it?.price}`;
+
+  canAddProduct(product: any): boolean {
+    return canSellProduct(product);
+  }
+
+  hasInventory(product: any): boolean {
+    return hasInventoryControl(product);
+  }
+
+  isLowStock(product: any): boolean {
+    return isLowStockProduct(product);
+  }
+
+  isOutOfStock(product: any): boolean {
+    return isOutOfStockProduct(product);
+  }
+
+  getInventoryLabel(product: any): string {
+    if (!this.hasInventory(product)) {
+      return 'Sin control';
+    }
+
+    return `${toInventoryNumber(product?.stock_actual, 0)} ${getInventoryUnit(product)}`;
+  }
 
   private buildEcuadorIsoDate(): string {
     const date = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Guayaquil' }));
@@ -305,6 +340,15 @@ export class PosMeseroComponent implements OnInit {
 
   private getProductKey(product: any): string {
     return String(product?.name || product?.id || product?.codigo || product?.nombre || '').trim();
+  }
+
+  private refreshProductsSilently(): void {
+    this.productsService.getAll(1).subscribe({
+      next: (res: any) => {
+        this.products = res?.message?.data || [];
+        this.applyFilters();
+      }
+    });
   }
 }
 

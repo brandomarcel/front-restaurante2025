@@ -20,6 +20,7 @@ import { finalize } from 'rxjs';
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
 import { AuthService } from 'src/app/services/auth.service';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
+import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 
 type RoleName = 'Cajero' | 'Mesero' | 'Gerente' | 'Desconocido';
 
@@ -350,6 +351,11 @@ export class PosComponent implements OnInit {
   }
 
   addProduct(product: any) {
+    if (!this.canAddProduct(product)) {
+      toast.warning('Este producto esta agotado y no se puede agregar.');
+      return;
+    }
+
     const existing = this.cart.find(i => (i.name ?? i.nombre) === (product.name ?? product.nombre));
     const price = this.toNumber(product.precio ?? product.price);
     const taxValue = this.getTaxPercent(product); // 0 o 15
@@ -478,6 +484,7 @@ export class PosComponent implements OnInit {
               next: (res: any) => {
                 const orderId = res.message?.name;
                 this.pendingOrderId = orderId;
+                this.refreshProductsSilently();
                 toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
                 this.openPrintModal(orderId);
               },
@@ -494,6 +501,7 @@ export class PosComponent implements OnInit {
       next: (res) => {
         const orderId = res.message?.name;
         this.pendingOrderId = orderId;
+        this.refreshProductsSilently();
         toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
         this.openPrintModal(orderId);
       },
@@ -551,6 +559,7 @@ export class PosComponent implements OnInit {
         const orderId = res.message?.name;
         this.pendingOrderId = orderId;
         toast.success('Orden creada.');
+        this.refreshProductsSilently();
         // Para mesero, por defecto solo comanda
         //this.printComanda(orderId);
         this.clearPage();
@@ -768,4 +777,37 @@ export class PosComponent implements OnInit {
   }
 
   trackByProductId = (_: number, p: any) => p?.id || p?._id || p?.codigo || p?.name || p?.nombre;
+
+  canAddProduct(product: any): boolean {
+    return canSellProduct(product);
+  }
+
+  hasInventory(product: any): boolean {
+    return hasInventoryControl(product);
+  }
+
+  isLowStock(product: any): boolean {
+    return isLowStockProduct(product);
+  }
+
+  isOutOfStock(product: any): boolean {
+    return isOutOfStockProduct(product);
+  }
+
+  getInventoryLabel(product: any): string {
+    if (!this.hasInventory(product)) {
+      return 'Sin control';
+    }
+
+    return `${toInventoryNumber(product?.stock_actual, 0)} ${getInventoryUnit(product)}`;
+  }
+
+  private refreshProductsSilently(): void {
+    this.productsService.getAll(1).subscribe({
+      next: (res: any) => {
+        this.products = res?.message?.data || [];
+        this.applyFilters();
+      }
+    });
+  }
 }

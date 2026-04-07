@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { API_ENDPOINT } from '../core/constants/api.constants';
-import { map } from 'rxjs';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 
 @Injectable({ providedIn: 'root' })
@@ -38,18 +37,22 @@ export class ProductsService {
 
 
   getById(id: number) {
-    return this.http.get<any>(`${this.apiUrl}/${id}`);
+    const params = new HttpParams().set('product_id', String(id));
+    return this.http.get<any>(`${this.urlBase}.get_producto_by_id`, {
+      context: new HttpContext().set(REQUIRE_AUTH, true),
+      params,
+    });
   }
 
   create(data: any) {
-    return this.http.post(`${this.apiUrl}/resource/Producto`, data, {
+    return this.http.post(`${this.urlBase}.create_producto`, data, {
       context: new HttpContext().set(REQUIRE_AUTH, true),
     });
   }
 
 
   update(name: string, data: any) {
-    return this.http.put(`${this.apiUrl}/resource/Producto/${name}`, data, {
+    return this.http.put(`${this.urlBase}.update_producto`, { name, ...data }, {
       context: new HttpContext().set(REQUIRE_AUTH, true),
       
     });

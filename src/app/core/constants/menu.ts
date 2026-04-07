@@ -104,9 +104,19 @@ export class Menu {
           route: '/dashboard/customers',
         },
         {
+          icon: 'assets/icons/tablericons/users-plus.svg',
+          label: 'Proveedores',
+          route: '/dashboard/suppliers',
+        },
+        {
           icon: 'assets/icons/tablericons/package.svg',
           label: 'Productos',
           route: '/dashboard/products',
+        },
+        {
+          icon: 'assets/icons/tablericons/repeat.svg',
+          label: 'Inventario',
+          route: '/dashboard/inventory',
         },
         {
           icon: 'assets/icons/tablericons/shopping-bag.svg',

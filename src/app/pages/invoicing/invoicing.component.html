@@ -103,6 +103,21 @@
               <ng-select formControlName="selectedProduct" id="product-select" class="ng-select-tailwind"
                 [items]="products" bindLabel="nombre" bindValue="name" placeholder="Busca y agrega un ítem"
                 [searchable]="true" [disabled]="order" (change)="addProductToCart($event)">
+                <ng-template ng-option-tmp let-item="item">
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                      <div class="truncate font-medium text-slate-800">{{ item.nombre }}</div>
+                      <div class="text-[11px] text-slate-500">
+                        {{ item.codigo || 'Sin codigo' }}
+                        <span *ngIf="hasInventory(item)"> | Stock {{ getInventoryLabel(item) }}</span>
+                      </div>
+                    </div>
+                    <div class="flex gap-1">
+                      <span *ngIf="isOutOfStock(item)" class="badge badge-red">Agotado</span>
+                      <span *ngIf="!isOutOfStock(item) && isLowStock(item)" class="badge badge-yellow">Bajo stock</span>
+                    </div>
+                  </div>
+                </ng-template>
               </ng-select>
             </div>
           </div>

@@ -27,6 +27,7 @@ import { PrintService } from 'src/app/services/print.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { environment } from 'src/environments/environment';
 import { CartService } from '../services/cart.service';
+import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 
 @Component({
   selector: 'app-pos-caja',
@@ -244,8 +245,8 @@ export class PosCajaComponent implements OnInit {
     this.filteredProductList = filtered
       .map((product: any, index: number) => ({ product, index }))
       .sort((a, b) => {
-        const aOut = a.product?.is_out_of_stock ? 1 : 0;
-        const bOut = b.product?.is_out_of_stock ? 1 : 0;
+        const aOut = this.canAddProduct(a.product) ? 0 : 1;
+        const bOut = this.canAddProduct(b.product) ? 0 : 1;
         if (aOut !== bOut) {
           return aOut - bOut;
         }
@@ -263,7 +264,10 @@ export class PosCajaComponent implements OnInit {
   }
 
   addProduct(product: any): void {
-    if (product?.is_out_of_stock) return;
+    if (!this.canAddProduct(product)) {
+      toast.warning('Este producto esta agotado y no se puede agregar.');
+      return;
+    }
 
     const existing = this.cartService.cart.find(i => (i.name ?? i.nombre) === (product.name ?? product.nombre));
     const price = this.toNumber(product.precio ?? product.price);
@@ -443,7 +447,7 @@ export class PosCajaComponent implements OnInit {
     if (!key) return;
     const alreadyFavorite = this.favoriteProductKeys.has(key);
 
-    if (!alreadyFavorite && product?.is_out_of_stock) {
+    if (!alreadyFavorite && !this.canAddProduct(product)) {
       toast.warning('No puedes marcar como favorito un producto agotado.');
       return;
     }
@@ -515,6 +519,30 @@ export class PosCajaComponent implements OnInit {
   trackByProductId = (_: number, p: any) => p?.id || p?._id || p?.codigo || p?.name || p?.nombre;
   trackByFavorite = (_: number, p: any) => this.getProductKey(p);
 
+  canAddProduct(product: any): boolean {
+    return canSellProduct(product);
+  }
+
+  hasInventory(product: any): boolean {
+    return hasInventoryControl(product);
+  }
+
+  isLowStock(product: any): boolean {
+    return isLowStockProduct(product);
+  }
+
+  isOutOfStock(product: any): boolean {
+    return isOutOfStockProduct(product);
+  }
+
+  getInventoryLabel(product: any): string {
+    if (!this.hasInventory(product)) {
+      return 'Sin control';
+    }
+
+    return `${toInventoryNumber(product?.stock_actual, 0)} ${getInventoryUnit(product)}`;
+  }
+
   private initClienteForm(): void {
     this.clienteForm = this.fb.group({
       nombre: ['', [Validators.required]],
@@ -583,6 +611,7 @@ export class PosCajaComponent implements OnInit {
           return;
         }
         toast.success(`Pedido guardado${this.paymentMethod === '01' ? `. Cambio: $${this.change.toFixed(2)}` : ''}`);
+        this.refreshProductsSilently();
         this.openPrintModal(orderId);
       }
     });
@@ -701,10 +730,19 @@ export class PosCajaComponent implements OnInit {
     return String(product?.name || product?.id || product?.codigo || product?.nombre || '').trim();
   }
 
+  private refreshProductsSilently(): void {
+    this.productsService.getAll(1).subscribe({
+      next: (res: any) => {
+        this.products = res?.message?.data || [];
+        this.applyFilters();
+      }
+    });
+  }
+
   private sanitizeFavorites(): void {
     const availableKeys = new Set(
       (this.products || [])
-        .filter((product: any) => !product?.is_out_of_stock)
+        .filter((product: any) => this.canAddProduct(product))
         .map((product: any) => this.getProductKey(product))
         .filter((key: string) => !!key)
     );
