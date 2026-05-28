@@ -495,7 +495,8 @@ export class PosComponent implements OnInit {
       });
       return;
     }
-
+    order.status = 'Ingresada';
+    console.log('NOTA DE VENTA para guardar', order);
     this.spinner.show();
     this.ordersService.create_order_v2(order).subscribe({
       next: (res) => {
@@ -538,7 +539,7 @@ export class PosComponent implements OnInit {
       delivery_address: this.deliveryAddress,
       delivery_phone: this.deliveryPhone,
       fecha: this.today,
-      status: 'Cerrada',
+      status: 'Ingresada',
       items: this.cart.map(item => ({
         product: item.name ?? item.nombre,
         qty: item.quantity,
