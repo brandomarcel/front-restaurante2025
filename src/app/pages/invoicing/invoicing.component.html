@@ -82,7 +82,6 @@
           </div>
         </section>
 
-
         <!-- Ítems -->
         <!-- Aviso cuando viene de orden -->
         <div *ngIf="order" class="mb-3 px-3 py-2 text-xs bg-amber-50 text-amber-800 rounded border border-amber-300">
@@ -200,6 +199,46 @@
               </tbody>
             </table>
           </div>
+        </section>
+
+           <section class="bg-white rounded-md border shadow-sm p-5">
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <h3 class="text-[13px] font-semibold text-gray-700">INFORMACIÓN ADICIONAL</h3>
+              <p class="text-[11px] text-gray-500 mt-0.5">Estos datos se incluirán en la factura electrónica.</p>
+            </div>
+            <app-button type="button" tone="info" impact="bold" shape="rounded" (click)="addAdditionalField()">
+              Agregar campo
+            </app-button>
+          </div>
+
+          <div formArrayName="additional_fields" class="space-y-3">
+            <div *ngFor="let field of additionalFields.controls; let i = index" [formGroupName]="i"
+              class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-start rounded-md border bg-gray-50 p-3">
+              <div>
+                <label class="block text-[11px] font-medium text-gray-600 mb-1">Nombre</label>
+                <input type="text" class="input" formControlName="field_name" maxlength="300"
+                  placeholder="Ej. correo" />
+                <small *ngIf="field.get('field_name')?.invalid && field.get('field_name')?.touched"
+                  class="text-red-500">Ingresa el nombre.</small>
+              </div>
+              <div>
+                <label class="block text-[11px] font-medium text-gray-600 mb-1">Valor</label>
+                <input type="text" class="input" formControlName="field_value" maxlength="300"
+                  placeholder="Valor del campo" />
+                <small *ngIf="field.get('field_value')?.invalid && field.get('field_value')?.touched"
+                  class="text-red-500">Ingresa el valor.</small>
+              </div>
+              <button type="button" class="btn btn-ghost text-red-600 mt-5" (click)="removeAdditionalField(i)"
+                [attr.aria-label]="'Eliminar campo adicional ' + (i + 1)" title="Eliminar campo">
+                <fa-icon [icon]="['fas', 'trash']"></fa-icon>
+              </button>
+            </div>
+          </div>
+
+          <p *ngIf="additionalFields.length === 0" class="text-xs text-gray-500 py-2">
+            No hay campos adicionales. El sistema puede agregar campos configurados por el administrador al emitir.
+          </p>
         </section>
 
       </div>

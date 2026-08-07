@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AbstractControl, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { toast } from 'ngx-sonner';
@@ -20,6 +20,7 @@ import { Customer } from 'src/app/core/models/customer';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
 import { ActivatedRoute, Router } from '@angular/router';
 import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
+import { AdditionalFieldPayload, normalizeAdditionalFields } from 'src/app/core/models/additional-field';
 
 type Payment = { name: string; codigo: string; nombre: string; };
 type CartItem = {
@@ -57,6 +58,10 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   ambiente: string = '';
   private subscriptions: Subscription[] = [];
   order: any | null = null;
+
+  get additionalFields(): FormArray {
+    return this.invoiceForm.get('additional_fields') as FormArray;
+  }
 
   constructor(
     private customersService: CustomersService,
@@ -152,6 +157,11 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     }));
 
     this.updateCartTotals();
+
+    const orderAdditionalFields = normalizeAdditionalFields(
+      order.additionalFields ?? order.additional_fields
+    );
+    orderAdditionalFields.forEach(field => this.addAdditionalField(field));
   }
   private detectarTipoIdentificacion(id: string): string {
     if (!id) return '05 - Cedula';
@@ -179,6 +189,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       paymentMethod: ['01', Validators.required],
       alias: [''],
       postingDate: [this.utilsService.getSoloFechaEcuador(), Validators.required], // YYYY-MM-DD, Validators.required],
+      additional_fields: this.fb.array([]),
       // company: [null, Validators.required], // <-- descomenta si usas el select de compañía
     });
 
@@ -186,6 +197,17 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       this.customerForm.get('num_identificacion')?.reset();
     });
     if (sub) this.subscriptions.push(sub);
+  }
+
+  addAdditionalField(field?: Partial<AdditionalFieldPayload>): void {
+    this.additionalFields.push(this.fb.group({
+      field_name: [field?.field_name || '', [Validators.required, Validators.maxLength(300)]],
+      field_value: [field?.field_value || '', [Validators.required, Validators.maxLength(300)]]
+    }));
+  }
+
+  removeAdditionalField(index: number): void {
+    this.additionalFields.removeAt(index);
   }
 
   private loadInitialData(): void {
@@ -378,6 +400,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   finalizeInvoice(): void {
     console.log('selectedCustomer', this.selectedCustomer);
     if (this.invoiceForm.invalid) {
+      this.invoiceForm.markAllAsTouched();
       toast.error('Selecciona un cliente y verifica los campos.');
       return;
     }
@@ -415,7 +438,8 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       })),
       payment: payment ? { code: payment.codigo, name: payment.name, amount: total } : null,
       auto_queue: true, // 👈 firma+envío por el microservicio
-      order_name: this.order?.name
+      order_name: this.order?.name,
+      additional_fields: normalizeAdditionalFields(this.additionalFields.getRawValue())
     };
 
     console.log('payload', payload);
@@ -458,6 +482,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   private clearInvoiceForm(): void {
     this.invoiceForm.reset({ paymentMethod: '01', selectedCustomer: null, alias: '', postingDate: this.utilsService.getSoloFechaEcuador() });
     this.cartItems = [];
+    this.additionalFields.clear();
     this.selectedCustomer = null;
   }
 

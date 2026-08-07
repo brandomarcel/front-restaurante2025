@@ -13,6 +13,7 @@ import { AlertService } from 'src/app/core/services/alert.service';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CreditNoteService } from 'src/app/services/credit-note.service';
 import { NgxSpinnerComponent, NgxSpinnerService } from 'ngx-spinner';
+import { AdditionalFieldPayload, normalizeAdditionalFields } from 'src/app/core/models/additional-field';
 
 @Component({
   selector: 'app-invoice-detail-page',
@@ -22,6 +23,7 @@ import { NgxSpinnerComponent, NgxSpinnerService } from 'ngx-spinner';
 })
 export class InvoiceDetailPageComponent implements OnInit {
   invoice: any = null;
+  additionalFields: AdditionalFieldPayload[] = [];
   motivosAnulacion: any[] = [];
   showMotivoModal = false;
   motivoForm: FormGroup;
@@ -58,6 +60,12 @@ export class InvoiceDetailPageComponent implements OnInit {
       next: (res: any) => {
         console.log('Factura cargada:', res);
         this.invoice = res?.message?.data || res?.data || null;
+        this.additionalFields = normalizeAdditionalFields(
+          this.invoice?.additionalFields ??
+          this.invoice?.additional_fields ??
+          res?.message?.additionalFields ??
+          res?.message?.additional_fields
+        );
         this.spinner.hide();
       },
       error: (err) => {

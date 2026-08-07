@@ -81,7 +81,9 @@ export class CompanyComponent implements OnInit {
       logo: [''],
       urlfirma: [''],
       clave: [''],
-      obligado_a_llevar_contabilidad: ['NO', Validators.required]
+      obligado_a_llevar_contabilidad: ['NO', Validators.required],
+      enable_provider_ruc: [false],
+      provider_ruc: ['', Validators.pattern(/^\d{13}$/)]
     });
   }
 
@@ -102,8 +104,11 @@ export class CompanyComponent implements OnInit {
           ambiente: ambienteBool,
           logo: company.logo || '',
           urlfirma: company.urlfirma || '',
-          obligado_a_llevar_contabilidad: this.normalizeContabilidad(company.obligado_a_llevar_contabilidad)
+          obligado_a_llevar_contabilidad: this.normalizeContabilidad(company.obligado_a_llevar_contabilidad),
+          enable_provider_ruc: this.normalizeCheck(company.enable_provider_ruc),
+          provider_ruc: company.provider_ruc || ''
         });
+        this.updateProviderRucValidation();
 
         this.certInfo = {
           subject: company.cert_common_name,
@@ -360,7 +365,8 @@ export class CompanyComponent implements OnInit {
   }
 
   private doUpdate(): Observable<void> {
-    const { ambiente, ...payload } = this.form.value;
+    // Configuración administrada en Company: se presenta en esta pantalla, pero no se modifica aquí.
+    const { ambiente, enable_provider_ruc, provider_ruc, ...payload } = this.form.value;
 
     return this.service.update(this.companyId, payload).pipe(
       map(() => void 0),
@@ -377,5 +383,21 @@ export class CompanyComponent implements OnInit {
       return 'SI';
     }
     return 'NO';
+  }
+
+  private normalizeCheck(value: unknown): boolean {
+    return value === true || value === 1 || `${value ?? ''}`.trim() === '1';
+  }
+
+  private updateProviderRucValidation(): void {
+    const providerRuc = this.form.get('provider_ruc');
+    if (!providerRuc) return;
+
+    providerRuc.setValidators(
+      this.form.get('enable_provider_ruc')?.value
+        ? [Validators.required, Validators.pattern(/^\d{13}$/)]
+        : [Validators.pattern(/^\d{13}$/)]
+    );
+    providerRuc.updateValueAndValidity({ emitEvent: false });
   }
 }

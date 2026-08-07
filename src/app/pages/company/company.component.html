@@ -17,6 +17,8 @@
       <form [formGroup]="form" (ngSubmit)="save()" class="grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs"
         [class.form-busy]="isSaving || isLoadingCompany">
         <div class="space-y-5">
+       
+
           <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
             <div class="px-4 py-3 border-b">
               <h3 class="text-sm font-semibold">Logo de la Empresa</h3>
@@ -137,6 +139,38 @@
               </div>
             </div>
           </div>
+
+
+             <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div class="px-4 py-3 border-b">
+              <h3 class="text-sm font-semibold">Campos adicionales de facturación</h3>
+              <p class="text-[11px] text-gray-500 mt-1">Configuración de solo lectura administrada por el sistema.</p>
+            </div>
+
+            <div class="p-4 space-y-4">
+              <label class="inline-flex items-center relative opacity-75 cursor-not-allowed">
+                <input type="checkbox" class="sr-only peer" formControlName="enable_provider_ruc"
+                  (click)="$event.preventDefault()" tabindex="-1" aria-readonly="true" />
+                <div class="w-11 h-6 bg-gray-300 rounded-full peer-checked:bg-green-600 transition-colors"></div>
+                <div
+                  class="absolute w-5 h-5 bg-white rounded-full transform translate-x-1 top-0.5 left-0.5 peer-checked:translate-x-5 transition-transform">
+                </div>
+                <span class="ml-3 text-sm font-semibold text-gray-700">Incluir RUC del proveedor del sistema</span>
+              </label>
+
+              <div *ngIf="f['enable_provider_ruc'].value">
+                <label class="block font-medium mb-1">RUC del proveedor del sistema</label>
+                <input appOnlyNumbers type="text" maxlength="13" class="input bg-gray-100 cursor-not-allowed"
+                  formControlName="provider_ruc" readonly aria-readonly="true"
+                  [class.border-red-500]="f['provider_ruc'].invalid" />
+                <small *ngIf="f['provider_ruc'].invalid" class="text-red-600">
+                  El RUC configurado debe tener exactamente 13 dígitos numéricos.
+                </small>
+              </div>
+            </div>
+          </div>
+
+          
         </div>
 
         <div class="space-y-5">
@@ -252,6 +286,8 @@
               </div>
             </div>
           </div>
+
+          
         </div>
       </form>
     </div>

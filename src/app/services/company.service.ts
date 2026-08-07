@@ -26,6 +26,8 @@ export interface CompanyInfo {
   logo?: string;                 // file_url en Frappe
   urlfirma?: string;   // file_url del .p12
   clave?: string;      // Password (Frappe lo cifra en el servidor)
+  enable_provider_ruc?: boolean | number;
+  provider_ruc?: string;
 }
 
 @Injectable({ providedIn: 'root' })
