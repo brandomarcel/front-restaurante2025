@@ -103,7 +103,7 @@
                 <div class="max-h-[48vh] sm:max-h-[50vh] overflow-y-auto pr-1">
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-3 pb-5">
                         <div *ngFor="let product of filteredProductList ;trackBy: trackByProductId"
-                            (click)="canAddProduct(product) && addProduct(product)" [ngClass]="{
+                            (click)="addProduct(product)" [ngClass]="{
                   'cursor-pointer rounded border p-2 shadow-sm transition text-[12px] sm:text-xs': true,
                   'hover:bg-muted': canAddProduct(product),
                   'border-red-500 bg-red-50 opacity-70 pointer-events-none': !canAddProduct(product)
@@ -121,6 +121,9 @@
                             </p>
                             <p *ngIf="hasInventory(product)" class="text-slate-500 text-[10px] italic mb-1">
                                 (Stock {{ getInventoryLabel(product) }})
+                            </p>
+                            <p *ngIf="hasInventory(product) && getCartQuantityForProduct(product)" class="text-slate-500 text-[10px] italic mb-1">
+                                (En venta {{ getCartQuantityForProduct(product) }})
                             </p>
 
                             <p class="text-muted-foreground">
@@ -210,8 +213,8 @@
                                     <fa-icon icon="minus"></fa-icon>
                                 </button>
                                 <span class="w-6 text-center font-semibold">{{ item.quantity }}</span>
-                                <button (click)="increase(item)"
-                                    class="w-8 h-8 rounded-full border text-foreground hover:bg-gray-100 flex items-center justify-center"
+                                <button (click)="increase(item)" [disabled]="!canIncreaseItem(item)"
+                                    class="w-8 h-8 rounded-full border text-foreground hover:bg-gray-100 flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-40"
                                     title="Aumentar cantidad" aria-label="Aumentar cantidad">
                                     <fa-icon icon="plus"></fa-icon>
                                 </button>

@@ -1,22 +1,31 @@
 import { Injectable } from '@angular/core';
+import { canSellProduct, canUseInventoryQuantity } from 'src/app/shared/utils/inventory.utils';
 
 @Injectable({ providedIn: 'root' })
 export class CartService {
 
     cart: any[] = [];
 
-    addProduct(product: any) {
+    addProduct(product: any): boolean {
         const existing = this.cart.find(
             i => (i.name ?? i.nombre) === (product.name ?? product.nombre)
         );
 
         const price = Number(product.precio ?? product.price ?? 0);
-        const taxValue = Number(product.tax_value ?? 0);
+        const taxValue = this.getTaxPercent(product);
 
         if (existing) {
+            if (!this.canUseQuantity(product, Number(existing.quantity || 0) + 1)) {
+                return false;
+            }
             existing.quantity++;
             this.recalcItem(existing);
+            this.syncInventorySnapshot(existing, product);
+            return true;
         } else {
+            if (!this.canUseQuantity(product, 1)) {
+                return false;
+            }
             const newItem = {
                 ...product,
                 nombre: product?.nombre ?? product?.name,
@@ -26,12 +35,17 @@ export class CartService {
             };
             this.recalcItem(newItem);
             this.cart.push(newItem);
+            return true;
         }
     }
 
-    increase(item: any) {
+    increase(item: any): boolean {
+        if (!this.canIncrease(item)) {
+            return false;
+        }
         item.quantity++;
         this.recalcItem(item);
+        return true;
     }
 
     decrease(item: any) {
@@ -66,6 +80,18 @@ export class CartService {
         );
     }
 
+    canAddProduct(product: any): boolean {
+        const existing = this.cart.find(
+            i => (i.name ?? i.nombre) === (product.name ?? product.nombre)
+        );
+        const nextQuantity = Number(existing?.quantity || 0) + 1;
+        return canSellProduct(product) && this.canUseQuantity(product, nextQuantity);
+    }
+
+    canIncrease(item: any): boolean {
+        return canSellProduct(item) && this.canUseQuantity(item, Number(item?.quantity || 0) + 1);
+    }
+
     private recalcItem(item: any) {
         const qty = Number(item.quantity);
         const price = Number(item.price);
@@ -81,5 +107,23 @@ export class CartService {
 
     private round2(n: number) {
         return Math.round((n + Number.EPSILON) * 100) / 100;
+    }
+
+    private canUseQuantity(product: any, quantity: number): boolean {
+        return canUseInventoryQuantity(product, quantity);
+    }
+
+    private getTaxPercent(product: any): number {
+        const value = Number(product?.tax_value ?? product?.tax?.value ?? product?.tax ?? 0);
+        return Number.isFinite(value) ? value : 0;
+    }
+
+    private syncInventorySnapshot(target: any, source: any): void {
+        target.controlar_inventario = source?.controlar_inventario ?? target.controlar_inventario;
+        target.permitir_stock_negativo = source?.permitir_stock_negativo ?? target.permitir_stock_negativo;
+        target.stock_actual = source?.stock_actual ?? target.stock_actual;
+        target.stock_minimo = source?.stock_minimo ?? target.stock_minimo;
+        target.is_out_of_stock = source?.is_out_of_stock ?? target.is_out_of_stock;
+        target.unidad_inventario = source?.unidad_inventario ?? target.unidad_inventario;
     }
 }

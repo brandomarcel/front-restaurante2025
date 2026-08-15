@@ -1,28 +1,28 @@
 <nav
-  [ngClass]="menuService.showSideBar ? 'w-[240px] 2xl:w-[304px] min-w-[240px] 2xl:min-w-[304px]' : 'w-[76px] min-w-[76px]'"
-  class="hidden h-full min-h-0 flex-col justify-between overflow-x-hidden border-r border-slate-200 bg-background pt-3 transition-[width] duration-300 motion-reduce:transition-none xl:flex"
+  [ngClass]="menuService.showSideBar ? 'w-[218px] 2xl:w-[238px] min-w-[218px] 2xl:min-w-[238px]' : 'w-[62px] min-w-[62px]'"
+  class="hidden h-full min-h-0 flex-col justify-between overflow-x-hidden border-r border-slate-200 bg-background pt-2 transition-[width] duration-300 motion-reduce:transition-none xl:flex"
   role="navigation"
   aria-label="Sidebar"
 >
   <div class="overflow-hidden min-h-0 h-full flex flex-col">
     <div
       [ngClass]="menuService.showSideBar ? 'justify-between' : 'justify-center'"
-      class="mx-4 mb-2 flex h-9 items-center shrink-0"
+      class="mx-3 mb-1.5 flex h-8 items-center shrink-0"
     >
       <div class="flex items-center" *ngIf="menuService.showSideBar">
         <button
           type="button"
           (click)="toggleSidebar()"
-          class="bg-primary flex items-center justify-center rounded-sm p-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
+          class="bg-primary flex h-8 w-8 items-center justify-center rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-primary/50"
           [attr.aria-expanded]="menuService.showSideBar ? 'true' : 'false'"
           [attr.aria-controls]="'sidebar-menu'"
         >
-          <img *ngIf="logoPreview; else defaultLogo" [src]="logoPreview" alt="FA" class="h-8 w-8" loading="lazy" />
+          <img *ngIf="logoPreview; else defaultLogo" [src]="logoPreview" alt="FA" class="h-6 w-6" loading="lazy" />
           <ng-template #defaultLogo>
-            <img src="./assets/images/only_logo_FA.png" alt="FA" class="h-8 w-8" loading="lazy" />
+            <img src="./assets/images/only_logo_FA.png" alt="FA" class="h-6 w-6" loading="lazy" />
           </ng-template>
         </button>
-        <b class="text-foreground ps-2 ml-1 grow text-sm font-bold">
+        <b class="text-foreground ps-2 ml-1 grow truncate text-xs font-bold">
           {{ appJson.displayName }}
         </b>
       </div>
@@ -30,7 +30,7 @@
       <button
         type="button"
         (click)="toggleSidebar()"
-        class="text-muted-foreground/50 hover:bg-slate-100 hover:text-muted-foreground flex items-center justify-center rounded-md p-2 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
+        class="text-muted-foreground/50 hover:bg-slate-100 hover:text-muted-foreground flex h-8 w-8 items-center justify-center rounded-md p-1.5 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
         [ngClass]="{ 'rotate-180': !menuService.showSideBar }"
         [attr.aria-expanded]="menuService.showSideBar ? 'true' : 'false'"
         [attr.aria-controls]="'sidebar-menu'"
@@ -41,18 +41,18 @@
 
     <div
       id="sidebar-menu"
-      class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400"
+      class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400"
     >
       <app-sidebar-menu></app-sidebar-menu>
     </div>
   </div>
 
-  <div class="mx-4 my-4 space-y-1 shrink-0">
+  <div class="mx-3 my-3 space-y-1 shrink-0">
     <div
-      class="rounded-sm hover:bg-card group relative flex h-9 cursor-default items-center justify-start p-2"
+      class="rounded-md hover:bg-card group relative flex h-8 cursor-default items-center justify-start px-2"
       [attr.title]="!menuService.showSideBar ? ('Version v' + appJson.version) : null"
     >
-      <svg-icon src="assets/icons/heroicons/outline/information-circle.svg" [svgClass]="'h-5 w-5 text-muted-foreground/50'"></svg-icon>
+      <svg-icon src="assets/icons/heroicons/outline/information-circle.svg" [svgClass]="'h-4 w-4 text-muted-foreground/50'"></svg-icon>
       <div
         class="ml-3 truncate text-[10px] font-semibold tracking-wide focus:outline-none"
         [ngClass]="{ 'hidden': !menuService.showSideBar }"
@@ -71,16 +71,16 @@
     aria-label="Cerrar menu lateral"
   ></button>
 
-  <nav id="sidebar-mobile-menu" class="bg-background absolute inset-y-0 left-0 flex w-[280px] max-w-[85vw] flex-col pt-3 shadow-2xl">
-    <div class="mx-4 mb-2 flex h-9 items-center justify-between shrink-0">
+  <nav id="sidebar-mobile-menu" class="bg-background absolute inset-y-0 left-0 flex w-[260px] max-w-[85vw] flex-col pt-2 shadow-2xl">
+    <div class="mx-3 mb-1.5 flex h-8 items-center justify-between shrink-0">
       <div class="flex items-center">
-        <div class="bg-primary flex items-center justify-center rounded-sm p-2">
-          <img *ngIf="logoPreview; else mobileDefaultLogo" [src]="logoPreview" alt="FA" class="h-8 w-8" loading="lazy" />
+        <div class="bg-primary flex h-8 w-8 items-center justify-center rounded-md p-1.5">
+          <img *ngIf="logoPreview; else mobileDefaultLogo" [src]="logoPreview" alt="FA" class="h-6 w-6" loading="lazy" />
           <ng-template #mobileDefaultLogo>
-            <img src="./assets/images/only_logo_FA.png" alt="FA" class="h-8 w-8" loading="lazy" />
+            <img src="./assets/images/only_logo_FA.png" alt="FA" class="h-6 w-6" loading="lazy" />
           </ng-template>
         </div>
-        <b class="text-foreground ps-2 ml-1 grow text-sm font-bold">
+        <b class="text-foreground ps-2 ml-1 grow truncate text-xs font-bold">
           {{ appJson.displayName }}
         </b>
       </div>
@@ -88,20 +88,20 @@
       <button
         type="button"
         (click)="closeMobileMenu()"
-        class="text-muted-foreground/60 hover:text-muted-foreground flex items-center justify-center rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
+        class="text-muted-foreground/60 hover:text-muted-foreground flex h-8 w-8 items-center justify-center rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-primary/50"
         aria-label="Cerrar menu lateral"
       >
         <svg-icon src="assets/icons/heroicons/outline/x.svg"></svg-icon>
       </button>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
+    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
       <app-sidebar-menu [mobile]="true"></app-sidebar-menu>
     </div>
 
-    <div class="mx-4 my-4 space-y-1 shrink-0">
-      <div class="rounded-sm hover:bg-card group relative flex h-9 cursor-default items-center justify-start p-2">
-        <svg-icon src="assets/icons/heroicons/outline/information-circle.svg" [svgClass]="'h-5 w-5 text-muted-foreground/50'"></svg-icon>
+    <div class="mx-3 my-3 space-y-1 shrink-0">
+      <div class="rounded-md hover:bg-card group relative flex h-8 cursor-default items-center justify-start px-2">
+        <svg-icon src="assets/icons/heroicons/outline/information-circle.svg" [svgClass]="'h-4 w-4 text-muted-foreground/50'"></svg-icon>
         <div class="ml-3 truncate text-[10px] font-semibold tracking-wide">
           <span class="bg-primary/10 text-primary px-2 font-semibold">v{{ appJson.version }}</span>
         </div>

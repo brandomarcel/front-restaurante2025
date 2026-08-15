@@ -1,5 +1,8 @@
 <header class="border-b border-slate-200/80 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
-  <div class="mx-auto flex min-h-[70px] w-full max-w-[1720px] items-center gap-2 px-3 py-2 sm:px-5 lg:px-6">
+  <div
+    class="mx-auto flex w-full max-w-[1720px] items-center gap-2 px-3 sm:px-5 lg:px-6"
+    [ngClass]="isPosMode ? 'min-h-[54px] py-1.5' : 'min-h-[70px] py-2'"
+  >
     <button
       *ngIf="!isPosMode"
       (click)="toggleMobileMenu()"
@@ -14,15 +17,15 @@
 
     <div class="min-w-0 flex-1">
       <div class="flex items-center gap-2">
-        <h1 class="truncate text-base font-semibold text-slate-900 sm:text-lg">{{ currentTitle }}</h1>
+        <h1 class="truncate font-semibold text-slate-900" [ngClass]="isPosMode ? 'text-sm sm:text-base' : 'text-base sm:text-lg'">{{ currentTitle }}</h1>
         <span
           *ngIf="isPosMode"
-          class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700"
+          class="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-700"
         >
           Modo POS
         </span>
       </div>
-      <p class="truncate text-xs text-slate-500">
+      <p class="truncate text-slate-500" [ngClass]="isPosMode ? 'text-[11px]' : 'text-xs'">
         {{ localizedDate }}
       </p>
     </div>
@@ -41,14 +44,15 @@
 
     <div class="flex items-center gap-2" *ngIf="isPosMode">
       <a
-        class="hidden min-h-[40px] items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 sm:inline-flex"
+        *ngIf="canOpenOrders"
+        class="hidden min-h-[34px] items-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-100 sm:inline-flex"
         [routerLink]="['/dashboard/orders']"
       >
         Órdenes
       </a>
       <a
         *ngIf="canOpenCaja"
-        class="hidden min-h-[40px] items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 sm:inline-flex"
+        class="hidden min-h-[34px] items-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-100 sm:inline-flex"
         [routerLink]="['/caja/apertura']"
       >
         Caja
@@ -56,7 +60,7 @@
       <button
         type="button"
         (click)="closePosMode()"
-        class="inline-flex min-h-[38px] items-center rounded-lg bg-slate-900 px-2.5 text-[11px] font-semibold text-white transition hover:bg-slate-700 sm:min-h-[40px] sm:px-3 sm:text-xs"
+        class="inline-flex min-h-[34px] items-center rounded-lg bg-slate-900 px-2.5 text-[11px] font-semibold text-white transition hover:bg-slate-700"
       >
         Salir POS
       </button>

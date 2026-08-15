@@ -22,7 +22,7 @@ export class AppComponent {
     const role: any = this.auth.getCurrentUser();
     console.log('role', role);
     if (this.isDeepNonEmptyObject(role)) {
-      this.menu.setMenuForRole(role.roles[0]);
+      this.menu.setMenuForRoles(Array.isArray(role?.roles) ? role.roles : []);
 
     }
 

@@ -2,31 +2,31 @@
   <table class="app-table text-xs">
     <thead class="app-thead">
       <tr>
-        <th class="app-th">Orden</th>
-        <th class="app-th">Fecha</th>
-        <th class="app-th">Cliente</th>
-        <th class="app-th">Tipo</th>
-        <th class="app-th">Estado</th>
-        <th class="app-th">SRI</th>
-        <th class="app-th text-right">Total</th>
-        <th class="app-th text-center">Acciones</th>
+        <th class="app-th py-2">Orden</th>
+        <th class="app-th py-2">Fecha</th>
+        <th class="app-th py-2">Cliente</th>
+        <th class="app-th py-2">Tipo</th>
+        <th class="app-th py-2">Estado</th>
+        <th class="app-th py-2">SRI</th>
+        <th class="app-th py-2 text-right">Total</th>
+        <th class="app-th py-2 text-center">Acciones</th>
       </tr>
     </thead>
 
     <tbody>
       <tr *ngFor="let o of orders; trackBy: trackByName" class="app-tr" [ngClass]="getRowClass(o.status)">
-        <td class="app-td">
+        <td class="app-td py-2">
           <div class="flex flex-col">
             <span class="font-semibold text-gray-900">{{ o.name }}</span>
             <span class="text-[11px] text-muted-foreground">{{ o.alias || o.usuario || '—' }}</span>
           </div>
         </td>
 
-        <td class="app-td text-gray-600">{{ (o.createdAtISO || o.createdAt) | date:'dd/MM/yyyy HH:mm' }}</td>
-        <td class="app-td">{{ o.customer.nombre || 'Consumidor final' }}</td>
-        <td class="app-td">{{ o.type || 'Nota Venta' }}</td>
+        <td class="app-td py-2 text-gray-600 whitespace-nowrap">{{ (o.createdAtISO || o.createdAt) | date:'dd/MM HH:mm' }}</td>
+        <td class="app-td py-2">{{ o.customer.nombre || 'Consumidor final' }}</td>
+        <td class="app-td py-2">{{ o.type || 'Nota Venta' }}</td>
 
-        <td class="app-td">
+        <td class="app-td py-2">
           <span class="badge" [ngClass]="{
             'badge-red': o.status === 'Ingresada',
             'badge-yellow': o.status === 'Preparación',
@@ -37,32 +37,32 @@
           </span>
         </td>
 
-        <td class="app-td">
+        <td class="app-td py-2">
           <span class="badge" [ngClass]="getSriBadge(o.sri.status)">
             {{ o.sri.status || 'Sin factura' }}
           </span>
         </td>
 
-        <td class="app-td text-right font-semibold">{{ o.total | currency:'USD':'symbol':'1.2-2' }}</td>
+        <td class="app-td py-2 text-right font-semibold">{{ o.total | currency:'USD':'symbol':'1.2-2' }}</td>
 
-        <td class="app-td text-center">
-          <div class="flex items-center justify-center gap-2">
-            <button type="button" (click)="open.emit(o)" class="btn btn-outline">Detalle</button>
+        <td class="app-td py-2 text-center">
+          <div class="flex items-center justify-center gap-1.5">
+            <button type="button" (click)="open.emit(o)" class="btn btn-outline !px-3 !py-1 !text-[11px]">Detalle</button>
 
             <button
               *ngIf="allowActions && o.status === 'Ingresada'"
               type="button"
               (click)="toPreparacion.emit(o)"
-              class="btn bg-amber-500 text-white hover:bg-amber-600">
-              Preparacion
+              class="btn bg-amber-500 text-white hover:bg-amber-600 !px-3 !py-1 !text-[11px]">
+              Preparación
             </button>
 
             <button
               *ngIf="allowActions && o.status === 'Preparación'"
               type="button"
               (click)="toCerrada.emit(o)"
-              class="btn bg-emerald-600 text-white hover:bg-emerald-700">
-              Marcar lista
+              class="btn bg-emerald-600 text-white hover:bg-emerald-700 !px-3 !py-1 !text-[11px]">
+              Lista
             </button>
           </div>
         </td>

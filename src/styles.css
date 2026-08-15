@@ -328,12 +328,51 @@ select {
   .app-card-body { @apply p-4 md:p-6; }
 
   /* Tablas */
-  .app-table-wrap { @apply overflow-x-auto rounded-lg border border-gray-200 shadow-sm; }
-  .app-table { @apply min-w-full text-xs bg-white; }
-  .app-thead { @apply sticky top-0 bg-gray-50; }
-  .app-th { @apply p-3 text-left font-medium text-gray-700; }
-  .app-td { @apply p-3 align-middle text-gray-800; }
-  .app-tr { @apply border-t hover:bg-gray-50; }
+  .app-table-wrap {
+    @apply overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+  .app-table-wrap::-webkit-scrollbar { width: 8px; height: 8px; }
+  .app-table-wrap::-webkit-scrollbar-thumb { @apply rounded-full bg-slate-300; }
+  .app-table-wrap::-webkit-scrollbar-track { @apply bg-transparent; }
+  .app-table {
+    @apply min-w-full border-separate border-spacing-0 bg-white text-xs text-slate-700;
+  }
+  .app-thead,
+  .app-table thead {
+    @apply sticky top-0 z-10 bg-slate-50;
+  }
+  .app-th,
+  .app-table th {
+    @apply whitespace-nowrap border-b border-slate-200 px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-slate-500;
+  }
+  .app-td,
+  .app-table td {
+    @apply border-b border-slate-100 px-3 py-2 align-middle text-slate-700;
+  }
+  .app-tr,
+  .app-table tbody tr {
+    @apply transition-colors hover:bg-slate-50;
+  }
+  .app-table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .app-table td:first-child,
+  .app-table th:first-child {
+    @apply pl-3;
+  }
+  .app-table td:last-child,
+  .app-table th:last-child {
+    @apply pr-3;
+  }
+  .app-table .btn,
+  .app-table button {
+    @apply min-h-[28px] rounded-md px-2.5 py-1 text-[11px] font-semibold;
+  }
+  .app-table .badge {
+    @apply rounded-md px-1.5 py-0.5 text-[10px] font-semibold;
+  }
 
   /* Paginación */
   .pager { @apply mt-4 flex items-center justify-center gap-2; }
@@ -427,4 +466,102 @@ select {
   width: 48px; height: 48px;
   border: 1px solid #e5e7eb; border-radius: 6px; background: white;
   object-fit: contain; padding: 4px;
+}
+
+/* ===========================
+   DENSIDAD GLOBAL DEL SISTEMA
+   Mantiene la jerarquía visual, pero con la escala compacta del POS.
+   =========================== */
+@layer utilities {
+  .density-compact {
+    font-size: 0.8125rem;
+    line-height: 1.25rem;
+  }
+
+  .density-compact .text-xs {
+    font-size: 0.6875rem !important;
+    line-height: 0.95rem !important;
+  }
+
+  .density-compact .text-sm {
+    font-size: 0.75rem !important;
+    line-height: 1rem !important;
+  }
+
+  .density-compact .text-base {
+    font-size: 0.8125rem !important;
+    line-height: 1.15rem !important;
+  }
+
+  .density-compact .text-lg {
+    font-size: 0.9375rem !important;
+    line-height: 1.25rem !important;
+  }
+
+  .density-compact .text-xl {
+    font-size: 1rem !important;
+    line-height: 1.35rem !important;
+  }
+
+  .density-compact .text-2xl {
+    font-size: 1.125rem !important;
+    line-height: 1.45rem !important;
+  }
+
+  .density-compact .text-3xl {
+    font-size: 1.5rem !important;
+    line-height: 1.8rem !important;
+  }
+
+  .density-compact .text-4xl {
+    font-size: 1.875rem !important;
+    line-height: 2.1rem !important;
+  }
+
+  .density-compact .text-5xl {
+    font-size: 2.25rem !important;
+    line-height: 2.45rem !important;
+  }
+
+  .density-compact .app-page-title {
+    font-size: 1rem !important;
+    line-height: 1.35rem !important;
+  }
+
+  .density-compact input,
+  .density-compact select,
+  .density-compact textarea,
+  .density-compact .input,
+  .density-compact .select,
+  .density-compact .ng-select-tailwind .ng-select-container,
+  .density-compact .ng-select-tailwind .ng-value,
+  .density-compact .ng-select-tailwind .ng-placeholder,
+  .density-compact .ng-select-tailwind .ng-input input {
+    font-size: 0.75rem !important;
+    line-height: 1rem !important;
+  }
+
+  .density-compact button:not([class*="text-"]),
+  .density-compact .btn,
+  .density-compact .pager-btn {
+    font-size: 0.75rem !important;
+    line-height: 1rem !important;
+  }
+
+  .density-compact .app-table,
+  .density-compact table {
+    font-size: 0.75rem !important;
+    line-height: 1rem !important;
+  }
+
+  .density-compact .app-th,
+  .density-compact th {
+    font-size: 0.6875rem !important;
+    line-height: 0.95rem !important;
+  }
+
+  .density-compact .badge {
+    font-size: 0.625rem !important;
+    line-height: 0.875rem !important;
+  }
 }

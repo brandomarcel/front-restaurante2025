@@ -1,404 +1,538 @@
-<div class="flex flex-col">
+<div class="h-full min-h-0">
+  <form [formGroup]="invoiceForm" (ngSubmit)="finalizeInvoice()" class="h-full min-h-0">
+    <div class="space-y-3 pb-24 md:pb-3">
+      <section class="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex min-w-0 flex-wrap items-center gap-2">
+            <h2 class="truncate text-sm font-bold leading-5 text-slate-900">
+              {{ order ? 'Emitir factura de orden' : 'Emitir factura directa' }}
+            </h2>
 
-
-
-  <form [formGroup]="invoiceForm" (ngSubmit)="finalizeInvoice()">
-    <!-- Barra superior -->
-    <div class="flex items-center justify-between bg-white rounded-md border px-4 py-3 mb-3 shadow-sm">
-      <h2 *ngIf="!order" class="text-base font-semibold tracking-wide">FACTURAR</h2>
-      <h2 *ngIf="order" class="text-base font-semibold tracking-wide">N°: {{ order.name }} a realizar la Facturar</h2>
-      <div class="flex items-center gap-3">
-        <div class="hidden sm:flex items-center gap-2">
-          <span class="text-[11px] text-gray-600">Ambiente</span>
-          <div class="px-2 py-1 rounded-md border bg-gray-50 text-[11px] font-semibold"
-            [ngClass]="ambiente === 'PRODUCCION' ? 'text-green-700' : 'text-yellow-600'">
-            {{ ambiente || '—' }}
-          </div>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <span class="text-[11px] text-gray-600">Fecha</span>
-          <input type="date" class="border rounded-md px-3 py-1.5 text-xs" formControlName="postingDate"
-            [formGroup]="invoiceForm" />
-        </div>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-      <!-- Columna principal -->
-      <div class="md:col-span-2 space-y-6">
-
-        <!-- Cliente -->
-        <section class="bg-white rounded-md border shadow-sm p-5">
-          <div class="flex justify-between items-center mb-2">
-            <h3 class="text-[13px] font-semibold text-gray-700">INFORMACIÓN DEL CLIENTE</h3>
-            <app-button type="button" tone="info" impact="bold" shape="rounded" (click)="showCustomerModal = true">
-              <fa-icon [icon]="['fas','user-plus']" class="mr-1"></fa-icon> Nuevo
-            </app-button>
-            <!-- <button type="button" (click)="showCustomerModal = true"
-              class="bg-blue-600 text-white px-3 py-1.5 rounded-md text-[11px] hover:bg-blue-700">
-              <fa-icon [icon]="['fas','user-plus']" class="mr-1"></fa-icon> Nuevo
-            </button> -->
+            <span *ngIf="order" class="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+              {{ order.name }}
+            </span>
           </div>
 
-          <label for="customer-select" class="block text-[11px] font-medium text-gray-600 mb-1">Buscar cliente</label>
-          <ng-select id="customer-select" class="ng-select-tailwind" [items]="customers" bindLabel="nombre"
-            bindValue="name" placeholder="Selecciona un cliente o busca por nombre o cédula" [searchable]="true"
-            [searchFn]="customSearchFn" formControlName="selectedCustomer" (change)="onCustomerSelected($event)"
-            [ngClass]="{
-    'ng-select-invalid': invoiceForm.get('selectedCustomer')?.invalid && invoiceForm.get('selectedCustomer')?.touched
-  }">
+          <div class="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+            <label class="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              Fecha
+              <input
+                type="date"
+                class="min-h-[28px] w-[128px] rounded-md border border-slate-200 bg-white px-2 text-[11px] normal-case tracking-normal"
+                formControlName="postingDate" />
+            </label>
+          </div>
+        </div>
+      </section>
 
-            <!-- 🔹 Cómo se muestran las opciones en la lista -->
-            <ng-template ng-option-tmp let-item="item">
-              <div class="flex flex-col leading-tight">
-                <span class="font-medium text-gray-800">{{ item.nombre }}</span>
-                <small class="text-gray-500 text-[11px]">{{ item.num_identificacion }}</small>
+      <div class="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
+        <main class="min-w-0 space-y-3">
+          <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+            <div class="mb-2 flex items-center justify-between gap-2">
+              <div>
+                <h3 class="text-xs font-semibold text-primary">Cliente</h3>
+                <p class="text-[10px] text-slate-500">Busca por nombre, cédula, RUC, teléfono o correo.</p>
               </div>
-            </ng-template>
-
-            <!-- 🔹 Cómo se muestra el valor seleccionado -->
-            <ng-template ng-label-tmp let-item="item">
-              {{ item.nombre }} — {{ item.num_identificacion }}
-            </ng-template>
-
-          </ng-select>
-
-
-
-          <div *ngIf="invoiceForm.get('selectedCustomer')?.invalid && invoiceForm.get('selectedCustomer')?.touched"
-            class="text-red-500 text-[11px] mt-1">
-            Debes seleccionar un cliente.
-          </div>
-
-          <div *ngIf="selectedCustomer"
-            class="mt-3 p-3 bg-gray-50 rounded-lg border text-[11px] grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <div><span class="text-gray-500">Identificación:</span> {{ selectedCustomer.num_identificacion || '—' }}
+              <app-button type="button" tone="info" impact="bold" size="small" shape="rounded" (buttonClick)="openCustomerModalFromSearch()">
+                <fa-icon [icon]="['fas','user-plus']" class="mr-1"></fa-icon>
+                Nuevo
+              </app-button>
             </div>
-            <div><span class="text-gray-500">Email:</span> {{ selectedCustomer.correo || '—' }}</div>
-            <div class="sm:col-span-1"><span class="text-gray-500">Teléfono:</span> {{ selectedCustomer.telefono }}
+
+            <div class="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1fr)_auto]">
+              <div class="relative">
+                <input
+                  id="customer-search"
+                  type="text"
+                  [(ngModel)]="customerSearchTerm"
+                  [ngModelOptions]="{standalone: true}"
+                  (ngModelChange)="onCustomerSearchChange($event)"
+                  (focus)="openCustomerSearch()"
+                  (blur)="closeCustomerSearchSoon()"
+                  (keyup.enter)="selectFirstCustomerSuggestion()"
+                  placeholder="Nombre, cédula, RUC, teléfono o correo"
+                  class="min-h-[32px] w-full rounded-md border border-slate-200 bg-white px-2.5 text-[11px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  [ngClass]="{
+                    'border-red-400': invoiceForm.get('selectedCustomer')?.invalid && invoiceForm.get('selectedCustomer')?.touched
+                  }" />
+
+                <div *ngIf="isCustomerSearchOpen"
+                  class="absolute left-0 right-0 top-full z-30 mt-1 max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                  <div *ngIf="customerSearchLoading" class="px-2.5 py-1.5 text-[11px] text-slate-500">
+                    Buscando clientes...
+                  </div>
+
+                  <button
+                    *ngFor="let c of customers; trackBy: trackByCustomerId"
+                    type="button"
+                    (mousedown)="selectCustomer(c)"
+                    class="flex w-full items-start gap-2 border-b border-slate-100 px-2.5 py-1.5 text-left text-[11px] hover:bg-primary/5">
+                    <span class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-primary/10 text-[10px] font-bold text-primary">
+                      {{ c?.nombre?.charAt(0) || 'C' }}
+                    </span>
+                    <span class="min-w-0">
+                      <span class="block truncate font-semibold text-slate-800">{{ c?.nombre }}</span>
+                      <span class="block truncate text-[10px] text-slate-500">
+                        {{ c?.num_identificacion }} · {{ c?.telefono || c?.correo || 'Sin contacto' }}
+                      </span>
+                    </span>
+                  </button>
+
+                  <div *ngIf="!customerSearchLoading && customers.length === 0"
+                    class="px-2.5 py-1.5 text-[11px] text-slate-500">
+                    Sin coincidencias.
+                    <button type="button" (mousedown)="openCustomerModalFromSearch()" class="ml-1 font-semibold text-primary">
+                      Crear cliente
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex gap-1.5">
+                <button
+                  *ngIf="!selectedCustomer"
+                  type="button"
+                  (click)="selectFinalConsumer()"
+                  class="min-h-[32px] whitespace-nowrap rounded-md border border-primary/20 bg-primary/5 px-3 text-[11px] font-semibold text-primary">
+                  Consumidor final
+                </button>
+
+                <button
+                  type="button"
+                  (click)="searchCustomerFromInput()"
+                  class="min-h-[32px] rounded-md bg-primary px-3 text-[11px] font-semibold text-white">
+                  Buscar
+                </button>
+
+                <button
+                  *ngIf="selectedCustomer"
+                  type="button"
+                  (click)="clearSelectedCustomer()"
+                  class="min-h-[32px] rounded-md border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-600">
+                  Cambiar
+                </button>
+              </div>
             </div>
-          </div>
-        </section>
 
-        <!-- Ítems -->
-        <!-- Aviso cuando viene de orden -->
-        <div *ngIf="order" class="mb-3 px-3 py-2 text-xs bg-amber-50 text-amber-800 rounded border border-amber-300">
-          Ítems bloqueados porque esta factura proviene de la orden <strong>{{ order.name }}</strong>.
-          Para modificar cantidades o precios, edita la Orden.
-        </div>
+            <div *ngIf="invoiceForm.get('selectedCustomer')?.invalid && invoiceForm.get('selectedCustomer')?.touched"
+              class="mt-1 text-[11px] text-red-500">
+              Debes seleccionar un cliente.
+            </div>
 
-        <!-- Ítems -->
-        <section class="bg-white rounded-lg shadow-sm p-6">
-          <h2 class="text-lg font-semibold text-gray-700 mb-4">Detalle de la Factura</h2>
+            <div *ngIf="selectedCustomer"
+              class="mt-2 grid grid-cols-1 gap-1.5 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[11px] text-slate-700 sm:grid-cols-3">
+              <p class="truncate"><span class="text-slate-500">ID:</span> {{ selectedCustomer.num_identificacion || '—' }}</p>
+              <p class="truncate"><span class="text-slate-500">Email:</span> {{ selectedCustomer.correo || '—' }}</p>
+              <p class="truncate"><span class="text-slate-500">Tel:</span> {{ selectedCustomer.telefono || '—' }}</p>
+            </div>
+          </section>
 
-          <!-- Agregar producto/servicio -->
-          <div *ngIf="!order" class="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 mb-3">
-            <div class="flex-grow">
-              <label for="product-select" class="block text-xs font-medium text-gray-700 mb-1">
-                Agregar Producto/Servicio
-              </label>
-              <ng-select formControlName="selectedProduct" id="product-select" class="ng-select-tailwind"
-                [items]="products" bindLabel="nombre" bindValue="name" placeholder="Busca y agrega un ítem"
-                [searchable]="true" [disabled]="order" (change)="addProductToCart($event)">
-                <ng-template ng-option-tmp let-item="item">
-                  <div class="flex items-center justify-between gap-3">
-                    <div class="min-w-0">
-                      <div class="truncate font-medium text-slate-800">{{ item.nombre }}</div>
-                      <div class="text-[11px] text-slate-500">
-                        {{ item.codigo || 'Sin codigo' }}
-                        <span *ngIf="hasInventory(item)"> | Stock {{ getInventoryLabel(item) }}</span>
+          <section *ngIf="order" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+            Ítems bloqueados porque esta factura proviene de la orden <strong>{{ order.name }}</strong>.
+            Para modificar cantidades o precios, edita la orden.
+          </section>
+
+          <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+            <div class="mb-2 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h3 class="text-xs font-semibold text-primary">Detalle de factura</h3>
+                <p class="text-[10px] text-slate-500">
+                  {{ order ? 'Revisa los ítems antes de emitir.' : 'Agrega productos o un ítem manual.' }}
+                </p>
+              </div>
+
+              <div *ngIf="!order" class="w-full min-w-0 lg:w-[560px]">
+                <div class="grid gap-1.5">
+                  <div class="grid min-w-0 gap-1.5 md:grid-cols-[minmax(0,1fr)_auto_auto]">
+                    <div class="relative">
+                      <input
+                        id="product-search"
+                        type="text"
+                        [(ngModel)]="productSearchTerm"
+                        [ngModelOptions]="{standalone: true}"
+                        (ngModelChange)="onProductSearchChange($event)"
+                        (focus)="openProductSearch()"
+                        (blur)="closeProductSearchSoon()"
+                        (keyup.enter)="selectFirstProductSuggestion()"
+                        placeholder="Buscar producto por nombre o código"
+                        class="min-h-[34px] w-full rounded-lg border border-slate-200 bg-white px-3 pr-9 text-[11px] outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" />
+
+                      <button
+                        *ngIf="productSearchTerm"
+                        type="button"
+                        (mousedown)="clearProductSearch()"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+                        ✕
+                      </button>
+
+                      <div
+                        *ngIf="isProductSearchOpen"
+                        class="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                        <p class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                          {{ productSearchHelpText }}
+                        </p>
+
+                        <button
+                          *ngFor="let product of filteredProductSuggestions; trackBy: trackByProductId"
+                          type="button"
+                          (mousedown)="selectProductFromSearch(product)"
+                          [disabled]="isProductBlocked(product)"
+                          class="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg px-2 py-1.5 text-left transition hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-55">
+                          <span class="min-w-0">
+                            <span class="block truncate text-[11px] font-bold text-slate-900">{{ product.nombre }}</span>
+                            <span class="block truncate text-[10px] text-slate-500">
+                              {{ product.codigo || 'Sin código' }}
+                              <ng-container *ngIf="hasInventory(product)"> · Stock {{ getInventoryLabel(product) }}</ng-container>
+                            </span>
+                          </span>
+
+                          <span class="flex flex-wrap items-center justify-end gap-1">
+                            <span class="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                              {{ getProductPriceLabel(product) }}
+                            </span>
+                            <span class="rounded-md bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
+                              {{ getProductTaxLabel(product) }}
+                            </span>
+                            <span *ngIf="isOutOfStock(product)" class="badge badge-red">Agotado</span>
+                            <span *ngIf="!isOutOfStock(product) && isLowStock(product)" class="badge badge-yellow">Bajo</span>
+                          </span>
+                        </button>
+
+                        <div
+                          *ngIf="productSearchTerm.trim() && filteredProductSuggestions.length === 0"
+                          class="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-2 py-3 text-center text-[11px] text-slate-500">
+                          No encontré productos con ese texto.
+                        </div>
                       </div>
                     </div>
-                    <div class="flex gap-1">
-                      <span *ngIf="isOutOfStock(item)" class="badge badge-red">Agotado</span>
-                      <span *ngIf="!isOutOfStock(item) && isLowStock(item)" class="badge badge-yellow">Bajo stock</span>
-                    </div>
-                  </div>
-                </ng-template>
-              </ng-select>
-            </div>
-          </div>
 
-          <!-- Tabla -->
-          <div class="overflow-x-auto max-h-[360px] overflow-y-auto">
-            <table class="min-w-full table-auto divide-y divide-gray-200">
-              <thead class="bg-gray-50 sticky top-0 ">
-                <tr>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wide text-[10px]">
-                    Ítem / Descripción
-                  </th>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wide text-[10px] w-24">
-                    Cantidad
-                  </th>
-                  <th class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide text-[10px] w-28">
-                    Precio
-                  </th>
-                  <th class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide text-[10px] w-20">
-                    IVA %
-                  </th>
-                  <th class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wide text-[10px] w-28">
-                    Total
-                  </th>
-                  <th class="px-2 py-2 w-10"></th>
-                </tr>
-              </thead>
-
-              <tbody class="bg-white divide-y divide-gray-200">
-                <tr *ngFor="let item of cartItems; let i = index; trackBy: trackByIndex" class="align-top"
-                  [ngClass]="{'opacity-80': order}">
-                  <!-- sin nowrap y con break-words para ocupar todo el renglón -->
-                  <td class="px-3 py-2 text-gray-900 whitespace-normal break-words">
-                    <div class="font-medium leading-5">{{ item.nombre || item.description }}</div>
-                    <div class="text-gray-500 text-[10px]" *ngIf="item.codigo">{{ item.codigo }}</div>
-                  </td>
-
-                  <td class="px-3 py-2">
-                    <div class="flex items-center gap-1">
-                      <button type="button" class="w-7 h-7 grid place-items-center border rounded" [disabled]="order"
-                        [ngClass]="{'cursor-not-allowed opacity-50': order}" (click)="decrementQty(i)">−</button>
-
-                      <input type="number" class="no-spinner w-16 h-7 text-center border-gray-300 rounded-md" min="1"
-                        step="1" [ngModelOptions]="{standalone: true}" [(ngModel)]="item.quantity" [readOnly]="order"
-                        [attr.tabindex]="order ? -1 : 0" (ngModelChange)="updateCartTotals()">
-
-                      <button type="button" class="w-7 h-7 grid place-items-center border rounded" [disabled]="order"
-                        [ngClass]="{'cursor-not-allowed opacity-50': order}" (click)="incrementQty(i)">+</button>
-                    </div>
-                  </td>
-
-                  <td class="px-3 py-2 text-right">
-                    <input type="number" class="no-spinner w-24 h-7 text-center border-gray-300 rounded-md" min="0"
-                      step="0.01" [ngModelOptions]="{standalone: true}" [(ngModel)]="item.price" [readOnly]="order"
-                      [attr.tabindex]="order ? -1 : 0" (ngModelChange)="updateCartTotals()">
-                  </td>
-
-                  <td class="px-3 py-2 font-semibold text-gray-800 text-right">
-                    {{ item.tax_value ?? (item.tax === 'IVA-15' ? 15 : 0) }}
-                  </td>
-
-                  <td class="px-3 py-2 font-semibold text-gray-800 text-right">
-                    ${{ item.total | number:'1.2-2' }}
-                  </td>
-
-                  <td class="px-2 py-2 text-right">
-                    <button type="button" (click)="removeProductFromCart(i)" [disabled]="order"
-                      [ngClass]="{'cursor-not-allowed opacity-50 text-gray-400': order}"
-                      class="text-red-600 hover:text-red-900" title="Eliminar">
-                      <fa-icon [icon]="['fas', 'trash']" class="text-[12px]"></fa-icon>
+                    <button
+                      type="button"
+                      (click)="selectFirstProductSuggestion()"
+                      class="min-h-[34px] rounded-lg bg-primary px-3 text-[11px] font-bold text-white transition hover:bg-primary/90">
+                      Agregar
                     </button>
-                  </td>
-                </tr>
 
-                <tr *ngIf="cartItems.length === 0">
-                  <td colspan="6" class="text-center py-6 text-gray-500 italic">
-                    No hay ítems en la factura.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
+                    <button
+                      type="button"
+                      (click)="showManualItem = !showManualItem"
+                      class="min-h-[34px] rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-50">
+                      Manual
+                    </button>
+                  </div>
 
-           <section class="bg-white rounded-md border shadow-sm p-5">
-          <div class="flex items-center justify-between gap-3 mb-3">
-            <div>
-              <h3 class="text-[13px] font-semibold text-gray-700">INFORMACIÓN ADICIONAL</h3>
-              <p class="text-[11px] text-gray-500 mt-0.5">Estos datos se incluirán en la factura electrónica.</p>
-            </div>
-            <app-button type="button" tone="info" impact="bold" shape="rounded" (click)="addAdditionalField()">
-              Agregar campo
-            </app-button>
-          </div>
-
-          <div formArrayName="additional_fields" class="space-y-3">
-            <div *ngFor="let field of additionalFields.controls; let i = index" [formGroupName]="i"
-              class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-start rounded-md border bg-gray-50 p-3">
-              <div>
-                <label class="block text-[11px] font-medium text-gray-600 mb-1">Nombre</label>
-                <input type="text" class="input" formControlName="field_name" maxlength="300"
-                  placeholder="Ej. correo" />
-                <small *ngIf="field.get('field_name')?.invalid && field.get('field_name')?.touched"
-                  class="text-red-500">Ingresa el nombre.</small>
+                  <div *ngIf="showManualItem" class="grid gap-1.5 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                    <input
+                      type="text"
+                      [(ngModel)]="adHoc.description"
+                      [ngModelOptions]="{standalone: true}"
+                      placeholder="Descripción del ítem manual"
+                      class="min-h-[30px] rounded-md border border-slate-200 bg-white px-2 text-[11px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                    <button
+                      type="button"
+                      (click)="addAdHocLine()"
+                      class="min-h-[30px] rounded-md border border-primary/20 bg-primary/5 px-2.5 text-[11px] font-semibold text-primary">
+                      Agregar manual
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label class="block text-[11px] font-medium text-gray-600 mb-1">Valor</label>
-                <input type="text" class="input" formControlName="field_value" maxlength="300"
-                  placeholder="Valor del campo" />
-                <small *ngIf="field.get('field_value')?.invalid && field.get('field_value')?.touched"
-                  class="text-red-500">Ingresa el valor.</small>
-              </div>
-              <button type="button" class="btn btn-ghost text-red-600 mt-5" (click)="removeAdditionalField(i)"
-                [attr.aria-label]="'Eliminar campo adicional ' + (i + 1)" title="Eliminar campo">
-                <fa-icon [icon]="['fas', 'trash']"></fa-icon>
-              </button>
             </div>
-          </div>
 
-          <p *ngIf="additionalFields.length === 0" class="text-xs text-gray-500 py-2">
-            No hay campos adicionales. El sistema puede agregar campos configurados por el administrador al emitir.
-          </p>
-        </section>
+            <div *ngIf="cartItems.length > 0; else emptyCart" class="space-y-1.5">
+              <div
+                *ngFor="let item of cartItems; let i = index; trackBy: trackByIndex"
+                class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 transition"
+                [ngClass]="{'opacity-75': order}">
+                <div class="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                  <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                      <p class="truncate text-xs font-semibold leading-4 text-slate-900">
+                        {{ item.nombre || item.description }}
+                      </p>
+                      <span class="rounded bg-white px-1.5 py-0.5 text-[9px] font-semibold text-slate-500">
+                        IVA {{ item.tax_value ?? (item.tax === 'IVA-15' ? 15 : 0) }}%
+                      </span>
+                    </div>
+                    <p class="truncate text-[10px] text-slate-500">
+                      <span *ngIf="item.codigo">{{ item.codigo }}</span>
+                      <span *ngIf="hasCartInventory(item)">{{ item.codigo ? ' · ' : '' }}Stock {{ getCartStockLabel(item) }}</span>
+                    </p>
+                  </div>
 
-      </div>
+                  <div class="grid grid-cols-[auto_auto_auto] items-end gap-2 sm:grid-cols-[auto_auto_auto_auto]">
+                    <div>
+                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-slate-400">Cant</p>
+                      <div class="inline-flex overflow-hidden rounded-md border border-slate-200 bg-white">
+                        <button
+                          type="button"
+                          class="h-7 w-7 text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          [disabled]="!!order"
+                          (click)="decrementQty(i)">
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          class="no-spinner h-7 w-12 border-x border-slate-200 text-center text-[11px]"
+                          min="1"
+                          step="1"
+                          [ngModelOptions]="{standalone: true}"
+                          [(ngModel)]="item.quantity"
+                          [readOnly]="!!order"
+                          [attr.tabindex]="order ? -1 : 0"
+                          (ngModelChange)="onCartQuantityChange(i)">
+                        <button
+                          type="button"
+                          class="h-7 w-7 text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          [disabled]="!!order || !canIncreaseCartItem(i)"
+                          (click)="incrementQty(i)">
+                          +
+                        </button>
+                      </div>
+                    </div>
 
-      <!-- Lateral -->
-      <aside class="md:col-span-1">
-        <div class="space-y-4 md:sticky md:top-6">
+                    <div>
+                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-slate-400">Precio</p>
+                      <input
+                        type="number"
+                        class="no-spinner h-7 w-20 rounded-md border-slate-200 bg-white text-center text-[11px]"
+                        min="0"
+                        step="0.01"
+                        [ngModelOptions]="{standalone: true}"
+                        [(ngModel)]="item.price"
+                        [readOnly]="!!order"
+                        [attr.tabindex]="order ? -1 : 0"
+                        (ngModelChange)="updateCartTotals()">
+                    </div>
 
-          <!-- Ambiente (móvil también) -->
-          <div class="bg-white rounded-md border shadow-sm p-5 sm:hidden">
-            <div class="flex justify-between text-gray-700">
-              <span class="text-xs">Ambiente:</span>
-              <span class="text-xs font-semibold"
-                [ngClass]="ambiente === 'PRODUCCION' ? 'text-green-700' : 'text-yellow-600'">
-                {{ ambiente }}
+                    <div class="text-right">
+                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-slate-400">Total</p>
+                      <p class="h-7 rounded-md bg-white px-2 py-1 text-xs font-bold text-slate-900">
+                        ${{ (item.total * (1 + ((item.tax_value ?? (item.tax === 'IVA-15' ? 15 : 0)) / 100))) | number:'1.2-2' }}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      (click)="removeProductFromCart(i)"
+                      [disabled]="!!order"
+                      class="h-7 w-7 self-end rounded-md border border-red-200 bg-white text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      title="Eliminar"
+                      aria-label="Eliminar">
+                      <fa-icon [icon]="['fas', 'trash']" class="text-[10px]"></fa-icon>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <ng-template #emptyCart>
+              <div class="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-[11px] text-slate-500">
+                No hay ítems en la factura.
+              </div>
+            </ng-template>
+          </section>
+
+          <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+            <div class="mb-2 flex items-center justify-between gap-3">
+              <div>
+                <h3 class="text-xs font-semibold text-primary">Información adicional</h3>
+                <p class="text-[10px] text-slate-500">Datos que se incluirán en la factura electrónica.</p>
+              </div>
+              <app-button type="button" tone="info" impact="bold" size="small" shape="rounded" (buttonClick)="addAdditionalField()">
+                Agregar
+              </app-button>
+            </div>
+
+            <div formArrayName="additional_fields" class="space-y-1.5">
+              <div
+                *ngFor="let field of additionalFields.controls; let i = index"
+                [formGroupName]="i"
+                class="grid grid-cols-1 items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 sm:grid-cols-[1fr_1fr_auto]">
+                <div>
+                  <label class="mb-0.5 block text-[10px] font-semibold text-slate-500">Nombre</label>
+                  <input type="text" class="input !h-8 !text-[11px]" formControlName="field_name" maxlength="300" placeholder="Ej. correo" />
+                  <small *ngIf="field.get('field_name')?.invalid && field.get('field_name')?.touched" class="text-[10px] text-red-500">
+                    Ingresa el nombre.
+                  </small>
+                </div>
+                <div>
+                  <label class="mb-0.5 block text-[10px] font-semibold text-slate-500">Valor</label>
+                  <input type="text" class="input !h-8 !text-[11px]" formControlName="field_value" maxlength="300" placeholder="Valor del campo" />
+                  <small *ngIf="field.get('field_value')?.invalid && field.get('field_value')?.touched" class="text-[10px] text-red-500">
+                    Ingresa el valor.
+                  </small>
+                </div>
+                <button
+                  type="button"
+                  class="mt-4 h-8 rounded-md border border-red-200 bg-white px-2 text-red-500 transition hover:bg-red-50 sm:mt-[18px]"
+                  (click)="removeAdditionalField(i)"
+                  [attr.aria-label]="'Eliminar campo adicional ' + (i + 1)"
+                  title="Eliminar campo">
+                  <fa-icon [icon]="['fas', 'trash']" class="text-[10px]"></fa-icon>
+                </button>
+              </div>
+            </div>
+
+            <p *ngIf="additionalFields.length === 0" class="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[11px] text-slate-500">
+              No hay campos adicionales. El sistema puede agregar campos configurados por el administrador al emitir.
+            </p>
+          </section>
+        </main>
+
+        <aside class="space-y-3 xl:sticky xl:top-3 xl:self-start">
+          <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-primary">Resumen</p>
+                <p class="mt-1 text-2xl font-bold leading-none text-slate-900">${{ total | number:'1.2-2' }}</p>
+              </div>
+              <span class="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-semibold text-slate-600">
+                {{ cartItems.length }} ítems
               </span>
             </div>
-          </div>
 
-          <!-- Resumen -->
-          <section class="bg-white rounded-md border shadow-sm p-5">
-            <h3 class="text-[13px] font-semibold text-gray-700 mb-2">RESUMEN</h3>
-            <div class="space-y-1 text-gray-700">
-              <div class="flex justify-between"><span class="text-xs">Subtotal:</span><span class="font-medium">${{
-                  subtotal | number:'1.2-2' }}</span></div>
-              <div class="flex justify-between"><span class="text-xs">IVA (15%):</span><span class="font-medium">${{ iva
-                  | number:'1.2-2' }}</span></div>
-              <div class="flex justify-between items-center font-bold text-base pt-2 border-t mt-2">
-                <span>Total:</span><span>${{ total | number:'1.2-2' }}</span>
+            <div class="mt-3 space-y-1 rounded-lg border border-slate-200 bg-slate-50 p-2 text-[11px]">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-500">Subtotal</span>
+                <span class="font-semibold text-slate-900">${{ subtotal | number:'1.2-2' }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-500">IVA</span>
+                <span class="font-semibold text-slate-900">${{ iva | number:'1.2-2' }}</span>
+              </div>
+              <div class="flex items-center justify-between border-t border-slate-200 pt-1.5">
+                <span class="font-semibold text-slate-500">Total</span>
+                <span class="font-bold text-primary">${{ total | number:'1.2-2' }}</span>
               </div>
             </div>
           </section>
 
-          <!-- Método de pago -->
-          <section class="bg-white rounded-md border shadow-sm p-5">
-            <label for="payment-method" class="block text-[11px] font-medium mb-1 text-gray-600">Método de pago</label>
-            <ng-select id="payment-method" class="ng-select-tailwind" formControlName="paymentMethod" [items]="payments"
-              bindLabel="description" bindValue="codigo" placeholder="Selecciona un método de pago">
+          <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+            <label for="payment-method" class="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-primary">
+              Método de pago
+            </label>
+            <ng-select
+              id="payment-method"
+              class="ng-select-tailwind"
+              formControlName="paymentMethod"
+              [items]="payments"
+              bindLabel="description"
+              bindValue="codigo"
+              placeholder="Selecciona un método">
             </ng-select>
             <div *ngIf="invoiceForm.get('paymentMethod')?.invalid && invoiceForm.get('paymentMethod')?.touched"
-              class="text-red-500 text-[11px] mt-1">
+              class="mt-1 text-[11px] text-red-500">
               Selecciona un método de pago.
             </div>
           </section>
 
-          <!-- Referencia -->
-          <!-- <section class="bg-white rounded-md border shadow-sm p-5">
-            <label for="alias-input" class="block text-[11px] font-medium mb-1 text-gray-600">Referencia (opcional)</label>
-            <input id="alias-input" type="text"
-                   formControlName="alias"
-                   class="w-full border-gray-300 rounded-md px-3 py-2 text-xs"
-                   placeholder="Ej. Orden de compra #123" />
-          </section> -->
-
-          <app-button type="submit" full impact="bold" tone="primary" shape="rounded" size="large"
+          <button
+            type="submit"
+            class="flex min-h-[42px] w-full items-center justify-between rounded-lg bg-primary px-3 text-xs font-bold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             [disabled]="invoiceForm.invalid || cartItems.length === 0">
-            Generar Factura
-          </app-button>
-
-        </div>
-      </aside>
+            <span>Generar factura</span>
+            <span>${{ total | number:'1.2-2' }}</span>
+          </button>
+        </aside>
+      </div>
     </div>
   </form>
 </div>
 
-<!-- Barra inferior en móvil -->
-<div class="fixed inset-x-0 bottom-0 bg-white border-t shadow-sm p-3 md:hidden" *ngIf="cartItems.length > 0">
-  <div class="flex items-center justify-between">
-    <div class="text-xs">
-      <div class="text-gray-500">Total</div>
-      <div class="text-lg font-bold">${{ total | number:'1.2-2' }}</div>
+<div class="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white p-2 shadow-sm md:hidden" *ngIf="cartItems.length > 0">
+  <div class="flex items-center justify-between gap-2">
+    <div>
+      <p class="text-[10px] text-slate-500">Total</p>
+      <p class="text-base font-bold text-slate-900">${{ total | number:'1.2-2' }}</p>
     </div>
-    <app-button type="button" tone="primary" shape="rounded" (click)="finalizeInvoice()">
+    <button
+      type="button"
+      class="min-h-[36px] rounded-lg bg-primary px-3 text-xs font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+      [disabled]="invoiceForm.invalid || cartItems.length === 0"
+      (click)="finalizeInvoice()">
       Generar
-    </app-button>
+    </button>
   </div>
 </div>
 
-<!-- Modal Cliente -->
-<div *ngIf="showCustomerModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-  <div class="bg-white w-full max-w-md rounded-lg shadow-xl p-6 text-sm relative">
-    <button class="absolute top-3 right-4 text-gray-400 hover:text-gray-700 text-2xl font-light"
-      (click)="closeCustomerModal()" aria-label="Cerrar">×</button>
-    <h3 class="text-base font-semibold text-gray-800 mb-4">Nuevo Cliente</h3>
+<div *ngIf="showCustomerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+  <div class="relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-4 text-xs shadow-xl">
+    <button class="absolute right-4 top-3 text-xl font-light text-gray-400 hover:text-gray-700" (click)="closeCustomerModal()" aria-label="Cerrar">×</button>
+    <h3 class="mb-4 text-sm font-semibold text-gray-800">Nuevo cliente</h3>
 
     <form [formGroup]="customerForm" (ngSubmit)="saveCustomer()" class="space-y-3">
       <div>
-        <label class="block text-xs font-medium text-gray-700">Tipo de Identificación</label>
-        <select class="select" formControlName="tipo_identificacion">
-          <option *ngFor="let item of identificationTypes" [value]="item.value"> {{ item.label }}
-          </option>
-
+        <label class="block text-[11px] font-semibold text-gray-700">Tipo de identificación</label>
+        <select class="select !mt-1 !h-8 !text-[11px]" formControlName="tipo_identificacion">
+          <option *ngFor="let item of identificationTypes" [value]="item.value">{{ item.label }}</option>
         </select>
 
-        <div *ngIf="customerForm.get('tipo_identificacion')?.invalid && submittedCustomerForm"
-          class="text-red-500 text-[11px] mt-1">
+        <div *ngIf="customerForm.get('tipo_identificacion')?.invalid && submittedCustomerForm" class="mt-1 text-[11px] text-red-500">
           Seleccione un tipo de identificación.
         </div>
       </div>
 
       <div>
-        <label class="block text-xs font-medium text-gray-700">Identificación</label>
-        <input [attr.maxlength]="getMaxLength()" type="text" formControlName="num_identificacion"
-          class="w-full border rounded-md px-3 py-2 mt-1 text-gray-900" inputmode="numeric" autocomplete="off" />
-        <div *ngIf="customerForm.get('num_identificacion')?.invalid && submittedCustomerForm"
-          class="text-red-500 text-[11px] mt-1">
-          <ng-container *ngIf="customerForm.get('num_identificacion')?.errors?.['required']">Campo
-            requerido.</ng-container>
-          <ng-container *ngIf="customerForm.get('num_identificacion')?.errors?.['cedulaInvalida']">La cédula debe tener
-            10 dígitos.</ng-container>
-          <ng-container *ngIf="customerForm.get('num_identificacion')?.errors?.['rucInvalido']">El RUC debe tener 13
-            dígitos.</ng-container>
+        <label class="block text-[11px] font-semibold text-gray-700">Identificación</label>
+        <input
+          [attr.maxlength]="getMaxLength()"
+          type="text"
+          formControlName="num_identificacion"
+          class="mt-1 h-8 w-full rounded-md border border-slate-200 px-2.5 text-[11px] text-gray-900"
+          inputmode="numeric"
+          autocomplete="off" />
+        <div *ngIf="customerForm.get('num_identificacion')?.invalid && submittedCustomerForm" class="mt-1 text-[11px] text-red-500">
+          <ng-container *ngIf="customerForm.get('num_identificacion')?.errors?.['required']">Campo requerido.</ng-container>
+          <ng-container *ngIf="customerForm.get('num_identificacion')?.errors?.['cedulaInvalida']">La cédula debe tener 10 dígitos.</ng-container>
+          <ng-container *ngIf="customerForm.get('num_identificacion')?.errors?.['rucInvalido']">El RUC debe tener 13 dígitos.</ng-container>
         </div>
       </div>
 
       <div>
-        <label class="block text-xs font-medium text-gray-700">Nombre / Razón Social</label>
-        <input type="text" formControlName="nombre" class="w-full border rounded-md px-3 py-2 mt-1 text-gray-900"
+        <label class="block text-[11px] font-semibold text-gray-700">Nombre / Razón social</label>
+        <input
+          type="text"
+          formControlName="nombre"
+          class="mt-1 h-8 w-full rounded-md border border-slate-200 px-2.5 text-[11px] text-gray-900"
           oninput="this.value = this.value.toUpperCase()" />
-        <div *ngIf="customerForm.get('nombre')?.invalid && submittedCustomerForm" class="text-red-500 text-[11px] mt-1">
+        <div *ngIf="customerForm.get('nombre')?.invalid && submittedCustomerForm" class="mt-1 text-[11px] text-red-500">
           Campo requerido.
         </div>
       </div>
 
       <div>
-        <label class="block text-xs font-medium text-gray-700">Email</label>
-        <input type="email" formControlName="correo" class="w-full border rounded-md px-3 py-2 mt-1 text-gray-900" />
-        <div *ngIf="customerForm.get('correo')?.invalid && submittedCustomerForm" class="text-red-500 text-[11px] mt-1">
+        <label class="block text-[11px] font-semibold text-gray-700">Email</label>
+        <input type="email" formControlName="correo" class="mt-1 h-8 w-full rounded-md border border-slate-200 px-2.5 text-[11px] text-gray-900" />
+        <div *ngIf="customerForm.get('correo')?.invalid && submittedCustomerForm" class="mt-1 text-[11px] text-red-500">
           Email inválido.
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <label class="block text-xs font-medium text-gray-700">Teléfono</label>
-          <input maxlength="10" type="text" formControlName="telefono"
-            class="w-full border rounded-md px-3 py-2 mt-1 text-gray-900" />
-          <div *ngIf="customerForm.get('telefono')?.invalid && submittedCustomerForm"
-            class="text-red-500 text-[11px] mt-1">
+          <label class="block text-[11px] font-semibold text-gray-700">Teléfono</label>
+          <input maxlength="10" type="text" formControlName="telefono" class="mt-1 h-8 w-full rounded-md border border-slate-200 px-2.5 text-[11px] text-gray-900" />
+          <div *ngIf="customerForm.get('telefono')?.invalid && submittedCustomerForm" class="mt-1 text-[11px] text-red-500">
             Teléfono inválido.
           </div>
-
         </div>
         <div>
-          <label class="block text-xs font-medium text-gray-700">Dirección</label>
-          <input type="text" formControlName="direccion"
-            class="w-full border rounded-md px-3 py-2 mt-1 text-gray-900" />
-          <div *ngIf="customerForm.get('direccion')?.invalid && submittedCustomerForm"
-            class="text-red-500 text-[11px] mt-1">
+          <label class="block text-[11px] font-semibold text-gray-700">Dirección</label>
+          <input type="text" formControlName="direccion" class="mt-1 h-8 w-full rounded-md border border-slate-200 px-2.5 text-[11px] text-gray-900" />
+          <div *ngIf="customerForm.get('direccion')?.invalid && submittedCustomerForm" class="mt-1 text-[11px] text-red-500">
             Dirección inválida.
           </div>
         </div>
       </div>
 
-      <div class="flex justify-end gap-3 pt-2">
-
-        <app-button type="button" impact="bold" (click)="closeCustomerModal()" tone="light"
-          shape="rounded">Cancelar</app-button>
-        <app-button type="submit" impact="bold" tone="success" shape="rounded">Guardar</app-button>
-
+      <div class="flex justify-end gap-2 pt-2">
+        <app-button type="button" impact="bold" size="small" (buttonClick)="closeCustomerModal()" tone="light" shape="rounded">
+          Cancelar
+        </app-button>
+        <app-button type="submit" impact="bold" size="small" tone="success" shape="rounded">
+          Guardar
+        </app-button>
       </div>
     </form>
   </div>

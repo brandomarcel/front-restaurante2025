@@ -80,7 +80,7 @@ this.spinner.hide();
     this.utilsGlobalSvc.getMotivosAnulacion().subscribe({
       next: (res: any) => {
         console.log('Motivos cargada:', res);
-        this.motivosAnulacion = res?.message || null;
+        this.motivosAnulacion = res?.message || [];
 
       },
       error: (err) => {
@@ -197,13 +197,57 @@ this.spinner.hide();
   @HostListener('document:keydown.escape')
   onEsc() { if (this.showMotivoModal) this.closeMotivo(); }
 
+  get invoiceItems(): any[] {
+    return Array.isArray(this.invoice?.items) ? this.invoice.items : [];
+  }
+
+  get invoiceNumber(): string {
+    return this.invoice?.sri?.number || this.invoice?.name || '—';
+  }
+
+  get invoiceStatusRaw(): string {
+    return String(this.invoice?.sri?.status || this.invoice?.status || '').trim();
+  }
+
+  get canAnnul(): boolean {
+    return this.invoiceStatusRaw === 'AUTORIZADO';
+  }
+
+  get canResend(): boolean {
+    return !!this.invoice && this.invoiceStatusRaw !== 'AUTORIZADO';
+  }
+
+  itemSubtotal(item: any): number {
+    const quantity = Number(item?.quantity || 0);
+    const price = Number(item?.price || 0);
+    return Number(item?.subtotal ?? (quantity * price));
+  }
+
+  itemTotal(item: any): number {
+    const subtotal = this.itemSubtotal(item);
+    const taxRate = Number(item?.tax_rate || 0);
+    return Number(item?.total ?? (subtotal + (subtotal * (taxRate / 100))));
+  }
+
   get sriStatus(): string {
-    const st = this.invoice?.sri?.status;
-    return st === 'AUTORIZADO' ? 'AUTORIZADO' :
-      st === 'Rejected' ? 'Rechazada' :
-        st === 'Error' ? 'Error' :
-          st === 'Queued' ? 'En cola' :
-            st === 'Processing' ? 'En proceso' :
-              st === 'Draft' ? 'Borrador' : (st || '—');
+    return this.getSriStatusLabel(this.invoiceStatusRaw);
+  }
+
+  getSriStatusLabel(status: string | undefined | null): string {
+    const value = String(status || '').trim();
+    if (value === 'AUTORIZADO') return 'AUTORIZADO';
+    if (value === 'Rejected') return 'Rechazada';
+    if (value === 'Error' || value === 'ERROR') return 'Error';
+    if (value === 'Queued') return 'En cola';
+    if (value === 'Processing') return 'En proceso';
+    if (value === 'Draft') return 'Borrador';
+    return value || '—';
+  }
+
+  getSriStatusBadge(status: string | undefined | null): string {
+    const value = String(status || '').trim();
+    if (value === 'AUTORIZADO') return 'badge-green';
+    if (value === 'Rejected' || value === 'Error' || value === 'ERROR' || value === 'ANULADA') return 'badge-red';
+    return 'badge-yellow';
   }
 }

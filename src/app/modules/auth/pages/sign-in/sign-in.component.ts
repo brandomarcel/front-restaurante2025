@@ -9,6 +9,7 @@ import { NgxSpinnerComponent, NgxSpinnerService } from 'ngx-spinner';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { MenuService } from 'src/app/modules/layout/services/menu.service';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 
 @Component({
@@ -29,7 +30,8 @@ export class SignInComponent implements OnInit {
     private spinner: NgxSpinnerService,
     private frappeErrorService: FrappeErrorService,
     private alertService: AlertService,
-    private menu: MenuService, private auth: AuthService
+    private menu: MenuService, private auth: AuthService,
+    private capabilities: CompanyCapabilitiesService
   ) { }
   ngOnInit(): void {
 
@@ -73,20 +75,10 @@ export class SignInComponent implements OnInit {
     this.authService.login(username, password).subscribe({
       next: (res:any) => {
         const role: any = this.auth.getCurrentUser();
-        this.menu.setMenuForRole(role.roles[0]) ;
+        this.menu.setMenuForRoles(Array.isArray(role?.roles) ? role.roles : []);
         this.spinner.hide();
         this.isSubmitting = false;
-        const roles = Array.isArray(role?.roles) ? role.roles.map((r: string) => String(r || '').toLowerCase()) : [];
-
-        if (roles.some((r: string) => r.includes('mesero'))) {
-          this._router.navigate(['/dashboard/pos']);
-          return;
-        }
-        if (roles.some((r: string) => r.includes('cocina') || r.includes('chef') || r.includes('kitchen'))) {
-          this._router.navigate(['/dashboard/orders-realtime']);
-          return;
-        }
-        this._router.navigate(['/dashboard']); // Ruta protegida del POS
+        this._router.navigateByUrl(this.capabilities.getLandingRoute(role?.roles));
       },
       error: (error: any) => {
         const mensaje: any = this.frappeErrorService.handle(error);

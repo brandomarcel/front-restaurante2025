@@ -19,13 +19,15 @@ const routes: Routes = [
   path: 'caja',
   component: LayoutComponent,
   canActivate: [RoleAccessGuard],
-  data: { allowedRoles: ['GERENTE', 'CAJERO'] },
+  data: { allowedRoles: ['GERENTE', 'CAJERO'], featureKey: 'cash_register' },
   loadChildren: () => import('../caja/caja.module').then((m) => m.CajaModule),
 },
 
 {
   path: 'report',
   component: LayoutComponent,
+  canActivate: [RoleAccessGuard],
+  data: { allowedRoles: ['GERENTE'], featureKey: 'orders' },
   loadChildren: () => import('../report/report.module').then((m) => m.ReportModule),
 },
 

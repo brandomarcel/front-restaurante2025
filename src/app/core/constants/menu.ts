@@ -12,16 +12,19 @@ export class Menu {
           icon: 'assets/icons/tablericons/chart-donut-3.svg',
           label: 'Dashboard',
           route: '/dashboard/main',
+          featureKey: 'orders',
         },
         {
           icon: 'assets/icons/tablericons/building-store.svg',
           label: 'POS',
           route: '/dashboard/pos',
+          featureKey: 'tables',
         },
         {
           icon: 'assets/icons/tablericons/chart-donut-3.svg',
           label: 'Ordenes en vivo',
           route: '/dashboard/orders-realtime',
+          featureKey: 'kitchen',
         },
       ],
     },
@@ -30,22 +33,25 @@ export class Menu {
     {
       group: 'Facturación',
       separator: true,
-      allowedRoles: ['GERENTE'],
+      allowedRoles: ['GERENTE', 'CAJERO'],
       items: [
         {
           icon: 'assets/icons/tablericons/cash-register.svg',
           label: 'Facturar',
           route: '/dashboard/invoicing',
+          featureKey: 'direct_invoice',
         },
         {
           icon: 'assets/icons/tablericons/file-invoice.svg',
           label: 'Lista Facturas',
           route: '/dashboard/invoices',
+          featureKey: 'direct_invoice',
         },
         {
           icon: 'assets/icons/tablericons/file-invoice.svg',
           label: 'Lista Notas Crédito',
           route: '/dashboard/credit-notes',
+          featureKey: 'credit_note',
         },
       ],
     },
@@ -59,6 +65,7 @@ export class Menu {
           icon: 'assets/icons/tablericons/cash-banknote.svg',
           label: 'Caja',
           route: '/caja',
+          featureKey: 'cash_register',
           children: [
             { label: 'Apertura', route: '/caja/apertura' },
             { label: 'Retiros', route: '/caja/retiro' },
@@ -71,6 +78,7 @@ export class Menu {
           icon: 'assets/icons/tablericons/shopping-bag.svg',
           label: 'Lista Órdenes',
           route: '/dashboard/orders',
+          featureKey: 'orders',
         },
       ],
     },
@@ -84,6 +92,7 @@ export class Menu {
           icon: 'assets/icons/tablericons/report-analytics.svg',
           label: 'Reportes',
           route: '/report',
+          featureKey: 'orders',
           children: [
             { label: 'Productos Mas Vendidos', route: '/report/ventasproducto' },
             { label: 'Cierres de Caja', route: '/report/report-cierre-caja' },
@@ -102,6 +111,7 @@ export class Menu {
           icon: 'assets/icons/tablericons/users.svg',
           label: 'Clientes',
           route: '/dashboard/customers',
+          featureKey: 'customers',
         },
         // {
         //   icon: 'assets/icons/tablericons/users-plus.svg',
@@ -112,21 +122,25 @@ export class Menu {
           icon: 'assets/icons/tablericons/package.svg',
           label: 'Productos',
           route: '/dashboard/products',
+          featureKey: 'products',
         },
         {
           icon: 'assets/icons/tablericons/repeat.svg',
           label: 'Inventario',
           route: '/dashboard/inventory',
+          featureKey: 'products',
         },
         {
           icon: 'assets/icons/tablericons/shopping-bag.svg',
           label: 'Lista Órdenes',
           route: '/dashboard/orders',
+          featureKey: 'orders',
         },
         {
           icon: 'assets/icons/tablericons/category.svg',
           label: 'Categorias',
           route: '/dashboard/categories',
+          featureKey: 'products',
         },
         {
           icon: 'assets/icons/tablericons/users.svg',
@@ -147,12 +161,14 @@ export class Menu {
           icon: 'assets/icons/tablericons/shopping-bag.svg',
           label: 'Lista Órdenes',
           route: '/dashboard/orders',
+          featureKey: 'orders',
         },
 
         {
           icon: 'assets/icons/tablericons/building-store.svg',
           label: 'POS',
           route: '/dashboard/pos',
+          featureKey: 'tables',
         },
 
       ],
@@ -167,6 +183,7 @@ export class Menu {
           icon: 'assets/icons/tablericons/chart-donut-3.svg',
           label: 'Ordenes en vivo',
           route: '/dashboard/orders-realtime',
+          featureKey: 'kitchen',
         },
       ],
     },

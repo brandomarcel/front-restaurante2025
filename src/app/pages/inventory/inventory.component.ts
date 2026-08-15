@@ -9,7 +9,6 @@ import { AlertService } from 'src/app/core/services/alert.service';
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { InventoryService } from 'src/app/services/inventory.service';
 import { ProductsService } from 'src/app/services/products.service';
-import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 import {
   canSellProduct,
   getInventoryUnit,
@@ -21,7 +20,7 @@ import {
 
 @Component({
   selector: 'app-inventory',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './inventory.component.html',
   styleUrl: './inventory.component.css'
 })
@@ -123,6 +122,10 @@ export class InventoryComponent implements OnInit {
 
   get outOfStockCount(): number {
     return this.inventoryProducts.filter((item) => this.isOutOfStock(item)).length;
+  }
+
+  get attentionProductsCount(): number {
+    return this.inventoryProducts.filter((item) => this.isLowStock(item) || this.isOutOfStock(item)).length;
   }
 
   get availableProductsCount(): number {

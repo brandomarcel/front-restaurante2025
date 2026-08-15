@@ -5,6 +5,7 @@ import { AngularSvgIconModule } from 'angular-svg-icon';
 import { Subscription } from 'rxjs';
 import { MenuService } from '../../services/menu.service';
 import { ProfileMenuComponent } from './profile-menu/profile-menu.component';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 @Component({
   selector: 'app-navbar',
@@ -21,6 +22,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   constructor(
     public menuService: MenuService,
     private router: Router,
+    private capabilities: CompanyCapabilitiesService,
   ) {}
 
   ngOnInit(): void {
@@ -49,7 +51,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
 
   public closePosMode(): void {
-    this.router.navigateByUrl('/dashboard/main');
+    this.router.navigateByUrl(this.capabilities.getPosExitRoute(this.readStoredRoles()));
   }
 
   get isPosMode(): boolean {
@@ -62,7 +64,11 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   get canOpenCaja(): boolean {
     const role = this.menuService.currentRole || this.readStoredRole();
-    return role === 'GERENTE' || role === 'CAJERO';
+    return this.capabilities.isEnabled('cash_register') && (role === 'GERENTE' || role === 'CAJERO');
+  }
+
+  get canOpenOrders(): boolean {
+    return this.capabilities.isEnabled('orders');
   }
 
   get localizedDate(): string {
@@ -92,6 +98,15 @@ export class NavbarComponent implements OnInit, OnDestroy {
         .trim();
     } catch {
       return '';
+    }
+  }
+
+  private readStoredRoles(): string[] {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      return Array.isArray(user?.roles) ? user.roles : [];
+    } catch {
+      return [];
     }
   }
 }

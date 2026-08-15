@@ -20,6 +20,7 @@ import { SplitOrderDialogComponent } from './components/split-order-dialog/split
 import { OrderSplitsTableComponent } from './components/order-splits-table/order-splits-table.component';
 import { PaymentsService } from 'src/app/services/payments.service';
 import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
+import { AlertService } from 'src/app/core/services/alert.service';
 
 type Product = any; // usa tu modelo si lo tienes
 type OrderItem = {
@@ -66,6 +67,7 @@ export class OrderDetailPageComponent implements OnInit {
   splitActionLoadingName = '';
   splitDeleteLoadingName = '';
   splitsLoading = false;
+  closingOrder = false;
   orderSplits: OrderSplitRow[] = [];
   splitRemainingItems: any[] = [];
   paymentMethods: any[] = [];
@@ -83,6 +85,7 @@ export class OrderDetailPageComponent implements OnInit {
     private ordersSvc: OrdersService,
     private orderSplitSvc: OrderSplitService,
     private paymentsSvc: PaymentsService,
+    private alertService: AlertService,
   ) { }
 
   ngOnInit(): void {
@@ -385,6 +388,44 @@ export class OrderDetailPageComponent implements OnInit {
   console.log('payload actualizar orden =>', payload);
 }
 
+  async closeOrder(): Promise<void> {
+    if (!this.order?.name) {
+      toast.error('Orden no válida.');
+      return;
+    }
+    if (this.isClosed) {
+      toast.info('La orden ya está cerrada.');
+      return;
+    }
+    if (this.isLocked) {
+      toast.info('La orden ya está bloqueada por facturación.');
+      return;
+    }
+    if (this.closingOrder) return;
+
+    const result = await this.alertService.confirm(
+      'Al cerrar la orden ya no se podrán agregar, eliminar ni editar productos. Si tienes cambios pendientes, guarda antes de cerrarla.',
+      'Cerrar orden'
+    );
+
+    if (!result.isConfirmed) return;
+
+    const orderName = this.order.name;
+    this.closingOrder = true;
+    this.ordersSvc.updateStatus(orderName, 'Cerrada')
+      .pipe(finalize(() => this.closingOrder = false))
+      .subscribe({
+        next: () => {
+          toast.success('Orden cerrada. Ya no se podrán hacer cambios.');
+          if (this.order) {
+            this.order.status = 'Cerrada';
+          }
+          this.fetch(orderName);
+        },
+        error: () => toast.error('No se pudo cerrar la orden.')
+      });
+  }
+
 
 
   // =================== Helpers ===================
@@ -654,6 +695,10 @@ export class OrderDetailPageComponent implements OnInit {
     if (this.isClosed) return false;
     if (this.isReadOnlyView) return false;
     return true;
+  }
+
+  get canCloseOrder(): boolean {
+    return !!this.order?.name && !this.isClosed && !this.isLocked;
   }
 
   get orderStatusLabel(): string {

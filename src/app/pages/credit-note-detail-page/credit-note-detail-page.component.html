@@ -134,9 +134,9 @@
                 <h3 class="text-lg font-semibold text-gray-700">📦 Productos de la Factura</h3>
             </div>
 
-            <div class="overflow-x-auto max-h-[60vh] overflow-y-auto border border-gray-200 rounded-md">
-                <table class="min-w-full table-auto text-sm">
-                    <thead class="bg-gray-50 sticky top-0 z-10">
+            <div class="app-table-wrap max-h-[60vh]">
+                <table class="app-table">
+                    <thead class="app-thead">
                         <tr>
                             <th class="p-3 text-left">Producto</th>
                             <th class="p-3 text-left">Cantidad</th>
@@ -147,7 +147,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr *ngFor="let item of invoice?.items" class="border-t hover:bg-gray-50">
+                        <tr *ngFor="let item of invoice?.items" class="app-tr">
                             <td class="p-3">{{ item.productName }}</td>
                             <td class="p-3">{{ item.quantity }}</td>
                             <td class="p-3">{{ item.price | currency:'USD':'symbol':'1.2-2' }}</td>

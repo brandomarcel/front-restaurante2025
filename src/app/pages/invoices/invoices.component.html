@@ -203,9 +203,9 @@
             <!-- Tab: Items -->
             <div *ngIf="activeTab === 'items'">
                 <h4 class="text-base font-semibold text-gray-700 mb-2">📦 Items</h4>
-                <div class="overflow-x-auto max-h-[50vh] overflow-y-auto">
-                    <table class="w-full text-sm border border-gray-200 rounded-lg">
-                        <thead class="bg-gray-100">
+                <div class="app-table-wrap max-h-[50vh]">
+                    <table class="app-table">
+                        <thead class="app-thead">
                             <tr>
                                 <th class="p-2 text-left">Producto</th>
                                 <th class="p-2 text-left">Cantidad</th>
@@ -216,7 +216,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr *ngFor="let it of invoiceSelected?.items" class="border-t hover:bg-gray-50">
+                            <tr *ngFor="let it of invoiceSelected?.items" class="app-tr">
                                 <td class="p-2">{{ it.productName }}</td>
                                 <td class="p-2">{{ it.quantity }}</td>
                                 <td class="p-2">{{ it.price | currency:'USD':'symbol':'1.2-2' }}</td>

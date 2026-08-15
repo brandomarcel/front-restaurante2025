@@ -4,6 +4,7 @@ import { NavigationEnd, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Menu } from 'src/app/core/constants/menu';
 import { MenuItem, SubMenuItem, Role } from 'src/app/core/models/menu.model';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 @Injectable({ providedIn: 'root' })
 export class MenuService implements OnDestroy {
@@ -16,7 +17,7 @@ export class MenuService implements OnDestroy {
   private _sidebarBeforePos: boolean | null = null;
   private _subscription = new Subscription();
 
-  constructor(private router: Router) {
+  constructor(private router: Router, private capabilities: CompanyCapabilitiesService) {
     this._pagesMenu.set([]);
     this.syncLayoutByRoute(this.router.url);
 
@@ -53,8 +54,14 @@ export class MenuService implements OnDestroy {
   public toggleMobileMenu() { this._showMobileMenu.set(!this._showMobileMenu()); }
 
   public setMenuForRole(role: Role | string) {
-    this._currentRole.set(this.normalizeRole(String(role || '')));
-    const filtered = this.filterMenuByRole(Menu.pages, role);
+    this.setMenuForRoles([role]);
+  }
+
+  public setMenuForRoles(roles: Array<Role | string>) {
+    const normalizedRoles = roles.map(role => this.normalizeRole(String(role || ''))).filter(Boolean);
+    const appRole = ['GERENTE', 'CAJERO', 'MESERO', 'COCINA'].find(role => normalizedRoles.includes(role));
+    this._currentRole.set(appRole || normalizedRoles[0] || '');
+    const filtered = this.filterMenuByAccess(Menu.pages, normalizedRoles);
     this._pagesMenu.set(filtered);
     this.applyActiveState();
     this.rebuildQuickActions();
@@ -80,27 +87,28 @@ export class MenuService implements OnDestroy {
     return !!item.active;
   }
 
-  private filterMenuByRole(groups: MenuItem[], role: Role | string): MenuItem[] {
-    const normRole = String(role || '').trim().toUpperCase() as Role;
+  private filterMenuByAccess(groups: MenuItem[], currentRoles: string[]): MenuItem[] {
     const normRoles = (roles?: Role[]) =>
       roles?.map((r) => String(r).trim().toUpperCase() as Role);
 
-    const filterItem = (item: SubMenuItem, inheritedRoles?: Role[]): SubMenuItem | null => {
+    const filterItem = (item: SubMenuItem, inheritedRoles?: Role[], inheritedFeature?: SubMenuItem['featureKey']): SubMenuItem | null => {
       const rolesForThisItem = normRoles(item.allowedRoles) ?? normRoles(inheritedRoles);
-      const allowed = !rolesForThisItem || rolesForThisItem.includes(normRole);
+      const featureKey = item.featureKey ?? inheritedFeature;
+      const allowedByRole = !rolesForThisItem || rolesForThisItem.some(role => currentRoles.includes(role));
+      const allowed = allowedByRole && this.capabilities.isEnabled(featureKey);
 
       const children = item.children
-        ?.map((child) => filterItem(child, rolesForThisItem))
+        ?.map((child) => filterItem(child, rolesForThisItem, featureKey))
         .filter((child): child is SubMenuItem => !!child);
 
       if (!allowed && (!children || children.length === 0)) return null;
-      return { ...item, children };
+      return { ...item, featureKey, children };
     };
 
     return groups
       .map((group) => {
         const groupRoles = normRoles(group.allowedRoles);
-        const groupAllowed = !groupRoles || groupRoles.includes(normRole);
+        const groupAllowed = !groupRoles || groupRoles.some(role => currentRoles.includes(role));
         if (groupRoles && !groupAllowed) return null;
 
         const items = (group.items || [])

@@ -20,15 +20,14 @@
 <div class="border-muted/20 bg-background flex min-w-full flex-col rounded-xl border p-2">
   <app-table-action></app-table-action>
   <div
-    class="scrollbar-thumb-rounded scrollbar-track-rounded scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted grow overflow-x-auto px-5">
-    <table
-      class="text-muted-foreground table w-full table-auto border-collapse border-0 text-left align-middle leading-5">
-      <thead class="border-muted/20 text-muted-foreground border text-xs">
+    class="app-table-wrap grow">
+    <table class="app-table">
+      <thead class="app-thead">
         <tr app-table-header (onCheck)="toggleUsers($event)"></tr>
       </thead>
       <tbody>
         @for (user of filteredUsers(); track $index) {
-        <tr class="hover:bg-card/50" app-table-row [user]="user"></tr>
+        <tr class="app-tr" app-table-row [user]="user"></tr>
         } @empty {
         <tr>
           <td class="py-4 text-center text-sm" colspan="7">No users found</td>

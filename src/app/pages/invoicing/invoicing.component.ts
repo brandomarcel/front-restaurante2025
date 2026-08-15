@@ -5,7 +5,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
-import { finalize, firstValueFrom, Subscription } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, finalize, firstValueFrom, of, Subject, Subscription, switchMap, takeUntil } from 'rxjs';
 
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
 import { AlertService } from '../../core/services/alert.service';
@@ -19,7 +19,7 @@ import { UtilsService } from '../../core/services/utils.service';
 import { Customer } from 'src/app/core/models/customer';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
 import { ActivatedRoute, Router } from '@angular/router';
-import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
+import { canSellProduct, canUseInventoryQuantity, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { AdditionalFieldPayload, normalizeAdditionalFields } from 'src/app/core/models/additional-field';
 
 type Payment = { name: string; codigo: string; nombre: string; };
@@ -52,11 +52,20 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
   // --- Estado UI ---
   selectedCustomer: Customer | null = null;
+  customerSearchTerm = '';
+  isCustomerSearchOpen = false;
+  customerSearchLoading = false;
+  productSearchTerm = '';
+  isProductSearchOpen = false;
+  showManualItem = false;
+  productSuggestions: Product[] = [];
   cartItems: CartItem[] = [];
   showCustomerModal = false;
   submittedCustomerForm = false;
   ambiente: string = '';
   private subscriptions: Subscription[] = [];
+  private readonly customerSearch$ = new Subject<string>();
+  private readonly destroy$ = new Subject<void>();
   order: any | null = null;
 
   get additionalFields(): FormArray {
@@ -84,6 +93,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     console.log('📦ambienteGuardado', ambienteGuardado);
     this.ambiente = ambienteGuardado ?? '----------';
     this.initializeForms();
+    this.initCustomerSearch();
     this.loadInitialData();
     const orderName = this.route.snapshot.paramMap.get('order_name');
     console.log('📦orderName', orderName);
@@ -97,6 +107,8 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   async getOrderDetail(orderName: string) {
@@ -130,7 +142,8 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       direccion: c.direccion || '',
     }, { emitEvent: false });
 
-    this.selectedCustomer = this.customerForm.getRawValue();
+    this.selectedCustomer = { ...this.customerForm.getRawValue(), name: c.name || '' };
+    this.customerSearchTerm = this.formatCustomerSearchLabel(this.selectedCustomer);
     console.log('this.selectedCustomer', this.selectedCustomer);
 
     // 💳 Cargar datos de la factura
@@ -211,19 +224,8 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   }
 
   private loadInitialData(): void {
-    this.loadCustomers();
     this.loadProducts();
     this.loadPaymentMethods();
-  }
-
-  // ------------------ Carga de datos ------------------
-  loadCustomers(): void {
-    this.spinner.show();
-    this.customersService.getAll(1).subscribe({
-      next: (res: any) => this.customers = (res?.message.data || []) as Customer[],
-      error: () => toast.error('Error al cargar la lista de clientes.'),
-      complete: () => this.spinner.hide()
-    });
   }
 
   loadProducts(): void {
@@ -232,6 +234,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       next: (res: any) => {
         const all = (res.message.data || []) as Product[];
         this.products = all.filter(p => Number((p as any).isactive) === 1);
+        this.refreshProductSuggestions();
         console.log('Productos cargados:', this.products);
       },
       error: () => toast.error('Error al cargar la lista de productos.'),
@@ -248,21 +251,97 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     });
 
   }
-  customSearchFn(term: string, item: any) {
-    term = term.toLowerCase();
-
-    return (
-      item.nombre?.toLowerCase().includes(term) ||
-      item.num_identificacion?.toLowerCase().includes(term)
-    );
+  // ------------------ Cliente ------------------
+  onCustomerSearchChange(term: string): void {
+    this.customerSearchTerm = term || '';
+    if (this.customerSearchTerm.trim().length < 2) {
+      this.customers = [];
+      this.customerSearchLoading = false;
+    }
+    this.isCustomerSearchOpen = this.customerSearchTerm.trim().length >= 2;
+    this.customerSearch$.next(this.customerSearchTerm);
   }
 
-  // ------------------ Cliente ------------------
-  onCustomerSelected(value: string | null) {
-    if (!value) { this.selectedCustomer = null; return; }
-    console.log('Valor seleccionado del cliente:', value);
-    this.selectedCustomer = this.customers.find((c: any) => c === value) || null;
-    console.log('Cliente seleccionado:', this.selectedCustomer);
+  openCustomerSearch(): void {
+    this.isCustomerSearchOpen = this.customerSearchTerm.trim().length >= 2;
+    if (this.isCustomerSearchOpen && this.customers.length === 0) {
+      this.customerSearch$.next(this.customerSearchTerm);
+    }
+  }
+
+  closeCustomerSearchSoon(): void {
+    setTimeout(() => {
+      this.isCustomerSearchOpen = false;
+    }, 150);
+  }
+
+  searchCustomerFromInput(): void {
+    const term = this.customerSearchTerm.trim();
+    if (!term) {
+      toast.warning('Escribe nombre, cedula, RUC, telefono o correo del cliente.');
+      return;
+    }
+
+    if (this.customers.length === 1) {
+      this.selectCustomer(this.customers[0]);
+      return;
+    }
+
+    const digits = term.replace(/\D/g, '');
+    if ((digits.length === 10 || digits.length === 13) && digits === term) {
+      this.findCustomerByIdentification(digits);
+      return;
+    }
+
+    if (this.customers.length > 1) {
+      this.isCustomerSearchOpen = true;
+      return;
+    }
+
+    this.searchCustomerSuggestionsNow(term);
+  }
+
+  selectFirstCustomerSuggestion(): void {
+    if (this.customers.length) {
+      this.selectCustomer(this.customers[0]);
+      return;
+    }
+    this.searchCustomerFromInput();
+  }
+
+  selectCustomer(customer: Customer): void {
+    this.selectedCustomer = customer;
+    this.invoiceForm.patchValue({ selectedCustomer: customer?.name || null });
+    this.customerSearchTerm = this.formatCustomerSearchLabel(customer);
+    this.customers = [];
+    this.isCustomerSearchOpen = false;
+  }
+
+  clearSelectedCustomer(): void {
+    this.selectedCustomer = null;
+    this.customerSearchTerm = '';
+    this.customers = [];
+    this.isCustomerSearchOpen = false;
+    this.invoiceForm.patchValue({ selectedCustomer: null });
+  }
+
+  selectFinalConsumer(): void {
+    const finalConsumerIdentification = '9999999999999';
+    this.customerSearchTerm = finalConsumerIdentification;
+    this.findCustomerByIdentification(finalConsumerIdentification);
+  }
+
+  openCustomerModalFromSearch(): void {
+    const digits = this.customerSearchTerm.trim().replace(/\D/g, '');
+    if (digits.length === 10 || digits.length === 13) {
+      this.customerForm.patchValue({
+        num_identificacion: digits,
+        tipo_identificacion: digits.length === 10 ? '05 - Cedula' : '04 - RUC'
+      }, { emitEvent: false });
+      this.customerForm.get('num_identificacion')?.updateValueAndValidity();
+    }
+    this.showCustomerModal = true;
+    this.isCustomerSearchOpen = false;
   }
 
   saveCustomer(): void {
@@ -280,10 +359,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
           const created: Customer = res.message.data;
           toast.success('Cliente creado exitosamente.');
-          // añade a la lista y selecciona de inmediato
-          this.customers = [created, ...this.customers];
-          this.selectedCustomer = created;
-          this.invoiceForm.patchValue({ selectedCustomer: created.name });
+          this.selectCustomer(created);
           this.closeCustomerModal();
         }
       });
@@ -297,7 +373,131 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     this.customerForm.reset({ tipo_identificacion: '05 - Cedula' });
   }
 
+  private searchCustomerSuggestionsNow(term: string): void {
+    if (term.trim().length < 2) {
+      toast.warning('Escribe al menos 2 caracteres para buscar.');
+      return;
+    }
+
+    this.customerSearchLoading = true;
+    this.customersService.searchClientes(term, 8).pipe(
+      finalize(() => this.customerSearchLoading = false),
+      catchError(() => of([]))
+    ).subscribe((customers: any[]) => {
+      this.customers = customers as Customer[];
+      if (customers.length === 1) {
+        this.selectCustomer(customers[0] as Customer);
+        return;
+      }
+      if (customers.length > 1) {
+        this.isCustomerSearchOpen = true;
+        return;
+      }
+      this.isCustomerSearchOpen = true;
+      toast.info('No hay coincidencias. Si es cliente nuevo, usa el boton Nuevo.');
+    });
+  }
+
+  private findCustomerByIdentification(identification: string): void {
+    this.spinner.show();
+    this.customersService.get_cliente_by_identificacion(identification).pipe(
+      finalize(() => this.spinner.hide())
+    ).subscribe({
+      next: (res: any) => {
+        const customer = res?.message || null;
+        if (customer) {
+          this.selectCustomer(customer);
+          return;
+        }
+        this.openCustomerCreateFromIdentification(identification);
+      },
+      error: () => {
+        this.openCustomerCreateFromIdentification(identification);
+      }
+    });
+  }
+
+  private initCustomerSearch(): void {
+    this.customerSearch$.pipe(
+      debounceTime(250),
+      distinctUntilChanged(),
+      switchMap((term: string) => {
+        const query = term.trim();
+        if (query.length < 2) {
+          return of([]);
+        }
+        this.customerSearchLoading = true;
+        return this.customersService.searchClientes(query, 8).pipe(
+          catchError(() => of([])),
+          finalize(() => this.customerSearchLoading = false)
+        );
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe((customers: any[]) => {
+      this.customers = customers as Customer[];
+      this.isCustomerSearchOpen = this.customerSearchTerm.trim().length >= 2;
+    });
+  }
+
+  private openCustomerCreateFromIdentification(identification: string): void {
+    this.customerForm.patchValue({
+      num_identificacion: identification,
+      tipo_identificacion: identification.length === 10 ? '05 - Cedula' : '04 - RUC'
+    }, { emitEvent: false });
+    this.customerForm.get('num_identificacion')?.updateValueAndValidity();
+    this.showCustomerModal = true;
+    toast.error('Cliente no encontrado con esa identificacion.');
+  }
+
+  private formatCustomerSearchLabel(customer: Partial<Customer> | null | undefined): string {
+    const name = customer?.nombre || 'Cliente';
+    const identification = customer?.num_identificacion ? ` - ${customer.num_identificacion}` : '';
+    return `${name}${identification}`;
+  }
+
   // ------------------ Carrito ------------------
+  onProductSearchChange(term: string): void {
+    this.productSearchTerm = term || '';
+    this.refreshProductSuggestions();
+    this.isProductSearchOpen = !this.order;
+  }
+
+  openProductSearch(): void {
+    if (this.order) return;
+    this.refreshProductSuggestions();
+    this.isProductSearchOpen = true;
+  }
+
+  closeProductSearchSoon(): void {
+    setTimeout(() => {
+      this.isProductSearchOpen = false;
+    }, 150);
+  }
+
+  selectProductFromSearch(product: Product): void {
+    if (!product) return;
+    this.addProductToCart(product);
+    this.productSearchTerm = '';
+    this.isProductSearchOpen = false;
+  }
+
+  selectFirstProductSuggestion(): void {
+    const firstAvailable = this.filteredProductSuggestions.find(product => !this.isProductBlocked(product));
+    if (!firstAvailable) {
+      toast.info(this.productSearchTerm.trim() ? 'No hay productos disponibles para agregar.' : 'Escribe o selecciona un producto.');
+      return;
+    }
+
+    this.selectProductFromSearch(firstAvailable);
+  }
+
+  clearProductSearch(): void {
+    this.productSearchTerm = '';
+    this.refreshProductSuggestions();
+    this.isProductSearchOpen = false;
+    this.invoiceForm.patchValue({ selectedProduct: null });
+  }
+
   addProductToCart(productSelection: Product | string | null): void {
     const product = this.resolveProduct(productSelection);
     if (!product) return;
@@ -309,8 +509,19 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
     const existing = this.cartItems.find(ci => ci.name === product.name);
     if (existing) {
-      existing.quantity = this.safeNumber(existing.quantity, 0) + 1;
+      const nextQuantity = this.safeNumber(existing.quantity, 0) + 1;
+      if (!canUseInventoryQuantity(product, nextQuantity)) {
+        toast.warning(`Stock disponible: ${this.getInventoryLabel(product)}.`);
+        this.invoiceForm.patchValue({ selectedProduct: null });
+        return;
+      }
+      existing.quantity = nextQuantity;
     } else {
+      if (!canUseInventoryQuantity(product, 1)) {
+        toast.warning(`Stock disponible: ${this.getInventoryLabel(product)}.`);
+        this.invoiceForm.patchValue({ selectedProduct: null });
+        return;
+      }
       const price = this.safeMoney(product.precio);
       // Inferir tax_value si no viene
       const inferredTaxValue = product.tax_value ?? (product.tax === 'IVA-15' ? 15 : 0);
@@ -345,6 +556,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       total: 0
     });
     this.adHoc.description = '';
+    this.showManualItem = false;
     this.updateCartTotals();
   }
 
@@ -356,13 +568,36 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
   incrementQty(i: number) {
     const it = this.cartItems[i];
-    it.quantity = this.safeNumber(it.quantity, 0) + 1;
+    const nextQuantity = this.safeNumber(it.quantity, 0) + 1;
+    if (!this.canUseCartQuantity(it, nextQuantity)) {
+      toast.warning(`No puedes superar el stock disponible: ${this.getCartStockLabel(it)}.`);
+      return;
+    }
+    it.quantity = nextQuantity;
     this.updateCartTotals();
   }
 
   decrementQty(i: number) {
     const it = this.cartItems[i];
     it.quantity = Math.max(1, this.safeNumber(it.quantity, 1) - 1);
+    this.updateCartTotals();
+  }
+
+  onCartQuantityChange(index: number): void {
+    const item = this.cartItems[index];
+    if (!item) return;
+
+    const requestedQuantity = Math.max(1, this.safeNumber(item.quantity, 1));
+    const product = this.getCartProduct(item);
+
+    if (product && !canUseInventoryQuantity(product, requestedQuantity)) {
+      const availableStock = Math.max(1, getAvailableStock(product));
+      item.quantity = availableStock;
+      toast.warning(`Cantidad ajustada al stock disponible: ${this.getInventoryLabel(product)}.`);
+    } else {
+      item.quantity = requestedQuantity;
+    }
+
     this.updateCartTotals();
   }
 
@@ -406,6 +641,11 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     }
     if (this.cartItems.length === 0) {
       toast.error('Agrega al menos un producto a la factura.');
+      return;
+    }
+    const stockBlockedItem = this.cartItems.find(item => !this.canUseCartQuantity(item, this.safeNumber(item.quantity, 1)));
+    if (stockBlockedItem) {
+      toast.error(`Stock insuficiente para ${stockBlockedItem.nombre || stockBlockedItem.description}. Disponible: ${this.getCartStockLabel(stockBlockedItem)}.`);
       return;
     }
 
@@ -482,12 +722,54 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   private clearInvoiceForm(): void {
     this.invoiceForm.reset({ paymentMethod: '01', selectedCustomer: null, alias: '', postingDate: this.utilsService.getSoloFechaEcuador() });
     this.cartItems = [];
+    this.productSearchTerm = '';
+    this.productSuggestions = [];
+    this.isProductSearchOpen = false;
+    this.showManualItem = false;
+    this.adHoc.description = '';
     this.additionalFields.clear();
-    this.selectedCustomer = null;
+    this.clearSelectedCustomer();
   }
 
   // ------------------ Utilidades ------------------
   trackByIndex = (i: number) => i;
+  trackByCustomerId = (_: number, c: Customer) => c?.name || c?.num_identificacion || _;
+  trackByProductId = (_: number, product: Product) => product?.name || product?.codigo || _;
+
+  get filteredProductSuggestions(): Product[] {
+    return this.productSuggestions;
+  }
+
+  get productSearchHelpText(): string {
+    if (!this.products.length) return 'Cargando productos...';
+    if (!this.productSearchTerm.trim()) return 'Productos recientes/disponibles para agregar rápido.';
+    return `${this.filteredProductSuggestions.length} coincidencia(s).`;
+  }
+
+  getProductPriceLabel(product: Product | null | undefined): string {
+    return `$${this.safeMoney((product as any)?.precio).toFixed(2)}`;
+  }
+
+  getProductTaxLabel(product: Product | null | undefined): string {
+    const tax = (product as any)?.tax_value ?? ((product as any)?.tax === 'IVA-15' ? 15 : 0);
+    return `${tax || 0}% IVA`;
+  }
+
+  canIncreaseCartItem(index: number): boolean {
+    const item = this.cartItems[index];
+    if (!item) return false;
+    return this.canUseCartQuantity(item, this.safeNumber(item.quantity, 0) + 1);
+  }
+
+  getCartStockLabel(item: CartItem): string {
+    const product = this.getCartProduct(item);
+    if (!product || !this.hasInventory(product)) return 'Sin control';
+    return this.getInventoryLabel(product);
+  }
+
+  hasCartInventory(item: CartItem): boolean {
+    return this.hasInventory(this.getCartProduct(item));
+  }
 
   hasInventory(product: Product | null | undefined): boolean {
     return hasInventoryControl(product);
@@ -577,6 +859,57 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     if (!productSelection) return null;
     if (typeof productSelection !== 'string') return productSelection;
     return this.products.find((item) => item.name === productSelection) || null;
+  }
+
+  private getCartProduct(item: CartItem): Product | null {
+    if (!item?.name || item.name === 'ADHOC') return null;
+    return this.products.find(product => product.name === item.name) || null;
+  }
+
+  private canUseCartQuantity(item: CartItem, quantity: number): boolean {
+    const product = this.getCartProduct(item);
+    return canUseInventoryQuantity(product, quantity);
+  }
+
+  private refreshProductSuggestions(): void {
+    const query = this.normalizeSearch(this.productSearchTerm);
+    const source = this.products || [];
+
+    if (!query) {
+      this.productSuggestions = source.slice(0, 8);
+      return;
+    }
+
+    this.productSuggestions = source
+      .map(product => ({ product, score: this.getProductSearchScore(product, query) }))
+      .filter(entry => entry.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 12)
+      .map(entry => entry.product);
+  }
+
+  private normalizeSearch(value: any): string {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  private getProductSearchScore(product: Product, query: string): number {
+    const name = this.normalizeSearch((product as any)?.nombre);
+    const code = this.normalizeSearch((product as any)?.codigo);
+    const description = this.normalizeSearch((product as any)?.descripcion);
+    const haystack = `${name} ${code} ${description}`;
+    const tokens = query.split(/\s+/).filter(Boolean);
+
+    if (!tokens.every(token => haystack.includes(token))) return 0;
+    if (code === query || name === query) return 100;
+    if (code.startsWith(query)) return 90;
+    if (name.startsWith(query)) return 80;
+    if (code.includes(query)) return 70;
+    if (name.includes(query)) return 60;
+    return 40;
   }
 
 

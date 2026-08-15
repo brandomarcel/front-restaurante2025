@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
-import { catchError, EMPTY, Observable } from 'rxjs';
+import { catchError, EMPTY, map, Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { API_ENDPOINT } from '../core/constants/api.constants';
 import { toast } from 'ngx-sonner';
@@ -63,6 +63,26 @@ getAll(isactive?: number) {
       params,
       context: new HttpContext().set(REQUIRE_AUTH, true)
     });
+  }
+
+  searchClientes(search: string, limit = 10, isactive = 1): Observable<any[]> {
+    let params = new HttpParams()
+      .set('search', search.trim())
+      .set('limit', String(limit));
+
+    if (isactive !== undefined && isactive !== null) {
+      params = params.set('isactive', String(isactive));
+    }
+
+    return this.http.get<any>(`${this.apiUrl}/method/restaurante_app.restaurante_bmarc.api.cliente.search_clientes`, {
+      params,
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(
+      map((res: any) => {
+        const raw = res?.message?.data ?? res?.data ?? res?.message ?? res ?? [];
+        return Array.isArray(raw) ? raw : [];
+      })
+    );
   }
 
 

@@ -21,6 +21,7 @@ import { CajaAbiertaGuard } from 'src/app/core/guards/caja-abierta.guard';
 import { RoleAccessGuard } from 'src/app/core/guards/role-access.guard';
 import { SuppliersComponent } from 'src/app/pages/suppliers/suppliers.component';
 import { InventoryComponent } from 'src/app/pages/inventory/inventory.component';
+import { NoAccessComponent } from 'src/app/pages/no-access.component';
 
 const routes: Routes = [
   {
@@ -28,34 +29,35 @@ const routes: Routes = [
     component: DashboardComponent,
     children: [
       { path: '', redirectTo: 'main', pathMatch: 'full' },
-      { path: 'main', component: NftComponent },
+      { path: 'main', component: NftComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'orders', allowedRoles: ['GERENTE', 'CAJERO'] } },
       // { path: 'pos', component: PosComponent },
-      { path: 'pos', component: PosShellComponent, canActivate: [CajaAbiertaGuard] },
-      { path: 'customers', component: CustomersComponent },
-      { path: 'suppliers', component: SuppliersComponent },
-      { path: 'inventory', component: InventoryComponent },
-      { path: 'products', component: ProductsComponent },
-      { path: 'company', component: CompanyComponent },
-      { path: 'orders', component: OrdersComponent },
-      { path: 'orders/:id', component: OrderDetailPageComponent, canActivate: [CajaAbiertaGuard] },
+      { path: 'pos', component: PosShellComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { featureKey: 'tables', allowedRoles: ['GERENTE', 'CAJERO', 'MESERO'] } },
+      { path: 'customers', component: CustomersComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'customers', allowedRoles: ['GERENTE', 'CAJERO'] } },
+      { path: 'suppliers', component: SuppliersComponent, canActivate: [RoleAccessGuard], data: { allowedRoles: ['GERENTE'] } },
+      { path: 'inventory', component: InventoryComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'products', allowedRoles: ['GERENTE'] } },
+      { path: 'products', component: ProductsComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'products', allowedRoles: ['GERENTE'] } },
+      { path: 'company', component: CompanyComponent, canActivate: [RoleAccessGuard], data: { allowedRoles: ['GERENTE'] } },
+      { path: 'orders', component: OrdersComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'orders', allowedRoles: ['GERENTE', 'CAJERO', 'MESERO'] } },
+      { path: 'orders/:id', component: OrderDetailPageComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { featureKey: 'orders', allowedRoles: ['GERENTE', 'CAJERO', 'MESERO'] } },
 
-      { path: 'categories', component: CategorysComponent },
-      { path: 'users', component: UsersComponent },
+      { path: 'categories', component: CategorysComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'products', allowedRoles: ['GERENTE'] } },
+      { path: 'users', component: UsersComponent, canActivate: [RoleAccessGuard], data: { allowedRoles: ['GERENTE'] } },
       
-      { path: 'invoicing', component: InvoicingComponent, canActivate: [CajaAbiertaGuard] },
-      { path: 'invoicing/:order_name', component: InvoicingComponent, canActivate: [CajaAbiertaGuard] },
+      { path: 'invoicing', component: InvoicingComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', allowedRoles: ['GERENTE', 'CAJERO'] } },
+      { path: 'invoicing/:order_name', component: InvoicingComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { featureKey: 'orders', allowedRoles: ['GERENTE', 'CAJERO'] } },
 
-      { path: 'invoices', component: InvoicesComponent },
-      { path: 'invoices/:id', component: InvoiceDetailPageComponent },
+      { path: 'invoices', component: InvoicesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', allowedRoles: ['GERENTE', 'CAJERO'] } },
+      { path: 'invoices/:id', component: InvoiceDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', allowedRoles: ['GERENTE', 'CAJERO'] } },
 
-      { path: 'credit-notes', component: CreditNotesComponent },
-      { path: 'credit-note/:id', component: CreditNoteDetailPageComponent },
+      { path: 'credit-notes', component: CreditNotesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'credit_note', allowedRoles: ['GERENTE', 'CAJERO'] } },
+      { path: 'credit-note/:id', component: CreditNoteDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'credit_note', allowedRoles: ['GERENTE', 'CAJERO'] } },
+      { path: 'no-access', component: NoAccessComponent },
 
       {
         path: 'orders-realtime',
         component: OrdersRealtimeComponent,
         canActivate: [RoleAccessGuard],
-        data: { deniedRoles: ['MESERO'] }
+        data: { featureKey: 'kitchen', allowedRoles: ['GERENTE', 'COCINA'], deniedRoles: ['MESERO'] }
       },
 
       { path: '**', redirectTo: 'errors/404' },

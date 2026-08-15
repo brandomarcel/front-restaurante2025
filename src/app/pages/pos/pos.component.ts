@@ -20,7 +20,7 @@ import { finalize } from 'rxjs';
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
 import { AuthService } from 'src/app/services/auth.service';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
-import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
+import { canSellProduct, canUseInventoryQuantity, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 
 type RoleName = 'Cajero' | 'Mesero' | 'Gerente' | 'Desconocido';
 
@@ -352,7 +352,7 @@ export class PosComponent implements OnInit {
 
   addProduct(product: any) {
     if (!this.canAddProduct(product)) {
-      toast.warning('Este producto esta agotado y no se puede agregar.');
+      toast.warning(this.getStockLimitMessage(product));
       return;
     }
 
@@ -377,6 +377,10 @@ export class PosComponent implements OnInit {
   }
 
   increase(item: any) {
+    if (!this.canIncreaseItem(item)) {
+      toast.warning(this.getStockLimitMessage(item));
+      return;
+    }
     item.quantity++;
     this.recalcItem(item);
   }
@@ -780,7 +784,12 @@ export class PosComponent implements OnInit {
   trackByProductId = (_: number, p: any) => p?.id || p?._id || p?.codigo || p?.name || p?.nombre;
 
   canAddProduct(product: any): boolean {
-    return canSellProduct(product);
+    const nextQuantity = this.getCartQuantityForProduct(product) + 1;
+    return canSellProduct(product) && canUseInventoryQuantity(product, nextQuantity);
+  }
+
+  canIncreaseItem(item: any): boolean {
+    return canSellProduct(item) && canUseInventoryQuantity(item, Number(item?.quantity || 0) + 1);
   }
 
   hasInventory(product: any): boolean {
@@ -801,6 +810,27 @@ export class PosComponent implements OnInit {
     }
 
     return `${toInventoryNumber(product?.stock_actual, 0)} ${getInventoryUnit(product)}`;
+  }
+
+  getCartQuantityForProduct(product: any): number {
+    const key = product?.name ?? product?.nombre;
+    const item = this.cart.find((cartItem: any) => (cartItem.name ?? cartItem.nombre) === key);
+    return Number(item?.quantity || 0);
+  }
+
+  getStockLimitMessage(product: any): string {
+    const productName = product?.nombre || product?.name || 'Producto';
+    if (!this.hasInventory(product)) {
+      return `${productName} no se puede agregar.`;
+    }
+
+    if (!canSellProduct(product)) {
+      return `${productName} está agotado y no se puede agregar.`;
+    }
+
+    const currentQty = this.getCartQuantityForProduct(product);
+    const available = getAvailableStock(product);
+    return `Stock insuficiente para ${productName}. Disponible: ${available} ${getInventoryUnit(product)}. En venta: ${currentQty}.`;
   }
 
   private refreshProductsSilently(): void {

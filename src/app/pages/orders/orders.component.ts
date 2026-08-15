@@ -186,7 +186,7 @@ export class OrdersComponent implements OnInit {
   getEstadoBadgeClass(value: any): string {
     const st = this.getCanonicalStatus(value);
     if (st === 'Ingresada') return 'badge-red';
-    if (st === 'PreparaciÃ³n') return 'badge-yellow';
+    if (st === 'Preparación') return 'badge-yellow';
     if (st === 'Cerrada') return 'badge-green';
     return 'badge-gray';
   }

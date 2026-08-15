@@ -9,7 +9,7 @@ import { AlertService } from 'src/app/core/services/alert.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
-import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
+import { canSellProduct, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 
 type OrderType = 'Servirse' | 'Llevar' | 'Domicilio';
 
@@ -29,6 +29,7 @@ export class PosMeseroComponent implements OnInit {
 
   alias = '';
   searchTerm = '';
+  productView: 'all' | 'favorites' = 'all';
   orderType: OrderType = 'Servirse';
   deliveryAddress = '';
   deliveryPhone = '';
@@ -57,13 +58,6 @@ export class PosMeseroComponent implements OnInit {
     return this.cartService.cart.reduce((acc, item) => acc + Number(item?.quantity ?? 0), 0);
   }
 
-  get canSubmitOrder(): boolean {
-    if (!this.alias.trim()) return false;
-    if (this.cartService.cart.length === 0) return false;
-    if (this.orderType === 'Domicilio' && (!this.deliveryAddress.trim() || !this.deliveryPhone.trim())) return false;
-    return !this.isSubmittingOrder;
-  }
-
   get subtotal(): number {
     return this.cartService.subtotal;
   }
@@ -74,6 +68,14 @@ export class PosMeseroComponent implements OnInit {
 
   get total(): number {
     return this.cartService.total;
+  }
+
+  get visibleProductList(): any[] {
+    if (this.productView === 'favorites') {
+      return this.filteredProductList.filter((product) => this.isFavorite(product));
+    }
+
+    return this.filteredProductList;
   }
 
   loadProducts(): void {
@@ -102,6 +104,10 @@ export class PosMeseroComponent implements OnInit {
   onCategorySelected(categoryName: string): void {
     this.selectedCategory = categoryName;
     this.applyFilters();
+  }
+
+  setProductView(view: 'all' | 'favorites'): void {
+    this.productView = view;
   }
 
   setOrderType(type: OrderType): void {
@@ -149,11 +155,15 @@ export class PosMeseroComponent implements OnInit {
 
   addProduct(product: any): void {
     if (!this.canAddProduct(product)) {
-      toast.warning('Este producto esta agotado y no se puede agregar.');
+      toast.warning(this.getStockLimitMessage(product));
       return;
     }
 
-    this.cartService.addProduct(product);
+    const added = this.cartService.addProduct(product);
+    if (!added) {
+      toast.warning(this.getStockLimitMessage(product));
+      return;
+    }
 
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate(50);
@@ -180,7 +190,9 @@ export class PosMeseroComponent implements OnInit {
   }
 
   increase(item: any): void {
-    this.cartService.increase(item);
+    if (!this.cartService.increase(item)) {
+      toast.warning(this.getStockLimitMessage(item));
+    }
   }
 
   decrease(item: any): void {
@@ -217,7 +229,7 @@ export class PosMeseroComponent implements OnInit {
       return;
     }
 
-    if (!this.alias) {
+    if (!this.alias.trim()) {
       toast.error('Ingresa la mesa o alias.');
       return;
     }
@@ -273,7 +285,11 @@ export class PosMeseroComponent implements OnInit {
   trackByCart = (_: number, it: any) => `${it?.name || it?.nombre}-${it?.price}`;
 
   canAddProduct(product: any): boolean {
-    return canSellProduct(product);
+    return this.cartService.canAddProduct(product);
+  }
+
+  canIncreaseItem(item: any): boolean {
+    return this.cartService.canIncrease(item);
   }
 
   hasInventory(product: any): boolean {
@@ -294,6 +310,27 @@ export class PosMeseroComponent implements OnInit {
     }
 
     return `${toInventoryNumber(product?.stock_actual, 0)} ${getInventoryUnit(product)}`;
+  }
+
+  getCartQuantityForProduct(product: any): number {
+    const key = product?.name ?? product?.nombre;
+    const item = this.cartService.cart.find((cartItem: any) => (cartItem.name ?? cartItem.nombre) === key);
+    return Number(item?.quantity || 0);
+  }
+
+  getStockLimitMessage(product: any): string {
+    const productName = product?.nombre || product?.name || 'Producto';
+    if (!this.hasInventory(product)) {
+      return `${productName} no se puede agregar.`;
+    }
+
+    if (!canSellProduct(product)) {
+      return `${productName} está agotado y no se puede agregar.`;
+    }
+
+    const currentQty = this.getCartQuantityForProduct(product);
+    const available = getAvailableStock(product);
+    return `Stock insuficiente para ${productName}. Disponible: ${available} ${getInventoryUnit(product)}. En venta: ${currentQty}.`;
   }
 
   private buildEcuadorIsoDate(): string {

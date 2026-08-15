@@ -1,12 +1,14 @@
 // src/app/services/auth.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
-import { Observable, switchMap, tap } from 'rxjs';
+import { catchError, map, Observable, of, switchMap, tap } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { UserService } from './user.service';
 import { Router } from '@angular/router';
 import { FrappeSocketService } from './frappe-socket.service';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
+import { CompanyService } from './company.service';
+import { CompanyCapabilitiesService } from '../core/services/company-capabilities.service';
 
 interface LoginResponse {
   access_token: string;
@@ -27,7 +29,9 @@ export class AuthService {
   constructor(private http: HttpClient,
     private userService: UserService,
     private router: Router, // Agrega el Router aquí
-    private socket: FrappeSocketService
+    private socket: FrappeSocketService,
+    private companyService: CompanyService,
+    private capabilities: CompanyCapabilitiesService
   ) { }
 
 
@@ -94,7 +98,17 @@ login(username: string, password: string) {
         // Guardar en localStorage para persistencia
         localStorage.setItem('user', JSON.stringify(user));
         localStorage.setItem('companyId', user.companyId);
-      })
+        // Evita reutilizar capacidades de otra empresa en un cambio de sesión.
+        this.capabilities.clear();
+      }),
+      switchMap(userResponse => this.companyService.get_empresa().pipe(
+        tap(companyResponse => this.capabilities.setFromResponse(companyResponse)),
+        map(() => userResponse),
+        catchError(() => {
+          this.capabilities.useSafeFallback();
+          return of(userResponse);
+        })
+      ))
     );
   }
 
@@ -106,6 +120,7 @@ login(username: string, password: string) {
       tap(() => {
         console.log('logout');
         this.userService.clearUser();
+        this.capabilities.clear();
         localStorage.removeItem('user');
         localStorage.removeItem('access_token'); // si lo estás usando
         this.router.navigate(['/auth/sign-in']);
@@ -115,6 +130,7 @@ login(username: string, password: string) {
 
   goLogin() {
     this.userService.clearUser();
+        this.capabilities.clear();
         localStorage.removeItem('user');
         localStorage.removeItem('access_token'); // si lo estás usando
         this.router.navigate(['/auth/sign-in']);

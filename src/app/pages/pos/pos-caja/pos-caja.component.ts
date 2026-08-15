@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -14,7 +14,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
-import { finalize } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, finalize, of, Subject, switchMap, takeUntil } from 'rxjs';
 import { OnlyNumbersDirective } from 'src/app/core/directives/only-numbers.directive';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
 import { MenuService } from 'src/app/modules/layout/services/menu.service';
@@ -27,7 +27,7 @@ import { PrintService } from 'src/app/services/print.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { environment } from 'src/environments/environment';
 import { CartService } from '../services/cart.service';
-import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
+import { canSellProduct, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 
 @Component({
   selector: 'app-pos-caja',
@@ -36,7 +36,7 @@ import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduc
   templateUrl: './pos-caja.component.html',
   styles: [':host { display: block; height: 100%; min-height: 0; }']
 })
-export class PosCajaComponent implements OnInit {
+export class PosCajaComponent implements OnInit, OnDestroy {
   ambiente = '';
   showPaymentModal = false;
   showCustomerModal = false;
@@ -51,12 +51,17 @@ export class PosCajaComponent implements OnInit {
   favoriteProducts: any[] = [];
   categories: any[] = [];
   payments: any[] = [];
+  filteredCustomers: any[] = [];
 
   identificationCustomer = '';
+  customerSearchTerm = '';
+  isCustomerSearchOpen = false;
+  customerSearchLoading = false;
   customer: any = null;
   alias = '';
   searchTerm = '';
   selectedCategory = '';
+  productView: 'all' | 'favorites' = 'all';
   orderType: 'Servirse' | 'Llevar' | 'Domicilio' = 'Servirse';
   deliveryAddress = '';
   deliveryPhone = '';
@@ -67,6 +72,8 @@ export class PosCajaComponent implements OnInit {
   private today = '';
   private readonly url = environment.URL;
   private readonly favoritesStorageKey = 'pos_caja_favorites_v1';
+  private readonly customerSearch$ = new Subject<string>();
+  private readonly destroy$ = new Subject<void>();
   private favoriteProductKeys = new Set<string>();
 
   submitted = false;
@@ -92,7 +99,13 @@ export class PosCajaComponent implements OnInit {
     this.today = this.buildEcuadorIsoDate();
     this.loadFavorites();
     this.initClienteForm();
+    this.initCustomerSearch();
     this.loadInitialData();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   get f() {
@@ -113,6 +126,14 @@ export class PosCajaComponent implements OnInit {
 
   get canCheckout(): boolean {
     return !!this.customer && this.cartService.cart.length > 0 && !this.isSubmittingOrder;
+  }
+
+  get visibleProductList(): any[] {
+    return this.productView === 'favorites' ? this.favoriteProducts : this.filteredProductList;
+  }
+
+  get productViewLabel(): string {
+    return this.productView === 'favorites' ? 'favoritos' : 'productos';
   }
 
   get selectedPaymentName(): string {
@@ -175,7 +196,7 @@ export class PosCajaComponent implements OnInit {
   }
 
   findByIdentificationCustomer(): void {
-    const identification = this.identificationCustomer?.trim();
+    const identification = this.identificationCustomer?.trim() || this.customerSearchTerm?.trim();
     if (!identification || (identification.length !== 10 && identification.length !== 13)) {
       toast.warning('La identificacion debe tener 10 o 13 digitos.');
       return;
@@ -187,24 +208,139 @@ export class PosCajaComponent implements OnInit {
     ).subscribe({
       next: (res: any) => {
         this.customer = res?.message || null;
+        if (this.customer) {
+          this.selectCustomer(this.customer);
+          return;
+        }
+        this.openCustomerCreateFromIdentification(identification);
       },
       error: () => {
         this.customer = null;
-        const tipoIdentificacion = identification.length === 10 ? '05 - Cedula' : '04 - RUC';
-        this.clienteForm.patchValue({
-          num_identificacion: identification,
-          tipo_identificacion: tipoIdentificacion
-        });
-        this.showCustomerModal = true;
-        toast.error('Cliente no encontrado con esa identificacion.');
+        this.openCustomerCreateFromIdentification(identification);
       }
     });
   }
 
   selectFinalConsumer(): void {
     this.identificationCustomer = '9999999999999';
+    this.customerSearchTerm = this.identificationCustomer;
     this.findByIdentificationCustomer();
   }
+
+  onCustomerSearchChange(term: string): void {
+    this.customerSearchTerm = term || '';
+    const digits = this.customerSearchTerm.replace(/\D/g, '');
+    this.identificationCustomer = digits.length === this.customerSearchTerm.trim().length ? digits : '';
+    if (this.customerSearchTerm.trim().length < 2) {
+      this.filteredCustomers = [];
+      this.customerSearchLoading = false;
+    }
+    this.isCustomerSearchOpen = this.customerSearchTerm.trim().length >= 2;
+    this.customerSearch$.next(this.customerSearchTerm);
+  }
+
+  openCustomerSearch(): void {
+    this.isCustomerSearchOpen = this.customerSearchTerm.trim().length >= 2;
+    if (this.isCustomerSearchOpen && this.filteredCustomers.length === 0) {
+      this.customerSearch$.next(this.customerSearchTerm);
+    }
+  }
+
+  closeCustomerSearchSoon(): void {
+    setTimeout(() => {
+      this.isCustomerSearchOpen = false;
+    }, 150);
+  }
+
+  openCustomerModalFromSearch(): void {
+    const digits = this.customerSearchTerm.trim().replace(/\D/g, '');
+    if (digits.length === 10 || digits.length === 13) {
+      this.clienteForm.patchValue({
+        num_identificacion: digits,
+        tipo_identificacion: digits.length === 10 ? '05 - Cedula' : '04 - RUC'
+      }, { emitEvent: false });
+      this.clienteForm.get('num_identificacion')?.updateValueAndValidity();
+    }
+    this.showCustomerModal = true;
+    this.isCustomerSearchOpen = false;
+  }
+
+  searchCustomerFromInput(): void {
+    const term = this.customerSearchTerm.trim();
+    if (!term) {
+      toast.warning('Escribe nombre, cedula, RUC, telefono o correo del cliente.');
+      return;
+    }
+
+    if (this.filteredCustomers.length === 1) {
+      this.selectCustomer(this.filteredCustomers[0]);
+      return;
+    }
+
+    const digits = term.replace(/\D/g, '');
+    if ((digits.length === 10 || digits.length === 13) && digits === term) {
+      this.identificationCustomer = digits;
+      this.findByIdentificationCustomer();
+      return;
+    }
+
+    if (this.filteredCustomers.length > 1) {
+      this.isCustomerSearchOpen = true;
+      return;
+    }
+
+    this.searchCustomerSuggestionsNow(term);
+  }
+
+  selectFirstCustomerSuggestion(): void {
+    if (this.filteredCustomers.length) {
+      this.selectCustomer(this.filteredCustomers[0]);
+      return;
+    }
+    this.searchCustomerFromInput();
+  }
+
+  selectCustomer(customer: any): void {
+    this.customer = customer;
+    this.identificationCustomer = customer?.num_identificacion || '';
+    this.customerSearchTerm = this.formatCustomerSearchLabel(customer);
+    this.filteredCustomers = [];
+    this.isCustomerSearchOpen = false;
+  }
+
+  clearCustomerSelection(): void {
+    this.identificationCustomer = '';
+    this.customerSearchTerm = '';
+    this.customer = null;
+    this.filteredCustomers = [];
+    this.isCustomerSearchOpen = false;
+  }
+
+  private searchCustomerSuggestionsNow(term: string): void {
+    if (term.trim().length < 2) {
+      toast.warning('Escribe al menos 2 caracteres para buscar.');
+      return;
+    }
+
+    this.customerSearchLoading = true;
+    this.customersService.searchClientes(term, 8).pipe(
+      finalize(() => this.customerSearchLoading = false),
+      catchError(() => of([]))
+    ).subscribe((customers: any[]) => {
+      this.filteredCustomers = customers;
+      if (customers.length === 1) {
+        this.selectCustomer(customers[0]);
+        return;
+      }
+      if (customers.length > 1) {
+        this.isCustomerSearchOpen = true;
+        return;
+      }
+      this.isCustomerSearchOpen = true;
+      toast.info('No hay coincidencias. Si es cliente nuevo, usa el boton +.');
+    });
+  }
+
 
   guardarCliente(): void {
     this.submitted = true;
@@ -218,6 +354,7 @@ export class PosCajaComponent implements OnInit {
         toast.success('Cliente creado exitosamente.');
         this.customer = res?.message?.data;
         this.identificationCustomer = this.customer?.num_identificacion || '';
+        this.customerSearchTerm = this.formatCustomerSearchLabel(this.customer);
         this.cerrarModal();
       },
       error: (err) => {
@@ -265,34 +402,19 @@ export class PosCajaComponent implements OnInit {
 
   addProduct(product: any): void {
     if (!this.canAddProduct(product)) {
-      toast.warning('Este producto esta agotado y no se puede agregar.');
+      toast.warning(this.getStockLimitMessage(product));
       return;
     }
 
-    const existing = this.cartService.cart.find(i => (i.name ?? i.nombre) === (product.name ?? product.nombre));
-    const price = this.toNumber(product.precio ?? product.price);
-    const taxValue = this.getTaxPercent(product);
-
-    if (existing) {
-      existing.quantity++;
-      this.recalcItem(existing);
-      return;
+    if (!this.cartService.addProduct(product)) {
+      toast.warning(this.getStockLimitMessage(product));
     }
-
-    const newItem = {
-      ...product,
-      nombre: product?.nombre ?? product?.name,
-      price,
-      quantity: 1,
-      tax_value: taxValue
-    };
-    this.recalcItem(newItem);
-    this.cartService.cart.push(newItem);
   }
 
   increase(item: any): void {
-    item.quantity++;
-    this.recalcItem(item);
+    if (!this.cartService.increase(item)) {
+      toast.warning(this.getStockLimitMessage(item));
+    }
   }
 
   decrease(item: any): void {
@@ -442,12 +564,17 @@ export class PosCajaComponent implements OnInit {
     this.applyFilters();
   }
 
+  setProductView(view: 'all' | 'favorites'): void {
+    this.productView = view;
+    this.applyFilters();
+  }
+
   toggleFavorite(product: any): void {
     const key = this.getProductKey(product);
     if (!key) return;
     const alreadyFavorite = this.favoriteProductKeys.has(key);
 
-    if (!alreadyFavorite && !this.canAddProduct(product)) {
+    if (!alreadyFavorite && !canSellProduct(product)) {
       toast.warning('No puedes marcar como favorito un producto agotado.');
       return;
     }
@@ -488,6 +615,9 @@ export class PosCajaComponent implements OnInit {
   clearPage(): void {
     this.cartService.clear();
     this.customer = null;
+    this.customerSearchTerm = '';
+    this.filteredCustomers = [];
+    this.isCustomerSearchOpen = false;
     this.alias = '';
     this.identificationCustomer = '';
     this.amountReceived = null;
@@ -518,9 +648,14 @@ export class PosCajaComponent implements OnInit {
 
   trackByProductId = (_: number, p: any) => p?.id || p?._id || p?.codigo || p?.name || p?.nombre;
   trackByFavorite = (_: number, p: any) => this.getProductKey(p);
+  trackByCustomerId = (_: number, c: any) => c?.name || c?.num_identificacion || _;
 
   canAddProduct(product: any): boolean {
-    return canSellProduct(product);
+    return this.cartService.canAddProduct(product);
+  }
+
+  canIncreaseItem(item: any): boolean {
+    return this.cartService.canIncrease(item);
   }
 
   hasInventory(product: any): boolean {
@@ -541,6 +676,27 @@ export class PosCajaComponent implements OnInit {
     }
 
     return `${toInventoryNumber(product?.stock_actual, 0)} ${getInventoryUnit(product)}`;
+  }
+
+  getStockLimitMessage(product: any): string {
+    const productName = product?.nombre || product?.name || 'Producto';
+    if (!this.hasInventory(product)) {
+      return `${productName} no se puede agregar.`;
+    }
+
+    if (!canSellProduct(product)) {
+      return `${productName} está agotado y no se puede agregar.`;
+    }
+
+    const currentQty = this.getCartQuantityForProduct(product);
+    const available = getAvailableStock(product);
+    return `Stock insuficiente para ${productName}. Disponible: ${available} ${getInventoryUnit(product)}. En venta: ${currentQty}.`;
+  }
+
+  getCartQuantityForProduct(product: any): number {
+    const key = product?.name ?? product?.nombre;
+    const item = this.cartService.cart.find((cartItem: any) => (cartItem.name ?? cartItem.nombre) === key);
+    return Number(item?.quantity || 0);
   }
 
   private initClienteForm(): void {
@@ -568,6 +724,45 @@ export class PosCajaComponent implements OnInit {
     this.loadProducts();
     this.loadCategory();
     this.loadMethodPayment();
+  }
+
+  private formatCustomerSearchLabel(customer: any): string {
+    const name = customer?.nombre || 'Cliente';
+    const identification = customer?.num_identificacion ? ` - ${customer.num_identificacion}` : '';
+    return `${name}${identification}`;
+  }
+
+  private initCustomerSearch(): void {
+    this.customerSearch$.pipe(
+      debounceTime(250),
+      distinctUntilChanged(),
+      switchMap((term: string) => {
+        const query = term.trim();
+        if (query.length < 2) {
+          return of([]);
+        }
+        this.customerSearchLoading = true;
+        return this.customersService.searchClientes(query, 8).pipe(
+          catchError(() => of([])),
+          finalize(() => this.customerSearchLoading = false)
+        );
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe((customers: any[]) => {
+      this.filteredCustomers = customers;
+      this.isCustomerSearchOpen = this.customerSearchTerm.trim().length >= 2;
+    });
+  }
+
+  private openCustomerCreateFromIdentification(identification: string): void {
+    const tipoIdentificacion = identification.length === 10 ? '05 - Cedula' : '04 - RUC';
+    this.clienteForm.patchValue({
+      num_identificacion: identification,
+      tipo_identificacion: tipoIdentificacion
+    }, { emitEvent: false });
+    this.clienteForm.get('num_identificacion')?.updateValueAndValidity();
+    this.showCustomerModal = true;
+    toast.error('Cliente no encontrado con esa identificacion.');
   }
 
   private buildOrderPayload(typePago: 'Nota Venta' | 'Factura') {
@@ -742,7 +937,7 @@ export class PosCajaComponent implements OnInit {
   private sanitizeFavorites(): void {
     const availableKeys = new Set(
       (this.products || [])
-        .filter((product: any) => this.canAddProduct(product))
+        .filter((product: any) => canSellProduct(product))
         .map((product: any) => this.getProductKey(product))
         .filter((key: string) => !!key)
     );
