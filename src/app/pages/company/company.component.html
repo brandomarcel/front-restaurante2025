@@ -207,6 +207,20 @@
               </div>
 
               <div>
+                <label class="block font-medium mb-1">Tipo de operación</label>
+                <select class="input" formControlName="business_mode"
+                  aria-readonly="true"
+                  [class.border-red-500]="f['business_mode'].invalid && submitted">
+                  <option value="RESTAURANTE">Restaurante / POS</option>
+                  <option value="FACTURADOR">Facturador</option>
+                </select>
+                <p class="mt-1 text-[11px] text-gray-500">
+                  Solo lectura. Este valor lo define el administrador del sistema.
+                </p>
+                <small *ngIf="f['business_mode'].invalid && submitted" class="text-red-600">Campo requerido</small>
+              </div>
+
+              <div>
                 <label class="block font-medium mb-1">Direccion</label>
                 <input type="text" class="input" formControlName="address"
                   [class.border-red-500]="f['address'].invalid && submitted" />

@@ -1,224 +1,301 @@
-<div class="min-h-full bg-slate-50 p-4 lg:p-6">
-  <section class="mb-4 rounded-2xl bg-gradient-to-r from-slate-900 via-primary to-sky-700 px-4 py-5 text-white shadow-lg lg:px-6">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-      <div>
-        <p class="text-xs uppercase tracking-[0.25em] text-white/70">Dashboard operativo</p>
-        <h1 class="mt-1 text-2xl font-bold">Bienvenido, {{ userData?.fullName || 'Equipo' }}</h1>
-        <p class="mt-1 text-sm text-white/80">Resumen principal del restaurante: {{ today | date:'dd/MM/yyyy' }}</p>
-      </div>
-
-      <div class="flex flex-col items-start gap-2 lg:items-end">
-        <div class="flex flex-wrap gap-2">
-          <span class="rounded-full px-3 py-1 text-xs font-semibold"
+<div class="min-h-full bg-slate-100/70 p-3 lg:p-4">
+  <section class="mb-3 overflow-hidden rounded-xl bg-gradient-to-r px-3 py-3 text-white shadow-sm lg:px-4" [ngClass]="heroClasses">
+    <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+      <div class="min-w-0">
+        <div class="mb-1.5 flex flex-wrap items-center gap-1.5">
+          <span class="rounded-md bg-white/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">
+            {{ modeLabel }}
+          </span>
+          <span class="rounded-md bg-white/15 px-2 py-0.5 text-[10px] font-semibold">
+            {{ today | date:'dd/MM/yyyy' }}
+          </span>
+          <span class="rounded-md px-2 py-0.5 text-[10px] font-semibold" [ngClass]="firmaClasses">
+            Firma: {{ firmaLabel }}
+          </span>
+          <span *ngIf="isRestaurantMode" class="rounded-md px-2 py-0.5 text-[10px] font-semibold"
             [ngClass]="cajaAbierta ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'">
             Caja {{ cajaAbierta ? 'abierta' : 'sin apertura' }}
           </span>
-          <span class="rounded-full px-3 py-1 text-xs font-semibold" [ngClass]="firmaClasses">
-            Firma: {{ firmaLabel }}
-          </span>
         </div>
 
+        <h1 class="truncate text-lg font-bold leading-tight lg:text-xl">
+          {{ dashboardTitle }}
+        </h1>
+        <p class="mt-0.5 max-w-2xl text-[11px] text-white/80">
+          {{ dashboardSubtitle }} · Bienvenido, {{ userData?.fullName || 'Equipo' }}
+        </p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-4 xl:min-w-[520px]">
         <a
-          *ngIf="!cajaAbierta"
-          [routerLink]="['/caja/apertura']"
-          class="inline-flex items-center rounded-lg bg-white px-3 py-2 text-xs font-semibold text-slate-900 shadow-sm ring-1 ring-white/40 transition hover:bg-slate-100">
-          Abrir caja ahora
+          *ngFor="let action of primaryActions"
+          [routerLink]="action.route"
+          class="rounded-lg px-2.5 py-2 shadow-sm transition hover:scale-[1.01] hover:shadow"
+          [ngClass]="action.tone">
+          <p class="text-[11px] font-bold leading-tight">{{ action.label }}</p>
+          <p class="mt-0.5 text-[10px] opacity-80">{{ action.detail }}</p>
         </a>
       </div>
     </div>
   </section>
 
-  <app-avisos [avisos]="avisos" (eliminar)="eliminarAviso($event)" class="mb-4 block"></app-avisos>
+  <app-avisos [avisos]="avisos" (eliminar)="eliminarAviso($event)" class="mb-3 block"></app-avisos>
 
-  <section class="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-12">
-    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-7">
-      <div class="mb-3 flex items-center justify-between gap-3">
+  <section class="mb-3 grid grid-cols-2 gap-2 xl:grid-cols-4">
+    <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+        {{ isFacturadorMode ? 'Documentos/ventas' : 'Pedidos' }}
+      </p>
+      <p class="mt-1 text-xl font-black text-slate-900">{{ totalOrdersToday }}</p>
+      <p class="text-[10px] text-slate-500">{{ isFacturadorMode ? 'actividad registrada hoy' : ritmoTurnoLabel }}</p>
+    </article>
+
+    <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Ventas</p>
+      <p class="mt-1 text-xl font-black text-primary">{{ total_sales_today | currency:'USD':'symbol':'1.0-0' }}</p>
+      <p class="text-[10px] text-slate-500">total del día</p>
+    </article>
+
+    <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Ticket promedio</p>
+      <p class="mt-1 text-xl font-black text-slate-900">{{ ticketPromedio | currency:'USD':'symbol':'1.0-2' }}</p>
+      <p class="text-[10px]" [ngClass]="ticketPromedioClasses">{{ ticketPromedioLabel }}</p>
+    </article>
+
+    <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+        {{ isFacturadorMode ? 'Estado firma' : 'Caja esperada' }}
+      </p>
+      <p class="mt-1 text-xl font-black text-slate-900">
+        <ng-container *ngIf="isFacturadorMode; else restaurantExpectedCash">{{ firmaLabel }}</ng-container>
+        <ng-template #restaurantExpectedCash>{{ efectivoEsperado | currency:'USD':'symbol':'1.0-0' }}</ng-template>
+      </p>
+      <p class="text-[10px]" [ngClass]="isFacturadorMode ? firmaClasses : diferenciaCajaClasses">
+        {{ isFacturadorMode ? modeLabel : diferenciaCajaLabel }}
+      </p>
+    </article>
+  </section>
+
+  <section class="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
+    <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-7">
+      <div class="mb-2 flex items-center justify-between gap-2">
         <div>
-          <h2 class="text-base font-semibold text-slate-900">Panorama del turno</h2>
-          <p class="text-xs text-slate-500">Resumen en lenguaje simple para operar rapido</p>
+          <h2 class="text-sm font-bold text-slate-900">{{ isFacturadorMode ? 'Panorama de facturación' : 'Panorama del turno' }}</h2>
+          <p class="text-[10px] text-slate-500">Lectura rápida para decidir qué hacer ahora.</p>
         </div>
-        <span class="rounded-full px-3 py-1 text-xs font-semibold" [ngClass]="estadoTurnoClasses">
+        <span class="rounded-md px-2 py-1 text-[10px] font-bold" [ngClass]="estadoTurnoClasses">
           {{ estadoTurnoLabel }}
         </span>
       </div>
 
-      <div class="space-y-2 text-sm">
-        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Ventas de hoy</p>
-          <p class="mt-1 font-medium text-slate-800">{{ resumenVentasClaro }}</p>
+      <div class="grid gap-2 md:grid-cols-3">
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Ventas de hoy</p>
+          <p class="mt-1 text-[11px] font-semibold text-slate-800">{{ resumenVentasClaro }}</p>
         </div>
-        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Situacion de caja</p>
-          <p class="mt-1 font-medium text-slate-800">{{ resumenCajaClaro }}</p>
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+            {{ isFacturadorMode ? 'Firma / SRI' : 'Situación de caja' }}
+          </p>
+          <p class="mt-1 text-[11px] font-semibold text-slate-800">{{ resumenCajaClaro }}</p>
         </div>
-        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Producto destacado</p>
-          <p class="mt-1 font-medium text-slate-800">{{ resumenProductosClaro }}</p>
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+            {{ isFacturadorMode ? 'Producto facturado' : 'Producto destacado' }}
+          </p>
+          <p class="mt-1 text-[11px] font-semibold text-slate-800">{{ resumenProductosClaro }}</p>
         </div>
       </div>
     </article>
 
-    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-5">
-      <h2 class="text-base font-semibold text-slate-900">Que revisar ahora</h2>
-      <p class="mb-3 text-xs text-slate-500">Acciones recomendadas para el responsable del turno</p>
-
-      <ul class="space-y-2">
-        <li *ngFor="let accion of accionesSugeridas" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+    <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-5">
+      <h2 class="text-sm font-bold text-slate-900">Qué revisar ahora</h2>
+      <p class="mb-2 text-[10px] text-slate-500">{{ isFacturadorMode ? 'Prioridades de emisión y configuración.' : 'Prioridades del responsable de turno.' }}</p>
+      <ul class="grid gap-1.5">
+        <li *ngFor="let accion of accionesSugeridas" class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-[11px] font-medium text-slate-700">
           {{ accion }}
         </li>
       </ul>
-
-      <div class="mt-4 grid grid-cols-2 gap-2 text-xs">
-        <div class="rounded-lg bg-emerald-50 p-2 text-emerald-700">
-          <p class="uppercase tracking-wide">Pedidos</p>
-          <p class="mt-1 text-lg font-bold">{{ totalOrdersToday }}</p>
-        </div>
-        <div class="rounded-lg bg-sky-50 p-2 text-sky-700">
-          <p class="uppercase tracking-wide">Ventas</p>
-          <p class="mt-1 text-lg font-bold">{{ total_sales_today | currency:'USD':'symbol':'1.0-0' }}</p>
-        </div>
-        <div class="rounded-lg bg-amber-50 p-2 text-amber-700">
-          <p class="uppercase tracking-wide">Efectivo esperado</p>
-          <p class="mt-1 text-lg font-bold">{{ efectivoEsperado | currency:'USD':'symbol':'1.0-0' }}</p>
-        </div>
-        <div class="rounded-lg p-2" [ngClass]="diferenciaCaja >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'">
-          <p class="uppercase tracking-wide">Diferencia</p>
-          <p class="mt-1 text-lg font-bold">{{ diferenciaCaja | currency:'USD':'symbol':'1.0-0' }}</p>
-        </div>
-      </div>
     </article>
   </section>
 
-  <section class="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-12">
-    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-8">
-      <div class="mb-3 flex items-center justify-between gap-3">
-        <div>
-          <h2 class="text-base font-semibold text-slate-900">Top productos vendidos</h2>
-          <p class="text-xs text-slate-500">Ranking por unidades del dia</p>
-        </div>
-        <span class="rounded-full bg-slate-900 px-3 py-1 text-[11px] font-semibold text-white">{{ topProductName }}</span>
-      </div>
-
-      <apx-chart
-        *ngIf="topProductsBarOptions?.chart"
-        [series]="topProductsBarOptions.series"
-        [chart]="topProductsBarOptions.chart"
-        [plotOptions]="topProductsBarOptions.plotOptions"
-        [dataLabels]="topProductsBarOptions.dataLabels"
-        [xaxis]="topProductsBarOptions.xaxis"
-        [yaxis]="topProductsBarOptions.yaxis"
-        [colors]="topProductsBarOptions.colors"
-        [grid]="topProductsBarOptions.grid"
-        [tooltip]="topProductsBarOptions.tooltip">
-      </apx-chart>
-    </article>
-
-    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-4">
-      <div class="mb-3">
-        <h2 class="text-base font-semibold text-slate-900">Flujo de caja</h2>
-        <p class="text-xs text-slate-500">Distribucion de movimientos en el turno</p>
-      </div>
-
-      <apx-chart
-        *ngIf="cashFlowDonutOptions?.chart"
-        [series]="cashFlowDonutOptions.series"
-        [chart]="cashFlowDonutOptions.chart"
-        [labels]="cashFlowDonutOptions.labels"
-        [colors]="cashFlowDonutOptions.colors"
-        [legend]="cashFlowDonutOptions.legend"
-        [dataLabels]="cashFlowDonutOptions.dataLabels"
-        [plotOptions]="cashFlowDonutOptions.plotOptions"
-        [stroke]="cashFlowDonutOptions.stroke"
-        [tooltip]="cashFlowDonutOptions.tooltip"
-        [responsive]="cashFlowDonutOptions.responsive">
-      </apx-chart>
-
-      <div class="mt-3 space-y-2 text-xs">
-        <div class="flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 text-amber-700">
-          <span>Apertura</span>
-          <span class="font-bold">{{ montoApertura | currency:'USD':'symbol':'1.0-0' }}</span>
-        </div>
-        <div class="flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2 text-emerald-700">
-          <span>Ventas</span>
-          <span class="font-bold">{{ total_sales_today | currency:'USD':'symbol':'1.0-0' }}</span>
-        </div>
-        <div class="flex items-center justify-between rounded-lg bg-rose-50 px-3 py-2 text-rose-700">
-          <span>Retiros</span>
-          <span class="font-bold">{{ totalRetiros | currency:'USD':'symbol':'1.0-0' }}</span>
-        </div>
-      </div>
-    </article>
-  </section>
-
-  <section class="grid grid-cols-1 gap-4 xl:grid-cols-12">
-    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-8">
-      <div class="mb-3">
-        <h2 class="text-base font-semibold text-slate-900">Comparativo monetario</h2>
-        <p class="text-xs text-slate-500">Ventas, retiros, efectivo actual, esperado y diferencia</p>
-      </div>
-
-      <apx-chart
-        *ngIf="moneyBarsOptions?.chart"
-        [series]="moneyBarsOptions.series"
-        [chart]="moneyBarsOptions.chart"
-        [plotOptions]="moneyBarsOptions.plotOptions"
-        [dataLabels]="moneyBarsOptions.dataLabels"
-        [xaxis]="moneyBarsOptions.xaxis"
-        [yaxis]="moneyBarsOptions.yaxis"
-        [colors]="moneyBarsOptions.colors"
-        [grid]="moneyBarsOptions.grid"
-        [tooltip]="moneyBarsOptions.tooltip">
-      </apx-chart>
-    </article>
-
-    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-4">
-      <div class="mb-4">
-        <h2 class="text-base font-semibold text-slate-900">Rendimiento comercial</h2>
-        <p class="text-xs text-slate-500">Lectura simple del ritmo de venta y del mix de productos</p>
-      </div>
-
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
-        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <p class="text-xs uppercase tracking-wide text-slate-500">Ticket promedio</p>
-              <p class="mt-1 text-xl font-bold text-slate-900">{{ ticketPromedio | currency:'USD':'symbol':'1.0-2' }}</p>
-            </div>
-            <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold" [ngClass]="ticketPromedioClasses">
-              {{ ticketPromedioLabel }}
-            </span>
+  <ng-container *ngIf="isRestaurantMode; else facturadorDashboard">
+    <section class="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
+      <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-8">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900">Top productos vendidos</h2>
+            <p class="text-[10px] text-slate-500">Ranking por unidades del día.</p>
           </div>
-          <p class="mt-2 text-xs text-slate-500">Valor medio de cada pedido registrado hoy.</p>
+          <span class="rounded-md bg-slate-900 px-2 py-1 text-[10px] font-bold text-white">{{ topProductName }}</span>
         </div>
+        <apx-chart
+          *ngIf="topProductsBarOptions?.chart"
+          [series]="topProductsBarOptions.series"
+          [chart]="topProductsBarOptions.chart"
+          [plotOptions]="topProductsBarOptions.plotOptions"
+          [dataLabels]="topProductsBarOptions.dataLabels"
+          [xaxis]="topProductsBarOptions.xaxis"
+          [yaxis]="topProductsBarOptions.yaxis"
+          [colors]="topProductsBarOptions.colors"
+          [grid]="topProductsBarOptions.grid"
+          [tooltip]="topProductsBarOptions.tooltip">
+        </apx-chart>
+      </article>
 
-        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <p class="text-xs uppercase tracking-wide text-slate-500">Ritmo del turno</p>
-              <p class="mt-1 text-xl font-bold text-slate-900">{{ ordersPerHour | number:'1.0-1' }} pedidos/h</p>
+      <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-4">
+        <h2 class="text-sm font-bold text-slate-900">Flujo de caja</h2>
+        <p class="mb-2 text-[10px] text-slate-500">Apertura, ventas y retiros.</p>
+        <apx-chart
+          *ngIf="cashFlowDonutOptions?.chart"
+          [series]="cashFlowDonutOptions.series"
+          [chart]="cashFlowDonutOptions.chart"
+          [labels]="cashFlowDonutOptions.labels"
+          [colors]="cashFlowDonutOptions.colors"
+          [legend]="cashFlowDonutOptions.legend"
+          [dataLabels]="cashFlowDonutOptions.dataLabels"
+          [plotOptions]="cashFlowDonutOptions.plotOptions"
+          [stroke]="cashFlowDonutOptions.stroke"
+          [tooltip]="cashFlowDonutOptions.tooltip"
+          [responsive]="cashFlowDonutOptions.responsive">
+        </apx-chart>
+      </article>
+    </section>
+
+    <section class="grid grid-cols-1 gap-3 xl:grid-cols-12">
+      <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-8">
+        <h2 class="text-sm font-bold text-slate-900">Comparativo monetario</h2>
+        <p class="mb-2 text-[10px] text-slate-500">Ventas, retiros, efectivo actual, esperado y diferencia.</p>
+        <apx-chart
+          *ngIf="moneyBarsOptions?.chart"
+          [series]="moneyBarsOptions.series"
+          [chart]="moneyBarsOptions.chart"
+          [plotOptions]="moneyBarsOptions.plotOptions"
+          [dataLabels]="moneyBarsOptions.dataLabels"
+          [xaxis]="moneyBarsOptions.xaxis"
+          [yaxis]="moneyBarsOptions.yaxis"
+          [colors]="moneyBarsOptions.colors"
+          [grid]="moneyBarsOptions.grid"
+          [tooltip]="moneyBarsOptions.tooltip">
+        </apx-chart>
+      </article>
+
+      <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-4">
+        <h2 class="text-sm font-bold text-slate-900">Rendimiento comercial</h2>
+        <p class="mb-2 text-[10px] text-slate-500">Ritmo de venta y mix de productos.</p>
+        <div class="grid gap-2">
+          <div class="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <p class="text-[10px] uppercase tracking-wide text-slate-500">Ritmo</p>
+                <p class="text-base font-black text-slate-900">{{ ordersPerHour | number:'1.0-1' }} pedidos/h</p>
+              </div>
+              <span class="rounded-md px-2 py-1 text-[10px] font-bold" [ngClass]="ritmoTurnoClasses">{{ ritmoTurnoLabel }}</span>
             </div>
-            <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold" [ngClass]="ritmoTurnoClasses">
-              {{ ritmoTurnoLabel }}
-            </span>
           </div>
-          <p class="mt-2 text-xs text-slate-500">Promedio de pedidos segun las horas transcurridas del dia.</p>
-        </div>
-
-        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <p class="text-xs uppercase tracking-wide text-slate-500">Mix de venta</p>
-              <p class="mt-1 text-base font-semibold text-slate-900">{{ mixVentasLabel }}</p>
+          <div class="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <p class="text-[10px] uppercase tracking-wide text-slate-500">Mix</p>
+                <p class="text-base font-black text-slate-900">{{ mixVentasLabel }}</p>
+              </div>
+              <span class="rounded-md px-2 py-1 text-[10px] font-bold" [ngClass]="mixVentasClasses">
+                {{ topProductShareInTop | number:'1.0-1' }}%
+              </span>
             </div>
-            <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold" [ngClass]="mixVentasClasses">
-              {{ topProductShareInTop | number:'1.0-1' }}%
-            </span>
+            <p class="mt-1 text-[10px] text-slate-500">{{ mixVentasDetalle }}</p>
           </div>
-          <p class="mt-2 text-xs text-slate-500">{{ mixVentasDetalle }}</p>
         </div>
-      </div>
+      </article>
+    </section>
+  </ng-container>
 
-      
-    </article>
-  </section>
+  <ng-template #facturadorDashboard>
+    <section class="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
+      <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-8">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900">Productos/servicios facturados</h2>
+            <p class="text-[10px] text-slate-500">Ranking de lo que más se está emitiendo hoy.</p>
+          </div>
+          <a routerLink="/dashboard/invoicing" class="rounded-md bg-primary px-2.5 py-1.5 text-[10px] font-bold text-white">
+            Nueva factura
+          </a>
+        </div>
+        <apx-chart
+          *ngIf="topProductsBarOptions?.chart"
+          [series]="topProductsBarOptions.series"
+          [chart]="topProductsBarOptions.chart"
+          [plotOptions]="topProductsBarOptions.plotOptions"
+          [dataLabels]="topProductsBarOptions.dataLabels"
+          [xaxis]="topProductsBarOptions.xaxis"
+          [yaxis]="topProductsBarOptions.yaxis"
+          [colors]="topProductsBarOptions.colors"
+          [grid]="topProductsBarOptions.grid"
+          [tooltip]="topProductsBarOptions.tooltip">
+        </apx-chart>
+      </article>
+
+      <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-4">
+        <h2 class="text-sm font-bold text-slate-900">Centro de emisión</h2>
+        <p class="mb-2 text-[10px] text-slate-500">Accesos pensados para una empresa facturadora.</p>
+        <div class="grid gap-2">
+          <a routerLink="/dashboard/invoicing" class="rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-primary transition hover:bg-primary/10">
+            <p class="text-xs font-black">Emitir factura directa</p>
+            <p class="text-[10px]">Selecciona cliente, productos y envía al SRI.</p>
+          </a>
+          <a routerLink="/dashboard/invoices" class="rounded-lg border border-violet-200 bg-violet-50 p-2.5 text-violet-700 transition hover:bg-violet-100">
+            <p class="text-xs font-black">Facturas emitidas</p>
+            <p class="text-[10px]">Revisa, descarga o reenvía comprobantes.</p>
+          </a>
+          <a routerLink="/dashboard/credit-notes" class="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-amber-700 transition hover:bg-amber-100">
+            <p class="text-xs font-black">Notas de crédito</p>
+            <p class="text-[10px]">Gestiona anulaciones o ajustes.</p>
+          </a>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid grid-cols-1 gap-3 xl:grid-cols-12">
+      <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-8">
+        <h2 class="text-sm font-bold text-slate-900">Resumen monetario</h2>
+        <p class="mb-2 text-[10px] text-slate-500">Ventas del día y movimiento registrado.</p>
+        <apx-chart
+          *ngIf="moneyBarsOptions?.chart"
+          [series]="moneyBarsOptions.series"
+          [chart]="moneyBarsOptions.chart"
+          [plotOptions]="moneyBarsOptions.plotOptions"
+          [dataLabels]="moneyBarsOptions.dataLabels"
+          [xaxis]="moneyBarsOptions.xaxis"
+          [yaxis]="moneyBarsOptions.yaxis"
+          [colors]="moneyBarsOptions.colors"
+          [grid]="moneyBarsOptions.grid"
+          [tooltip]="moneyBarsOptions.tooltip">
+        </apx-chart>
+      </article>
+
+      <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-4">
+        <h2 class="text-sm font-bold text-slate-900">Salud de facturación</h2>
+        <p class="mb-2 text-[10px] text-slate-500">Lo mínimo que debe estar bien para emitir sin fricción.</p>
+        <div class="grid gap-2 text-[11px]">
+          <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+            <span>Firma electrónica</span>
+            <span class="rounded-md px-2 py-0.5 font-bold" [ngClass]="firmaClasses">{{ firmaLabel }}</span>
+          </div>
+          <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+            <span>Ventas hoy</span>
+            <span class="font-black text-slate-900">{{ total_sales_today | currency:'USD':'symbol':'1.0-0' }}</span>
+          </div>
+          <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+            <span>Ticket promedio</span>
+            <span class="font-black text-slate-900">{{ ticketPromedio | currency:'USD':'symbol':'1.0-2' }}</span>
+          </div>
+          <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+            <span>Producto líder</span>
+            <span class="max-w-[150px] truncate font-black text-slate-900">{{ topProductName }}</span>
+          </div>
+        </div>
+      </article>
+    </section>
+  </ng-template>
 </div>

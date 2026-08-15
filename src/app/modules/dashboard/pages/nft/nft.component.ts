@@ -11,6 +11,7 @@ import { isNullOrEmpty } from 'src/app/shared/utils/validation';
 import { AvisosComponent } from "src/app/shared/components/avisos/avisos.component";
 import { diasRestantes } from 'src/app/shared/utils/date.utils';
 import { NgApexchartsModule } from 'ng-apexcharts';
+import { BusinessMode, CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 // Interfaz para los avisos
 interface Aviso {
@@ -49,6 +50,7 @@ export class NftComponent implements OnInit, OnDestroy {
   topProducts: any[] = [];
   today = new Date();
   certDaysLeft: number | null = null;
+  businessMode: BusinessMode = 'RESTAURANTE';
 
   // Nuevas propiedades
   userData?: UserData | null;
@@ -60,14 +62,17 @@ export class NftComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
   private avisoCounter = 0;
+  private cashDataRequested = false;
 
   constructor(
     private ordersService: OrdersService,
     private cajasService: CajasService,
-    private companyService: CompanyService
+    private companyService: CompanyService,
+    private capabilities: CompanyCapabilitiesService
   ) { }
 
   ngOnInit(): void {
+    this.businessMode = this.capabilities.businessMode;
     this.actualizarVisualizaciones();
     this.loadData();
   }
@@ -80,7 +85,6 @@ export class NftComponent implements OnInit, OnDestroy {
   async loadData() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     this.userData = user;
-    this.getDatosCierre();
 
     forkJoin({
       dashboard: this.ordersService.get_dashboard_metrics(),
@@ -88,9 +92,14 @@ export class NftComponent implements OnInit, OnDestroy {
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (results: any) => {
+        next: async (results: any) => {
+          this.capabilities.setFromResponse(results.empresa);
+          this.businessMode = this.capabilities.businessMode;
           this.procesarDashboard(results.dashboard);
           this.procesarEmpresa(results.empresa);
+          if (this.isRestaurantMode && !this.idApertura) {
+            await this.getDatosCierre();
+          }
           this.generarAvisos();
         },
         error: (err: any) => {
@@ -99,20 +108,22 @@ export class NftComponent implements OnInit, OnDestroy {
       });
 
   }
-    async getDatosCierre() {
+  async getDatosCierre() {
+    if (this.cashDataRequested || this.isFacturadorMode) return;
+    this.cashDataRequested = true;
 
-    const userEmail: string = String(this.userData?.email || '');
-    console.log('userEmail', userEmail);
-
-      const resp: any = await firstValueFrom(this.cajasService.getDatosCierre(userEmail))
-      console.log('resp', resp);
+    try {
+      const userEmail: string = String(this.userData?.email || '');
+      const resp: any = await firstValueFrom(this.cajasService.getDatosCierre(userEmail));
       const data = resp?.message || {};
       this.idApertura = data.apertura;
       this.montoApertura = data.monto_apertura || 0;
       this.totalRetiros = data.total_retiros || 0;
       this.efectivoSistema = data.efectivo_sistema || 0;
       this.actualizarVisualizaciones();
- 
+    } catch (error) {
+      console.error('Error cargando datos de caja:', error);
+    }
   }
 
   private procesarDashboard(response: any): void {
@@ -170,7 +181,7 @@ export class NftComponent implements OnInit, OnDestroy {
         'warning');
     }
   
-    if (!this.idApertura) {
+    if (this.isRestaurantMode && !this.idApertura) {
       this.agregarAviso(
         'Caja',
         'No hay apertura de caja activa. Por favor, realiza la apertura.',
@@ -269,6 +280,52 @@ export class NftComponent implements OnInit, OnDestroy {
 
   get cajaAbierta(): boolean {
     return !!this.idApertura;
+  }
+
+  get isFacturadorMode(): boolean {
+    return this.businessMode === 'FACTURADOR';
+  }
+
+  get isRestaurantMode(): boolean {
+    return !this.isFacturadorMode;
+  }
+
+  get modeLabel(): string {
+    return this.isFacturadorMode ? 'Facturador' : 'Restaurante';
+  }
+
+  get dashboardTitle(): string {
+    return this.isFacturadorMode ? 'Panel de facturación' : 'Panel operativo';
+  }
+
+  get dashboardSubtitle(): string {
+    return this.isFacturadorMode
+      ? `Facturación electrónica, clientes y documentos: ${this.today.toLocaleDateString('es-EC')}`
+      : `Operación del restaurante, caja y órdenes: ${this.today.toLocaleDateString('es-EC')}`;
+  }
+
+  get heroClasses(): string {
+    return this.isFacturadorMode
+      ? 'from-slate-950 via-violet-700 to-primary'
+      : 'from-slate-950 via-primary to-sky-700';
+  }
+
+  get primaryActions(): Array<{ label: string; detail: string; route: string; tone: string }> {
+    if (this.isFacturadorMode) {
+      return [
+        { label: 'Emitir factura', detail: 'Factura directa al SRI', route: '/dashboard/invoicing', tone: 'bg-primary text-white' },
+        { label: 'Ver facturas', detail: 'Historial y reenvíos', route: '/dashboard/invoices', tone: 'bg-violet-600 text-white' },
+        { label: 'Clientes', detail: 'Datos fiscales', route: '/dashboard/customers', tone: 'bg-slate-900 text-white' },
+        { label: 'Productos', detail: 'Catálogo facturable', route: '/dashboard/products', tone: 'bg-emerald-600 text-white' }
+      ];
+    }
+
+    return [
+      { label: 'Abrir POS', detail: 'Venta y orden rápida', route: '/dashboard/pos', tone: 'bg-primary text-white' },
+      { label: 'Órdenes', detail: 'Seguimiento del día', route: '/dashboard/orders', tone: 'bg-slate-900 text-white' },
+      { label: 'Tiempo real', detail: 'Cocina y atención', route: '/dashboard/orders-realtime', tone: 'bg-sky-600 text-white' },
+      { label: this.cajaAbierta ? 'Cerrar caja' : 'Abrir caja', detail: 'Control del turno', route: this.cajaAbierta ? '/caja/cierre' : '/caja/apertura', tone: 'bg-emerald-600 text-white' }
+    ];
   }
 
   get ticketPromedio(): number {
@@ -445,6 +502,11 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   get estadoTurnoLabel(): string {
+    if (this.isFacturadorMode) {
+      if (this.companyData?.firma || this.certDaysLeft === null || this.certDaysLeft <= 0) return 'Revisar firma';
+      if (!this.totalOrdersToday) return 'Listo para emitir';
+      return 'Facturación activa';
+    }
     if (!this.cajaAbierta) {
       return 'Atencion requerida';
     }
@@ -458,6 +520,11 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   get estadoTurnoClasses(): string {
+    if (this.isFacturadorMode) {
+      if (this.companyData?.firma || this.certDaysLeft === null || this.certDaysLeft <= 0) return 'bg-red-100 text-red-700';
+      if (!this.totalOrdersToday) return 'bg-sky-100 text-sky-700';
+      return 'bg-emerald-100 text-emerald-700';
+    }
     if (!this.cajaAbierta || this.diferenciaCajaAbs > 20) {
       return 'bg-red-100 text-red-700';
     }
@@ -469,12 +536,20 @@ export class NftComponent implements OnInit, OnDestroy {
 
   get resumenVentasClaro(): string {
     if (!this.totalOrdersToday) {
-      return 'Aun no hay pedidos registrados hoy.';
+      return this.isFacturadorMode ? 'Aun no hay documentos o ventas registradas hoy.' : 'Aun no hay pedidos registrados hoy.';
     }
-    return `Llevas ${this.totalOrdersToday} pedidos por ${this.total_sales_today.toFixed(2)} USD.`;
+    return this.isFacturadorMode
+      ? `Llevas ${this.totalOrdersToday} documento(s)/venta(s) por ${this.total_sales_today.toFixed(2)} USD.`
+      : `Llevas ${this.totalOrdersToday} pedidos por ${this.total_sales_today.toFixed(2)} USD.`;
   }
 
   get resumenCajaClaro(): string {
+    if (this.isFacturadorMode) {
+      if (this.companyData?.firma) return 'Falta registrar la firma electrónica para emitir comprobantes.';
+      if (this.certDaysLeft === null) return 'No se detectó fecha de certificado. Revisa configuración de firma.';
+      if (this.certDaysLeft <= 0) return 'La firma está vencida. Debes renovarla antes de emitir.';
+      return `Firma activa. Certificado con ${this.certDaysLeft} día(s) disponibles.`;
+    }
     if (!this.cajaAbierta) {
       return 'No hay apertura de caja activa en este turno.';
     }
@@ -489,13 +564,27 @@ export class NftComponent implements OnInit, OnDestroy {
 
   get resumenProductosClaro(): string {
     if (!this.topProducts.length) {
-      return 'Sin ventas de productos para mostrar ranking.';
+      return this.isFacturadorMode ? 'Sin productos facturados para mostrar ranking.' : 'Sin ventas de productos para mostrar ranking.';
     }
-    return `${this.topProductName} lidera las ventas con ${this.topProductCount} unidades.`;
+    return `${this.topProductName} lidera ${this.isFacturadorMode ? 'la facturación' : 'las ventas'} con ${this.topProductCount} unidades.`;
   }
 
   get accionesSugeridas(): string[] {
     const acciones: string[] = [];
+
+    if (this.isFacturadorMode) {
+      if (this.companyData?.firma) {
+        acciones.push('Registrar firma electrónica para habilitar emisión de comprobantes.');
+      }
+      if (this.certDaysLeft !== null && this.certDaysLeft <= 30) {
+        acciones.push(`Renovar certificado de firma (${this.certDaysLeft} día(s) restantes).`);
+      }
+      if (this.totalOrdersToday === 0) {
+        acciones.push('Emitir una factura directa o revisar documentos pendientes.');
+      }
+      acciones.push('Mantener actualizados clientes, productos y datos fiscales.');
+      return acciones;
+    }
 
     if (!this.cajaAbierta) {
       acciones.push('Realizar apertura de caja para iniciar el turno.');

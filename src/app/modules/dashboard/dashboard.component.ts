@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Router, RouterOutlet } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
 import { UtilsService } from 'src/app/core/services/utils.service';
 import { CompanyService } from 'src/app/services/company.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
@@ -15,8 +15,7 @@ export class DashboardComponent implements OnInit {
     private service: CompanyService,
     private utilsService: UtilsService,
     private capabilities: CompanyCapabilitiesService,
-    private menuService: MenuService,
-    private router: Router
+    private menuService: MenuService
   ) { }
 
   ngOnInit(): void {
@@ -40,9 +39,6 @@ export class DashboardComponent implements OnInit {
         this.utilsService.cambiarAmbiente(company.ambiente);
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         this.menuService.setMenuForRoles(Array.isArray(user?.roles) ? user.roles : []);
-        if (this.capabilities.businessMode === 'FACTURADOR' && /^\/dashboard\/?(?:main)?$/.test(this.router.url)) {
-          this.router.navigateByUrl(this.capabilities.getLandingRoute(user?.roles));
-        }
       }
       },
       error: () => {

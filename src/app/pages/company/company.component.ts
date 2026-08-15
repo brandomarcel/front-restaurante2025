@@ -8,6 +8,8 @@ import { CompanyService } from 'src/app/services/company.service';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 import { AlertService } from '../../core/services/alert.service';
 import { UtilsService } from '../../core/services/utils.service';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { MenuService } from 'src/app/modules/layout/services/menu.service';
 
 @Component({
   selector: 'app-company',
@@ -48,7 +50,9 @@ export class CompanyComponent implements OnInit {
     private service: CompanyService,
     private alertService: AlertService,
     private utilsService: UtilsService,
-    private spinner: NgxSpinnerService
+    private spinner: NgxSpinnerService,
+    private capabilities: CompanyCapabilitiesService,
+    private menuService: MenuService
   ) { }
 
   ngOnInit(): void {
@@ -72,6 +76,7 @@ export class CompanyComponent implements OnInit {
       address: ['', Validators.required],
       phone: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
+      business_mode: [{ value: 'RESTAURANTE', disabled: true }, Validators.required],
       establishmentcode: ['', [Validators.required, Validators.pattern(/^\d{3}$/)]],
       emissionpoint: ['', [Validators.required, Validators.pattern(/^\d{3}$/)]],
       invoiceseq_prod: ['', Validators.required],
@@ -104,6 +109,7 @@ export class CompanyComponent implements OnInit {
           ambiente: ambienteBool,
           logo: company.logo || '',
           urlfirma: company.urlfirma || '',
+          business_mode: this.normalizeBusinessMode(company.business_mode),
           obligado_a_llevar_contabilidad: this.normalizeContabilidad(company.obligado_a_llevar_contabilidad),
           enable_provider_ruc: this.normalizeCheck(company.enable_provider_ruc),
           provider_ruc: company.provider_ruc || ''
@@ -154,6 +160,7 @@ export class CompanyComponent implements OnInit {
       switchMap(() => this.uploadLogoIfNeeded()),
       switchMap(() => this.analyzeFirmaIfNeeded()),
       switchMap(() => this.doUpdate()),
+      switchMap(() => this.refreshCompanyCapabilities()),
       finalize(() => {
         this.isSaving = false;
         this.spinner.hide();
@@ -365,8 +372,8 @@ export class CompanyComponent implements OnInit {
   }
 
   private doUpdate(): Observable<void> {
-    // Configuración administrada en Company: se presenta en esta pantalla, pero no se modifica aquí.
-    const { ambiente, enable_provider_ruc, provider_ruc, ...payload } = this.form.value;
+    // Ambiente se cambia con su propio switch; business_mode y RUC proveedor son configuración administrada.
+    const { ambiente, business_mode, enable_provider_ruc, provider_ruc, ...payload } = this.form.getRawValue();
 
     return this.service.update(this.companyId, payload).pipe(
       map(() => void 0),
@@ -377,12 +384,38 @@ export class CompanyComponent implements OnInit {
     );
   }
 
+  private refreshCompanyCapabilities(): Observable<void> {
+    return this.service.get_empresa().pipe(
+      tap((response) => {
+        this.capabilities.setFromResponse(response);
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        this.menuService.setMenuForRoles(Array.isArray(user?.roles) ? user.roles : []);
+      }),
+      map(() => void 0),
+      catchError(() => of(void 0))
+    );
+  }
+
   private normalizeContabilidad(value: unknown): 'SI' | 'NO' {
     const normalized = `${value ?? ''}`.trim().toUpperCase();
     if (normalized === 'SI' || normalized === 'SÍ' || normalized === '1' || normalized === 'TRUE') {
       return 'SI';
     }
     return 'NO';
+  }
+
+  private normalizeBusinessMode(value: unknown): 'RESTAURANTE' | 'FACTURADOR' {
+    const normalized = `${value ?? ''}`
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase();
+
+    if (normalized === 'FACTURADOR' || normalized === 'FACTURACION' || normalized.includes('FACTUR')) {
+      return 'FACTURADOR';
+    }
+
+    return 'RESTAURANTE';
   }
 
   private normalizeCheck(value: unknown): boolean {

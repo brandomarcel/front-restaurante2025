@@ -16,6 +16,7 @@ export interface CompanyInfo {
   address?: string;
   phone?: string;
   email?: string;
+  business_mode?: 'RESTAURANTE' | 'FACTURADOR' | string;
   establishmentcode?: string;
   emissionpoint?: string;
   invoiceseq_prod?: number;

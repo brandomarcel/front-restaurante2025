@@ -39,7 +39,7 @@ export class CompanyCapabilitiesService {
     const rawCompany = response?.message?.data ?? response?.message ?? response?.data ?? response ?? {};
     const company = Array.isArray(rawCompany) ? (rawCompany[0] ?? {}) : rawCompany;
     const businessModeValue = company?.business_mode ?? response?.message?.business_mode ?? response?.business_mode;
-    const businessMode: BusinessMode = businessModeValue === 'FACTURADOR' ? 'FACTURADOR' : 'RESTAURANTE';
+    const businessMode = this.resolveBusinessMode(businessModeValue);
     const received = company?.features ?? response?.message?.features ?? response?.features;
     const features = received && typeof received === 'object'
       ? this.featureKeys.reduce((result, key) => {
@@ -73,6 +73,9 @@ export class CompanyCapabilitiesService {
   }
 
   getLandingRoute(userRoles: unknown): string {
+    if (this.businessMode === 'FACTURADOR' && this.hasRole(userRoles, ['GERENTE', 'CAJERO'])) {
+      return '/dashboard/main';
+    }
     if (this.canAccess('tables', ['GERENTE', 'CAJERO', 'MESERO'], userRoles)) return '/dashboard/pos';
     if (this.canAccess('direct_invoice', ['GERENTE', 'CAJERO'], userRoles)) return '/dashboard/invoicing';
     if (this.canAccess('kitchen', ['GERENTE', 'COCINA'], userRoles)) return '/dashboard/orders-realtime';
@@ -105,6 +108,20 @@ export class CompanyCapabilitiesService {
 
   private defaultState() {
     return { businessMode: 'RESTAURANTE' as BusinessMode, features: { ...RESTAURANT_FALLBACK }, loaded: false };
+  }
+
+  private resolveBusinessMode(value: unknown): BusinessMode {
+    const normalized = this.normalize(String(value || ''));
+    if (
+      normalized === 'FACTURADOR' ||
+      normalized === 'FACTURACION' ||
+      normalized === 'FACTURACION_ELECTRONICA' ||
+      normalized.includes('FACTUR')
+    ) {
+      return 'FACTURADOR';
+    }
+
+    return 'RESTAURANTE';
   }
 
   private normalize(value: string): string {
