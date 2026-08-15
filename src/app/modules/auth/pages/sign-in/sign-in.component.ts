@@ -16,7 +16,7 @@ import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabi
   selector: 'app-sign-in',
   templateUrl: './sign-in.component.html',
   styleUrls: ['./sign-in.component.css'],
-  imports: [FormsModule, ReactiveFormsModule, AngularSvgIconModule, NgIf, ButtonComponent, NgClass, NgxSpinnerComponent,RouterLink],
+  imports: [FormsModule, ReactiveFormsModule, AngularSvgIconModule, NgIf, ButtonComponent, NgClass, NgxSpinnerComponent, RouterLink],
 })
 export class SignInComponent implements OnInit {
   form!: FormGroup;
@@ -24,24 +24,23 @@ export class SignInComponent implements OnInit {
   passwordTextType = false;
   isSubmitting = false;
 
-  constructor(private readonly _formBuilder: FormBuilder,
+  constructor(
+    private readonly _formBuilder: FormBuilder,
     private authService: AuthService,
     private readonly _router: Router,
     private spinner: NgxSpinnerService,
     private frappeErrorService: FrappeErrorService,
     private alertService: AlertService,
-    private menu: MenuService, private auth: AuthService,
-    private capabilities: CompanyCapabilitiesService
+    private menu: MenuService,
+    private capabilities: CompanyCapabilitiesService,
   ) { }
+
   ngOnInit(): void {
-
-
     this.form = this._formBuilder.group({
       email: ['', [Validators.required]],
       password: ['', Validators.required],
     });
   }
-
 
   get f() {
     return this.form.controls;
@@ -50,17 +49,6 @@ export class SignInComponent implements OnInit {
   togglePasswordTextType() {
     this.passwordTextType = !this.passwordTextType;
   }
-
-  // onSubmit() {
-  //   this.submitted = true;
-  //   const { email, password } = this.form.value;
-
-  //   if (this.form.invalid) {
-  //     return;
-  //   }
-
-  //   this._router.navigate(['/dashboard']);
-  // }
 
   onSubmit() {
     this.submitted = true;
@@ -73,8 +61,8 @@ export class SignInComponent implements OnInit {
     this.isSubmitting = true;
     this.spinner.show();
     this.authService.login(username, password).subscribe({
-      next: (res:any) => {
-        const role: any = this.auth.getCurrentUser();
+      next: () => {
+        const role: any = this.authService.getCurrentUser();
         this.menu.setMenuForRoles(Array.isArray(role?.roles) ? role.roles : []);
         this.spinner.hide();
         this.isSubmitting = false;
@@ -87,29 +75,5 @@ export class SignInComponent implements OnInit {
         this.isSubmitting = false;
       }
     });
-
-
-    // this.authService.login(this.form.value).subscribe({
-    //   next: (res) => {
-
-    //     console.log(res);
-
-    //     // Guarda el token y el usuario
-    //     localStorage.setItem('access_token', res.access_token);
-    //     localStorage.setItem('user', JSON.stringify(res.user));
-    //     this.spinner.hide();
-    //     // Redirige al dashboard u otra página
-    //     this._router.navigate(['/dashboard']);
-    //   },
-    //   error: (err) => {
-    //     this.spinner.hide();
-    //     toast.error('Credenciales incorrectas');
-    //     console.error('Error de login:', err.message);
-    //     // Aquí podrías mostrar una alerta o toast
-    //   },
-    //   complete: () => {
-    //     this.spinner.hide();
-    //   }
-    // });
   }
 }

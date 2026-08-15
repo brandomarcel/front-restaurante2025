@@ -1,13 +1,21 @@
 @import "../../../../../styles.css";
 
 .is__invalid-input {
-  @apply border border-destructive focus:border-destructive focus:outline-hidden focus:ring-transparent;
+  @apply border-destructive focus:border-destructive focus:outline-none focus:ring-2 focus:ring-destructive/15;
 }
 
 .is__invalid-error {
-  @apply px-1 pt-1 text-xs text-destructive;
+  @apply px-1 text-[11px] font-semibold text-destructive;
 }
 
 .input-icon {
-  @apply text-muted-foreground pointer-events-none absolute left-3 top-2.5 z-20;
+  @apply pointer-events-none absolute left-3 top-1/2 z-20 -translate-y-1/2 text-slate-400;
+}
+
+.login-label {
+  @apply text-[11px] font-bold uppercase tracking-wide text-slate-500;
+}
+
+.login-input {
+  @apply block h-10 w-full rounded-xl border border-slate-200 bg-white px-3 pl-9 text-sm font-semibold text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15;
 }
