@@ -36,11 +36,11 @@
           <button
             *ngIf="item.children && (menuService.showSideBar || mobile)"
             class="ml-auto inline-flex items-center justify-center text-muted-foreground/70 transition-transform duration-200"
-            [ngClass]="{ 'rotate-180': item.expanded }"
+            [ngClass]="{ 'rotate-90': item.expanded }"
             aria-label="Expandir submenu"
             type="button"
           >
-            <svg-icon src="assets/icons/heroicons/outline/chevron-down.svg" svgClass="h-3.5 w-3.5"></svg-icon>
+            <svg-icon src="assets/icons/heroicons/solid/chevron-right.svg" svgClass="h-3.5 w-3.5"></svg-icon>
           </button>
 
         </div>
