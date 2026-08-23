@@ -75,8 +75,8 @@ export class MenuService implements OnDestroy {
   }
 
   private markItemState(item: SubMenuItem): boolean {
-    const routeActive = this.isActive(item.route);
     const hasChildren = !!item.children?.length;
+    const routeActive = this.isActive(item.route, hasChildren);
     const childrenActive = hasChildren
       ? item.children!.some((child) => this.markItemState(child))
       : false;
@@ -121,10 +121,10 @@ export class MenuService implements OnDestroy {
       .filter((group): group is MenuItem => !!group);
   }
 
-  public isActive(instruction?: string | null): boolean {
+  public isActive(instruction?: string | null, exact = false): boolean {
     if (!instruction) return false;
     return this.router.isActive(this.router.createUrlTree([instruction]), {
-      paths: 'subset',
+      paths: exact ? 'exact' : 'subset',
       queryParams: 'subset',
       fragment: 'ignored',
       matrixParams: 'ignored',
