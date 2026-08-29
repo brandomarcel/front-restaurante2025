@@ -26,6 +26,7 @@ export interface FrappeQueryReportResponse {
 @Injectable({ providedIn: 'root' })
 export class FrappeQueryReportService {
   private readonly runUrl = `${environment.apiUrl}/method/frappe.desk.query_report.run`;
+  private readonly exportUrl = `${environment.apiUrl}/method/frappe.desk.query_report.export_query`;
 
   constructor(
     private http: HttpClient,
@@ -45,6 +46,33 @@ export class FrappeQueryReportService {
     }).pipe(
       catchError((error) => {
         const message = this.frappeErr.handle(error) || 'No se pudo cargar el reporte.';
+        return throwError(() => new Error(message));
+      })
+    );
+  }
+
+  exportExcel(reportName: string, filters: Record<string, any>, visibleIdx: number[] = []): Observable<Blob> {
+    const cleanFilters = this.cleanFilters(filters);
+    const body = new FormData();
+
+    body.append('report_name', reportName);
+    body.append('file_format_type', 'Excel');
+    body.append('filters', JSON.stringify(cleanFilters));
+    body.append('applied_filters', JSON.stringify(cleanFilters));
+    body.append('custom_columns', JSON.stringify([]));
+    body.append('visible_idx', JSON.stringify(visibleIdx));
+    body.append('include_indentation', '0');
+    body.append('include_filters', '1');
+    body.append('include_hidden_columns', '0');
+    body.append('export_in_background', '0');
+
+    return this.http.post(this.exportUrl, body, {
+      responseType: 'blob',
+      withCredentials: true,
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(
+      catchError((error) => {
+        const message = this.frappeErr.handle(error) || 'No se pudo exportar el reporte.';
         return throwError(() => new Error(message));
       })
     );

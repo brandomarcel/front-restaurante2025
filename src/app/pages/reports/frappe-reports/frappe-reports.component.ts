@@ -114,9 +114,7 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
         'Total',
         'Estado',
         'Estado SRI',
-        'Secuencial',
-        'Plan',
-        'Consumió Plan'
+        'Secuencial'
       ],
       filters: [
         { key: 'from_date', label: 'Desde', type: 'date', required: true },
@@ -158,6 +156,7 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
   columns: FrappeReportColumn[] = [];
   rows: any[] = [];
   loading = false;
+  exporting = false;
   errorMessage = '';
   payments: any[] = [];
 
@@ -230,10 +229,11 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
           this.rows = Array.isArray(message.result) ? message.result : [];
           this.columns = this.normalizeColumns(message.columns || []);
           if (!this.columns.length && this.rows.length && !Array.isArray(this.rows[0])) {
-            this.columns = Object.keys(this.rows[0]).map((key) => ({
+            this.columns = Object.keys(this.rows[0]).map((key, index) => ({
               label: this.humanizeKey(key),
               fieldname: key,
-              fieldtype: 'Data'
+              fieldtype: 'Data',
+              sourceIndex: index
             }));
           }
         },
@@ -249,6 +249,34 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
   clearFilters(): void {
     this.filters = this.buildDefaultFilters(this.selectedReport);
     this.runReport();
+  }
+
+  exportExcel(): void {
+    if (this.exporting || !this.validateFilters()) return;
+
+    const visibleIndexes = this.getVisibleColumnIndexes();
+    if (!visibleIndexes.length) {
+      toast.error('Consulta el reporte antes de exportar para identificar las columnas visibles.');
+      return;
+    }
+
+    this.exporting = true;
+    this.spinner.show();
+
+    this.reportSvc.exportExcel(this.selectedReport.name, this.cleanFilters(this.filters), visibleIndexes)
+      .pipe(finalize(() => {
+        this.exporting = false;
+        this.spinner.hide();
+      }))
+      .subscribe({
+        next: (blob) => {
+          this.downloadBlob(blob, this.buildExportFilename());
+          toast.success('Reporte exportado correctamente.');
+        },
+        error: (error) => {
+          toast.error(error?.message || 'No se pudo exportar el reporte.');
+        }
+      });
   }
 
   trackByColumn = (index: number, column: FrappeReportColumn) => column.fieldname || column.label || index;
@@ -387,6 +415,12 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
     return foundIndex >= 0 ? foundIndex : fallback;
   }
 
+  private getVisibleColumnIndexes(): number[] {
+    return this.displayColumns
+      .map((column, index) => this.getSourceColumnIndex(column, index))
+      .filter((index) => Number.isInteger(index) && index >= 0);
+  }
+
   private humanizeKey(value: string): string {
     return String(value || '')
       .replace(/_/g, ' ')
@@ -402,5 +436,30 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
 
   private options(values: string[]): FilterOption[] {
     return values.map((value) => ({ label: value, value }));
+  }
+
+  private buildExportFilename(): string {
+    const from = String(this.filters['from_date'] || '').trim();
+    const to = String(this.filters['to_date'] || '').trim();
+    const range = from && to ? `_${from}_${to}` : '';
+    return `${this.sanitizeFilename(this.selectedReport.title)}${range}.xlsx`;
+  }
+
+  private sanitizeFilename(value: string): string {
+    return String(value || 'Reporte')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\\/:*?"<>|]+/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private downloadBlob(blob: Blob, filename: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    window.URL.revokeObjectURL(url);
   }
 }

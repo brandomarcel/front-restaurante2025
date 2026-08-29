@@ -5,13 +5,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UtilsService } from '../../../core/services/utils.service';
 import { UserService } from '../../../services/user.service';
-import { ButtonComponent } from "src/app/shared/components/button/button.component";
 import { NgSelectComponent } from "@ng-select/ng-select";
 import { NgxSpinnerService } from 'ngx-spinner';
 import { finalize } from 'rxjs';
+import { RouterModule } from '@angular/router';
 @Component({
   selector: 'app-report-cierre-caja',
-  imports: [CommonModule, FormsModule, ButtonComponent, NgSelectComponent],
+  imports: [CommonModule, FormsModule, RouterModule, NgSelectComponent],
   templateUrl: './report-cierre-caja.component.html',
   styleUrl: './report-cierre-caja.component.css'
 })
@@ -57,6 +57,34 @@ export class ReportCierreCajaComponent implements OnInit {
 
     this.cargarUsuarios();
     this.buscar(); // Carga inicial
+  }
+
+  get totalSistema(): number {
+    return this.roundMoney(this.cierres.reduce((sum, cierre) => sum + this.toNumber(cierre?.efectivo_sistema), 0));
+  }
+
+  get totalReal(): number {
+    return this.roundMoney(this.cierres.reduce((sum, cierre) => sum + this.toNumber(cierre?.efectivo_real), 0));
+  }
+
+  get totalRetiros(): number {
+    return this.roundMoney(this.cierres.reduce((sum, cierre) => sum + this.toNumber(cierre?.total_retiros), 0));
+  }
+
+  get diferenciaTotal(): number {
+    return this.roundMoney(this.cierres.reduce((sum, cierre) => sum + this.toNumber(cierre?.diferencia), 0));
+  }
+
+  get cerradosCount(): number {
+    return this.cierres.filter((cierre) => String(cierre?.estado || '').toUpperCase() === 'CERRADO').length;
+  }
+
+  get canExport(): boolean {
+    return !this.loadingExport && !this.loadingCierres && this.cierres.length > 0;
+  }
+
+  get selectedUserLabel(): string {
+    return this.filters.usuario || 'Todos los usuarios';
   }
 
   private getCurrentUser(): { email?: string } | null {
@@ -136,7 +164,7 @@ export class ReportCierreCajaComponent implements OnInit {
 
   /** 📦 Exportar los cierres con detalle a Excel */
   exportarExcel(): void {
-    if (!this.cierres.length || this.loadingExport) return;
+    if (!this.canExport) return;
 
     this.loadingExport = true;
     this.beginLoading();
@@ -182,6 +210,39 @@ export class ReportCierreCajaComponent implements OnInit {
         this.endLoading();
       }
     }, 0);
+  }
+
+  toggleCierre(cierre: any): void {
+    const name = cierre?.name || cierre?.apertura || cierre?.fecha_hora;
+    this.cierreSeleccionado = this.cierreSeleccionado === name ? null : name;
+  }
+
+  isSelected(cierre: any): boolean {
+    const name = cierre?.name || cierre?.apertura || cierre?.fecha_hora;
+    return this.cierreSeleccionado === name;
+  }
+
+  getEstadoBadge(estado: string): string {
+    return String(estado || '').toUpperCase() === 'CERRADO' ? 'badge-green' : 'badge-yellow';
+  }
+
+  getDiferenciaClass(value: any): string {
+    const diferencia = this.toNumber(value);
+    if (diferencia < 0) return 'text-red-600';
+    if (diferencia > 0) return 'text-amber-600';
+    return 'text-emerald-600';
+  }
+
+  trackByCierre = (_: number, cierre: any) => cierre?.name || cierre?.apertura || cierre?.fecha_hora;
+  trackByPago = (_: number, pago: any) => `${pago?.metodo_pago || 'pago'}-${pago?.monto || 0}`;
+
+  private toNumber(value: any): number {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : 0;
+  }
+
+  private roundMoney(value: number): number {
+    return Math.round((value + Number.EPSILON) * 100) / 100;
   }
 
 }

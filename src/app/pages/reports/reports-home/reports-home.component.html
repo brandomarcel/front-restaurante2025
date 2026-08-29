@@ -1,12 +1,4 @@
 <div class="app-container density-compact space-y-3 pb-6">
-  <section class="rounded-xl border border-border bg-white p-4 shadow-sm">
-    <p class="text-[10px] font-bold uppercase tracking-wide text-primary">Reportes</p>
-    <h1 class="text-xl font-black text-slate-900">Centro de reportes</h1>
-    <p class="mt-1 max-w-2xl text-xs text-muted-foreground">
-      Elige el reporte que necesitas. Cada opción abre una pantalla dedicada para aprovechar todo el espacio con filtros y tabla.
-    </p>
-  </section>
-
   <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
     <a
       *ngFor="let report of visibleReports; trackBy: trackByReport"
