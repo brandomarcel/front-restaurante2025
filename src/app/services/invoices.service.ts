@@ -2,7 +2,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
-import { catchError, EMPTY, Observable } from 'rxjs';
+import { catchError, Observable, throwError } from 'rxjs';
 import { FrappeErrorService } from '../core/services/frappe-error.service';
 import { toast } from 'ngx-sonner';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
@@ -24,7 +24,7 @@ export class InvoicesService {
       catchError((e) => {
         const msg = this.err.handle(e) || 'Error al crear la factura.';
         toast.error(msg);
-        return EMPTY;
+        return throwError(() => e);
       })
     );
   }
@@ -40,7 +40,7 @@ export class InvoicesService {
       catchError((e) => {
         const msg = this.err.handle(e) || 'Error al crear la factura.';
         toast.error(msg);
-        return EMPTY;
+        return throwError(() => e);
       })
     );
   }

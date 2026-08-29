@@ -333,7 +333,7 @@
             </ng-template>
           </section>
 
-          <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <section *ngIf="canUseAdditionalFields" class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
             <div class="mb-2 flex items-center justify-between gap-3">
               <div>
                 <h3 class="text-xs font-semibold text-primary">Información adicional</h3>
@@ -430,10 +430,13 @@
           <button
             type="submit"
             class="flex min-h-[42px] w-full items-center justify-between rounded-lg bg-primary px-3 text-xs font-bold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-            [disabled]="invoiceForm.invalid || cartItems.length === 0">
+            [disabled]="invoiceForm.invalid || cartItems.length === 0 || !canEmitInvoice">
             <span>Generar factura</span>
             <span>${{ total | number:'1.2-2' }}</span>
           </button>
+          <p *ngIf="invoicePlanBlockMessage" class="mt-2 rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-2 text-[11px] font-semibold text-orange-700">
+            {{ invoicePlanBlockMessage }}
+          </p>
         </aside>
       </div>
     </div>
@@ -449,7 +452,7 @@
     <button
       type="button"
       class="min-h-[36px] rounded-lg bg-primary px-3 text-xs font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
-      [disabled]="invoiceForm.invalid || cartItems.length === 0"
+      [disabled]="invoiceForm.invalid || cartItems.length === 0 || !canEmitInvoice"
       (click)="finalizeInvoice()">
       Generar
     </button>

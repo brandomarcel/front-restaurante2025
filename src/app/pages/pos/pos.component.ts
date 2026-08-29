@@ -21,6 +21,7 @@ import { ButtonComponent } from "src/app/shared/components/button/button.compone
 import { AuthService } from 'src/app/services/auth.service';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
 import { canSellProduct, canUseInventoryQuantity, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 type RoleName = 'Cajero' | 'Mesero' | 'Gerente' | 'Desconocido';
 
@@ -91,7 +92,8 @@ export class PosComponent implements OnInit {
     private printService: PrintService,
     private utilsService: UtilsService,
     private alertService: AlertService,
-    private auth: AuthService
+    private auth: AuthService,
+    private capabilities: CompanyCapabilitiesService
   ) {
 
   }
@@ -385,6 +387,14 @@ export class PosComponent implements OnInit {
     this.recalcItem(item);
   }
 
+  get canEmitInvoice(): boolean {
+    return this.capabilities.validateFeatureUse('direct_invoice').allowed;
+  }
+
+  get invoicePlanBlockMessage(): string | null {
+    return this.capabilities.getPlanBlockMessage('direct_invoice');
+  }
+
   decrease(item: any) {
     if (item.quantity > 1) {
       item.quantity--;
@@ -442,6 +452,14 @@ export class PosComponent implements OnInit {
     if (!this.permissions.canCharge) {
       toast.warning('Este rol no puede cobrar.');
       return;
+    }
+
+    if (typePago === 'Factura') {
+      const planBlockMessage = this.capabilities.getPlanBlockMessage('direct_invoice');
+      if (planBlockMessage) {
+        toast.error(planBlockMessage);
+        return;
+      }
     }
 
     const payment = this.payments.find((p: any) => p.codigo === this.paymentMethod);
@@ -502,7 +520,7 @@ export class PosComponent implements OnInit {
     order.status = 'Ingresada';
     console.log('NOTA DE VENTA para guardar', order);
     this.spinner.show();
-    this.ordersService.create_order_v2(order).subscribe({
+    this.ordersService.create_order_v2(order).pipe(finalize(() => this.spinner.hide())).subscribe({
       next: (res) => {
         const orderId = res.message?.name;
         this.pendingOrderId = orderId;
@@ -510,10 +528,7 @@ export class PosComponent implements OnInit {
         toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
         this.openPrintModal(orderId);
       },
-      error: () => {
-        toast.error('Error al guardar el pedido.');
-      },
-      complete: () => this.spinner.hide()
+      error: () => { }
     });
   }
 
@@ -559,7 +574,7 @@ export class PosComponent implements OnInit {
     console.log('paso todo esto');
 
     this.spinner.show();
-    this.ordersService.create_order_v2(order).subscribe({
+    this.ordersService.create_order_v2(order).pipe(finalize(() => this.spinner.hide())).subscribe({
       next: (res: any) => {
         const orderId = res.message?.name;
         this.pendingOrderId = orderId;
@@ -569,10 +584,7 @@ export class PosComponent implements OnInit {
         //this.printComanda(orderId);
         this.clearPage();
       },
-      error: () => {
-        toast.error('Error al enviar la comanda.');
-      },
-      complete: () => this.spinner.hide()
+      error: () => { }
     });
   }
 

@@ -113,7 +113,7 @@ export class OrdersService {
       catchError((error) => {
         const msg = this.frappeErr.handle(error) || 'Error al crear la orden.';
         toast.error(msg);
-        return EMPTY;
+        return throwError(() => error);
       })
     );
   }

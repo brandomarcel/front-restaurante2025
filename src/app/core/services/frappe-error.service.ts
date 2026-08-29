@@ -8,6 +8,9 @@ export class FrappeErrorService {
 
     if (!error) return 'Error inesperado';
 
+    const planMessage = this.extractPlanErrorMessage(error);
+    if (planMessage) return planMessage;
+
     // 🔹 1. Frappe _server_messages (prioridad máxima)
     const serverMessage = this.extractServerMessage(error?.error?._server_messages);
     if (serverMessage) return serverMessage;
@@ -28,6 +31,76 @@ export class FrappeErrorService {
     }
 
     return 'Error inesperado';
+  }
+
+  // =============================================
+  // 🔥 Errores del sistema de planes
+  // =============================================
+  private extractPlanErrorMessage(error: any): string | null {
+    const candidates = [
+      error?.plan_error,
+      error?.error?.plan_error,
+      error?.error?.message?.plan_error,
+      error?.message?.plan_error
+    ];
+
+    for (const candidate of candidates) {
+      const message = this.readPlanError(candidate);
+      if (message) return message;
+    }
+
+    const raw = JSON.stringify(error || {});
+    const planCodes = [
+      'PLAN_REQUIRED',
+      'PLAN_INACTIVE',
+      'PLAN_MODE_NOT_ALLOWED',
+      'PLAN_FEATURE_NOT_ALLOWED',
+      'PLAN_VOUCHERS_EXHAUSTED'
+    ];
+
+    const found = planCodes.find((code) => raw.includes(code));
+    if (!found) return null;
+
+    const fallback: Record<string, string> = {
+      PLAN_REQUIRED: 'La empresa no tiene un plan asignado.',
+      PLAN_INACTIVE: 'El plan de la empresa no está activo.',
+      PLAN_MODE_NOT_ALLOWED: 'El plan actual no permite este modo de operación.',
+      PLAN_FEATURE_NOT_ALLOWED: 'El plan actual no permite usar esta función.',
+      PLAN_VOUCHERS_EXHAUSTED: 'No quedan comprobantes disponibles en el plan actual.'
+    };
+
+    return fallback[found];
+  }
+
+  private readPlanError(value: any): string | null {
+    try {
+      if (!value) return null;
+
+      if (typeof value === 'string') {
+        const decoded = decodeURIComponent(value);
+        try {
+          return this.readPlanError(JSON.parse(decoded));
+        } catch {
+          return this.cleanHtml(decoded);
+        }
+      }
+
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          const message = this.readPlanError(item);
+          if (message) return message;
+        }
+        return null;
+      }
+
+      if (typeof value === 'object') {
+        if (value.plan_error) return this.readPlanError(value.plan_error);
+        if (value.message && typeof value.message === 'string') return this.cleanHtml(value.message);
+        if (value.message) return this.readPlanError(value.message);
+      }
+    } catch { }
+
+    return null;
   }
 
   // =============================================

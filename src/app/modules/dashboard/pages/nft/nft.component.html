@@ -29,9 +29,10 @@
       <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-4 xl:min-w-[520px]">
         <a
           *ngFor="let action of primaryActions"
-          [routerLink]="action.route"
+          [routerLink]="isActionBlocked(action) ? null : action.route"
+          (click)="onPrimaryActionClick($event, action)"
           class="rounded-lg px-2.5 py-2 shadow-sm transition hover:scale-[1.01] hover:shadow"
-          [ngClass]="action.tone">
+          [ngClass]="[action.tone, isActionBlocked(action) ? 'cursor-not-allowed opacity-60 grayscale' : '']">
           <p class="text-[11px] font-bold leading-tight">{{ action.label }}</p>
           <p class="mt-0.5 text-[10px] opacity-80">{{ action.detail }}</p>
         </a>
@@ -40,6 +41,47 @@
   </section>
 
   <app-avisos [avisos]="avisos" (eliminar)="eliminarAviso($event)" class="mb-3 block"></app-avisos>
+
+  <section class="mb-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div class="min-w-0">
+        <div class="mb-1 flex items-center gap-2">
+          <h2 class="text-sm font-bold text-slate-900">Plan actual</h2>
+          <span
+            class="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+            [ngClass]="planStatusClasses">
+            {{ hasCurrentPlan ? planStatus : 'Sin plan' }}
+          </span>
+        </div>
+        <p class="truncate text-base font-black text-slate-950">{{ planName }}</p>
+        <p class="text-[11px] text-slate-500">
+          <ng-container *ngIf="hasCurrentPlan; else noDashboardPlanText">
+            Vigencia: {{ planVigenciaLabel }}
+          </ng-container>
+          <ng-template #noDashboardPlanText>Sin plan asignado</ng-template>
+        </p>
+        <p *ngIf="planIsInactive" class="mt-1 text-[11px] font-semibold text-orange-700">El plan no está activo.</p>
+        <p *ngIf="planExpiringSoon && !planIsInactive" class="mt-1 text-[11px] font-semibold text-amber-700">
+          El plan vence en {{ planDaysToExpire }} día(s).
+        </p>
+      </div>
+
+      <div *ngIf="hasCurrentPlan" class="grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-3 lg:min-w-[520px]">
+        <div class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+          <p class="font-bold uppercase tracking-wide text-slate-500">Comprobantes</p>
+          <p class="mt-0.5 font-black text-slate-900">{{ planVoucherUsageLabel }}</p>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+          <p class="font-bold uppercase tracking-wide text-slate-500">Restantes</p>
+          <p class="mt-0.5 font-black text-slate-900">{{ planRemainingLabel }}</p>
+        </div>
+        <div *ngIf="shouldShowPlanAutoRenew" class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+          <p class="font-bold uppercase tracking-wide text-slate-500">Auto renovación</p>
+          <p class="mt-0.5 font-black text-slate-900">{{ planAutoRenewLabel }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <section class="mb-3 grid grid-cols-2 gap-2 xl:grid-cols-4">
     <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
@@ -240,15 +282,15 @@
         <h2 class="text-sm font-bold text-slate-900">Centro de emisión</h2>
         <p class="mb-2 text-[10px] text-slate-500">Accesos pensados para una empresa facturadora.</p>
         <div class="grid gap-2">
-          <a routerLink="/dashboard/invoicing" class="rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-primary transition hover:bg-primary/10">
+          <a *ngIf="isFeatureEnabled('direct_invoice')" routerLink="/dashboard/invoicing" class="rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-primary transition hover:bg-primary/10">
             <p class="text-xs font-black">Emitir factura directa</p>
             <p class="text-[10px]">Selecciona cliente, productos y envía al SRI.</p>
           </a>
-          <a routerLink="/dashboard/invoices" class="rounded-lg border border-violet-200 bg-violet-50 p-2.5 text-violet-700 transition hover:bg-violet-100">
+          <a *ngIf="isFeatureEnabled('direct_invoice')" routerLink="/dashboard/invoices" class="rounded-lg border border-violet-200 bg-violet-50 p-2.5 text-violet-700 transition hover:bg-violet-100">
             <p class="text-xs font-black">Facturas emitidas</p>
             <p class="text-[10px]">Revisa, descarga o reenvía comprobantes.</p>
           </a>
-          <a routerLink="/dashboard/credit-notes" class="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-amber-700 transition hover:bg-amber-100">
+          <a *ngIf="isFeatureEnabled('credit_note')" routerLink="/dashboard/credit-notes" class="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-amber-700 transition hover:bg-amber-100">
             <p class="text-xs font-black">Notas de crédito</p>
             <p class="text-[10px]">Gestiona anulaciones o ajustes.</p>
           </a>

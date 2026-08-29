@@ -277,7 +277,7 @@ export class PosMeseroComponent implements OnInit {
         this.refreshProductsSilently();
         this.resetOrderForm();
       },
-      error: () => toast.error('Error al enviar la comanda.')
+      error: () => { }
     });
   }
 

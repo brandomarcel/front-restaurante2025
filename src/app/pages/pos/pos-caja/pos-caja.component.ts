@@ -28,6 +28,7 @@ import { ProductsService } from 'src/app/services/products.service';
 import { environment } from 'src/environments/environment';
 import { CartService } from '../services/cart.service';
 import { canSellProduct, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 @Component({
   selector: 'app-pos-caja',
@@ -91,7 +92,8 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     private spinner: NgxSpinnerService,
     private printService: PrintService,
     public cartService: CartService,
-    public alertService: AlertService
+    public alertService: AlertService,
+    private capabilities: CompanyCapabilitiesService
   ) { }
 
   ngOnInit(): void {
@@ -126,6 +128,14 @@ export class PosCajaComponent implements OnInit, OnDestroy {
 
   get canCheckout(): boolean {
     return !!this.customer && this.cartService.cart.length > 0 && !this.isSubmittingOrder;
+  }
+
+  get canEmitInvoice(): boolean {
+    return this.capabilities.validateFeatureUse('direct_invoice').allowed;
+  }
+
+  get invoicePlanBlockMessage(): string | null {
+    return this.capabilities.getPlanBlockMessage('direct_invoice');
   }
 
   get visibleProductList(): any[] {
@@ -463,6 +473,14 @@ export class PosCajaComponent implements OnInit, OnDestroy {
 
   confirmarPago(typePago: 'Nota Venta' | 'Factura'): void {
     if (this.isSubmittingOrder) return;
+
+    if (typePago === 'Factura') {
+      const planBlockMessage = this.invoicePlanBlockMessage;
+      if (planBlockMessage) {
+        toast.error(planBlockMessage);
+        return;
+      }
+    }
 
     if (this.paymentMethod === '01' && this.change < 0) {
       toast.error('El monto recibido es menor al total.');

@@ -11,7 +11,7 @@ import { isNullOrEmpty } from 'src/app/shared/utils/validation';
 import { AvisosComponent } from "src/app/shared/components/avisos/avisos.component";
 import { diasRestantes } from 'src/app/shared/utils/date.utils';
 import { NgApexchartsModule } from 'ng-apexcharts';
-import { BusinessMode, CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { BusinessMode, CompanyCapabilitiesService, CompanyFeatureKey, CompanyPlan } from 'src/app/core/services/company-capabilities.service';
 
 // Interfaz para los avisos
 interface Aviso {
@@ -32,6 +32,15 @@ interface CompanyData {
   cert_not_before?: string;
 }
 
+type DashboardAction = {
+  label: string;
+  detail: string;
+  route: string;
+  tone: string;
+  feature?: CompanyFeatureKey;
+  requiresEmission?: boolean;
+};
+
 @Component({
   selector: 'app-nft',
   templateUrl: './nft.component.html',
@@ -51,6 +60,7 @@ export class NftComponent implements OnInit, OnDestroy {
   today = new Date();
   certDaysLeft: number | null = null;
   businessMode: BusinessMode = 'RESTAURANTE';
+  currentPlan: CompanyPlan | null = null;
 
   // Nuevas propiedades
   userData?: UserData | null;
@@ -73,6 +83,7 @@ export class NftComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.businessMode = this.capabilities.businessMode;
+    this.currentPlan = this.capabilities.plan;
     this.actualizarVisualizaciones();
     this.loadData();
   }
@@ -95,6 +106,7 @@ export class NftComponent implements OnInit, OnDestroy {
         next: async (results: any) => {
           this.capabilities.setFromResponse(results.empresa);
           this.businessMode = this.capabilities.businessMode;
+          this.currentPlan = this.capabilities.plan;
           this.procesarDashboard(results.dashboard);
           this.procesarEmpresa(results.empresa);
           if (this.isRestaurantMode && !this.idApertura) {
@@ -310,22 +322,114 @@ export class NftComponent implements OnInit, OnDestroy {
       : 'from-slate-950 via-primary to-sky-700';
   }
 
-  get primaryActions(): Array<{ label: string; detail: string; route: string; tone: string }> {
+  get primaryActions(): DashboardAction[] {
     if (this.isFacturadorMode) {
-      return [
-        { label: 'Emitir factura', detail: 'Factura directa al SRI', route: '/dashboard/invoicing', tone: 'bg-primary text-white' },
-        { label: 'Ver facturas', detail: 'Historial y reenvíos', route: '/dashboard/invoices', tone: 'bg-violet-600 text-white' },
-        { label: 'Clientes', detail: 'Datos fiscales', route: '/dashboard/customers', tone: 'bg-slate-900 text-white' },
-        { label: 'Productos', detail: 'Catálogo facturable', route: '/dashboard/products', tone: 'bg-emerald-600 text-white' }
-      ];
+      return this.filterAllowedActions([
+        { label: 'Emitir factura', detail: 'Factura directa al SRI', route: '/dashboard/invoicing', tone: 'bg-primary text-white', feature: 'direct_invoice', requiresEmission: true },
+        { label: 'Ver facturas', detail: 'Historial y reenvíos', route: '/dashboard/invoices', tone: 'bg-violet-600 text-white', feature: 'direct_invoice' },
+        { label: 'Clientes', detail: 'Datos fiscales', route: '/dashboard/customers', tone: 'bg-slate-900 text-white', feature: 'customers' },
+        { label: 'Productos', detail: 'Catálogo facturable', route: '/dashboard/products', tone: 'bg-emerald-600 text-white', feature: 'products' },
+        { label: 'Notas crédito', detail: 'Anulaciones y ajustes', route: '/dashboard/credit-notes', tone: 'bg-amber-600 text-white', feature: 'credit_note' }
+      ]).slice(0, 4);
     }
 
-    return [
-      { label: 'Abrir POS', detail: 'Venta y orden rápida', route: '/dashboard/pos', tone: 'bg-primary text-white' },
-      { label: 'Órdenes', detail: 'Seguimiento del día', route: '/dashboard/orders', tone: 'bg-slate-900 text-white' },
-      { label: 'Tiempo real', detail: 'Cocina y atención', route: '/dashboard/orders-realtime', tone: 'bg-sky-600 text-white' },
-      { label: this.cajaAbierta ? 'Cerrar caja' : 'Abrir caja', detail: 'Control del turno', route: this.cajaAbierta ? '/caja/cierre' : '/caja/apertura', tone: 'bg-emerald-600 text-white' }
-    ];
+    return this.filterAllowedActions([
+      { label: 'Abrir POS', detail: 'Venta y orden rápida', route: '/dashboard/pos', tone: 'bg-primary text-white', feature: 'tables' },
+      { label: 'Órdenes', detail: 'Seguimiento del día', route: '/dashboard/orders', tone: 'bg-slate-900 text-white', feature: 'orders' },
+      { label: 'Tiempo real', detail: 'Cocina y atención', route: '/dashboard/orders-realtime', tone: 'bg-sky-600 text-white', feature: 'kitchen' },
+      { label: this.cajaAbierta ? 'Cerrar caja' : 'Abrir caja', detail: 'Control del turno', route: this.cajaAbierta ? '/caja/cierre' : '/caja/apertura', tone: 'bg-emerald-600 text-white', feature: 'cash_register' }
+    ]);
+  }
+
+  private filterAllowedActions(actions: DashboardAction[]): DashboardAction[] {
+    return actions.filter((action) => !action.feature || this.capabilities.isEnabled(action.feature));
+  }
+
+  isFeatureEnabled(feature: CompanyFeatureKey): boolean {
+    return this.capabilities.isEnabled(feature);
+  }
+
+  isActionBlocked(action: DashboardAction): boolean {
+    return !!action.requiresEmission && !!this.capabilities.getPlanBlockMessage('direct_invoice');
+  }
+
+  onPrimaryActionClick(event: Event, action: DashboardAction): void {
+    const blockMessage = action.requiresEmission ? this.capabilities.getPlanBlockMessage('direct_invoice') : null;
+    if (!blockMessage) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.agregarAviso('Plan actual', blockMessage, 'warning');
+  }
+
+  get hasCurrentPlan(): boolean {
+    return !!this.currentPlan;
+  }
+
+  get planName(): string {
+    return this.currentPlan?.plan_name || this.currentPlan?.plan || 'Sin plan asignado';
+  }
+
+  get planStatus(): string {
+    return `${this.currentPlan?.status || 'SIN PLAN'}`.toUpperCase();
+  }
+
+  get planStatusClasses(): string {
+    return this.getPlanStatusClasses(this.planStatus);
+  }
+
+  get planIsInactive(): boolean {
+    return !!this.currentPlan && this.currentPlan.active === false;
+  }
+
+  get planUnlimitedVouchers(): boolean {
+    return !!this.currentPlan?.unlimited_authorized_vouchers || Number(this.currentPlan?.remaining_authorized_vouchers) === -1;
+  }
+
+  get planUsedVouchers(): number {
+    return Number(this.currentPlan?.used_authorized_vouchers) || 0;
+  }
+
+  get planPurchasedVouchers(): number {
+    return Number(this.currentPlan?.purchased_authorized_vouchers) || 0;
+  }
+
+  get planRemainingLabel(): string {
+    if (!this.currentPlan) return '—';
+    if (this.planUnlimitedVouchers) return 'Ilimitado';
+    return `${Number(this.currentPlan.remaining_authorized_vouchers) || 0}`;
+  }
+
+  get planVoucherUsageLabel(): string {
+    if (!this.currentPlan) return '—';
+    if (this.planUnlimitedVouchers) return `${this.planUsedVouchers} usados / Ilimitado`;
+    return `${this.planUsedVouchers} usados / ${this.planPurchasedVouchers} incluidos`;
+  }
+
+  get planVigenciaLabel(): string {
+    if (!this.currentPlan) return '—';
+    return `${this.formatPlanDate(this.currentPlan.start_date)} hasta ${this.formatPlanDate(this.currentPlan.end_date)}`;
+  }
+
+  get planDaysToExpire(): number | null {
+    if (!this.currentPlan?.end_date) return null;
+    const end = this.parsePlanDate(this.currentPlan.end_date);
+    if (!end) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return Math.ceil((end.getTime() - today.getTime()) / 86400000);
+  }
+
+  get planExpiringSoon(): boolean {
+    return this.planDaysToExpire !== null && this.planDaysToExpire >= 0 && this.planDaysToExpire <= 7;
+  }
+
+  get shouldShowPlanAutoRenew(): boolean {
+    return this.currentPlan?.auto_renew !== undefined && this.currentPlan?.auto_renew !== null && `${this.currentPlan?.auto_renew}` !== '';
+  }
+
+  get planAutoRenewLabel(): string {
+    const value = this.currentPlan?.auto_renew;
+    return value === true || value === 1 || `${value ?? ''}` === '1' ? 'Sí' : 'No';
   }
 
   get ticketPromedio(): number {
@@ -669,6 +773,37 @@ export class NftComponent implements OnInit, OnDestroy {
     this.construirChartTopProductos();
     this.construirChartFlujoCaja();
     this.construirChartResumenMonetario();
+  }
+
+  formatPlanDate(value?: string | null): string {
+    const raw = `${value || ''}`.trim();
+    if (!raw) return '—';
+    const parts = raw.split('-');
+    if (parts.length !== 3) return raw;
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+
+  private getPlanStatusClasses(status: string): string {
+    const normalized = `${status || ''}`
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .trim();
+
+    if (normalized === 'ACTIVO') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    if (normalized === 'PRUEBA') return 'bg-sky-100 text-sky-700 border-sky-200';
+    if (normalized === 'VENCIDO') return 'bg-red-100 text-red-700 border-red-200';
+    if (normalized === 'SUSPENDIDO') return 'bg-orange-100 text-orange-700 border-orange-200';
+    if (normalized === 'CANCELADO' || normalized === 'RENOVADO') return 'bg-slate-100 text-slate-600 border-slate-200';
+    return 'bg-slate-100 text-slate-700 border-slate-200';
+  }
+
+  private parsePlanDate(value?: string | null): Date | null {
+    const raw = `${value || ''}`.trim();
+    const parts = raw.split('-').map((part) => Number(part));
+    if (parts.length !== 3 || parts.some((part) => !Number.isFinite(part))) return null;
+    const [year, month, day] = parts;
+    return new Date(year, month - 1, day);
   }
 
   private formatChartDecimal(value: number): string {

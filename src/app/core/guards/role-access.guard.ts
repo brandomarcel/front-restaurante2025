@@ -38,8 +38,9 @@ export class RoleAccessGuard implements CanActivate {
     const currentRoles = this.readCurrentRoles();
     const featureKey = route.data?.['featureKey'] as CompanyFeatureKey | undefined;
 
-    if (featureKey && !this.capabilities.isEnabled(featureKey)) {
-      toast.error('Este módulo no está disponible para la empresa.');
+    const featureAccess = this.capabilities.validateFeatureUse(featureKey);
+    if (!featureAccess.allowed) {
+      toast.error(featureAccess.message || 'Este módulo no está disponible para la empresa.');
       return this.redirectToAvailable(state.url, currentRoles, 'feature');
     }
 

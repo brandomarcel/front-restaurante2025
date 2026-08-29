@@ -482,10 +482,14 @@
                         Nota de Venta
                     </app-button>
                     <app-button type="button" (click)="confirmarPago('Factura')" full impact="bold" tone="primary"
-                        shape="rounded" size="large">
+                        shape="rounded" size="large" [disabled]="!canEmitInvoice">
                         Facturar
                     </app-button>
                 </div>
+                <p *ngIf="invoicePlanBlockMessage"
+                    class="mx-4 mb-3 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-[11px] font-semibold text-orange-700 md:mx-0">
+                    {{ invoicePlanBlockMessage }}
+                </p>
             </div>
         </footer>
     </div>

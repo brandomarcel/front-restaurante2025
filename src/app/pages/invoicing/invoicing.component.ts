@@ -21,6 +21,7 @@ import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
 import { ActivatedRoute, Router } from '@angular/router';
 import { canSellProduct, canUseInventoryQuantity, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { AdditionalFieldPayload, normalizeAdditionalFields } from 'src/app/core/models/additional-field';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 type Payment = { name: string; codigo: string; nombre: string; };
 type CartItem = {
@@ -83,7 +84,8 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     private invoicesService: InvoicesService,
     private utilsService: UtilsService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private capabilities: CompanyCapabilitiesService
 
   ) { }
 
@@ -633,6 +635,12 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
   // ------------------ Factura ------------------
   finalizeInvoice(): void {
+    const planBlockMessage = this.capabilities.getPlanBlockMessage('direct_invoice');
+    if (planBlockMessage) {
+      toast.error(planBlockMessage);
+      return;
+    }
+
     console.log('selectedCustomer', this.selectedCustomer);
     if (this.invoiceForm.invalid) {
       this.invoiceForm.markAllAsTouched();
@@ -679,7 +687,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       payment: payment ? { code: payment.codigo, name: payment.name, amount: total } : null,
       auto_queue: true, // 👈 firma+envío por el microservicio
       order_name: this.order?.name,
-      additional_fields: normalizeAdditionalFields(this.additionalFields.getRawValue())
+      additional_fields: this.canUseAdditionalFields ? normalizeAdditionalFields(this.additionalFields.getRawValue()) : []
     };
 
     console.log('payload', payload);
@@ -707,10 +715,22 @@ export class InvoicingComponent implements OnInit, OnDestroy {
                 });
 
             },error: (err: any) => {
-          console.error('Error al obtener datos:', err);
-        }
+              console.error('Error al emitir factura:', err);
+            }
           });
       });
+  }
+
+  get canEmitInvoice(): boolean {
+    return this.capabilities.validateFeatureUse('direct_invoice').allowed;
+  }
+
+  get invoicePlanBlockMessage(): string | null {
+    return this.capabilities.getPlanBlockMessage('direct_invoice');
+  }
+
+  get canUseAdditionalFields(): boolean {
+    return this.capabilities.isEnabled('additional_fields');
   }
 
   private printInvoice(invoiceId: string): void {

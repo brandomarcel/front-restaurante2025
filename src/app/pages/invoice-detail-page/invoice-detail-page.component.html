@@ -115,7 +115,7 @@
           </div>
         </div>
 
-        <div *ngIf="additionalFields.length" class="mt-2 flex flex-wrap gap-1.5">
+        <div *ngIf="canSeeAdditionalFields && additionalFields.length" class="mt-2 flex flex-wrap gap-1.5">
           <div *ngFor="let field of additionalFields"
             class="max-w-full rounded-full border border-primary/15 bg-primary/5 px-2 py-1 text-[11px] text-slate-700">
             <span class="font-bold uppercase text-primary">{{ field.field_name }}:</span>

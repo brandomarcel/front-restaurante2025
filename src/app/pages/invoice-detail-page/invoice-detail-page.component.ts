@@ -14,6 +14,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { CreditNoteService } from 'src/app/services/credit-note.service';
 import { NgxSpinnerComponent, NgxSpinnerService } from 'ngx-spinner';
 import { AdditionalFieldPayload, normalizeAdditionalFields } from 'src/app/core/models/additional-field';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 @Component({
   selector: 'app-invoice-detail-page',
@@ -40,6 +41,7 @@ export class InvoiceDetailPageComponent implements OnInit {
     private fb: FormBuilder,
     private creditNoteSvc: CreditNoteService,
     private spinner: NgxSpinnerService,
+    private capabilities: CompanyCapabilitiesService,
   ) {
     this.motivoForm = this.fb.group({
       motivo: ['', Validators.required],
@@ -107,6 +109,12 @@ this.spinner.hide();
   }
 
   reenviarFactura() {
+    const planBlockMessage = this.capabilities.getPlanBlockMessage('direct_invoice');
+    if (planBlockMessage) {
+      toast.error(planBlockMessage);
+      return;
+    }
+
     this.spinner.show();
     this.invoicesSvc.emit_existing_invoice_v2(this.invoice.name).subscribe({
       next: (res: any) => {
@@ -169,6 +177,12 @@ this.spinner.hide();
 
 
   async anularFactura(motivo: string) {
+    const planBlockMessage = this.capabilities.getPlanBlockMessage('credit_note');
+    if (planBlockMessage) {
+      toast.error(planBlockMessage);
+      return;
+    }
+
     this.spinner.show();
 
     try {
@@ -210,11 +224,15 @@ this.spinner.hide();
   }
 
   get canAnnul(): boolean {
-    return this.invoiceStatusRaw === 'AUTORIZADO';
+    return this.invoiceStatusRaw === 'AUTORIZADO' && this.capabilities.validateFeatureUse('credit_note').allowed;
   }
 
   get canResend(): boolean {
-    return !!this.invoice && this.invoiceStatusRaw !== 'AUTORIZADO';
+    return !!this.invoice && this.invoiceStatusRaw !== 'AUTORIZADO' && this.capabilities.validateFeatureUse('direct_invoice').allowed;
+  }
+
+  get canSeeAdditionalFields(): boolean {
+    return this.capabilities.isEnabled('additional_fields');
   }
 
   itemSubtotal(item: any): number {

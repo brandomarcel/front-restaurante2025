@@ -2,13 +2,13 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgxSpinnerService } from 'ngx-spinner';
-import { catchError, finalize, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
+import { catchError, finalize, forkJoin, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { OnlyNumbersDirective } from 'src/app/core/directives/only-numbers.directive';
 import { CompanyService } from 'src/app/services/company.service';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 import { AlertService } from '../../core/services/alert.service';
 import { UtilsService } from '../../core/services/utils.service';
-import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { CompanyCapabilitiesService, CompanyPlan } from 'src/app/core/services/company-capabilities.service';
 import { MenuService } from 'src/app/modules/layout/services/menu.service';
 
 @Component({
@@ -23,6 +23,7 @@ export class CompanyComponent implements OnInit {
   submitted = false;
   isLoadingCompany = false;
   isSaving = false;
+  currentPlan: CompanyPlan | null = null;
 
   ambiente: 'PRUEBAS' | 'PRODUCCION' = 'PRUEBAS';
 
@@ -94,11 +95,19 @@ export class CompanyComponent implements OnInit {
 
   loadCompanyInfo(): void {
     this.isLoadingCompany = true;
-    this.service.getAll().pipe(finalize(() => {
+    forkJoin({
+      companyList: this.service.getAll(),
+      empresa: this.service.get_empresa().pipe(catchError(() => of(null)))
+    }).pipe(finalize(() => {
       this.isLoadingCompany = false;
     })).subscribe({
       next: (resp: any) => {
-        const company = resp?.data?.[0] ?? resp?.message?.data?.[0];
+        if (resp?.empresa) {
+          this.capabilities.setFromResponse(resp.empresa);
+          this.currentPlan = this.capabilities.plan;
+        }
+
+        const company = resp?.companyList?.data?.[0] ?? resp?.companyList?.message?.data?.[0];
         if (!company) return;
 
         this.companyId = company.name;
@@ -129,6 +138,59 @@ export class CompanyComponent implements OnInit {
         this.alertService.error('No se pudo cargar la información de la empresa');
       }
     });
+  }
+
+  get planName(): string {
+    return this.currentPlan?.plan_name || this.currentPlan?.plan || 'Sin plan activo';
+  }
+
+  get planStatus(): string {
+    return `${this.currentPlan?.status || 'SIN PLAN'}`.toUpperCase();
+  }
+
+  get hasCurrentPlan(): boolean {
+    return !!this.currentPlan;
+  }
+
+  get planIsInactive(): boolean {
+    return !!this.currentPlan && this.currentPlan.active === false;
+  }
+
+  get planStatusClasses(): string {
+    return this.getPlanStatusClasses(this.planStatus);
+  }
+
+  get planUnlimitedVouchers(): boolean {
+    return !!this.currentPlan?.unlimited_authorized_vouchers || Number(this.currentPlan?.remaining_authorized_vouchers) === -1;
+  }
+
+  get planUsedVouchers(): number {
+    return Number(this.currentPlan?.used_authorized_vouchers) || 0;
+  }
+
+  get planPurchasedVouchers(): number {
+    return Number(this.currentPlan?.purchased_authorized_vouchers) || 0;
+  }
+
+  get planRemainingLabel(): string {
+    if (!this.currentPlan) return '—';
+    if (this.planUnlimitedVouchers) return 'Ilimitado';
+    return `${Number(this.currentPlan.remaining_authorized_vouchers) || 0}`;
+  }
+
+  get planVoucherUsageLabel(): string {
+    if (!this.currentPlan) return '—';
+    if (this.planUnlimitedVouchers) return `${this.planUsedVouchers} usados / Ilimitado`;
+    return `${this.planUsedVouchers} usados / ${this.planPurchasedVouchers} incluidos`;
+  }
+
+  get shouldShowAutoRenew(): boolean {
+    return this.currentPlan?.auto_renew !== undefined && this.currentPlan?.auto_renew !== null && `${this.currentPlan?.auto_renew}` !== '';
+  }
+
+  get autoRenewLabel(): string {
+    const value = this.currentPlan?.auto_renew;
+    return value === true || value === 1 || `${value ?? ''}` === '1' ? 'Sí' : 'No';
   }
 
   cambiarAmbiente(): void {
@@ -388,6 +450,7 @@ export class CompanyComponent implements OnInit {
     return this.service.get_empresa().pipe(
       tap((response) => {
         this.capabilities.setFromResponse(response);
+        this.currentPlan = this.capabilities.plan;
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         this.menuService.setMenuForRoles(Array.isArray(user?.roles) ? user.roles : []);
       }),
@@ -416,6 +479,29 @@ export class CompanyComponent implements OnInit {
     }
 
     return 'RESTAURANTE';
+  }
+
+  formatPlanDate(value?: string | null): string {
+    const raw = `${value || ''}`.trim();
+    if (!raw) return '—';
+    const parts = raw.split('-');
+    if (parts.length !== 3) return raw;
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+
+  private getPlanStatusClasses(status: string): string {
+    const normalized = `${status || ''}`
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .trim();
+
+    if (normalized === 'ACTIVO') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    if (normalized === 'PRUEBA') return 'bg-sky-100 text-sky-700 border-sky-200';
+    if (normalized === 'VENCIDO') return 'bg-red-100 text-red-700 border-red-200';
+    if (normalized === 'SUSPENDIDO') return 'bg-orange-100 text-orange-700 border-orange-200';
+    if (normalized === 'CANCELADO' || normalized === 'RENOVADO') return 'bg-slate-100 text-slate-600 border-slate-200';
+    return 'bg-slate-100 text-slate-700 border-slate-200';
   }
 
   private normalizeCheck(value: unknown): boolean {
