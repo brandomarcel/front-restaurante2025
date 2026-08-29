@@ -29,6 +29,7 @@ import { environment } from 'src/environments/environment';
 import { CartService } from '../services/cart.service';
 import { canSellProduct, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { buildSinglePaymentPayload, findPaymentMethod, getDefaultPaymentValue, getPaymentDisplayLabel, isCashPayment } from 'src/app/shared/utils/payment.utils';
 
 @Component({
   selector: 'app-pos-caja',
@@ -66,7 +67,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   orderType: 'Servirse' | 'Llevar' | 'Domicilio' = 'Servirse';
   deliveryAddress = '';
   deliveryPhone = '';
-  paymentMethod = '01';
+  paymentMethod = '';
 
   printOption: 'comanda' | 'recibo' | 'ambas' = 'ambas';
   private pendingOrderId: string | null = null;
@@ -147,8 +148,12 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   get selectedPaymentName(): string {
-    const payment = this.payments.find((p: any) => p.codigo === this.paymentMethod);
-    return payment?.description || payment?.nombre || 'Metodo de pago';
+    const payment = findPaymentMethod(this.payments, this.paymentMethod);
+    return getPaymentDisplayLabel(payment);
+  }
+
+  get isSelectedPaymentCash(): boolean {
+    return isCashPayment(this.payments, this.paymentMethod);
   }
 
   toggleSidebar(): void {
@@ -160,7 +165,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   onPaymentMethodChange(): void {
-    if (this.paymentMethod !== '01') {
+    if (!this.isSelectedPaymentCash) {
       this.amountReceived = null;
       this.change = 0;
       return;
@@ -197,7 +202,12 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.spinner.show();
     this.paymentsService.getAll().pipe(finalize(() => this.spinner.hide())).subscribe({
       next: (res: any) => {
-        this.payments = res || [];
+        this.payments = (res || []).map((payment: any) => ({
+          ...payment,
+          name: payment.name || payment.codigo,
+          description: payment.description || payment.nombre || payment.name || payment.codigo
+        }));
+        this.ensureValidPaymentMethod();
       },
       error: () => {
         toast.error('Error al cargar metodos de pago.');
@@ -463,7 +473,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   calcularCambio(): void {
-    if (this.paymentMethod !== '01') {
+    if (!this.isSelectedPaymentCash) {
       this.change = 0;
       return;
     }
@@ -482,7 +492,8 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       }
     }
 
-    if (this.paymentMethod === '01' && this.change < 0) {
+    const receivedAmount = Number(this.amountReceived);
+    if (this.isSelectedPaymentCash && (!Number.isFinite(receivedAmount) || receivedAmount < this.total)) {
       toast.error('El monto recibido es menor al total.');
       return;
     }
@@ -784,9 +795,9 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   private buildOrderPayload(typePago: 'Nota Venta' | 'Factura') {
-    const payment = this.payments.find((p: any) => p.codigo === this.paymentMethod);
-    if (!payment) {
-      toast.error('Selecciona un metodo de pago valido.');
+    const paymentResult = buildSinglePaymentPayload(this.payments, this.paymentMethod, this.total);
+    if (paymentResult.error) {
+      toast.error(paymentResult.error);
       return null;
     }
 
@@ -806,8 +817,13 @@ export class PosCajaComponent implements OnInit, OnDestroy {
         rate: item.price,
         tax_rate: item.tax_value
       })),
-      payments: [{ formas_de_pago: payment?.name }]
+      payments: paymentResult.payments
     };
+  }
+
+  private ensureValidPaymentMethod(): void {
+    const current = findPaymentMethod(this.payments, this.paymentMethod);
+    this.paymentMethod = current?.name || current?.codigo || getDefaultPaymentValue(this.payments);
   }
 
   private submitOrder(payload: any): void {
@@ -823,7 +839,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
           toast.error('No se recibio numero de orden.');
           return;
         }
-        toast.success(`Pedido guardado${this.paymentMethod === '01' ? `. Cambio: $${this.change.toFixed(2)}` : ''}`);
+        toast.success(`Pedido guardado${this.isSelectedPaymentCash ? `. Cambio: $${this.change.toFixed(2)}` : ''}`);
         this.refreshProductsSilently();
         this.openPrintModal(orderId);
       }

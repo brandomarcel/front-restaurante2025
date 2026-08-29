@@ -22,6 +22,7 @@ import { AuthService } from 'src/app/services/auth.service';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
 import { canSellProduct, canUseInventoryQuantity, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { buildSinglePaymentPayload, findPaymentMethod, getDefaultPaymentValue, isCashPayment } from 'src/app/shared/utils/payment.utils';
 
 type RoleName = 'Cajero' | 'Mesero' | 'Gerente' | 'Desconocido';
 
@@ -52,7 +53,7 @@ export class PosComponent implements OnInit {
   deliveryAddress: string = '';
   deliveryPhone: string = '';
 
-  paymentMethod: string = '01';
+  paymentMethod: string = '';
 
   showCustomerModal = false;
 
@@ -246,7 +247,12 @@ export class PosComponent implements OnInit {
     this.spinner.show();
     this.paymentsService.getAll().subscribe((res: any) => {
       this.spinner.hide();
-      this.payments = res || [];
+      this.payments = (res || []).map((payment: any) => ({
+        ...payment,
+        name: payment.name || payment.codigo,
+        description: payment.description || payment.nombre || payment.name || payment.codigo
+      }));
+      this.ensureValidPaymentMethod();
     },
     error => {
       this.spinner.hide();
@@ -415,6 +421,10 @@ export class PosComponent implements OnInit {
     return this.round2(this.cart.reduce((acc, it) => acc + this.toNumber(it.total), 0));
   }
 
+  get isSelectedPaymentCash(): boolean {
+    return isCashPayment(this.payments, this.paymentMethod);
+  }
+
   // ======= Pago (solo Cajero/Gerente) =======
   abrirModalPago() {
     if (!this.permissions.canCharge) {
@@ -438,13 +448,15 @@ export class PosComponent implements OnInit {
   }
 
   calcularCambio() {
-    if (this.paymentMethod === '01') {
+    if (this.isSelectedPaymentCash) {
       const recibido = Number(this.amountReceived);
       if (Number.isFinite(recibido)) {
         this.change = recibido - this.total;
       } else {
         this.change = 0;
       }
+    } else {
+      this.change = 0;
     }
   }
 
@@ -462,12 +474,23 @@ export class PosComponent implements OnInit {
       }
     }
 
-    const payment = this.payments.find((p: any) => p.codigo === this.paymentMethod);
     const TYPE_IDENTIFICATION_RUC = "07 - Consumidor Final";
     const UMBRAL = 50;
 
     const isConsumidorFinal = this.customer?.tipo_identificacion === TYPE_IDENTIFICATION_RUC;
     const totalN = Number(this.total);
+
+    const receivedAmount = Number(this.amountReceived);
+    if (this.isSelectedPaymentCash && (!Number.isFinite(receivedAmount) || receivedAmount < totalN)) {
+      toast.error('El monto recibido es menor al total.');
+      return;
+    }
+
+    const paymentResult = buildSinglePaymentPayload(this.payments, this.paymentMethod, totalN);
+    if (paymentResult.error) {
+      toast.error(paymentResult.error);
+      return;
+    }
 
     if (isConsumidorFinal && typePago === 'Factura' && totalN >= UMBRAL) {
       toast.error(`El consumidor final no puede facturar por un monto mayor o igual a $${UMBRAL}.`);
@@ -490,11 +513,7 @@ export class PosComponent implements OnInit {
         rate: item.price,
         tax_rate: item.tax_value
       })),
-      payments: [
-        {
-          formas_de_pago: payment?.name,
-        }
-      ]
+      payments: paymentResult.payments
     };
 
     if (typePago === 'Factura') {
@@ -507,7 +526,7 @@ export class PosComponent implements OnInit {
                 const orderId = res.message?.name;
                 this.pendingOrderId = orderId;
                 this.refreshProductsSilently();
-                toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
+                toast.success(`Pedido guardado. ${this.isSelectedPaymentCash ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
                 this.openPrintModal(orderId);
               },
               error: () => { },
@@ -525,7 +544,7 @@ export class PosComponent implements OnInit {
         const orderId = res.message?.name;
         this.pendingOrderId = orderId;
         this.refreshProductsSilently();
-        toast.success(`Pedido guardado. ${this.paymentMethod === '01' ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
+        toast.success(`Pedido guardado. ${this.isSelectedPaymentCash ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
         this.openPrintModal(orderId);
       },
       error: () => { }
@@ -852,5 +871,10 @@ export class PosComponent implements OnInit {
         this.applyFilters();
       }
     });
+  }
+
+  private ensureValidPaymentMethod(): void {
+    const current = findPaymentMethod(this.payments, this.paymentMethod);
+    this.paymentMethod = current?.name || current?.codigo || getDefaultPaymentValue(this.payments);
   }
 }

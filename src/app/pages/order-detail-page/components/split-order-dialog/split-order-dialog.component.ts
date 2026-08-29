@@ -6,6 +6,7 @@ import {
   SplitOrderPayload,
   SplitPaymentRequest
 } from 'src/app/services/order-split.types';
+import { findPaymentMethod, getPaymentDisplayLabel, getPaymentValue as getInternalPaymentValue } from 'src/app/shared/utils/payment.utils';
 
 type SplitItemRowForm = {
   order_item: string;
@@ -312,11 +313,11 @@ export class SplitOrderDialogComponent implements OnChanges {
   }
 
   getPaymentLabel(payment: any): string {
-    return String(payment?.description || payment?.nombre || payment?.codigo || payment?.name || 'Pago');
+    return getPaymentDisplayLabel(payment);
   }
 
   getPaymentValue(payment: any): string {
-    return String(payment?.name || '');
+    return getInternalPaymentValue(payment);
   }
 
   submit(): void {
@@ -490,7 +491,8 @@ export class SplitOrderDialogComponent implements OnChanges {
     const efectivo = this.paymentOptions.find((payment) => {
       const label = this.getPaymentLabel(payment).toLowerCase();
       const value = this.getPaymentValue(payment).toLowerCase();
-      return label.includes('efectivo') || value.includes('efectivo');
+      const code = String(payment?.codigo || '').trim();
+      return code === '01' || label.includes('efectivo') || value.includes('efectivo');
     });
 
     if (efectivo) return this.getPaymentValue(efectivo);
@@ -553,10 +555,13 @@ export class SplitOrderDialogComponent implements OnChanges {
       return null;
     }
 
-    const normalizedPayments = this.payments.map((p) => ({
-      formas_de_pago: String(p.formas_de_pago || '').trim(),
-      monto: this.round2(this.toPositive(p.monto, 0))
-    }));
+    const normalizedPayments = this.payments.map((p) => {
+      const selectedPayment = findPaymentMethod(this.paymentOptions, p.formas_de_pago);
+      return {
+        formas_de_pago: getInternalPaymentValue(selectedPayment) || String(p.formas_de_pago || '').trim(),
+        monto: this.round2(this.toPositive(p.monto, 0))
+      };
+    });
 
     const hasIncompletePayments = normalizedPayments.some((p) => {
       const hasMethod = !!p.formas_de_pago;

@@ -85,18 +85,12 @@ export class Menu {
     {
       group: 'Reportes',
       separator: false,
-      allowedRoles: ['GERENTE'],
+      allowedRoles: ['SYSTEM MANAGER', 'GERENTE', 'CAJERO'],
       items: [
         {
           icon: 'assets/icons/tablericons/report-analytics.svg',
           label: 'Reportes',
           route: '/report',
-          featureKey: 'orders',
-          children: [
-            { label: 'Productos Mas Vendidos', route: '/report/ventasproducto' },
-            { label: 'Cierres de Caja', route: '/report/report-cierre-caja' },
-            { label: 'Ventas Generales', route: '/report/report-orders' },
-          ],
         },
       ],
     },

@@ -22,8 +22,9 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { canSellProduct, canUseInventoryQuantity, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { AdditionalFieldPayload, normalizeAdditionalFields } from 'src/app/core/models/additional-field';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { buildSinglePaymentPayload, findPaymentMethod, getDefaultPaymentValue } from 'src/app/shared/utils/payment.utils';
 
-type Payment = { name: string; codigo: string; nombre: string; };
+type Payment = { name: string; codigo: string; nombre: string; description?: string; };
 type CartItem = {
   name?: string; nombre?: string; description?: string; codigo?: string;
   quantity: number; price: number; discount_pct: number; tax?: string | null; total: number;
@@ -153,7 +154,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       selectedCustomer: c.name || null,
       alias: order.name || '',
       postingDate: this.utilsService.getSoloFechaEcuador(),
-      paymentMethod: '01' // efectivo por defecto
+      paymentMethod: this.defaultPaymentMethodValue
     });
 
     // 🛒 Cargar productos en una variable local (para renderizar en la tabla)
@@ -201,7 +202,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     this.invoiceForm = this.fb.group({
       selectedCustomer: [null, Validators.required],
       selectedProduct: [null],
-      paymentMethod: ['01', Validators.required],
+      paymentMethod: ['', Validators.required],
       alias: [''],
       postingDate: [this.utilsService.getSoloFechaEcuador(), Validators.required], // YYYY-MM-DD, Validators.required],
       additional_fields: this.fb.array([]),
@@ -247,12 +248,38 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   loadPaymentMethods(): void {
     this.spinner.show();
     this.paymentsService.getAll().subscribe({
-      next: (res: any) => { this.payments = (res || []) as Payment[]; console.log('Metodos de pago cargados:', this.payments); },
+      next: (res: any) => {
+        this.payments = ((res || []) as Payment[]).map(payment => ({
+          ...payment,
+          name: payment.name || payment.codigo,
+          description: payment.description || payment.nombre || payment.name || payment.codigo
+        }));
+        this.ensureValidPaymentMethod();
+        console.log('Metodos de pago cargados:', this.payments);
+      },
       error: () => toast.error('Error al cargar métodos de pago.'),
       complete: () => this.spinner.hide()
     });
 
   }
+
+  get defaultPaymentMethodValue(): string {
+    return getDefaultPaymentValue(this.payments);
+  }
+
+  private ensureValidPaymentMethod(): void {
+    const control = this.invoiceForm?.get('paymentMethod');
+    if (!control) return;
+
+    const currentValue = String(control.value || '').trim();
+    const selected = findPaymentMethod(this.payments, currentValue);
+    const normalizedValue = selected?.name || selected?.codigo || this.defaultPaymentMethodValue;
+
+    if (normalizedValue && normalizedValue !== currentValue) {
+      control.patchValue(normalizedValue, { emitEvent: false });
+    }
+  }
+
   // ------------------ Cliente ------------------
   onCustomerSearchChange(term: string): void {
     this.customerSearchTerm = term || '';
@@ -667,8 +694,12 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     }
 
     const customerName: string = this.invoiceForm.get('selectedCustomer')?.value;
-    const paymentCode: string = this.invoiceForm.get('paymentMethod')?.value;
-    const payment = this.payments.find(p => p.codigo === paymentCode);
+    const paymentValue: string = this.invoiceForm.get('paymentMethod')?.value;
+    const paymentResult = buildSinglePaymentPayload(this.payments, paymentValue, total);
+    if (paymentResult.error) {
+      toast.error(paymentResult.error);
+      return;
+    }
 
     // payload para SalesInvoice
     const payload = {
@@ -684,7 +715,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
           ? (it.tax_value as number)
           : (it.tax === 'IVA-15' ? 15 : 0)
       })),
-      payment: payment ? { code: payment.codigo, name: payment.name, amount: total } : null,
+      payments: paymentResult.payments,
       auto_queue: true, // 👈 firma+envío por el microservicio
       order_name: this.order?.name,
       additional_fields: this.canUseAdditionalFields ? normalizeAdditionalFields(this.additionalFields.getRawValue()) : []
@@ -740,7 +771,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   }
 
   private clearInvoiceForm(): void {
-    this.invoiceForm.reset({ paymentMethod: '01', selectedCustomer: null, alias: '', postingDate: this.utilsService.getSoloFechaEcuador() });
+    this.invoiceForm.reset({ paymentMethod: this.defaultPaymentMethodValue, selectedCustomer: null, alias: '', postingDate: this.utilsService.getSoloFechaEcuador() });
     this.cartItems = [];
     this.productSearchTerm = '';
     this.productSuggestions = [];

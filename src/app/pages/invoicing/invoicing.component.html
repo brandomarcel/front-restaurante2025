@@ -418,7 +418,7 @@
               formControlName="paymentMethod"
               [items]="payments"
               bindLabel="description"
-              bindValue="codigo"
+              bindValue="name"
               placeholder="Selecciona un método">
             </ng-select>
             <div *ngIf="invoiceForm.get('paymentMethod')?.invalid && invoiceForm.get('paymentMethod')?.touched"

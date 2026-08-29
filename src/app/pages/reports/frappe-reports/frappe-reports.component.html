@@ -1,0 +1,143 @@
+<div class="app-container density-compact space-y-3 pb-6">
+  <section class="rounded-xl border border-border bg-white p-3 shadow-sm">
+    <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p class="text-[10px] font-bold uppercase tracking-wide text-primary">Reportes</p>
+        <h1 class="text-lg font-black text-slate-900">{{ selectedReport.title }}</h1>
+        <p class="text-xs text-muted-foreground">{{ selectedReport.description }}</p>
+      </div>
+      <a routerLink="/report" class="btn btn-outline !px-3 !py-1.5 !text-[11px]">
+        ← Cambiar reporte
+      </a>
+    </div>
+  </section>
+
+  <section class="rounded-xl border border-border bg-white p-3 shadow-sm">
+    <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+      <div>
+        <h2 class="text-sm font-black text-slate-900">Filtros</h2>
+        <p class="text-[11px] text-muted-foreground">Ajusta la consulta y vuelve a buscar.</p>
+      </div>
+
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="btn btn-outline !px-3 !py-1.5 !text-[11px]"
+          [disabled]="loading"
+          (click)="clearFilters()">
+          Limpiar
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary !px-3 !py-1.5 !text-[11px]"
+          [disabled]="loading"
+          (click)="runReport()">
+          {{ loading ? 'Consultando...' : 'Buscar' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+      <div *ngFor="let filter of selectedReport.filters" class="min-w-0">
+        <label class="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+          {{ filter.label }} <span *ngIf="filter.required" class="text-red-500">*</span>
+        </label>
+
+        <input
+          *ngIf="filter.type === 'date'"
+          type="date"
+          class="input !h-9 !w-full"
+          [(ngModel)]="filters[filter.key]" />
+
+        <input
+          *ngIf="filter.type === 'number'"
+          type="number"
+          min="1"
+          class="input !h-9 !w-full"
+          [(ngModel)]="filters[filter.key]" />
+
+        <input
+          *ngIf="filter.type === 'text'"
+          type="text"
+          class="input !h-9 !w-full"
+          [placeholder]="filter.placeholder || ''"
+          [(ngModel)]="filters[filter.key]" />
+
+        <select
+          *ngIf="filter.type === 'select'"
+          class="select !h-9 !w-full"
+          [(ngModel)]="filters[filter.key]">
+          <option value="">Todos</option>
+          <option *ngFor="let option of filter.options || []" [value]="option.value">{{ option.label }}</option>
+        </select>
+
+        <select
+          *ngIf="filter.type === 'payment'"
+          class="select !h-9 !w-full"
+          [(ngModel)]="filters[filter.key]">
+          <option value="">Todas</option>
+          <option *ngFor="let payment of payments" [value]="payment.name">{{ getPaymentLabel(payment) }}</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <section class="rounded-xl border border-border bg-white shadow-sm">
+    <div class="flex flex-col gap-2 border-b border-border px-3 py-2 md:flex-row md:items-center md:justify-between">
+      <div>
+        <h2 class="text-sm font-black text-slate-900">{{ selectedReport.name }}</h2>
+        <p class="text-[11px] text-muted-foreground">
+          {{ rows.length }} registro(s)
+        </p>
+      </div>
+
+      <div class="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600">
+        Vista compacta
+      </div>
+    </div>
+
+    <div *ngIf="errorMessage" class="m-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
+      {{ errorMessage }}
+    </div>
+
+    <div *ngIf="!loading && !errorMessage && !hasRows" class="p-8 text-center">
+      <div class="mx-auto max-w-sm rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6">
+        <p class="text-sm font-bold text-slate-800">No hay datos para los filtros seleccionados</p>
+        <p class="mt-1 text-xs text-muted-foreground">Cambia el rango de fechas o limpia los filtros para intentar de nuevo.</p>
+      </div>
+    </div>
+
+    <div *ngIf="hasRows" class="app-table-wrap max-h-[72vh]">
+      <table class="app-table text-xs">
+        <thead class="app-thead">
+          <tr>
+            <th class="app-th w-12 text-center">#</th>
+            <th
+              *ngFor="let column of displayColumns; let colIndex = index; trackBy: trackByColumn"
+              class="app-th whitespace-nowrap"
+              [ngClass]="(isMoneyColumn(column) || isNumericColumn(column)) ? 'text-right' : 'text-left'">
+              {{ column.label || column.fieldname || ('Columna ' + (colIndex + 1)) }}
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let row of rows; let rowIndex = index; trackBy: trackByRow" class="app-tr">
+            <td class="app-td text-center font-semibold text-slate-500">{{ rowIndex + 1 }}</td>
+            <td
+              *ngFor="let column of displayColumns; let colIndex = index; trackBy: trackByColumn"
+              class="app-td max-w-[260px] truncate"
+              [ngClass]="(isMoneyColumn(column) || isNumericColumn(column)) ? 'text-right font-semibold' : 'text-left'">
+              <ng-container *ngIf="isMoneyColumn(column); else normalCell">
+                {{ toNumber(getCell(row, column, colIndex)) | currency:'USD':'symbol':'1.2-2' }}
+              </ng-container>
+              <ng-template #normalCell>
+                {{ formatCell(row, column, colIndex) }}
+              </ng-template>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

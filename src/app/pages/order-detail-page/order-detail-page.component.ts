@@ -21,6 +21,7 @@ import { OrderSplitsTableComponent } from './components/order-splits-table/order
 import { PaymentsService } from 'src/app/services/payments.service';
 import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { AlertService } from 'src/app/core/services/alert.service';
+import { InvoicePaymentPayload, roundMoney, validatePaymentsTotal } from 'src/app/shared/utils/payment.utils';
 
 type Product = any; // usa tu modelo si lo tienes
 type OrderItem = {
@@ -501,8 +502,11 @@ export class OrderDetailPageComponent implements OnInit {
   invoiceSplit(row: OrderSplitRow): void {
     if (!row?.name || this.splitActionLoadingName || this.splitDeleteLoadingName) return;
 
+    const payments = this.getValidatedSplitPayments(row);
+    if (!payments) return;
+
     this.splitActionLoadingName = row.name;
-    this.orderSplitSvc.createAndEmitFromSplit(row.name)
+    this.orderSplitSvc.createAndEmitFromSplit(row.name, payments)
       .pipe(finalize(() => { this.splitActionLoadingName = ''; }))
       .subscribe({
         next: () => {
@@ -566,13 +570,33 @@ export class OrderDetailPageComponent implements OnInit {
   private loadPaymentMethods(): void {
     this.paymentsSvc.getAll().subscribe({
       next: (res: any[]) => {
-        this.paymentMethods = Array.isArray(res) ? res : [];
+        this.paymentMethods = (Array.isArray(res) ? res : []).map((payment: any) => ({
+          ...payment,
+          name: payment.name || payment.codigo,
+          description: payment.description || payment.nombre || payment.name || payment.codigo
+        }));
       },
       error: (e) => {
         this.paymentMethods = [];
         toast.error(this.extractBackendError(e));
       }
     });
+  }
+
+  private getValidatedSplitPayments(row: OrderSplitRow): InvoicePaymentPayload[] | null {
+    const total = roundMoney(row?.total ?? row?.sri?.grand_total ?? 0);
+    const payments: InvoicePaymentPayload[] = (row?.payments || []).map((payment: any) => ({
+      formas_de_pago: String(payment?.formas_de_pago || payment?.payment_method || payment?.method || '').trim(),
+      monto: roundMoney(payment?.monto ?? payment?.amount)
+    }));
+
+    const validationError = validatePaymentsTotal(payments, total);
+    if (validationError) {
+      toast.error(validationError);
+      return null;
+    }
+
+    return payments;
   }
 
   private mapSplitsResponse(res: any): { splits: OrderSplitRow[]; remaining: any[] } {

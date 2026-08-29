@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 import { environment } from 'src/environments/environment';
-import { OrderSplitResponse, SplitOrderPayload } from './order-split.types';
+import { OrderSplitResponse, SplitOrderPayload, SplitPaymentRequest } from './order-split.types';
 
 @Injectable({ providedIn: 'root' })
 export class OrderSplitService {
@@ -31,8 +31,8 @@ export class OrderSplitService {
     });
   }
 
-  createAndEmitFromSplit(splitName: string): Observable<any> {
-    return this.http.post<any>(this.createAndEmitFromSplitUrl, { split_name: splitName }, {
+  createAndEmitFromSplit(splitName: string, payments: SplitPaymentRequest[] = []): Observable<any> {
+    return this.http.post<any>(this.createAndEmitFromSplitUrl, { split_name: splitName, payments }, {
       context: new HttpContext().set(REQUIRE_AUTH, true)
     });
   }

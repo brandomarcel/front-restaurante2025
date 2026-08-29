@@ -59,7 +59,7 @@ export class MenuService implements OnDestroy {
 
   public setMenuForRoles(roles: Array<Role | string>) {
     const normalizedRoles = roles.map(role => this.normalizeRole(String(role || ''))).filter(Boolean);
-    const appRole = ['GERENTE', 'CAJERO', 'MESERO', 'COCINA'].find(role => normalizedRoles.includes(role));
+    const appRole = ['SYSTEM MANAGER', 'GERENTE', 'CAJERO', 'MESERO', 'COCINA'].find(role => normalizedRoles.includes(role));
     this._currentRole.set(appRole || normalizedRoles[0] || '');
     const filtered = this.filterMenuByAccess(Menu.pages, normalizedRoles);
     this._pagesMenu.set(filtered);

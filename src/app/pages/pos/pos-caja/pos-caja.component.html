@@ -535,14 +535,14 @@
 
                     <select [(ngModel)]="paymentMethod" (change)="calcularCambio()"
                         class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary">
-                        <option *ngFor="let item of payments" [value]="item.codigo">
+                        <option *ngFor="let item of payments" [value]="item.name || item.codigo">
                             {{ item.description || item.nombre }}
                         </option>
                     </select>
                 </div>
 
                 <!-- Efectivo -->
-                <div *ngIf="paymentMethod === '01'" class="mt-6">
+                <div *ngIf="isSelectedPaymentCash" class="mt-6">
 
                     <input type="number" [(ngModel)]="amountReceived" (input)="calcularCambio()"
                         class="w-full border rounded-md px-3 py-3 text-2xl font-semibold text-center focus:ring-2 focus:ring-primary"

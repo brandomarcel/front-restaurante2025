@@ -220,6 +220,24 @@
         </div>
       </section>
 
+      <section *ngIf="invoicePayments.length" class="rounded-xl border border-border bg-white p-3 shadow-sm">
+        <h2 class="mb-2 text-[11px] font-bold uppercase tracking-wide text-primary">Formas de pago</h2>
+
+        <div class="space-y-1.5 text-xs text-slate-700">
+          <div *ngFor="let payment of invoicePayments" class="rounded-lg bg-slate-50 px-2.5 py-2">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="truncate font-bold text-slate-900">{{ payment.payment_method || 'Método interno' }}</p>
+                <p *ngIf="payment.forma_pago" class="text-[10px] font-semibold uppercase text-muted-foreground">
+                  Código SRI: {{ payment.forma_pago }}
+                </p>
+              </div>
+              <p class="shrink-0 font-black text-slate-900">{{ payment.monto | currency:'USD':'symbol':'1.2-2' }}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="rounded-xl border border-border bg-white p-3 shadow-sm">
         <h2 class="mb-2 text-[11px] font-bold uppercase tracking-wide text-primary">Acciones</h2>
 

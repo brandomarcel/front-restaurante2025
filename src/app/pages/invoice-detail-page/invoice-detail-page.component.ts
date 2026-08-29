@@ -15,6 +15,7 @@ import { CreditNoteService } from 'src/app/services/credit-note.service';
 import { NgxSpinnerComponent, NgxSpinnerService } from 'ngx-spinner';
 import { AdditionalFieldPayload, normalizeAdditionalFields } from 'src/app/core/models/additional-field';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { roundMoney } from 'src/app/shared/utils/payment.utils';
 
 @Component({
   selector: 'app-invoice-detail-page',
@@ -62,6 +63,9 @@ export class InvoiceDetailPageComponent implements OnInit {
       next: (res: any) => {
         console.log('Factura cargada:', res);
         this.invoice = res?.message?.data || res?.data || null;
+        if (this.invoice && !Array.isArray(this.invoice.payments)) {
+          this.invoice.payments = res?.message?.payments || res?.message?.doc?.payments || res?.payments || [];
+        }
         this.additionalFields = normalizeAdditionalFields(
           this.invoice?.additionalFields ??
           this.invoice?.additional_fields ??
@@ -233,6 +237,30 @@ this.spinner.hide();
 
   get canSeeAdditionalFields(): boolean {
     return this.capabilities.isEnabled('additional_fields');
+  }
+
+  get invoicePayments(): any[] {
+    const rawPayments =
+      this.invoice?.payments ??
+      this.invoice?.doc?.payments ??
+      this.invoice?.sales_invoice?.payments ??
+      [];
+
+    if (!Array.isArray(rawPayments)) return [];
+
+    return rawPayments
+      .map((payment: any) => ({
+        payment_method: String(
+          payment?.payment_method ||
+          payment?.formas_de_pago ||
+          payment?.method ||
+          payment?.name ||
+          ''
+        ).trim(),
+        forma_pago: String(payment?.forma_pago || payment?.codigo || '').trim(),
+        monto: roundMoney(payment?.monto ?? payment?.amount ?? payment?.paid_amount)
+      }))
+      .filter((payment: any) => payment.payment_method || payment.forma_pago || payment.monto > 0);
   }
 
   itemSubtotal(item: any): number {
