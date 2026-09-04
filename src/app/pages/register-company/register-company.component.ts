@@ -6,6 +6,7 @@ import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
 import { RegisterCompanyService } from 'src/app/services/register-company.service';
 import { toast } from 'ngx-sonner';
 import { OnlyNumbersDirective } from 'src/app/core/directives/only-numbers.directive';
+import { catchError, map, of, switchMap } from 'rxjs';
 @Component({
   selector: 'app-register-company',
   standalone: true,
@@ -106,6 +107,22 @@ export class RegisterCompanyComponent {
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
+    this.setLogoFile(file);
+    input.value = '';
+  }
+
+  private setLogoFile(file: File): void {
+    const validExtension = /\.(png|jpe?g|webp)$/i.test(file.name || '');
+    const validMime = ['image/png', 'image/jpeg', 'image/webp'].includes((file.type || '').toLowerCase());
+    if (!file.size || !validExtension || (file.type && !validMime)) {
+      toast.error('El logo debe ser una imagen PNG, JPG/JPEG o WEBP válida.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('El logo no puede superar 2MB.');
+      return;
+    }
+
     this.logoFile = file;
     this.logoFileName = file.name;
 
@@ -163,12 +180,9 @@ submit() {
     invoiceseq_pruebas: this.form.value.invoiceseq_pruebas,
     ncseq_pruebas: this.form.value.ncseq_pruebas,
     ncseq_prod: this.form.value.ncseq_prod,
+    business_mode: 'lite',
+    business_model: 'Facturacion Simple',
   };
-
-  // Logo payload (opcional). Usamos la dataURL ya generada en la vista previa.
-  const logoPayload = this.logoFile && this.logoPreview
-    ? { filename: this.logoFile.name, data: this.logoPreview, is_private: 0 as 0 | 1 }
-    : undefined;
 
   this.isSubmitting = true;
   this.spinner.show();
@@ -176,16 +190,26 @@ submit() {
   this.registerSvc.registerTenantOpen({
     user: userPayload,
     company: companyPayload,
-    logo: logoPayload,
     add_permission: true
-  }).subscribe({
-    next: (res: any) => {
+  }).pipe(
+    switchMap((response: any) => {
+      const body = response?.message ?? response ?? {};
+      const business = body?.business?.name || body?.business?.business || body?.company?.name || body?.company || body?.data?.business?.name || body?.business_name;
+      if (!this.logoFile || !business) return of({ response, logoUploaded: false });
+      return this.registerSvc.uploadLiteLogo(String(business), this.logoFile).pipe(
+        map(() => ({ response, logoUploaded: true })),
+        catchError(() => of({ response, logoUploaded: false }))
+      );
+    })
+  ).subscribe({
+    next: ({ response, logoUploaded }: any) => {
       this.isSubmitting = false;
       this.spinner.hide();
+      const res = response?.message ?? response ?? {};
       const companyName = res?.company || companyPayload.businessname;
       const userName = res?.user || userPayload.email;
 
-      toast.success(`¡Listo! Usuario ${userName} y empresa ${companyName} creados.`);
+      toast.success(`¡Listo! Usuario ${userName} y empresa ${companyName} creados.${logoUploaded ? ' Logo cargado.' : ''}`);
 
       // Limpia estado/UI
       this.form.reset();
@@ -204,7 +228,6 @@ submit() {
       this.spinner.hide();
       const msg = this.parseFrappeError(err);
       toast.error(msg);
-      console.error('register_tenant_open error:', err);
     }
   });
 }

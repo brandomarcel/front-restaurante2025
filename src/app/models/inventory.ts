@@ -34,6 +34,12 @@ export interface InventoryMovement {
   notes?: string;
   reference_doctype?: string;
   reference_name?: string;
+  reference?: string;
+  business?: string;
+  item?: string;
+  quantity?: number;
+  stock_before?: number;
+  stock_after?: number;
   total_items?: number;
   total_quantity?: number;
   items?: InventoryMovementItem[];
@@ -48,4 +54,24 @@ export interface InventoryMovementPayload {
     product: string;
     quantity: number;
   }>;
+}
+
+export interface InventorySummary {
+  controlled_products?: number;
+  tracked_items?: number;
+  low_stock_products?: number;
+  low_stock_items?: number;
+  out_of_stock_products?: number;
+  out_of_stock_items?: number | InventoryProduct[];
+  products?: InventoryProduct[];
+  items?: InventoryProduct[];
+}
+
+export interface LiteStockMovementPayload {
+  business?: string;
+  item: string;
+  movement_type: 'Entrada' | 'Salida' | 'Ajuste';
+  quantity?: number;
+  target_stock?: number;
+  notes?: string;
 }

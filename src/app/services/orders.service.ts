@@ -7,6 +7,7 @@ import { FrappeErrorService } from '../core/services/frappe-error.service';
 import { toast } from 'ngx-sonner';
 import { API_ENDPOINT } from '../core/constants/api.constants';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
+import { CompanyCapabilitiesService } from '../core/services/company-capabilities.service';
 
 // 👇 Interface alineada a tu payload
 export interface OrderItemDTO {
@@ -65,6 +66,7 @@ export class OrdersService {
   constructor(
     private http: HttpClient,
     private frappeErr: FrappeErrorService,
+    private capabilities: CompanyCapabilitiesService,
   ) {
     this.urlBase = this.apiUrl + API_ENDPOINT.Orden;
   }
@@ -78,6 +80,10 @@ export class OrdersService {
     order: 'asc' | 'desc' = 'desc',
     status?: string
   ): Observable<OrdersListResponse> {
+    if (this.capabilities.isLiteMode) {
+      return throwError(() => new Error('Las órdenes de restaurante no están disponibles en FacturADA Lite.'));
+    }
+
     let params = new HttpParams()
       .set('limit', String(limit))
       .set('offset', String(offset))
@@ -94,6 +100,10 @@ export class OrdersService {
   }
 
   get_dashboard_metrics() {
+    if (this.capabilities.isLiteMode) {
+      return throwError(() => new Error('Las métricas de restaurante no están disponibles en FacturADA Lite.'));
+    }
+
     return this.http.get(`${this.urlBase}.get_dashboard_metrics`, {
       context: new HttpContext().set(REQUIRE_AUTH, true)
     });
@@ -101,6 +111,10 @@ export class OrdersService {
 
 
   getById(name: string) {
+    if (this.capabilities.isLiteMode) {
+      return throwError(() => new Error('Las órdenes de restaurante no están disponibles en FacturADA Lite.'));
+    }
+
     return this.http.get<{ data?: OrderDTO; message?: OrderDTO;[k: string]: any }>(
       `${this.urlBase}.get_order_with_details?order_name=${encodeURIComponent(name)}`,
       { context: new HttpContext().set(REQUIRE_AUTH, true) }
@@ -108,6 +122,10 @@ export class OrdersService {
   }
 
   create_order_v2(payload: any): Observable<any> {
+    if (this.capabilities.isLiteMode) {
+      return throwError(() => new Error('Las órdenes de restaurante no están disponibles en FacturADA Lite.'));
+    }
+
     const url = `${this.urlBase}.create_order_v2`;
     return this.http.post<any>(url, payload, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
       catchError((error) => {
@@ -120,6 +138,10 @@ export class OrdersService {
 
 
   create(order: any): Observable<any> {
+    if (this.capabilities.isLiteMode) {
+      return throwError(() => new Error('Las órdenes de restaurante no están disponibles en FacturADA Lite.'));
+    }
+
     return this.http.post<any>(`${this.apiUrl}/resource/orders`, order, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
       catchError((error) => {
         const msg = this.frappeErr.handle(error) || 'Error al crear la orden.';
@@ -130,6 +152,10 @@ export class OrdersService {
   }
 
   update(payload: any): Observable<any> {
+    if (this.capabilities.isLiteMode) {
+      return throwError(() => new Error('Las órdenes de restaurante no están disponibles en FacturADA Lite.'));
+    }
+
     const url = `${this.urlBase}.update_order`;
     return this.http.post<any>(url, payload, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
       catchError((e) => {
@@ -145,11 +171,19 @@ export class OrdersService {
   // invoice(id: number) { return this.http.post(`${this.apiUrl}/${id}/invoice`, {}); }
 
   getFilteredOrders(filters: any): Observable<any> {
+    if (this.capabilities.isLiteMode) {
+      return throwError(() => new Error('Los reportes de órdenes no están disponibles en FacturADA Lite.'));
+    }
+
     const params = new HttpParams({ fromObject: filters });
     return this.http.get(`${this.apiUrl}/filter`, { params });
   }
 
 getOrdersReport(filters: Record<string, any>): Observable<any> {
+  if (this.capabilities.isLiteMode) {
+    return throwError(() => new Error('Los reportes de órdenes no están disponibles en FacturADA Lite.'));
+  }
+
   const reportName = 'Orders Report';
 
   const url = `${this.apiUrl}/method/frappe.desk.query_report.run`;
@@ -170,6 +204,10 @@ getOrdersReport(filters: Record<string, any>): Observable<any> {
 }
 
 exportOrdersReportExcel(filters: Record<string, any>): Observable<Blob> {
+  if (this.capabilities.isLiteMode) {
+    return throwError(() => new Error('La exportación de órdenes no está disponible en FacturADA Lite.'));
+  }
+
   return this.logReportExport('Orders Report', filters).pipe(
     switchMap(() => this.downloadOrdersReportExcel(filters)),
   );
@@ -232,6 +270,10 @@ private downloadOrdersReportExcel(filters: Record<string, any>): Observable<Blob
 
   // src/app/services/orders.service.ts
 updateStatus(name: string, status: 'Ingresada' | 'Preparación' | 'Cerrada') {
+  if (this.capabilities.isLiteMode) {
+    return throwError(() => new Error('Las órdenes de restaurante no están disponibles en FacturADA Lite.'));
+  }
+
   const body = new FormData();
   body.set('name', name);
   body.set('status', status);

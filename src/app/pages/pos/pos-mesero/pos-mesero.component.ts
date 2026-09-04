@@ -83,7 +83,7 @@ export class PosMeseroComponent implements OnInit {
     this.productsService.getAll(1).pipe(
       finalize(() => this.isLoadingProducts = false)
     ).subscribe((res: any) => {
-      this.products = res?.message?.data || [];
+      this.products = Array.isArray(res) ? res : (res?.message?.data || []);
       this.applyFilters();
     });
   }
@@ -382,7 +382,7 @@ export class PosMeseroComponent implements OnInit {
   private refreshProductsSilently(): void {
     this.productsService.getAll(1).subscribe({
       next: (res: any) => {
-        this.products = res?.message?.data || [];
+        this.products = Array.isArray(res) ? res : (res?.message?.data || []);
         this.applyFilters();
       }
     });

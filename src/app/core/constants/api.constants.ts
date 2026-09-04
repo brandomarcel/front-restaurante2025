@@ -14,5 +14,7 @@ export const API_ENDPOINT = {
   Inventory: "/method/restaurante_app.inventarios_bmarc.api.stock",
   Register: "/method/restaurante_app.restaurante_bmarc.api.register",
   AnalyzeFirma: "/method/restaurante_app.restaurante_bmarc.api.analyze_company_firma",
+  FacturadaLite: "/method/facturada_lite.api.frontend",
+  FacturadaLiteSetup: "/method/facturada_lite.api.setup",
   
 };

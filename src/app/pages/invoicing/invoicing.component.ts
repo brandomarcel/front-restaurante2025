@@ -18,11 +18,12 @@ import { InvoicesService } from 'src/app/services/invoices.service';
 import { UtilsService } from '../../core/services/utils.service';
 import { Customer } from 'src/app/core/models/customer';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { canSellProduct, canUseInventoryQuantity, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { AdditionalFieldPayload, normalizeAdditionalFields } from 'src/app/core/models/additional-field';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { buildSinglePaymentPayload, findPaymentMethod, getDefaultPaymentValue } from 'src/app/shared/utils/payment.utils';
+import { LiteEmissionState } from 'src/app/core/utils/lite-invoice-emission';
 
 type Payment = { name: string; codigo: string; nombre: string; description?: string; };
 type CartItem = {
@@ -34,7 +35,7 @@ type CartItem = {
 @Component({
   selector: 'app-invoicing',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, ButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, RouterModule, ButtonComponent],
   templateUrl: './invoicing.component.html',
   styleUrls: ['./invoicing.component.css']
 })
@@ -59,7 +60,6 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   customerSearchLoading = false;
   productSearchTerm = '';
   isProductSearchOpen = false;
-  showManualItem = false;
   productSuggestions: Product[] = [];
   cartItems: CartItem[] = [];
   showCustomerModal = false;
@@ -69,6 +69,13 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   private readonly customerSearch$ = new Subject<string>();
   private readonly destroy$ = new Subject<void>();
   order: any | null = null;
+  isEmitting = false;
+  emissionState: LiteEmissionState | null = null;
+  emissionMessages: string[] = [];
+  emissionInvoiceName = '';
+  emissionAccessKey = '';
+  emissionAuthorizationNumber = '';
+  emissionAuthorizationDatetime = '';
 
   get additionalFields(): FormArray {
     return this.invoiceForm.get('additional_fields') as FormArray;
@@ -92,14 +99,20 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
 
-    const ambienteGuardado = localStorage.getItem('ambiente');
-    console.log('📦ambienteGuardado', ambienteGuardado);
-    this.ambiente = ambienteGuardado ?? '----------';
+    this.ambiente = this.utilsService.getAmbienteActual()
+      || localStorage.getItem('ambiente')
+      || '----------';
+    this.subscriptions.push(
+      this.utilsService.ambiente$
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((ambiente) => {
+          if (ambiente) this.ambiente = ambiente;
+        })
+    );
     this.initializeForms();
     this.initCustomerSearch();
     this.loadInitialData();
     const orderName = this.route.snapshot.paramMap.get('order_name');
-    console.log('📦orderName', orderName);
 
     if (orderName) {
       this.getOrderDetail(orderName);
@@ -120,21 +133,18 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       const response: any = await firstValueFrom(this.invoicesService.getOrderDetail(orderName));
 
       this.order = response?.message?.data || response?.data;
-      console.log('📦order', this.order);
       this.loadOrderData(this.order);
 
     } catch (error) {
-      console.error(error)
+      toast.error('No se pudo cargar la orden para facturar.');
     }
   }
 
   private loadOrderData(order: any): void {
-    console.log('loadOrderData', order);
     if (!order) return;
 
     // 🧾 Cargar datos del cliente
     const c = order.customer || {};
-    console.log('c', c);
 
     this.customerForm.patchValue({
       nombre: c.fullName || c.nombre || '',
@@ -147,7 +157,6 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
     this.selectedCustomer = { ...this.customerForm.getRawValue(), name: c.name || '' };
     this.customerSearchTerm = this.formatCustomerSearchLabel(this.selectedCustomer);
-    console.log('this.selectedCustomer', this.selectedCustomer);
 
     // 💳 Cargar datos de la factura
     this.invoiceForm.patchValue({
@@ -235,10 +244,9 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     this.spinner.show();
     this.productsService.getAll(1).subscribe({
       next: (res: any) => {
-        const all = (res.message.data || []) as Product[];
-        this.products = all.filter(p => Number((p as any).isactive) === 1);
+        const all = (Array.isArray(res) ? res : (res?.message?.data || [])) as Product[];
+        this.products = all.filter(p => (p as any).isactive === undefined || (p as any).isactive === true || Number((p as any).isactive) === 1);
         this.refreshProductSuggestions();
-        console.log('Productos cargados:', this.products);
       },
       error: () => toast.error('Error al cargar la lista de productos.'),
       complete: () => this.spinner.hide()
@@ -255,7 +263,6 @@ export class InvoicingComponent implements OnInit, OnDestroy {
           description: payment.description || payment.nombre || payment.name || payment.codigo
         }));
         this.ensureValidPaymentMethod();
-        console.log('Metodos de pago cargados:', this.payments);
       },
       error: () => toast.error('Error al cargar métodos de pago.'),
       complete: () => this.spinner.hide()
@@ -386,7 +393,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (res: any) => {
 
-          const created: Customer = res.message.data;
+          const created: Customer = Array.isArray(res) ? res[0] : (res?.data || res?.message?.data || res?.message || res);
           toast.success('Cliente creado exitosamente.');
           this.selectCustomer(created);
           this.closeCustomerModal();
@@ -433,7 +440,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       finalize(() => this.spinner.hide())
     ).subscribe({
       next: (res: any) => {
-        const customer = res?.message || null;
+        const customer = res?.data || res?.message?.data || (res?.message && typeof res.message === 'object' ? res.message : res) || null;
         if (customer) {
           this.selectCustomer(customer);
           return;
@@ -571,24 +578,6 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     this.invoiceForm.patchValue({ selectedProduct: null });
   }
 
-
-  addAdHocLine(): void {
-    const desc = (this.adHoc.description || '').trim();
-    if (!desc) return;
-    this.cartItems.push({
-      description: desc,
-      nombre: desc,
-      price: 0,
-      quantity: 1,
-      discount_pct: 0,
-      tax: null, // ad-hoc por defecto sin IVA; cámbialo si quieres 'IVA-15'
-      total: 0
-    });
-    this.adHoc.description = '';
-    this.showManualItem = false;
-    this.updateCartTotals();
-  }
-
   removeProductFromCart(index: number): void {
     if (index < 0 || index >= this.cartItems.length) return;
     this.cartItems.splice(index, 1);
@@ -667,8 +656,11 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       toast.error(planBlockMessage);
       return;
     }
+    if (this.isEmitting || this.emissionInvoiceName) {
+      toast.info('Esta factura ya fue enviada. Usa las acciones de estado o reintento.');
+      return;
+    }
 
-    console.log('selectedCustomer', this.selectedCustomer);
     if (this.invoiceForm.invalid) {
       this.invoiceForm.markAllAsTouched();
       toast.error('Selecciona un cliente y verifica los campos.');
@@ -677,6 +669,17 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     if (this.cartItems.length === 0) {
       toast.error('Agrega al menos un producto a la factura.');
       return;
+    }
+    const emissionEnvironment = this.getLiteEmissionEnvironment();
+    if (this.capabilities.isLiteMode) {
+      if (!emissionEnvironment) {
+        toast.error('No se pudo determinar el ambiente de emisión.');
+        return;
+      }
+      if (!this.capabilities.hasActiveInvoiceSequence(emissionEnvironment)) {
+        toast.error('No existe una secuencia activa para este ambiente.');
+        return;
+      }
     }
     const stockBlockedItem = this.cartItems.find(item => !this.canUseCartQuantity(item, this.safeNumber(item.quantity, 1)));
     if (stockBlockedItem) {
@@ -705,6 +708,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     const payload = {
       customer: customerName,
       total: total,
+      ...(this.capabilities.isLiteMode ? { environment: emissionEnvironment } : {}),
       posting_date: this.invoiceForm.get('postingDate')?.value,
       items: this.cartItems.map(it => ({
         item_code: it.name || 'ADHOC',
@@ -721,39 +725,52 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       additional_fields: this.canUseAdditionalFields ? normalizeAdditionalFields(this.additionalFields.getRawValue()) : []
     };
 
-    console.log('payload', payload);
-
     this.alertService.confirm('¿Deseas emitir la factura?', 'Esta acción creará un documento legal.')
       .then(result => {
         if (!result.isConfirmed) return;
 
+        this.isEmitting = true;
         this.spinner.show();
         this.invoicesService.create_and_emit_from_ui_v2(payload)
-          .pipe(finalize(() => this.spinner.hide()))
+          .pipe(finalize(() => {
+            this.spinner.hide();
+            this.isEmitting = false;
+          }))
           .subscribe({
             next: (res) => {
-              console.log('res save invoce',res);
-              const inv = res?.message.invoice;
-              toast.success(`Factura ${inv} creada y enviada al SRI.`);
-              this.clearInvoiceForm();
+              this.emissionState = res?.state || null;
+              this.emissionMessages = Array.isArray(res?.messages) ? res.messages : [];
+              this.emissionInvoiceName = String(res?.invoiceName || this.extractInvoiceName(res) || '').trim();
+              this.emissionAccessKey = String(res?.accessKey || res?.emission?.access_key || '').trim();
+              this.emissionAuthorizationNumber = String(res?.authorizationNumber || res?.emission?.authorization_number || '').trim();
+              this.emissionAuthorizationDatetime = String(res?.authorizationDatetime || res?.emission?.authorization_datetime || '').trim();
 
-              this.alertService.confirm(`Factura ${inv} creada y enviada al SRI.`, '¿Deseas imprimir la factura?', 'success')
-                .then(result => {
-                  if (result.isConfirmed) this.printInvoice(inv);
-                  if (this.order) {
-                    this.router.navigate(['/dashboard/invoicing']);
-                  }
-                });
+              if (this.emissionState === 'AUTHORIZED') {
+                toast.success('Factura autorizada por el SRI.');
+                this.refreshProductsAfterInvoice();
+                const inv = this.emissionInvoiceName;
+                this.alertService.confirm(`Factura ${inv || ''} autorizada.`, '¿Deseas imprimir el RIDE?', 'success')
+                  .then(printResult => {
+                    if (printResult.isConfirmed && inv) this.printInvoice(inv, 'ride');
+                    this.clearInvoiceForm();
+                    if (this.order) this.router.navigate(['/dashboard/invoicing']);
+                  });
+              } else if (this.emissionState === 'PROCESSING') {
+                toast.info('Comprobante recibido. Autorización pendiente.');
+              } else if (this.emissionState === 'REJECTED') {
+                toast.error(this.emissionMessages.join(' ') || 'El comprobante fue rechazado por el SRI.');
+              } else {
+                toast.error(this.emissionMessages.join(' ') || 'No se pudo completar el envío.');
+              }
 
-            },error: (err: any) => {
-              console.error('Error al emitir factura:', err);
-            }
+            },
+            error: (err) => this.handleEmissionError(err)
           });
       });
   }
 
   get canEmitInvoice(): boolean {
-    return this.capabilities.validateFeatureUse('direct_invoice').allowed;
+    return this.capabilities.canEmit() && !this.isEmitting && !this.emissionInvoiceName;
   }
 
   get invoicePlanBlockMessage(): string | null {
@@ -764,10 +781,47 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     return this.capabilities.isEnabled('additional_fields');
   }
 
-  private printInvoice(invoiceId: string): void {
+  private printInvoice(invoiceId: string, format: 'ride' | 'ticket' = 'ride'): void {
     if (!invoiceId) return;
+    if (this.capabilities.isLiteMode) {
+      this.printService.downloadLiteInvoicePdf(
+        invoiceId,
+        format === 'ride' ? 'FACTURADA RIDE' : 'FacturADA Lite Ticket'
+      ).subscribe({
+        next: (blob) => this.openPdfBlob(blob),
+        error: () => toast.error('No se pudo descargar el documento Lite.')
+      });
+      return;
+    }
     const invoiceUrl = this.printService.getFacturaPdf(invoiceId);
     window.open(invoiceUrl, '_blank', 'noopener=yes,noreferrer=yes');
+  }
+
+  private openPdfBlob(blob: Blob): void {
+    const url = window.URL.createObjectURL(blob);
+    const popup = window.open(url, '_blank', 'noopener=yes,noreferrer=yes');
+    if (!popup) toast.error('No se pudo abrir el documento descargado.');
+    window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+  }
+
+  printRide(): void {
+    if (this.emissionState !== 'AUTHORIZED' || !this.emissionInvoiceName) {
+      toast.info('El RIDE oficial estará disponible cuando la factura sea autorizada.');
+      return;
+    }
+    this.printInvoice(this.emissionInvoiceName, 'ride');
+  }
+
+  printTicket(): void {
+    if (!this.emissionInvoiceName) return;
+    this.printInvoice(this.emissionInvoiceName, 'ticket');
+  }
+
+  private handleEmissionError(err: any): void {
+    const message = this.getErrorMessage(err);
+    this.emissionState = 'ERROR';
+    this.emissionMessages = [message];
+    toast.error(message);
   }
 
   private clearInvoiceForm(): void {
@@ -776,10 +830,24 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     this.productSearchTerm = '';
     this.productSuggestions = [];
     this.isProductSearchOpen = false;
-    this.showManualItem = false;
-    this.adHoc.description = '';
     this.additionalFields.clear();
     this.clearSelectedCustomer();
+    this.emissionState = null;
+    this.emissionMessages = [];
+    this.emissionInvoiceName = '';
+    this.emissionAccessKey = '';
+    this.emissionAuthorizationNumber = '';
+    this.emissionAuthorizationDatetime = '';
+  }
+
+  private refreshProductsAfterInvoice(): void {
+    this.productsService.getAll(1).subscribe({
+      next: (response: any) => {
+        const products = Array.isArray(response) ? response : response?.message?.data;
+        if (Array.isArray(products)) this.products = products;
+      },
+      error: () => { }
+    });
   }
 
   // ------------------ Utilidades ------------------
@@ -895,9 +963,20 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     return Math.round((n + Number.EPSILON) * 100) / 100;
   }
 
-  // ad-hoc helper
-  adHoc = { description: '' };
+  private getLiteEmissionEnvironment(): 'Pruebas' | 'Produccion' | '' {
+    const value = this.capabilities.business?.environment
+      ?? this.capabilities.business?.tax_profile?.environment;
+    const normalized = String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase();
+    if (normalized.includes('PROD')) return 'Produccion';
+    if (normalized.includes('PRUEB') || normalized === 'TEST') return 'Pruebas';
+    return '';
+  }
 
+  // ad-hoc helper
   private getTaxPct(it: CartItem): number {
     // Prioriza tax_value numérico (0 o 15); si no existe, compatibilidad con 'IVA-15'
     if (Number.isFinite(it.tax_value as number)) {
@@ -920,6 +999,20 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   private canUseCartQuantity(item: CartItem, quantity: number): boolean {
     const product = this.getCartProduct(item);
     return canUseInventoryQuantity(product, quantity);
+  }
+
+  private extractInvoiceName(res: any): string {
+    const message = res?.message ?? res ?? {};
+    const data = message?.data ?? res?.data ?? {};
+    return String(
+      message?.invoice ??
+      message?.invoice_name ??
+      message?.name ??
+      data?.invoice ??
+      data?.invoice_name ??
+      data?.name ??
+      ''
+    ).trim();
   }
 
   private refreshProductSuggestions(): void {
@@ -965,4 +1058,3 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
 
 }
-

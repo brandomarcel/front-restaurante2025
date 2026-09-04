@@ -41,20 +41,54 @@ public getFechaHoraEcuador(): string {
 
 
 
-  private ambienteSubject = new BehaviorSubject<string>('');
+  /**
+   * Ambiente tributario compartido por toda la aplicación.
+   *
+   * El backend Lite lo entrega como `tax_profile.environment` (por ejemplo,
+   * "Pruebas"), mientras que las vistas históricas comparan contra
+   * `PRUEBAS`/`PRODUCCION`. Normalizamos en un único punto para evitar que
+   * cada pantalla tenga que conocer ambos formatos.
+   */
+  private ambienteSubject = new BehaviorSubject<string>(
+    this.normalizarAmbiente(this.readStoredAmbiente())
+  );
 
   // Observable que pueden usar los componentes
   ambiente$ = this.ambienteSubject.asObservable();
 
   // Función para cambiar el ambiente
-  cambiarAmbiente(nuevoAmbiente: string) {
-    console.log('cambiarAmbiente', nuevoAmbiente);
-    this.ambienteSubject.next(nuevoAmbiente);
+  cambiarAmbiente(nuevoAmbiente: unknown) {
+    const ambiente = this.normalizarAmbiente(nuevoAmbiente);
+    this.ambienteSubject.next(ambiente);
+    if (ambiente) {
+      localStorage.setItem('ambiente', ambiente);
+    }
   }
 
   // Opcional: obtener el valor actual
   getAmbienteActual(): string {
     return this.ambienteSubject.value;
+  }
+
+  private readStoredAmbiente(): string {
+    try {
+      return localStorage.getItem('ambiente') || '';
+    } catch {
+      return '';
+    }
+  }
+
+  private normalizarAmbiente(value: unknown): string {
+    const normalized = String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase();
+
+    if (!normalized) return '';
+    if (normalized === 'PRODUCCION' || normalized.includes('PROD')) return 'PRODUCCION';
+    if (normalized === 'PRUEBAS' || normalized === 'TEST' || normalized.includes('PRUEB')) return 'PRUEBAS';
+    return normalized;
   }
 
 

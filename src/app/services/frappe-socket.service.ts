@@ -22,9 +22,9 @@ export class FrappeSocketService {
 
     // dentro de connect()
     const base = environment.production ? environment.URL : ''; // '' en dev para usar el proxy
-    const nsUrl = `${base}/${environment.frappeSiteNamespace}`; // -> "/restaurante_bmarc" en dev
+    const nsUrl = `${base}/${environment.frappeSocketNamespace}`;
 
-    //const nsUrl = `${environment.apiUrl.replace(/^http/, 'ws')}/${environment.frappeSiteNamespace}`;
+    //const nsUrl = `${environment.apiUrl.replace(/^http/, 'ws')}/${environment.frappeSocketNamespace}`;
     console.log('[frappe-socket] connecting to', nsUrl);
     this.socket = io(nsUrl, {
       path: '/socket.io',

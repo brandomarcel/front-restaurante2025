@@ -110,9 +110,9 @@ export class PosComponent implements OnInit {
     this.permissions = this.getPermissionsFromRole(this.roleName);
     console.log('📦roleName', this.roleName, '📦permissions', this.permissions);
 
-    const ambienteGuardado = localStorage.getItem('ambiente');
-    console.log('📦ambienteGuardado', ambienteGuardado);
-    this.ambiente = ambienteGuardado ?? '----------';
+    this.ambiente = this.utilsService.getAmbienteActual()
+      || localStorage.getItem('ambiente')
+      || '----------';
 
     const fechaEcuador = new Date(
       new Date().toLocaleString('en-US', { timeZone: 'America/Guayaquil' })
@@ -221,7 +221,7 @@ export class PosComponent implements OnInit {
     this.spinner.show();
     this.productsService.getAll(1).subscribe((res: any) => {
       this.spinner.hide();
-      this.products = res.message.data || [];
+      this.products = Array.isArray(res) ? res : (res?.message?.data || []);
       this.applyFilters();
     },
     error => {
@@ -273,7 +273,7 @@ export class PosComponent implements OnInit {
     this.spinner.show();
     this.customersService.get_cliente_by_identificacion(identification).subscribe({
       next: (res) => {
-        this.customer = res.message;
+        this.customer = res?.data || res?.message?.data || (res?.message && typeof res.message === 'object' ? res.message : res);
       },
       error: (err) => {
         console.error('Error al buscar cliente:', err);
@@ -311,7 +311,7 @@ export class PosComponent implements OnInit {
       next: (res) => {
         toast.success('Cliente creado exitosamente');
         this.cerrarModal();
-        this.customer = res.message.data;
+        this.customer = Array.isArray(res) ? res[0] : (res?.data || res?.message?.data || res?.message || res);
         this.identificationCustomer = this.customer.num_identificacion;
       },
       error: (err) => {
@@ -394,7 +394,7 @@ export class PosComponent implements OnInit {
   }
 
   get canEmitInvoice(): boolean {
-    return this.capabilities.validateFeatureUse('direct_invoice').allowed;
+    return this.capabilities.canEmit();
   }
 
   get invoicePlanBlockMessage(): string | null {
@@ -867,7 +867,7 @@ export class PosComponent implements OnInit {
   private refreshProductsSilently(): void {
     this.productsService.getAll(1).subscribe({
       next: (res: any) => {
-        this.products = res?.message?.data || [];
+        this.products = Array.isArray(res) ? res : (res?.message?.data || []);
         this.applyFilters();
       }
     });

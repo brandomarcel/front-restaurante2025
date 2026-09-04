@@ -1,17 +1,19 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { OrdersService } from '../../../../services/orders.service';
 import { CajasService } from 'src/app/services/cajas.service';
 import { CompanyService } from '../../../../services/company.service';
 import { UserData } from 'src/app/core/models/user_data';
-import { firstValueFrom, forkJoin, Subject } from 'rxjs';
+import { firstValueFrom, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { isNullOrEmpty } from 'src/app/shared/utils/validation';
 import { AvisosComponent } from "src/app/shared/components/avisos/avisos.component";
 import { diasRestantes } from 'src/app/shared/utils/date.utils';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { BusinessMode, CompanyCapabilitiesService, CompanyFeatureKey, CompanyPlan } from 'src/app/core/services/company-capabilities.service';
+import { FacturadaLiteDashboardService, LiteDashboard, LiteDashboardPlan } from 'src/app/services/facturada-lite-dashboard.service';
 
 // Interfaz para los avisos
 interface Aviso {
@@ -27,6 +29,7 @@ interface CompanyData {
   phone?: string;
   email?: string;
   address?: string;
+  environment?: string;
   firma?: boolean;
   cert_not_after?: string;
   cert_not_before?: string;
@@ -45,7 +48,7 @@ type DashboardAction = {
   selector: 'app-nft',
   templateUrl: './nft.component.html',
   standalone: true,
-  imports: [CommonModule, RouterModule, AvisosComponent, NgApexchartsModule]
+  imports: [CommonModule, FormsModule, RouterModule, AvisosComponent, NgApexchartsModule]
 })
 export class NftComponent implements OnInit, OnDestroy {
 
@@ -61,6 +64,12 @@ export class NftComponent implements OnInit, OnDestroy {
   certDaysLeft: number | null = null;
   businessMode: BusinessMode = 'RESTAURANTE';
   currentPlan: CompanyPlan | null = null;
+
+  liteDashboard: LiteDashboard | null = null;
+  liteDashboardLoading = false;
+  liteDashboardError = '';
+  liteFromDate = '';
+  liteToDate = '';
 
   // Nuevas propiedades
   userData?: UserData | null;
@@ -78,7 +87,8 @@ export class NftComponent implements OnInit, OnDestroy {
     private ordersService: OrdersService,
     private cajasService: CajasService,
     private companyService: CompanyService,
-    private capabilities: CompanyCapabilitiesService
+    private capabilities: CompanyCapabilitiesService,
+    private liteDashboardService: FacturadaLiteDashboardService
   ) { }
 
   ngOnInit(): void {
@@ -97,18 +107,39 @@ export class NftComponent implements OnInit, OnDestroy {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     this.userData = user;
 
-    forkJoin({
-      dashboard: this.ordersService.get_dashboard_metrics(),
-      empresa: this.companyService.get_empresa()
-    })
+    const activeBusiness = this.capabilities.activeBusinessId
+      || localStorage.getItem('active_business')
+      || localStorage.getItem('businessId')
+      || undefined;
+    const companyRequest = this.isLiteMode && activeBusiness
+      ? this.companyService.getLiteSetup(activeBusiness)
+      : this.companyService.get_empresa(activeBusiness);
+
+    companyRequest
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: async (results: any) => {
-          this.capabilities.setFromResponse(results.empresa);
+        next: async (empresa: any) => {
+          if (this.isLiteMode) this.capabilities.setLiteSetupState(empresa);
+          else this.capabilities.setFromResponse(empresa);
           this.businessMode = this.capabilities.businessMode;
           this.currentPlan = this.capabilities.plan;
-          this.procesarDashboard(results.dashboard);
-          this.procesarEmpresa(results.empresa);
+          this.procesarEmpresa(empresa);
+
+          if (this.isLiteMode) {
+            this.initializeLiteDateRange();
+            await this.loadLiteDashboard();
+            this.actualizarVisualizaciones();
+            this.generarAvisos();
+            return;
+          }
+
+          try {
+            const dashboard = await firstValueFrom(this.ordersService.get_dashboard_metrics());
+            this.procesarDashboard(dashboard);
+          } catch (error) {
+            console.error('Error al obtener métricas:', error);
+          }
+
           if (this.isRestaurantMode && !this.idApertura) {
             await this.getDatosCierre();
           }
@@ -138,6 +169,62 @@ export class NftComponent implements OnInit, OnDestroy {
     }
   }
 
+  async loadLiteDashboard(): Promise<void> {
+    if (!this.isLiteMode) return;
+    if (!this.liteFromDate || !this.liteToDate) this.initializeLiteDateRange();
+
+    this.liteDashboardLoading = true;
+    this.liteDashboardError = '';
+    try {
+      this.liteDashboard = await firstValueFrom(this.liteDashboardService.getDashboard(
+        this.liteFromDate,
+        this.liteToDate,
+        this.capabilities.businessId || undefined
+      ));
+      this.actualizarLiteMetrics();
+    } catch (error: any) {
+      this.liteDashboard = null;
+      this.liteDashboardError = this.readLiteDashboardError(error);
+    } finally {
+      this.liteDashboardLoading = false;
+      this.generarAvisos();
+    }
+  }
+
+  onLiteDateChange(): void {
+    if (!this.liteFromDate || !this.liteToDate || this.liteFromDate > this.liteToDate) return;
+    void this.loadLiteDashboard();
+  }
+
+  private initializeLiteDateRange(): void {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    this.liteFromDate = this.toIsoDate(firstDay);
+    this.liteToDate = this.toIsoDate(lastDay);
+  }
+
+  private toIsoDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private actualizarLiteMetrics(): void {
+    const sales = this.liteDashboard?.sales;
+    if (!sales) return;
+    this.totalOrdersToday = sales.invoice_count;
+    this.total_sales_today = sales.sales_total;
+  }
+
+  private readLiteDashboardError(error: any): string {
+    const message = error?.error?.message;
+    if (typeof message === 'string' && message.trim()) return message;
+    if (typeof error?.message === 'string' && error.message.trim()) return error.message;
+    return 'No se pudo cargar el dashboard. Verifica la conexión e inténtalo nuevamente.';
+  }
+
   private procesarDashboard(response: any): void {
     try {
       const data = response?.message;
@@ -154,16 +241,27 @@ export class NftComponent implements OnInit, OnDestroy {
 
   procesarEmpresa(data: any) {
     try {
-      const resp = data?.message;
+      const resp = data?.message ?? data;
       if (resp) {
+        const business = resp?.business && typeof resp.business === 'object'
+          ? resp.business
+          : resp;
+        const taxProfile = resp?.tax_profile && typeof resp.tax_profile === 'object'
+          ? resp.tax_profile
+          : (business?.tax_profile && typeof business.tax_profile === 'object' ? business.tax_profile : {});
+        const certificateReference = taxProfile.certificate_reference
+          ?? business.urlfirma
+          ?? business.certificate_reference
+          ?? resp.certificate_reference;
         this.companyData = {
-          name: resp.name || 'Sin nombre',
-          phone: resp.phone,
-          email: resp.email,
-          address: resp.address,
-          firma: isNullOrEmpty(resp.urlfirma),
-          cert_not_after: resp.cert_not_after,
-          cert_not_before: resp.cert_not_before
+          name: business.businessname || business.business_name || business.trade_name || business.legal_name || business.name || 'Sin nombre',
+          phone: taxProfile.phone || business.phone,
+          email: taxProfile.email || business.email,
+          address: taxProfile.main_address || business.address || business.main_address,
+          environment: taxProfile.environment || taxProfile.ambiente || business.environment || business.ambiente,
+          firma: isNullOrEmpty(certificateReference),
+          cert_not_after: taxProfile.certificate_valid_to || business.cert_not_after,
+          cert_not_before: taxProfile.certificate_valid_from || business.cert_not_before
 
         };
       }
@@ -188,6 +286,19 @@ export class NftComponent implements OnInit, OnDestroy {
   private generarAvisos(): void {
     // Limpiar avisos previos
     this.avisos = [];
+    if (this.isLiteMode && this.liteDashboardError) {
+      this.agregarAviso('Dashboard', this.liteDashboardError, 'error');
+    }
+    if (this.isLiteMode && this.litePlanIsInactive) {
+      this.agregarAviso('Plan actual', 'El plan no está activo. La emisión de comprobantes está bloqueada.', 'warning');
+    } else if (this.isLiteMode && this.litePlan && !this.litePlanUnlimited && (Number(this.litePlan.remaining_authorized_documents) || 0) <= 0) {
+      this.agregarAviso('Comprobantes', 'Se agotó el límite de comprobantes autorizados del plan.', 'warning');
+    } else if (this.isLiteMode && this.litePlanExpiringSoon) {
+      this.agregarAviso('Plan actual', `El plan vence en ${this.litePlanDaysToExpire} día(s).`, 'warning');
+    }
+    if (this.isLiteMode && this.liteStockAlert) {
+      this.agregarAviso('Inventario', `Hay ${this.liteDashboard?.inventory.out_of_stock_items.length || 0} producto(s) sin stock.`, 'warning');
+    }
     if (this.companyData?.firma) {
       this.agregarAviso('Aviso', 'Ingrese su firma para poder emitir facturas.',
         'warning');
@@ -295,7 +406,11 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   get isFacturadorMode(): boolean {
-    return this.businessMode === 'FACTURADOR';
+    return this.businessMode === 'FACTURADOR' || this.businessMode === 'FACTURADA_LITE';
+  }
+
+  get isLiteMode(): boolean {
+    return this.businessMode === 'FACTURADA_LITE';
   }
 
   get isRestaurantMode(): boolean {
@@ -303,6 +418,7 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   get modeLabel(): string {
+    if (this.isLiteMode) return 'FacturADA Lite';
     return this.isFacturadorMode ? 'Facturador' : 'Restaurante';
   }
 
@@ -350,11 +466,11 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   isActionBlocked(action: DashboardAction): boolean {
-    return !!action.requiresEmission && !!this.capabilities.getPlanBlockMessage('direct_invoice');
+    return !!action.requiresEmission && !!this.litePlanBlockMessage;
   }
 
   onPrimaryActionClick(event: Event, action: DashboardAction): void {
-    const blockMessage = action.requiresEmission ? this.capabilities.getPlanBlockMessage('direct_invoice') : null;
+    const blockMessage = action.requiresEmission ? this.litePlanBlockMessage : null;
     if (!blockMessage) return;
     event.preventDefault();
     event.stopPropagation();
@@ -395,13 +511,13 @@ export class NftComponent implements OnInit, OnDestroy {
 
   get planRemainingLabel(): string {
     if (!this.currentPlan) return '—';
-    if (this.planUnlimitedVouchers) return 'Ilimitado';
+    if (this.planUnlimitedVouchers) return 'Ilimitados';
     return `${Number(this.currentPlan.remaining_authorized_vouchers) || 0}`;
   }
 
   get planVoucherUsageLabel(): string {
     if (!this.currentPlan) return '—';
-    if (this.planUnlimitedVouchers) return `${this.planUsedVouchers} usados / Ilimitado`;
+    if (this.planUnlimitedVouchers) return `${this.planUsedVouchers} usados / Ilimitados`;
     return `${this.planUsedVouchers} usados / ${this.planPurchasedVouchers} incluidos`;
   }
 
@@ -430,6 +546,140 @@ export class NftComponent implements OnInit, OnDestroy {
   get planAutoRenewLabel(): string {
     const value = this.currentPlan?.auto_renew;
     return value === true || value === 1 || `${value ?? ''}` === '1' ? 'Sí' : 'No';
+  }
+
+  get liteSales() {
+    return this.liteDashboard?.sales;
+  }
+
+  get liteBusinessName(): string {
+    const business = this.capabilities.business || {};
+    return String(
+      business.business_name || business.businessname || business.trade_name || business.legal_name || business.name ||
+      this.liteDashboard?.business || 'Negocio'
+    );
+  }
+
+  get liteEnabledModules(): string[] {
+    const labels: Array<[CompanyFeatureKey, string]> = [
+      ['direct_invoice', 'Facturación'],
+      ['customers', 'Clientes'],
+      ['products', 'Productos'],
+      ['inventory', 'Inventario'],
+      ['credit_note', 'Notas de crédito']
+    ];
+    return labels.filter(([feature]) => this.isFeatureEnabled(feature)).map(([, label]) => label);
+  }
+
+  get litePlan(): LiteDashboardPlan | null {
+    if (this.liteDashboard?.plan) return this.liteDashboard.plan;
+    if (!this.currentPlan) return null;
+    return {
+      name: this.currentPlan.plan_name || this.currentPlan.plan,
+      status: this.currentPlan.status,
+      active: this.currentPlan.active,
+      start_date: this.currentPlan.start_date,
+      end_date: this.currentPlan.end_date,
+      unlimited_documents: this.currentPlan.unlimited_authorized_vouchers,
+      max_authorized_documents: this.currentPlan.purchased_authorized_vouchers,
+      used_authorized_documents: this.currentPlan.used_authorized_vouchers,
+      remaining_authorized_documents: this.currentPlan.remaining_authorized_vouchers
+    };
+  }
+
+  get litePlanIsInactive(): boolean {
+    if (!this.litePlan) return false;
+    if (this.litePlan.active === false) return true;
+    const status = `${this.litePlan.status || ''}`.toUpperCase();
+    return ['VENCIDO', 'SUSPENDIDO', 'CANCELADO', 'INACTIVO'].includes(status);
+  }
+
+  get litePlanUnlimited(): boolean {
+    return this.litePlan?.unlimited_documents === true;
+  }
+
+  get litePlanRemainingLabel(): string {
+    if (!this.litePlan) return '—';
+    if (this.litePlanUnlimited) return 'Ilimitados';
+    return `${Number(this.litePlan.remaining_authorized_documents) || 0}`;
+  }
+
+  get litePlanConsumptionLabel(): string {
+    if (!this.litePlan) return '—';
+    return this.litePlanUnlimited ? 'Ilimitada' : 'Por comprobantes';
+  }
+
+  get litePlanBlockMessage(): string | null {
+    if (!this.isLiteMode) return this.capabilities.getPlanBlockMessage('direct_invoice');
+    if (!this.litePlan) return 'La empresa no tiene un plan asignado para emitir comprobantes.';
+    if (this.litePlanIsInactive) return 'El plan de la empresa no está activo.';
+    if (!this.litePlanUnlimited && (Number(this.litePlan.remaining_authorized_documents) || 0) <= 0) {
+      return 'No quedan comprobantes disponibles en el plan actual.';
+    }
+    return null;
+  }
+
+  get litePlanStatusClasses(): string {
+    return this.getPlanStatusClasses(`${this.litePlan?.status || 'SIN PLAN'}`);
+  }
+
+  get litePlanDaysToExpire(): number | null {
+    const end = this.litePlan?.end_date || this.currentPlan?.end_date;
+    const parsed = this.parsePlanDate(end);
+    if (!parsed) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return Math.ceil((parsed.getTime() - today.getTime()) / 86400000);
+  }
+
+  get litePlanExpiringSoon(): boolean {
+    return this.litePlanDaysToExpire !== null && this.litePlanDaysToExpire >= 0 && this.litePlanDaysToExpire <= 7;
+  }
+
+  get liteHasNoData(): boolean {
+    if (!this.liteDashboard || this.liteDashboardLoading) return false;
+    return !this.liteDashboard.recent_invoices.length;
+  }
+
+  get liteStockAlert(): boolean {
+    if (!this.isFeatureEnabled('inventory')) return false;
+    return (this.liteDashboard?.inventory.low_stock_items || 0) > 0 || (this.liteDashboard?.inventory.out_of_stock_items.length || 0) > 0;
+  }
+
+  get liteDashboardPeriodLabel(): string {
+    const from = this.liteDashboard?.period?.from_date || this.liteFromDate;
+    const to = this.liteDashboard?.period?.to_date || this.liteToDate;
+    return `${this.formatPlanDate(from)} hasta ${this.formatPlanDate(to)}`;
+  }
+
+  get litePlanDateRangeLabel(): string {
+    const start = this.litePlan?.start_date || this.currentPlan?.start_date;
+    const end = this.litePlan?.end_date || this.currentPlan?.end_date;
+    if (!start && !end) return 'Vigencia no disponible';
+    return `${this.formatPlanDate(start)} hasta ${this.formatPlanDate(end)}`;
+  }
+
+  formatLiteInvoiceDate(value: unknown): string {
+    const raw = `${value || ''}`.trim();
+    if (!raw) return '—';
+    const datePart = raw.split(/[T ]/)[0];
+    return this.formatPlanDate(datePart);
+  }
+
+  liteInvoiceName(invoice: any): string {
+    return String(invoice?.name || invoice?.invoice_name || invoice?.document || invoice?.documento || '—');
+  }
+
+  liteInvoiceCustomer(invoice: any): string {
+    return String(invoice?.customer_name || invoice?.customer || invoice?.customer_data?.nombre || invoice?.customer_data?.full_name || 'Consumidor final');
+  }
+
+  liteInvoiceStatus(invoice: any): string {
+    return String(invoice?.status || invoice?.einvoice_status || invoice?.sri_status || '—');
+  }
+
+  liteInvoiceTotal(invoice: any): number {
+    return Number(invoice?.total ?? invoice?.grand_total ?? invoice?.amount ?? 0) || 0;
   }
 
   get ticketPromedio(): number {

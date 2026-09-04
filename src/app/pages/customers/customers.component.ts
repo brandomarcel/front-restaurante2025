@@ -73,7 +73,7 @@ export class CustomersComponent implements OnInit {
     this.customersService.getAll().subscribe({
       next: (res: any) => {
         this.spinner.hide();
-        this.customers = res.message?.data || [];
+        this.customers = Array.isArray(res) ? res : (res?.message?.data || []);
         this.filteredCustomersList = [...this.customers].sort((a, b) =>
           (a.nombre || '').localeCompare(b.nombre || '')
         );

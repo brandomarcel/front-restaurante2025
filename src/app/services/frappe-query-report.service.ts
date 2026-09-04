@@ -4,6 +4,7 @@ import { catchError, Observable, throwError } from 'rxjs';
 import { FrappeErrorService } from '../core/services/frappe-error.service';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 import { environment } from 'src/environments/environment';
+import { CompanyCapabilitiesService } from '../core/services/company-capabilities.service';
 
 export interface FrappeReportColumn {
   label?: string;
@@ -30,7 +31,8 @@ export class FrappeQueryReportService {
 
   constructor(
     private http: HttpClient,
-    private frappeErr: FrappeErrorService
+    private frappeErr: FrappeErrorService,
+    private capabilities: CompanyCapabilitiesService
   ) {}
 
   run(reportName: string, filters: Record<string, any>): Observable<FrappeQueryReportResponse> {
@@ -79,7 +81,16 @@ export class FrappeQueryReportService {
   }
 
   private cleanFilters(filters: Record<string, any>): Record<string, any> {
-    return Object.entries(filters || {}).reduce((acc, [key, value]) => {
+    const source = { ...(filters || {}) };
+    if (this.capabilities.isLiteMode) {
+      delete source['company'];
+      delete source['company_id'];
+      if (!source['business']) {
+        const business = this.capabilities.activeBusinessId || localStorage.getItem('businessId') || '';
+        if (business) source['business'] = business;
+      }
+    }
+    return Object.entries(source).reduce((acc, [key, value]) => {
       if (
         value !== null &&
         value !== undefined &&

@@ -20,6 +20,9 @@ export class FrappeErrorService {
       return this.cleanHtml(error.error._error_message);
     }
 
+    const directMessage = this.extractDirectMessage(error);
+    if (directMessage) return directMessage;
+
     // 🔹 3. Exception estructurada de Frappe
     if (error?.error?.exception) {
       return this.extractExceptionMessage(error.error);
@@ -31,6 +34,25 @@ export class FrappeErrorService {
     }
 
     return 'Error inesperado';
+  }
+
+  private extractDirectMessage(error: any): string | null {
+    const candidates = [
+      error?.error?.message,
+      error?.message,
+      error?.error?.exc,
+      error?.exc,
+      error?.error?.error,
+      error?.error
+    ];
+
+    for (const candidate of candidates) {
+      if (typeof candidate === 'string' && candidate.trim()) {
+        return this.cleanHtml(candidate);
+      }
+    }
+
+    return null;
   }
 
   // =============================================
@@ -149,7 +171,10 @@ export class FrappeErrorService {
   // 🔥 Traducción inteligente de excepciones
   // =============================================
   private extractExceptionMessage(exc: any): string {
-    const raw = (exc?.message || '').toLowerCase();
+    const rawText = [exc?.exc_type, exc?.exception, exc?.exc, exc?.message]
+      .filter(Boolean)
+      .join(' ');
+    const raw = rawText.toLowerCase();
 
     const map: Record<string, string> = {
       'duplicate': 'Este registro ya existe.',
@@ -175,6 +200,10 @@ export class FrappeErrorService {
       'invalid login': 'Credenciales inválidas.',
       'invalid credentials': 'Credenciales inválidas.'
     };
+
+    if (raw.includes('permissionerror') || raw.includes('permission denied') || raw.includes('not permitted')) {
+      return 'No tienes permisos para realizar esta operación en el negocio seleccionado.';
+    }
 
     for (const key of Object.keys(map)) {
       if (raw.includes(key)) {

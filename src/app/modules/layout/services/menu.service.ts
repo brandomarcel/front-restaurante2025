@@ -58,10 +58,15 @@ export class MenuService implements OnDestroy {
   }
 
   public setMenuForRoles(roles: Array<Role | string>) {
-    const normalizedRoles = roles.map(role => this.normalizeRole(String(role || ''))).filter(Boolean);
-    const appRole = ['SYSTEM MANAGER', 'GERENTE', 'CAJERO', 'MESERO', 'COCINA'].find(role => normalizedRoles.includes(role));
+    const contextRole = this.capabilities.businessRole;
+    const normalizedRoles = [...roles, ...(contextRole ? [contextRole] : [])]
+      .map(role => this.normalizeRole(String(role || '')))
+      .map(role => role === 'FACTURADOR' ? 'FACTURACION' : role)
+      .filter(Boolean);
+    const effectiveRoles = this.expandAdminRoles(normalizedRoles);
+    const appRole = ['SYSTEM MANAGER', 'GERENTE', 'CAJERO', 'FACTURACION', 'MESERO', 'COCINA', 'USUARIO'].find(role => effectiveRoles.includes(role));
     this._currentRole.set(appRole || normalizedRoles[0] || '');
-    const filtered = this.filterMenuByAccess(Menu.pages, normalizedRoles);
+    const filtered = this.filterMenuByAccess(Menu.pages, effectiveRoles);
     this._pagesMenu.set(filtered);
     this.applyActiveState();
     this.rebuildQuickActions();
@@ -92,6 +97,8 @@ export class MenuService implements OnDestroy {
       roles?.map((r) => String(r).trim().toUpperCase() as Role);
 
     const filterItem = (item: SubMenuItem, inheritedRoles?: Role[], inheritedFeature?: SubMenuItem['featureKey']): SubMenuItem | null => {
+      if (this.capabilities.isLiteMode && item.hideInLite) return null;
+
       const rolesForThisItem = normRoles(item.allowedRoles) ?? normRoles(inheritedRoles);
       const featureKey = item.featureKey ?? inheritedFeature;
       const allowedByRole = !rolesForThisItem || rolesForThisItem.some(role => currentRoles.includes(role));
@@ -107,6 +114,8 @@ export class MenuService implements OnDestroy {
 
     return groups
       .map((group) => {
+        if (this.capabilities.isLiteMode && group.hideInLite) return null;
+
         const groupRoles = normRoles(group.allowedRoles);
         const groupAllowed = !groupRoles || groupRoles.some(role => currentRoles.includes(role));
         if (groupRoles && !groupAllowed) return null;
@@ -168,6 +177,13 @@ export class MenuService implements OnDestroy {
       .filter((item, index, arr) => arr.findIndex((x) => x.route === item.route) === index);
 
     const priorityMap: Record<string, string[]> = {
+      'SYSTEM MANAGER': [
+        '/dashboard/main',
+        '/dashboard/invoicing',
+        '/dashboard/invoices',
+        '/dashboard/customers',
+        '/dashboard/products',
+      ],
       GERENTE: [
         '/dashboard/main',
         '/dashboard/orders-realtime',
@@ -188,6 +204,17 @@ export class MenuService implements OnDestroy {
       ],
       COCINA: [
         '/dashboard/orders-realtime',
+      ],
+      FACTURACION: [
+        '/dashboard/main',
+        '/dashboard/invoicing',
+        '/dashboard/invoices',
+        '/dashboard/customers',
+        '/dashboard/products',
+      ],
+      USUARIO: [
+        '/dashboard/main',
+        '/dashboard/invoices',
       ],
     };
 
@@ -240,6 +267,15 @@ export class MenuService implements OnDestroy {
       .replace(/[\u0300-\u036f]/g, '')
       .toUpperCase()
       .trim();
+  }
+
+  private expandAdminRoles(roles: string[]): string[] {
+    const expanded = new Set(roles);
+    if (roles.includes('SYSTEM MANAGER') || roles.includes('ADMINISTRATOR') || roles.includes('ADMINISTRADOR') || roles.includes('ADMINISTRADOR DEL NEGOCIO')) {
+      expanded.add('GERENTE');
+      expanded.add('CAJERO');
+    }
+    return Array.from(expanded);
   }
 
   private defaultSidebarState(): boolean {

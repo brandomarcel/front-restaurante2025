@@ -386,7 +386,6 @@ export class OrderDetailPageComponent implements OnInit {
     error: () => toast.error('Error al actualizar la orden.')
   });
 
-  console.log('payload actualizar orden =>', payload);
 }
 
   async closeOrder(): Promise<void> {

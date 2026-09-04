@@ -79,7 +79,7 @@ export class ProfileMenuComponent implements OnInit {
   public themeDirection = ['ltr', 'rtl'];
 
   public user: any = {};
-  public roleUpper: Role | null = null; // 'GERENTE' | 'CAJERO' | 'MESERO' | 'COCINA'
+  public roleUpper: Role | null = null;
 
   constructor(public themeService: ThemeService, private authService: AuthService) {}
 
@@ -88,14 +88,16 @@ export class ProfileMenuComponent implements OnInit {
 
     // Normaliza el rol desde varias posibles propiedades
     const rawRole =
-      this.user?.roles?.[0] ??
+      this.user?.businessRole ??
+      this.user?.business_role ??
+      this.user?.roles?.find((role: string) => ['GERENTE', 'CAJERO', 'FACTURACION', 'FACTURADOR', 'MESERO', 'COCINA', 'USUARIO'].includes(String(role || '').trim().toUpperCase())) ??
       this.user?.role ??
       this.user?.rol ??
       this.user?.tipo ??
       '';
 
-    const r = String(rawRole).trim().toUpperCase();
-    this.roleUpper = r === 'GERENTE' || r === 'CAJERO' || r === 'MESERO' || r === 'COCINA'
+    const r = String(rawRole).trim().toUpperCase() === 'FACTURADOR' ? 'FACTURACION' : String(rawRole).trim().toUpperCase();
+    this.roleUpper = r === 'GERENTE' || r === 'CAJERO' || r === 'FACTURACION' || r === 'MESERO' || r === 'COCINA' || r === 'USUARIO'
       ? (r as Role)
       : null;
 
@@ -137,6 +139,7 @@ export class ProfileMenuComponent implements OnInit {
   get roleLabel(): string {
     if (this.roleUpper === 'GERENTE') return 'Gerente';
     if (this.roleUpper === 'CAJERO') return 'Cajero';
+    if (this.roleUpper === 'FACTURACION') return 'Facturación';
     if (this.roleUpper === 'MESERO') return 'Mesero';
     if (this.roleUpper === 'COCINA') return 'Cocina';
     return 'Usuario';
@@ -145,6 +148,7 @@ export class ProfileMenuComponent implements OnInit {
   get roleBadgeClass(): string {
     if (this.roleUpper === 'GERENTE') return 'bg-emerald-100 text-emerald-700';
     if (this.roleUpper === 'CAJERO') return 'bg-sky-100 text-sky-700';
+    if (this.roleUpper === 'FACTURACION') return 'bg-blue-100 text-blue-700';
     if (this.roleUpper === 'MESERO') return 'bg-violet-100 text-violet-700';
     if (this.roleUpper === 'COCINA') return 'bg-amber-100 text-amber-700';
     return 'bg-gray-100 text-gray-700';

@@ -1,21 +1,21 @@
 {
   "/api": {
-    "target": "http://192.168.100.195:8000",
+    "target": "http://192.168.100.195:8002",
     "secure": false,
     "changeOrigin": true,
     "cookieDomainRewrite": "localhost",
     "logLevel": "debug"
   },
   "/socket.io": {
-    "target": "http://192.168.100.195:9000",
+    "target": "http://192.168.100.195:8002",
     "ws": true,
     "secure": false,
     "changeOrigin": true,
     "cookieDomainRewrite": "localhost",
     "logLevel": "debug"
   },
-  "/restaurante_bmarc": {
-    "target": "http://192.168.100.195:8000",
+  "/facturada": {
+    "target": "http://192.168.100.195:8002",
     "ws": true,
     "secure": false,
     "changeOrigin": true,

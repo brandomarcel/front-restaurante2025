@@ -1,0 +1,9 @@
+/* Etiquetas compactas compartidas con el detalle de facturas. */
+.label {
+  display: block;
+  color: #64748b;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1rem;
+  text-transform: uppercase;
+}

@@ -4,17 +4,23 @@ import { catchError, Observable, shareReplay, throwError } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { FrappeErrorService } from '../core/services/frappe-error.service';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
+import { CompanyCapabilitiesService } from '../core/services/company-capabilities.service';
 
 @Injectable({ providedIn: 'root' })
 export class CajasService {
   private readonly apiUrl = environment.apiUrl;
 
   constructor(private http: HttpClient,
-    private frappeErrorService: FrappeErrorService
+    private frappeErrorService: FrappeErrorService,
+    private capabilities: CompanyCapabilitiesService
   ) { }
 
 
   getAllCategorias() {
+    if (this.capabilities.isLiteMode) {
+      return throwError(() => new Error('Caja no está disponible en FacturADA Lite.'));
+    }
+
     const campos = ['name', 'nombre', 'description', 'isactive'];
     return this.http.get(`${this.apiUrl}/resource/categorias?fields=${JSON.stringify(campos)}`, {
       context: new HttpContext().set(REQUIRE_AUTH, true)
@@ -23,6 +29,10 @@ export class CajasService {
 
 
   verificarAperturaActiva(usuario: string) {
+    if (this.capabilities.isLiteMode) {
+      return throwError(() => new Error('Caja no está disponible en FacturADA Lite.'));
+    }
+
     const url = `${this.apiUrl}/resource/Apertura de Caja?fields=["name"]&filters=[["usuario","=","${usuario}"],["estado","=","Abierta"]]`;
     return this.http.get<any>(url, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
@@ -34,6 +44,10 @@ export class CajasService {
   // }
 
   create_apertura_de_caja(data: any) {
+    if (this.capabilities.isLiteMode) {
+      return throwError(() => new Error('Caja no está disponible en FacturADA Lite.'));
+    }
+
     const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.apertura_de_caja.apertura_de_caja.create_apertura_de_caja`;
     return this.http.post(url, data, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
@@ -44,11 +58,19 @@ export class CajasService {
   // }
 
   create_retiro_de_caja(data: any) {
+    if (this.capabilities.isLiteMode) {
+      return throwError(() => new Error('Caja no está disponible en FacturADA Lite.'));
+    }
+
     const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.retiro_de_caja.retiro_de_caja.create_retiro_de_caja`;
     return this.http.post(url, data, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
 
   getDatosCierre(usuario: string):Observable<any> {
+    if (this.capabilities.isLiteMode) {
+      return throwError(() => new Error('Caja no está disponible en FacturADA Lite.'));
+    }
+
     const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.cierre_de_caja.cierre_de_caja.calcular_datos_para_cierre`;
     return this.http.get<any>(`${url}?usuario=${usuario}`, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
       catchError((e) => throwError(() => this.frappeErrorService.handle(e)))
@@ -58,6 +80,10 @@ export class CajasService {
   }
 
   create_cierre_de_caja(data: any) {
+    if (this.capabilities.isLiteMode) {
+      return throwError(() => new Error('Caja no está disponible en FacturADA Lite.'));
+    }
+
     const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.cierre_de_caja.cierre_de_caja.create_cierre_de_caja`;
     return this.http.post(url, data, { context: new HttpContext().set(REQUIRE_AUTH, true) });
   }
@@ -71,6 +97,10 @@ export class CajasService {
 
   /** Obtener retiros del turno actual */
   getRetirosPorApertura(aperturaId: string) {
+    if (this.capabilities.isLiteMode) {
+      return throwError(() => new Error('Caja no está disponible en FacturADA Lite.'));
+    }
+
     const filters = encodeURIComponent(JSON.stringify([
       ["relacionado_a", "=", aperturaId]
     ]));
@@ -81,6 +111,10 @@ export class CajasService {
 
 
   eliminarRetiro(name: string) {
+    if (this.capabilities.isLiteMode) {
+      return throwError(() => new Error('Caja no está disponible en FacturADA Lite.'));
+    }
+
     return this.http.delete(`/api/resource/Retiro de Caja/${name}`, {
       context: new HttpContext().set(REQUIRE_AUTH, true)
     });
@@ -89,6 +123,10 @@ export class CajasService {
 
   /** 📄 Obtener reporte de cierres de caja */
   obtenerReporteCierres(usuario?: string, desde?: string, hasta?: string) {
+    if (this.capabilities.isLiteMode) {
+      return throwError(() => new Error('Caja no está disponible en FacturADA Lite.'));
+    }
+
     let params: any = {};
     if (usuario) params.usuario = usuario;
     if (desde) params.desde = desde;

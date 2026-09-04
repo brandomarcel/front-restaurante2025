@@ -9,7 +9,7 @@
         <div class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
           Registros: {{ categoriesFiltradasList.length }}
         </div>
-        <app-button impact="bold" tone="light" shape="rounded" size="small" (click)="abrirModal()">
+        <app-button *ngIf="canManageCategories" impact="bold" tone="light" shape="rounded" size="small" (click)="abrirModal()">
           Nueva Categoria
         </app-button>
       </div>
@@ -42,24 +42,24 @@
             <th class="app-th">Nombre</th>
             <th class="app-th">Descripcion</th>
             <th class="app-th">Estado</th>
-            <th class="app-th text-center">Acciones</th>
+            <th *ngIf="canManageCategories" class="app-th text-center">Acciones</th>
           </tr>
         </thead>
 
         <tbody>
           <tr *ngFor="let categoria of categoriesFiltradasList | paginate: { itemsPerPage: pageSize, currentPage: page }; trackBy: trackByName"
             class="app-tr">
-            <td class="app-td">{{ categoria.nombre }}</td>
-            <td class="app-td">{{ categoria.description || '—' }}</td>
+            <td class="app-td">{{ categoria.category_name || categoria.nombre }}</td>
+            <td class="app-td">{{ categoria.description || categoria.descripcion || '—' }}</td>
             <td class="app-td">
               <span class="badge" [ngClass]="{ 'badge-green': categoria.isactive, 'badge-red': !categoria.isactive }">
                 {{ categoria.isactive ? 'Activo' : 'Inactivo' }}
               </span>
             </td>
-            <td class="app-td text-center">
+            <td *ngIf="canManageCategories" class="app-td text-center">
               <div class="inline-flex gap-2">
                 <button class="btn btn-outline" (click)="abrirModal(categoria)">Editar</button>
-                <button class="btn btn-warn" (click)="eliminar(categoria.name)">Eliminar</button>
+                <button class="btn btn-warn" (click)="eliminar(categoria.name)">Desactivar</button>
               </div>
             </td>
           </tr>

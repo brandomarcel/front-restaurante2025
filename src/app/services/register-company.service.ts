@@ -1,8 +1,9 @@
 // register-company.service.ts
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from 'src/environments/environment';
 import { API_ENDPOINT } from '../core/constants/api.constants';
+import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 
 @Injectable({ providedIn: 'root' })
 export class RegisterCompanyService {
@@ -16,7 +17,7 @@ export class RegisterCompanyService {
   registerTenantOpen(payload: {
     user: any;
     company: any;
-    logo?: { filename: string; data: string; is_private?: 0|1 };
+    logo?: never;
     add_permission?: boolean;
   }) {
     const body: any = {
@@ -24,12 +25,21 @@ export class RegisterCompanyService {
       company_json: JSON.stringify(payload.company),
       add_permission: payload.add_permission ? 1 : 0,
     };
-    if (payload.logo) body.logo_json = JSON.stringify(payload.logo);
-
     // SIN headers especiales
     return this.http.post(
       `${this.urlBase}.register_tenant_open`,
       body
+    );
+  }
+
+  uploadLiteLogo(business: string, file: File) {
+    const formData = new FormData();
+    formData.append('business', business);
+    formData.append('file', file, file.name);
+    return this.http.post(
+      `${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.upload_lite_logo`,
+      formData,
+      { withCredentials: true, context: new HttpContext().set(REQUIRE_AUTH, true) }
     );
   }
 }

@@ -27,7 +27,7 @@ const routes: Routes = [
   path: 'report',
   component: LayoutComponent,
   canActivate: [RoleAccessGuard],
-  data: { allowedRoles: ['SYSTEM MANAGER', 'GERENTE', 'CAJERO'] },
+  data: { allowedRoles: ['SYSTEM MANAGER', 'GERENTE', 'CAJERO'], liteBlocked: true },
   loadChildren: () => import('../report/report.module').then((m) => m.ReportModule),
 },
 

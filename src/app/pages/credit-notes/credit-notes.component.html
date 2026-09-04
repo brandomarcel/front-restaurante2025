@@ -2,8 +2,8 @@
     <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h2 class="text-xl font-bold">Notas de Credito</h2>
-                <p class="text-xs text-primary-foreground/80">Listado unificado de notas de credito emitidas.</p>
+                <h2 class="text-xl font-bold">Notas de Crédito</h2>
+                <p class="text-xs text-primary-foreground/80">Listado de notas de crédito del negocio seleccionado.</p>
             </div>
             <div class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
                 Registros: {{ total }}
@@ -17,10 +17,14 @@
                 <input class="input" type="text" [(ngModel)]="search"
                     placeholder="Buscar por #nota, clave, cliente, identificacion o estado..." />
 
-                <select class="select" [(ngModel)]="conOrdenFiltro" (ngModelChange)="aplicarFiltros()">
-                    <option value="">Todas</option>
-                    <option value="con">Con orden</option>
-                    <option value="sin">Sin orden</option>
+                <select class="select" [(ngModel)]="statusFilter" (ngModelChange)="onStatusChange()">
+                    <option value="">Todos los estados</option>
+                    <option value="Autorizada">Autorizada</option>
+                    <option value="Emitida">Emitida</option>
+                    <option value="Pendiente Emision">Pendiente Emision</option>
+                    <option value="Rechazada">Rechazada</option>
+                    <option value="Error de Envio">Error de Envio</option>
+                    <option value="Reemplazada">Reemplazada</option>
                 </select>
             </div>
 
@@ -37,12 +41,15 @@
             <table class="app-table text-xs">
                 <thead class="app-thead">
                     <tr>
-                        <th class="app-th">N° Nota Credito</th>
-                        <th class="app-th">Fecha Emision</th>
-                        <th class="app-th">Cliente</th>
+                        <th class="app-th">Documento</th>
+                        <th class="app-th">Fecha emisión</th>
+                        <th class="app-th">Cliente / identificación</th>
+                        <th class="app-th">Factura relacionada</th>
                         <th class="app-th text-right">Total</th>
-                        <th class="app-th">Estado SRI</th>
-                        <th class="app-th">Fact. Asociada</th>
+                        <th class="app-th">Moneda</th>
+                        <th class="app-th">Estado</th>
+                        <th class="app-th">Proveedor / SRI</th>
+                        <th class="app-th">Correo</th>
                         <th class="app-th text-center">Acciones</th>
                     </tr>
                 </thead>
@@ -51,19 +58,31 @@
                     <tr *ngFor="let inv of invoicesFiltradas" class="app-tr">
                         <td class="app-td">
                             <div class="flex flex-col">
-                                <span class="font-semibold">{{ inv.sri?.number || '—' }}</span>
-                                <span class="text-[11px] text-muted-foreground">{{ inv.name }}</span>
+                                <span class="font-semibold">{{ documentNumber(inv) }}</span>
+                                <span class="text-[11px] text-muted-foreground">{{ inv.name || '—' }}</span>
                             </div>
                         </td>
                         <td class="app-td">{{ inv.posting_date || '—' }}</td>
-                        <td class="app-td">{{ inv.customer?.fullName || inv.customer?.name || '—' }}</td>
-                        <td class="app-td text-right font-semibold">{{ inv.total | currency:'USD':'symbol':'1.2-2' }}</td>
                         <td class="app-td">
-                            <span class="badge" [ngClass]="getSriStatusBadge(inv.sri?.status)">
-                                {{ getSriStatusLabel(inv.sri?.status) }}
+                            <div>{{ customerName(inv) }}</div>
+                            <div class="text-[10px] text-muted-foreground">{{ customerIdentification(inv) }}</div>
+                        </td>
+                        <td class="app-td">
+                            <div>{{ relatedDocumentNumber(inv) }}</div>
+                            <div class="max-w-[180px] truncate text-[10px] text-muted-foreground">{{ inv.related_access_key || '—' }}</div>
+                        </td>
+                        <td class="app-td text-right font-semibold">{{ (inv.grand_total ?? inv.total ?? 0) | currency:(inv.currency || 'USD'):'symbol':'1.2-2' }}</td>
+                        <td class="app-td">{{ inv.currency || 'USD' }}</td>
+                        <td class="app-td">
+                            <span class="badge" [ngClass]="getSriStatusBadge(invoiceStatus(inv))">
+                                {{ getSriStatusLabel(invoiceStatus(inv)) }}
                             </span>
                         </td>
-                        <td class="app-td">{{ inv.invoice_modified?.invoice_reference || '—' }}</td>
+                        <td class="app-td">
+                            <div>{{ providerStatus(inv) }}</div>
+                            <div class="max-w-[220px] truncate text-[10px] text-muted-foreground" [title]="sriMessage(inv)">{{ sriMessage(inv) }}</div>
+                        </td>
+                        <td class="app-td">{{ emailStatus(inv) }}</td>
                         <td class="app-td text-center">
                             <button class="btn btn-outline" [routerLink]="['/dashboard/credit-note', inv.name]">
                                 Abrir
@@ -91,14 +110,14 @@
 </div>
 
 
-<!-- Modal Detalle Factura -->
+<!-- Modal de vista rápida; el detalle completo está en su propia pantalla -->
 <div *ngIf="mostrarModal" class="app-modal-backdrop">
     <div class="app-modal">
         <button class="app-modal-close" (click)="closeModal()">×</button>
 
         <div class="app-card-body">
             <h3 class="text-lg font-semibold mb-4">
-                Detalle de la Factura
+                Detalle de la Nota de Crédito
                 <span class="text-muted-foreground font-normal">
                     #{{ invoiceSelected?.sri?.number || invoiceSelected?.name }}
                 </span>
@@ -106,19 +125,10 @@
 
             <!-- Acciones -->
             <div class="mb-4 flex flex-wrap gap-2">
-                <button class="btn btn-warn" (click)="getFacturaPdf()" [disabled]="!invoiceSelected?.sri?.invoice">
-                    Descargar Factura
+                <button class="btn btn-warn" (click)="getFacturaPdf()" [disabled]="!invoiceSelected?.name && !invoiceSelected?.sri?.invoice">
+                    Descargar Nota de Crédito
                 </button>
 
-                <button *ngIf="invoiceSelected?.order" class="btn btn-outline"
-                    (click)="irAOrden(invoiceSelected?.order)">
-                    Ver Orden: {{ invoiceSelected?.order }}
-                </button>
-
-                <button *ngIf="invoiceSelected?.sri?.status !== 'AUTORIZADO'" class="btn btn-primary"
-                    (click)="reenviarFactura()">
-                    Reenviar Factura
-                </button>
             </div>
 
             <!-- Tabs -->
@@ -132,7 +142,7 @@
                 </button>
 
                 <button class="tab" [ngClass]="{ 'tab-active': activeTab === 'items' }" (click)="activeTab = 'items'">
-                    Items
+                    Productos
                 </button>
             </div>
 
@@ -144,7 +154,7 @@
                         <h4 class="text-base font-semibold text-gray-700 mb-2">🧾 Información</h4>
                         <ul class="text-sm text-gray-700 space-y-1">
                             <li><strong>ID:</strong> {{ invoiceSelected?.name }}</li>
-                            <li><strong>N° Factura:</strong> {{ invoiceSelected?.sri?.number || '—' }}</li>
+                            <li><strong>N° Nota:</strong> {{ invoiceSelected?.sri?.number || '—' }}</li>
                             <li><strong>Fecha:</strong> {{ invoiceSelected?.createdAt | ecuadorTime }}</li>
                             <li><strong>Total:</strong> <span class="text-green-700 font-semibold">
                                     {{ invoiceSelected?.total | currency:'USD':'symbol':'1.2-2' }}
@@ -197,7 +207,7 @@
                     <li *ngIf="invoiceSelected?.sri?.invoice"><strong>Factura:</strong> {{ invoiceSelected?.sri?.invoice
                         }}</li>
                     <li *ngIf="invoiceSelected?.total !== undefined">
-                        <strong>Total Factura:</strong> {{ invoiceSelected?.total | currency:'USD':'symbol':'1.2-2' }}
+                        <strong>Total Nota:</strong> {{ invoiceSelected?.total | currency:'USD':'symbol':'1.2-2' }}
                     </li>
                     <li *ngIf="invoiceSelected?.sri?.access_key">
                         <strong>Clave de Acceso:</strong>
@@ -212,7 +222,7 @@
 
             <!-- Tab: Items -->
             <div *ngIf="activeTab === 'items'">
-                <h4 class="text-base font-semibold text-gray-700 mb-2">📦 Items</h4>
+                <h4 class="text-base font-semibold text-gray-700 mb-2">📦 Productos</h4>
                 <div class="app-table-wrap max-h-[50vh]">
                     <table class="app-table">
                         <thead class="app-thead">

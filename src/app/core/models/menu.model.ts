@@ -5,6 +5,7 @@ export interface MenuItem {
   active?: boolean;
   items: Array<SubMenuItem>;
   allowedRoles?: Role[]; // opcional: regla a nivel grupo
+  hideInLite?: boolean;
 }
 
 export interface SubMenuItem {
@@ -16,5 +17,6 @@ export interface SubMenuItem {
   children?: Array<SubMenuItem>;
   allowedRoles?: Role[]; // opcional: regla a nivel grupo
   featureKey?: import('../services/company-capabilities.service').CompanyFeatureKey;
+  hideInLite?: boolean;
 }
-export type Role = 'SYSTEM MANAGER' | 'GERENTE' | 'CAJERO' | 'MESERO' | 'COCINA';
+export type Role = 'SYSTEM MANAGER' | 'GERENTE' | 'CAJERO' | 'FACTURACION' | 'MESERO' | 'COCINA' | 'USUARIO';

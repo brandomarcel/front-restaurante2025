@@ -1,4 +1,4 @@
-<div class="app-container space-y-3">
+<div *ngIf="inventoryEnabled; else inventoryUnavailable" class="app-container space-y-3">
   <section class="rounded-xl border border-border bg-white px-3 py-2 shadow-sm">
     <div class="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
       <div class="min-w-0">
@@ -114,6 +114,7 @@
               <th class="app-th py-2 text-center">Venta</th>
               <th class="app-th py-2 text-right">Stock</th>
               <th class="app-th py-2 text-right">Mínimo</th>
+              <th class="app-th py-2 text-right">Precio</th>
               <th class="app-th py-2">Unidad</th>
               <th class="app-th py-2">Estado</th>
             </tr>
@@ -135,6 +136,7 @@
               </td>
               <td class="app-td py-2 text-right font-bold text-slate-900">{{ formatStock(product) }}</td>
               <td class="app-td py-2 text-right">{{ hasInventory(product) ? (product.stock_minimo || 0) : '-' }}</td>
+              <td class="app-td py-2 text-right">{{ product.precio | number:'1.2-2' }}</td>
               <td class="app-td py-2">{{ hasInventory(product) ? getInventoryUnit(product) : '-' }}</td>
               <td class="app-td py-2">
                 <div class="flex flex-wrap gap-1">
@@ -148,7 +150,7 @@
             </tr>
 
             <tr *ngIf="inventoryProducts.length === 0">
-              <td colspan="7" class="app-td py-8 text-center text-xs text-muted-foreground">
+              <td colspan="8" class="app-td py-8 text-center text-xs text-muted-foreground">
                 No encontramos productos con esos filtros.
               </td>
             </tr>
@@ -169,7 +171,7 @@
             </span>
           </div>
 
-          <div class="mt-2 grid grid-cols-3 gap-2 text-[11px] text-slate-600">
+          <div class="mt-2 grid grid-cols-4 gap-2 text-[11px] text-slate-600">
             <div>
               <span class="block text-[10px] font-bold uppercase text-primary">Stock</span>
               <span class="font-bold text-slate-900">{{ formatStock(product) }}</span>
@@ -177,6 +179,10 @@
             <div>
               <span class="block text-[10px] font-bold uppercase text-primary">Mínimo</span>
               <span>{{ product.stock_minimo || 0 }}</span>
+            </div>
+            <div>
+              <span class="block text-[10px] font-bold uppercase text-primary">Precio</span>
+              <span>{{ product.precio | number:'1.2-2' }}</span>
             </div>
             <div>
               <span class="block text-[10px] font-bold uppercase text-primary">Estado</span>
@@ -221,7 +227,7 @@
         </div>
       </div>
 
-      <div class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_220px_150px_auto]">
+      <div class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_220px_150px_150px_minmax(0,1fr)_auto]">
         <select class="select h-8 !w-full text-xs" [(ngModel)]="historyProduct">
           <option value="">Todos los productos</option>
           <option *ngFor="let product of productOptions" [value]="product.name">{{ product.nombre }}</option>
@@ -229,8 +235,11 @@
 
         <select class="select h-8 !w-full text-xs" [(ngModel)]="historyMovementType">
           <option value="">Todos los tipos</option>
-          <option *ngFor="let type of movementTypes" [value]="type">{{ getMovementOptionLabel(type) }}</option>
+          <option *ngFor="let type of supportedMovementTypes" [value]="type">{{ getMovementOptionLabel(type) }}</option>
         </select>
+
+        <input class="input h-8 text-xs" type="date" [(ngModel)]="historyDate" aria-label="Fecha del movimiento" />
+        <input class="input h-8 text-xs" type="search" [(ngModel)]="historyReference" placeholder="Referencia" />
 
         <select class="select h-8 !w-full text-xs" [(ngModel)]="historyLimit">
           <option [ngValue]="10">10 por página</option>
@@ -406,7 +415,7 @@
             <div>
               <label class="mb-1 block font-semibold text-slate-700">Tipo de movimiento</label>
               <select class="select h-8 text-xs" formControlName="movement_type">
-                <option *ngFor="let type of movementTypes" [value]="type">{{ getMovementOptionLabel(type) }}</option>
+                <option *ngFor="let type of supportedMovementTypes" [value]="type">{{ getMovementOptionLabel(type) }}</option>
               </select>
               <p class="mt-1 text-[11px] text-slate-500">{{ getMovementOptionDescription(currentMovementType) }}</p>
             </div>
@@ -420,7 +429,7 @@
               <textarea rows="2" class="input text-xs" formControlName="notes" placeholder="Ej: ingreso por compra, merma, corrección de conteo"></textarea>
             </div>
 
-            <div class="md:col-span-2 rounded-lg border border-dashed border-slate-300 bg-white p-2">
+            <div *ngIf="!isLiteMode" class="md:col-span-2 rounded-lg border border-dashed border-slate-300 bg-white p-2">
               <button
                 type="button"
                 class="flex w-full items-center justify-between text-left text-xs font-bold text-slate-700"
@@ -450,7 +459,7 @@
         <section class="rounded-xl border border-slate-200 bg-white p-3">
           <div class="mb-2 flex items-center justify-between">
             <p class="text-[11px] font-bold uppercase tracking-wide text-primary">Items</p>
-            <button type="button" class="btn btn-outline !px-3 !py-1 !text-[11px]" (click)="agregarFilaMovimiento()">+ Fila</button>
+            <button *ngIf="!isLiteMode" type="button" class="btn btn-outline !px-3 !py-1 !text-[11px]" (click)="agregarFilaMovimiento()">+ Fila</button>
           </div>
 
           <div formArrayName="items" class="space-y-2">
@@ -468,10 +477,16 @@
                 <div *ngIf="submittedMovement && itemGroup.get('product')?.invalid" class="field-error">Producto requerido.</div>
               </div>
 
-              <div>
+              <div *ngIf="!isLiteMode || currentMovementType !== 'Ajuste'">
                 <label class="mb-1 block font-semibold text-slate-700">Cantidad</label>
                 <input class="input no-spinner h-8 text-xs" type="number" step="1" formControlName="quantity" />
                 <div *ngIf="submittedMovement && itemGroup.get('quantity')?.invalid" class="field-error">Cantidad requerida.</div>
+              </div>
+
+              <div *ngIf="isLiteMode && currentMovementType === 'Ajuste'">
+                <label class="mb-1 block font-semibold text-slate-700">Stock objetivo</label>
+                <input class="input no-spinner h-8 text-xs" type="number" min="0" step="1" formControlName="target_stock" />
+                <div *ngIf="submittedMovement && itemGroup.get('target_stock')?.invalid" class="field-error">Stock objetivo requerido.</div>
               </div>
 
               <div class="flex items-end">
@@ -491,3 +506,12 @@
     </div>
   </div>
 </div>
+
+<ng-template #inventoryUnavailable>
+  <div class="app-container">
+    <section class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-center shadow-sm">
+      <h2 class="text-base font-bold text-amber-900">Inventario no disponible</h2>
+      <p class="mt-1 text-xs text-amber-800">El inventario no está incluido o habilitado para el plan actual.</p>
+    </section>
+  </div>
+</ng-template>

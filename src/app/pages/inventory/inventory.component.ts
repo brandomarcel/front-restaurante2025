@@ -3,12 +3,14 @@ import { Component, OnInit } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { toast } from 'ngx-sonner';
-import { InventoryMovement, InventoryMovementPayload, InventoryMovementType, InventoryProduct } from 'src/app/models/inventory';
+import { InventoryMovement, InventoryMovementPayload, InventoryMovementType, InventoryProduct, InventorySummary, LiteStockMovementPayload } from 'src/app/models/inventory';
 import { Product } from 'src/app/core/models/product';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { InventoryService } from 'src/app/services/inventory.service';
 import { ProductsService } from 'src/app/services/products.service';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { forkJoin } from 'rxjs';
 import {
   canSellProduct,
   getInventoryUnit,
@@ -74,6 +76,7 @@ export class InventoryComponent implements OnInit {
   inventoryProducts: InventoryProduct[] = [];
   productOptions: Product[] = [];
   movements: InventoryMovement[] = [];
+  inventorySummary: InventorySummary | null = null;
   activeTab: 'overview' | 'history' = 'overview';
 
   search = '';
@@ -82,6 +85,8 @@ export class InventoryComponent implements OnInit {
 
   historyProduct = '';
   historyMovementType = '';
+  historyDate = '';
+  historyReference = '';
   historyLimit = 10;
   historyOffset = 0;
   historyTotal = 0;
@@ -98,11 +103,13 @@ export class InventoryComponent implements OnInit {
     private fb: FormBuilder,
     private spinner: NgxSpinnerService,
     private frappeErrorService: FrappeErrorService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private capabilities: CompanyCapabilitiesService
   ) { }
 
   ngOnInit(): void {
     this.initMovementForm();
+    if (!this.inventoryEnabled) return;
     this.cargarProductosInventario();
     this.cargarOpcionesProducto();
     this.cargarMovimientos();
@@ -113,15 +120,32 @@ export class InventoryComponent implements OnInit {
   }
 
   get controlledProductsCount(): number {
-    return this.inventoryProducts.filter((item) => this.hasInventory(item)).length;
+    return this.inventoryProducts.length || Number(this.inventorySummary?.tracked_items ?? this.inventorySummary?.controlled_products ?? 0) || 0;
   }
 
   get lowStockCount(): number {
-    return this.inventoryProducts.filter((item) => this.isLowStock(item)).length;
+    const calculated = this.inventoryProducts.filter((item) => this.isLowStock(item)).length;
+    return calculated || Number(this.inventorySummary?.low_stock_items ?? this.inventorySummary?.low_stock_products ?? 0) || 0;
   }
 
   get outOfStockCount(): number {
-    return this.inventoryProducts.filter((item) => this.isOutOfStock(item)).length;
+    const calculated = this.inventoryProducts.filter((item) => this.isOutOfStock(item)).length;
+    const summaryValue = Array.isArray(this.inventorySummary?.out_of_stock_items)
+      ? this.inventorySummary?.out_of_stock_items.length
+      : Number(this.inventorySummary?.out_of_stock_items ?? this.inventorySummary?.out_of_stock_products ?? 0);
+    return calculated || summaryValue || 0;
+  }
+
+  get inventoryEnabled(): boolean {
+    return this.capabilities.isEnabled('inventory');
+  }
+
+  get isLiteMode(): boolean {
+    return this.capabilities.isLiteMode;
+  }
+
+  get supportedMovementTypes(): InventoryMovementType[] {
+    return this.isLiteMode ? ['Entrada', 'Salida', 'Ajuste'] : this.movementTypes;
   }
 
   get attentionProductsCount(): number {
@@ -167,12 +191,38 @@ export class InventoryComponent implements OnInit {
   createMovementItem(): FormGroup {
     return this.fb.group({
       product: ['', Validators.required],
-      quantity: [null, Validators.required],
+      quantity: [1, Validators.required],
+      target_stock: [null],
     });
   }
 
   cargarProductosInventario(): void {
     this.spinner.show();
+    if (this.isLiteMode) {
+      forkJoin({
+        products: this.productsService.getAll(1),
+        summary: this.inventoryService.getStockSummary()
+      }).subscribe({
+        next: ({ products, summary }: any) => {
+          const productList = this.extractList(products, ['message', 'data']) as InventoryProduct[];
+          const summaryData = this.extractData(summary) as InventorySummary;
+          this.inventorySummary = summaryData || null;
+          const summaryProducts = (summaryData?.products || summaryData?.items || []) as InventoryProduct[];
+          const merged = productList.map((product) => {
+            const fromSummary = summaryProducts.find((item) => item.name === product.name);
+            return fromSummary ? { ...product, ...fromSummary } : product;
+          });
+          this.inventoryProducts = merged.filter((product) => this.hasInventory(product));
+        },
+        error: (error) => {
+          this.alertService.error(this.frappeErrorService.handle(error));
+          this.spinner.hide();
+        },
+        complete: () => this.spinner.hide()
+      });
+      return;
+    }
+
     this.inventoryService.getInventoryProducts({
       search: this.search || undefined,
       onlyLowStock: this.onlyLowStock,
@@ -186,6 +236,7 @@ export class InventoryComponent implements OnInit {
       error: (error) => {
         const mensaje = this.frappeErrorService.handle(error);
         this.alertService.error(mensaje);
+        this.spinner.hide();
       },
       complete: () => {
         this.spinner.hide();
@@ -196,7 +247,7 @@ export class InventoryComponent implements OnInit {
   cargarOpcionesProducto(): void {
     this.productsService.getAll(1).subscribe({
       next: (res: any) => {
-        const data = res?.message?.data || [];
+        const data = Array.isArray(res) ? res : (res?.message?.data || []);
         this.productOptions = ((Array.isArray(data) ? data : []) as Product[])
           .filter((product) => this.hasInventory(product));
       },
@@ -213,15 +264,33 @@ export class InventoryComponent implements OnInit {
       offset: this.historyOffset,
       product: this.historyProduct || undefined,
       movementType: this.historyMovementType || undefined,
+      fromDate: this.historyDate || undefined,
+      toDate: this.historyDate || undefined,
+      reference: this.historyReference || undefined,
     }).subscribe({
       next: (res: any) => {
         const list = this.extractList(res, ['message', 'data']);
-        this.movements = (Array.isArray(list) ? list : []) as InventoryMovement[];
+        this.movements = (Array.isArray(list) ? list : []).map((movement: any) => {
+          if (Array.isArray(movement?.items)) return movement as InventoryMovement;
+          return {
+            ...movement,
+            total_items: movement?.total_items ?? 1,
+            total_quantity: movement?.total_quantity ?? movement?.quantity,
+            items: movement?.item ? [{
+              product: movement.item,
+              product_name: movement.item_name,
+              quantity: movement.quantity,
+              stock_before: movement.stock_before,
+              stock_after: movement.stock_after
+            }] : []
+          } as InventoryMovement;
+        });
         this.historyTotal = this.extractTotal(res, this.movements.length);
       },
       error: (error) => {
         const mensaje = this.frappeErrorService.handle(error);
         this.alertService.error(mensaje);
+        this.spinner.hide();
       },
       complete: () => {
         this.spinner.hide();
@@ -248,6 +317,8 @@ export class InventoryComponent implements OnInit {
   limpiarFiltrosHistorial(): void {
     this.historyProduct = '';
     this.historyMovementType = '';
+    this.historyDate = '';
+    this.historyReference = '';
     this.historyOffset = 0;
     this.cargarMovimientos();
   }
@@ -277,6 +348,10 @@ export class InventoryComponent implements OnInit {
   }
 
   abrirMovimientoModal(): void {
+    if (!this.inventoryEnabled) {
+      this.alertService.error('El inventario no está incluido en el plan actual.');
+      return;
+    }
     this.showMovementModal = true;
     this.showOptionalReferenceFields = false;
     this.submittedMovement = false;
@@ -305,7 +380,7 @@ export class InventoryComponent implements OnInit {
 
   quitarFilaMovimiento(index: number): void {
     if (this.movementItems.length === 1) {
-      this.movementItems.at(0).reset({ product: '', quantity: null });
+      this.movementItems.at(0).reset({ product: '', quantity: 1, target_stock: null });
       return;
     }
     this.movementItems.removeAt(index);
@@ -334,6 +409,7 @@ export class InventoryComponent implements OnInit {
           toast.success('Movimiento registrado');
           this.cerrarMovimientoModal();
           this.cargarProductosInventario();
+          this.cargarOpcionesProducto();
           this.cargarMovimientos();
         },
         error: (error) => {
@@ -348,7 +424,7 @@ export class InventoryComponent implements OnInit {
     });
   }
 
-  buildMovementPayload(): InventoryMovementPayload | null {
+  buildMovementPayload(): InventoryMovementPayload | LiteStockMovementPayload | null {
     const raw = this.movementForm.getRawValue();
     const movementType = raw.movement_type as InventoryMovementType;
     const rows = (raw.items || [])
@@ -361,6 +437,40 @@ export class InventoryComponent implements OnInit {
     if (!rows.length) {
       this.alertService.error('Debes agregar al menos un item valido.');
       return null;
+    }
+
+    if (this.isLiteMode) {
+      const row = rows[0];
+      if (!['Entrada', 'Salida', 'Ajuste'].includes(movementType)) {
+        this.alertService.error('Tipo de movimiento no permitido en FacturADA Lite.');
+        return null;
+      }
+      if (!Number.isFinite(row.quantity) || row.quantity <= 0) {
+        this.alertService.error('La cantidad debe ser mayor que cero.');
+        return null;
+      }
+      const business = this.capabilities.businessId || localStorage.getItem('businessId') || '';
+      if (!business) {
+        this.alertService.error('No se encontró el negocio activo.');
+        return null;
+      }
+      const payload: LiteStockMovementPayload = {
+        business,
+        item: row.product,
+        movement_type: movementType as 'Entrada' | 'Salida' | 'Ajuste',
+        notes: raw.notes || ''
+      };
+      if (movementType === 'Ajuste') {
+        const target = Number(raw.items?.[0]?.target_stock);
+        if (!Number.isFinite(target) || target < 0) {
+          this.alertService.error('Ingresa un stock objetivo válido para el ajuste.');
+          return null;
+        }
+        payload.target_stock = target;
+      } else {
+        payload.quantity = row.quantity;
+      }
+      return payload;
     }
 
     const invalidProducts = rows.filter((row: any) => {
@@ -457,7 +567,9 @@ export class InventoryComponent implements OnInit {
       case 'Consumo':
         return 'Escribe una cantidad positiva. Este movimiento descuenta producto por uso interno.';
       case 'Ajuste':
-        return 'Puedes usar positivo o negativo segun la correccion que necesites hacer.';
+        return this.isLiteMode
+          ? 'Indica el stock objetivo después del conteo físico.'
+          : 'Puedes usar positivo o negativo segun la correccion que necesites hacer.';
       default:
         return '';
     }
@@ -502,7 +614,7 @@ export class InventoryComponent implements OnInit {
 
   extractReference(movement: InventoryMovement): string {
     const doctype = movement?.reference_doctype || '';
-    const name = movement?.reference_name || '';
+    const name = movement?.reference_name || movement?.reference || '';
     return doctype || name ? `${doctype || 'Ref'} ${name}`.trim() : 'Sin referencia';
   }
 
@@ -510,6 +622,7 @@ export class InventoryComponent implements OnInit {
   trackByMovement = (_: number, item: InventoryMovement) => item?.name || item?.creation || _;
 
   private extractList(res: any, preferredPath: string[]): any[] {
+    if (Array.isArray(res)) return res;
     const fromPreferred = preferredPath.reduce((acc: any, key: string) => acc?.[key], res);
     if (Array.isArray(fromPreferred)) {
       return fromPreferred;
@@ -526,6 +639,11 @@ export class InventoryComponent implements OnInit {
 
     const found = candidates.find((item) => Array.isArray(item));
     return Array.isArray(found) ? found : [];
+  }
+
+  private extractData(res: any): any {
+    const data = res?.message?.data ?? res?.data ?? (res && typeof res === 'object' && !Array.isArray(res) ? res : null);
+    return data?.summary && typeof data.summary === 'object' ? data.summary : data;
   }
 
   private extractTotal(res: any, fallback: number): number {

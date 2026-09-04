@@ -21,7 +21,7 @@
         <div class="rounded-full bg-rose-500/20 px-3 py-1 text-xs font-semibold">
           Agotados: {{ outOfStockCount }}
         </div>
-        <app-button impact="bold" tone="light" shape="rounded" size="small" (click)="abrirModal()">
+        <app-button *ngIf="canManageProducts" impact="bold" tone="light" shape="rounded" size="small" (click)="abrirModal()">
           Nuevo Producto
         </app-button>
       </div>
@@ -40,7 +40,7 @@
 
         <select class="select" [(ngModel)]="categoriaFiltro" (ngModelChange)="actualizarProductosFiltrados()">
           <option value="">Todas las categorias</option>
-          <option *ngFor="let c of categories" [value]="c.name">{{ c.nombre }}</option>
+          <option *ngFor="let c of categories" [value]="c.name">{{ c.category_name || c.nombre }}</option>
         </select>
       </div>
 
@@ -76,7 +76,7 @@
             <th class="app-th">Stock minimo</th>
             <th class="app-th">Unidad</th>
             <th class="app-th">Estado</th>
-            <th class="app-th text-center">Acciones</th>
+            <th *ngIf="canManageProducts" class="app-th text-center">Acciones</th>
           </tr>
         </thead>
 
@@ -92,7 +92,7 @@
               </div>
             </td>
             <td class="app-td font-mono text-xs text-gray-600">{{ p.codigo || '—' }}</td>
-            <td class="app-td">{{ getNameCategory(p.categoria) }}</td>
+            <td class="app-td">{{ getNameCategory(p.categoria || p.category) }}</td>
             <td class="app-td text-right font-semibold">{{ p.precio | currency }}</td>
             <td class="app-td">
               <span class="badge" [ngClass]="hasInventory(p) ? 'badge-green' : 'badge-gray'">
@@ -129,7 +129,7 @@
                 <span *ngIf="hasInventory(p) && isLowStock(p) && !isOutOfStock(p)" class="badge badge-yellow">Bajo stock</span>
               </div>
             </td>
-            <td class="app-td text-center">
+            <td *ngIf="canManageProducts" class="app-td text-center">
               <div class="inline-flex gap-2">
                 <button class="btn btn-outline" (click)="abrirModal(p)">Editar</button>
                 <button class="btn btn-warn" (click)="eliminar(p.name)">Eliminar</button>
@@ -214,7 +214,7 @@
             <div>
               <label class="mb-1 block font-medium">Impuesto (IVA)</label>
               <select class="select" formControlName="tax">
-                <option *ngFor="let t of taxes" [value]="t.name">{{ t.value }}</option>
+                <option *ngFor="let t of taxes" [value]="t.name ?? t.value">{{ t.value ?? t.rate ?? t.tax_rate ?? t.name }}</option>
                 <option *ngIf="taxes.length === 0" value="" disabled>No hay impuestos disponibles</option>
               </select>
               <div *ngIf="submitted && f['tax'].invalid" class="field-error">Impuesto requerido.</div>
@@ -223,10 +223,11 @@
             <div>
               <label class="mb-1 block font-medium">Categoria</label>
               <select class="select" formControlName="categoria">
-                <option *ngFor="let c of categories" [value]="c.name">{{ c.nombre }}</option>
+                <option value="">Sin categoria</option>
+                <option *ngFor="let c of categories" [value]="c.name">{{ c.category_name || c.nombre }}</option>
                 <option *ngIf="categories.length === 0" value="" disabled>No hay categorias disponibles</option>
               </select>
-              <div *ngIf="submitted && f['categoria'].invalid" class="field-error">Categoria requerida.</div>
+              <div *ngIf="submitted && f['categoria'].invalid" class="field-error">Categoria invalida.</div>
             </div>
           </div>
         </section>
@@ -238,14 +239,14 @@
               <span class="font-medium text-slate-700">Producto activo</span>
             </label>
 
-            <label class="inline-flex items-center gap-2">
+            <label *ngIf="inventoryEnabled" class="inline-flex items-center gap-2">
               <input type="checkbox" formControlName="controlar_inventario" (change)="onInventoryToggle()" />
               <span class="font-medium text-slate-700">Controlar inventario</span>
             </label>
           </div>
         </section>
 
-        <section class="rounded-xl border border-slate-200 bg-white p-3 md:p-4">
+        <section *ngIf="inventoryEnabled" class="rounded-xl border border-slate-200 bg-white p-3 md:p-4">
           <div class="mb-3 flex items-center justify-between gap-3">
             <div>
               <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Inventario</p>
@@ -279,16 +280,21 @@
                 </label>
               </div>
 
-              <div *ngIf="!productoEditando">
+              <div *ngIf="!productoEditando && !isLiteMode">
                 <label class="mb-1 block font-medium">Stock inicial</label>
                 <input class="input no-spinner" type="number" min="0" formControlName="stock_inicial" />
                 <div *ngIf="submitted && f['stock_inicial'].invalid" class="field-error">Stock inicial invalido.</div>
+              </div>
+
+              <div *ngIf="isLiteMode && !productoEditando" class="md:col-span-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
+                El producto se crea con stock cero. Registra la existencia inicial desde Inventario mediante un movimiento de Entrada.
               </div>
 
               <ng-container *ngIf="productoEditando">
                 <div>
                   <label class="mb-1 block font-medium">Stock actual</label>
                   <input class="input bg-slate-50" type="number" formControlName="stock_actual" readonly />
+                  <p *ngIf="isLiteMode" class="mt-1 text-[10px] text-slate-500">Se modifica únicamente con movimientos desde Inventario.</p>
                 </div>
 
                 <div>
@@ -305,7 +311,7 @@
                   </div>
                 </div>
 
-                <div class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                <div *ngIf="!isLiteMode" class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                   <div class="mb-3 flex flex-wrap gap-2">
                     <button
                       type="button"

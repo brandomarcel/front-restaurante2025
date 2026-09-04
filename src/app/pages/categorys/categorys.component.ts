@@ -6,6 +6,9 @@ import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { CategoryService } from 'src/app/services/category.service';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
+import { AlertService } from 'src/app/core/services/alert.service';
+import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 @Component({
   selector: 'app-categorys',
@@ -35,12 +38,29 @@ export class CategorysComponent implements OnInit {
   constructor(
     private categoryService: CategoryService,
     private fb: FormBuilder,
-    private spinner: NgxSpinnerService
+    private spinner: NgxSpinnerService,
+    private alertService: AlertService,
+    private frappeErrorService: FrappeErrorService,
+    private capabilities: CompanyCapabilitiesService
   ) {}
 
   ngOnInit() {
-    this.loadCategory();
     this.resetForm();
+    if (!this.canReadCategories) {
+      this.alertService.error('No tienes permisos para consultar categorías en la empresa seleccionada.');
+      return;
+    }
+    this.loadCategory();
+  }
+
+  get isLiteMode(): boolean { return this.capabilities.isLiteMode; }
+
+  get canReadCategories(): boolean {
+    return this.capabilities.isEnabled('products');
+  }
+
+  get canManageCategories(): boolean {
+    return this.capabilities.isEnabled('products');
   }
 
   loadCategory() {
@@ -48,16 +68,15 @@ export class CategorysComponent implements OnInit {
     this.categoryService.getAll().subscribe({
       next: (res: any) => {
         this.spinner.hide();
-        // según tu API, a veces usas res.data, otras res.message.data
-        const data = res?.data ?? res?.message?.data ?? [];
+        const data = Array.isArray(res) ? res : (res?.message?.data ?? res?.data ?? []);
         this.categories = data;
         // ordena por nombre visible
-        this.categories.sort((a: any, b: any) => (a?.nombre || '').localeCompare(b?.nombre || ''));
+        this.categories.sort((a: any, b: any) => (a?.category_name || a?.nombre || '').localeCompare(b?.category_name || b?.nombre || ''));
         this.actualizarCategoriasFiltradas();
       },
-      error: () => {
+      error: (error: any) => {
         this.spinner.hide();
-        toast.error('Error al cargar categorías');
+        this.alertService.error(this.frappeErrorService.handle(error));
       }
     });
   }
@@ -69,8 +88,8 @@ export class CategorysComponent implements OnInit {
 
     lista = lista.filter((c: any) => {
       const byText =
-        (c?.nombre && c.nombre.toLowerCase().includes(term)) ||
-        (c?.description && c.description.toLowerCase().includes(term)) ||
+        ((c?.category_name || c?.nombre) && String(c.category_name || c.nombre).toLowerCase().includes(term)) ||
+        ((c?.description || c?.descripcion) && String(c.description || c.descripcion).toLowerCase().includes(term)) ||
         (c?.name && c.name.toLowerCase().includes(term));
 
       const activo = !!c?.isactive; // del backend suele venir isactive
@@ -94,6 +113,11 @@ export class CategorysComponent implements OnInit {
   }
 
   abrirModal(categoria: any = null) {
+    if (!this.canManageCategories) {
+      this.alertService.error('No tienes permiso products.manage para crear o editar categorías.');
+      return;
+    }
+
     this.mostrarModal = true;
     this.categoriaEditando = categoria;
     this.resetForm();
@@ -101,8 +125,8 @@ export class CategorysComponent implements OnInit {
     if (categoria) {
       this.categoriaForm.patchValue({
         name: categoria.name || '',
-        nombre: categoria.nombre || '',
-        description: categoria.description || '',
+        nombre: categoria.category_name || categoria.nombre || '',
+        description: categoria.description || categoria.descripcion || '',
         // en el form usamos isActive, pero del backend suele ser isactive
         isActive: categoria.isactive ?? true,
       });
@@ -116,6 +140,11 @@ export class CategorysComponent implements OnInit {
   }
 
   guardarCategoria() {
+    if (!this.canManageCategories) {
+      this.alertService.error('No tienes permiso products.manage para guardar categorías.');
+      return;
+    }
+
     if (this.categoriaForm.invalid) {
       this.categoriaForm.markAllAsTouched();
       return;
@@ -123,7 +152,7 @@ export class CategorysComponent implements OnInit {
 
     const formValue = this.categoriaForm.value;
 
-    // Mapea al payload del backend: isactive en lugar de isActive
+    // CategoryService transforma estos aliases al contrato Lite.
     const payload = {
       name: formValue.name,
       nombre: formValue.nombre,
@@ -142,8 +171,8 @@ export class CategorysComponent implements OnInit {
           this.cerrarModal();
           this.spinner.hide();
         },
-        error: () => {
-          toast.error('Error al actualizar');
+        error: (error: any) => {
+          toast.error(this.frappeErrorService.handle(error));
           this.spinner.hide();
         }
       });
@@ -155,8 +184,8 @@ export class CategorysComponent implements OnInit {
           this.cerrarModal();
           this.spinner.hide();
         },
-        error: () => {
-          toast.error('Error al crear');
+        error: (error: any) => {
+          toast.error(this.frappeErrorService.handle(error));
           this.spinner.hide();
         }
       });
@@ -164,16 +193,21 @@ export class CategorysComponent implements OnInit {
   }
 
   eliminar(name: string) {
-    if (confirm('¿Eliminar esta categoría?')) {
+    if (!this.canManageCategories) {
+      this.alertService.error('No tienes permiso products.manage para desactivar categorías.');
+      return;
+    }
+
+    if (confirm('¿Desactivar esta categoría?')) {
       this.spinner.show();
       this.categoryService.delete(name).subscribe({
         next: () => {
-          toast.success('Categoría eliminada');
+          toast.success('Categoría desactivada');
           this.loadCategory();
           this.spinner.hide();
         },
-        error: () => {
-          toast.error('Error al eliminar');
+        error: (error: any) => {
+          toast.error(this.frappeErrorService.handle(error));
           this.spinner.hide();
         }
       });

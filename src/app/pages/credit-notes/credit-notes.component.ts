@@ -5,11 +5,13 @@ import { NgxPaginationModule } from 'ngx-pagination';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { EcuadorTimePipe } from '../../core/pipes/ecuador-time-pipe.pipe';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
-import { Router, RouterModule } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { PrintService } from 'src/app/services/print.service';
 import { environment } from 'src/environments/environment';
 import { toast } from 'ngx-sonner';
 import { CreditNoteService } from 'src/app/services/credit-note.service';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-credit-notes',
@@ -27,19 +29,20 @@ export class CreditNotesComponent implements OnInit {
   totalPages = 1;
 
   _search = '';
-  conOrdenFiltro: '' | 'con' | 'sin' = ''; // filtro por enlace a orden
+  statusFilter = '';
 
   mostrarModal = false;
   invoiceSelected: any | null = null;
   activeTab: 'info' | 'sri' | 'items' = 'info';
+  documentLoading = false;
 
   private url = environment.URL; // si usas URL (como en orders); si usas apiUrl para imprimir, ajusta
 
   constructor(
     private svc: CreditNoteService,           // o InvoicesService
     private spinner: NgxSpinnerService,
-    private router: Router,
-    private printService: PrintService
+    private printService: PrintService,
+    public capabilities: CompanyCapabilitiesService
   ) {}
   ngOnInit(): void {
     this.loadInvoices();
@@ -48,7 +51,7 @@ export class CreditNotesComponent implements OnInit {
   loadInvoices(): void {
     this.spinner.show();
     const offset = (this.page - 1) * this.pageSize;
-    this.svc.getAllCreditNotes(this.pageSize, offset).subscribe({
+    this.svc.getAllCreditNotes(this.pageSize, offset, this.statusFilter || undefined).subscribe({
       next: (res: any) => {
         const msg = res.message || res; // depende de tu proxy
         this.invoices = msg.data || [];
@@ -59,7 +62,7 @@ export class CreditNotesComponent implements OnInit {
       },
       error: (err: any) => {
         this.spinner.hide();
-        console.error('Error al cargar facturas:', err);
+        toast.error(String(err?.error?.message || err?.message || 'No se pudieron cargar las notas de crédito.'));
       }
     });
   }
@@ -68,6 +71,38 @@ export class CreditNotesComponent implements OnInit {
   set search(v: string) {
     this._search = v || '';
     this.aplicarFiltros();
+  }
+
+  customerName(invoice: any): string {
+    return String(invoice?.customer?.customer_name ?? invoice?.customer?.fullName ?? invoice?.customer_name ?? '—');
+  }
+
+  customerIdentification(invoice: any): string {
+    return String(invoice?.customer?.identification_number ?? invoice?.customer?.num_identificacion ?? invoice?.customer_identification_number ?? '—');
+  }
+
+  documentNumber(invoice: any): string {
+    return String(invoice?.document_number ?? invoice?.sri?.number ?? '—');
+  }
+
+  relatedDocumentNumber(invoice: any): string {
+    return String(invoice?.related_document_number ?? invoice?.invoice_modified?.invoice_reference ?? '—');
+  }
+
+  providerStatus(invoice: any): string {
+    return String(invoice?.electronic?.provider_status ?? invoice?.sri?.provider_status ?? '—');
+  }
+
+  sriMessage(invoice: any): string {
+    return String(invoice?.electronic?.sri_message ?? invoice?.sri?.sri_message ?? '—');
+  }
+
+  emailStatus(invoice: any): string {
+    return String(invoice?.email?.status ?? invoice?.email_status ?? 'No enviado');
+  }
+
+  invoiceStatus(invoice: any): string {
+    return String(invoice?.status ?? invoice?.sri?.status ?? '');
   }
 
   aplicarFiltros(): void {
@@ -79,18 +114,19 @@ export class CreditNotesComponent implements OnInit {
         inv?.name,
         inv?.sri?.number,
         inv?.sri?.access_key,
+        inv?.document_number,
+        inv?.related_document_number,
+        inv?.related_access_key,
         inv?.customer?.fullName,
         inv?.customer?.num_identificacion,
-        inv?.sri?.status
+        inv?.customer_name,
+        inv?.customer_identification_number,
+        inv?.status,
+        inv?.provider_status,
+        inv?.email_status
       ].map(x => (x ?? '').toString().toLowerCase()).some(x => x.includes(term));
 
-      const hasOrder = !!inv?.order;
-      const byOrden =
-        this.conOrdenFiltro === '' ? true :
-        this.conOrdenFiltro === 'con' ? hasOrder :
-        !hasOrder;
-
-      return byText && byOrden;
+      return byText;
     });
 
     this.invoicesFiltradas = lista;
@@ -98,8 +134,15 @@ export class CreditNotesComponent implements OnInit {
 
   limpiarFiltros(): void {
     this._search = '';
-    this.conOrdenFiltro = '';
+    this.statusFilter = '';
     this.aplicarFiltros();
+    this.page = 1;
+    this.loadInvoices();
+  }
+
+  onStatusChange(): void {
+    this.page = 1;
+    this.loadInvoices();
   }
 
   nextPage(): void { if (this.page < this.totalPages) { this.page++; this.loadInvoices(); } }
@@ -115,47 +158,52 @@ export class CreditNotesComponent implements OnInit {
 
   // PDF de factura (usa tu PrintService)
   getFacturaPdf() {
-    if (!this.invoiceSelected?.sri?.invoice) {
+    const invoiceName = this.invoiceSelected?.name || this.invoiceSelected?.sri?.invoice;
+    if (!invoiceName) {
       toast.error('Factura no disponible');
       return;
     }
-    const url = this.url + this.printService.getFacturaPdf(this.invoiceSelected.sri.invoice);
+    if (this.capabilities.isLiteMode) {
+      if (this.documentLoading) return;
+      this.documentLoading = true;
+      this.printService.downloadLiteInvoicePdf(invoiceName, 'Credit Note').pipe(
+        finalize(() => { this.documentLoading = false; })
+      ).subscribe({
+        next: (blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const w = window.open(url, '_blank');
+          if (!w) toast.error('No se pudo abrir la ventana de impresión');
+          window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+        },
+        error: () => toast.error('No se pudo descargar la nota de crédito.')
+      });
+      return;
+    }
+    const url = this.url + this.printService.getCreditNotePdf(invoiceName);
     const w = window.open(url, '_blank');
     if (!w) toast.error('No se pudo abrir la ventana de impresión');
   }
 
-  // Reenviar/Regenerar factura (opcional, si tienes endpoint)
-  reenviarFactura() {
-    // TODO: reemplaza por tu servicio real si lo tienes
-    toast.info('Implementa el servicio para reenviar/regenerar la factura');
-    // p.ej:
-    // this.spinner.show();
-    // this.svc.reenviarFactura(this.invoiceSelected.name).subscribe({
-    //   next: () => { this.spinner.hide(); toast.success('Factura reenviada'); this.loadInvoices(); this.closeModal(); },
-    //   error: () => { this.spinner.hide(); toast.error('No se pudo reenviar'); }
-    // });
-  }
-
-  irAOrden(orderName: string) {
-    if (!orderName) return;
-    this.router.navigate(['/orders'], { queryParams: { id: orderName } });
-  }
-
   getSriStatusLabel(status: string | undefined | null): string {
-    const value = String(status || '').trim();
-    if (value === 'AUTORIZADO') return 'AUTORIZADO';
-    if (value === 'Rejected') return 'Rechazada';
-    if (value === 'Error') return 'Error';
-    if (value === 'Queued') return 'En cola';
-    if (value === 'Processing') return 'En proceso';
-    if (value === 'Draft') return 'Borrador';
+    const value = String(status || '').trim().toUpperCase();
+    if (value === 'AUTORIZADO' || value === 'AUTORIZADA' || value === 'AUTHORIZED') return 'AUTORIZADA';
+    if (value === 'REJECTED' || value === 'RECHAZADO' || value === 'RECHAZADA' || value === 'NOT_AUTHORIZED') return 'Rechazada';
+    if (value === 'ERROR') return 'Error';
+    if (value === 'QUEUED' || value === 'EN COLA') return 'En cola';
+    if (value === 'PROCESSING') return 'Procesando';
+    if (value === 'EMITIDA') return 'Emitida';
+    if (value === 'DRAFT' || value === 'BORRADOR') return 'Borrador';
+    if (value === 'PENDIENTE EMISION' || value === 'PENDIENTE EMISIÓN') return 'Pendiente emisión';
+    if (value === 'ERROR DE ENVIO' || value === 'ERROR DE ENVÍO') return 'Error de envío';
+    if (value === 'REEMPLAZADA' || value === 'REPLACED') return 'Reemplazada';
     return value || '—';
   }
 
   getSriStatusBadge(status: string | undefined | null): string {
-    const value = String(status || '').trim();
-    if (value === 'AUTORIZADO') return 'badge-green';
-    if (value === 'Rejected' || value === 'Error' || value === 'ANULADA') return 'badge-red';
+    const value = String(status || '').trim().toUpperCase();
+    if (value === 'AUTORIZADO' || value === 'AUTORIZADA' || value === 'AUTHORIZED') return 'badge-green';
+    if (value === 'REJECTED' || value === 'RECHAZADO' || value === 'RECHAZADA' || value === 'ERROR' || value === 'ERROR DE ENVIO' || value === 'ERROR DE ENVÍO' || value === 'ANULADA') return 'badge-red';
+    if (value === 'REEMPLAZADA' || value === 'REPLACED') return 'badge-gray';
     return 'badge-yellow';
   }
 }

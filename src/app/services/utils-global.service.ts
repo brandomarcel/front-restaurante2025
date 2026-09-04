@@ -2,18 +2,27 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
-import { catchError, EMPTY, Observable } from 'rxjs';
+import { catchError, EMPTY, Observable, of, throwError } from 'rxjs';
 import { FrappeErrorService } from '../core/services/frappe-error.service';
 import { toast } from 'ngx-sonner';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
+import { CompanyCapabilitiesService } from '../core/services/company-capabilities.service';
 
 @Injectable({ providedIn: 'root' })
 export class UtilsGlobalService {
   private readonly api = environment.apiUrl;
 
-  constructor(private http: HttpClient, private err: FrappeErrorService) {}
+  constructor(
+    private http: HttpClient,
+    private err: FrappeErrorService,
+    private capabilities: CompanyCapabilitiesService
+  ) {}
 
   getAllCreditNotes(limit: number = 10, offset: number = 0) {
+  if (this.capabilities.isLiteMode) {
+    return throwError(() => 'Notas de crédito no disponibles en FacturADA Lite.');
+  }
+
   const params = new HttpParams()
     .set('limit', limit.toString())
     .set('offset', offset.toString());
@@ -26,6 +35,10 @@ export class UtilsGlobalService {
 
 
   getMotivosAnulacion() {
+    if (this.capabilities.isLiteMode) {
+      return of({ message: [] });
+    }
+
     return this.http.get(
       `${environment.apiUrl}/method/restaurante_app.facturacion_bmarc.einvoice.utils.get_motivos_anulacion_list`
     );

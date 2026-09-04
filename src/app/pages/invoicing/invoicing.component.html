@@ -25,6 +25,38 @@
         </div>
       </section>
 
+      <section *ngIf="emissionState" class="rounded-xl border px-3 py-2 text-xs"
+        [ngClass]="{
+          'border-emerald-200 bg-emerald-50 text-emerald-800': emissionState === 'AUTHORIZED',
+          'border-blue-200 bg-blue-50 text-blue-800': emissionState === 'PROCESSING',
+          'border-red-200 bg-red-50 text-red-800': emissionState === 'REJECTED' || emissionState === 'ERROR',
+          'border-orange-200 bg-orange-50 text-orange-800': emissionState === 'PROVIDER_ERROR'
+        }">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p class="font-bold">
+              {{ emissionState === 'AUTHORIZED' ? 'Factura autorizada' :
+                 emissionState === 'PROCESSING' ? 'Comprobante recibido. Autorización pendiente.' :
+                 emissionState === 'REJECTED' ? 'Comprobante rechazado por el SRI' :
+                 emissionState === 'PROVIDER_ERROR' ? 'No se pudo completar el envío' : 'Error al emitir la factura' }}
+            </p>
+            <p *ngIf="emissionInvoiceName" class="mt-0.5 text-[10px] opacity-80">Factura: {{ emissionInvoiceName }}</p>
+            <p *ngIf="emissionAccessKey" class="mt-0.5 break-all font-mono text-[10px] opacity-80">Clave: {{ emissionAccessKey }}</p>
+            <p *ngIf="emissionAuthorizationNumber" class="mt-0.5 text-[10px] opacity-80">Autorización: {{ emissionAuthorizationNumber }}</p>
+            <p *ngIf="emissionAuthorizationDatetime" class="mt-0.5 text-[10px] opacity-80">Fecha autorización: {{ emissionAuthorizationDatetime }}</p>
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            <button *ngIf="emissionInvoiceName" type="button" class="rounded-md border border-current px-2.5 py-1.5 text-[10px] font-bold" [routerLink]="['/dashboard/invoices', emissionInvoiceName]">Ver detalle</button>
+            <button *ngIf="emissionState === 'AUTHORIZED'" type="button" class="rounded-md bg-emerald-600 px-2.5 py-1.5 text-[10px] font-bold text-white" (click)="printRide()">Imprimir RIDE</button>
+            <button *ngIf="emissionState === 'AUTHORIZED' || emissionState === 'PROCESSING'" type="button" class="rounded-md border border-current px-2.5 py-1.5 text-[10px] font-bold" (click)="printTicket()">Ticket</button>
+          </div>
+        </div>
+        <details *ngIf="emissionMessages.length" class="mt-2">
+          <summary class="cursor-pointer text-[10px] font-bold">Ver mensajes tributarios</summary>
+          <ul class="mt-1 list-disc space-y-0.5 pl-4 text-[11px]"><li *ngFor="let message of emissionMessages">{{ message }}</li></ul>
+        </details>
+      </section>
+
       <div class="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
         <main class="min-w-0 space-y-3">
           <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
@@ -137,7 +169,7 @@
               <div>
                 <h3 class="text-xs font-semibold text-primary">Detalle de factura</h3>
                 <p class="text-[10px] text-slate-500">
-                  {{ order ? 'Revisa los ítems antes de emitir.' : 'Agrega productos o un ítem manual.' }}
+                  {{ order ? 'Revisa los ítems antes de emitir.' : 'Agrega productos desde el catálogo.' }}
                 </p>
               </div>
 
@@ -213,27 +245,6 @@
                       Agregar
                     </button>
 
-                    <button
-                      type="button"
-                      (click)="showManualItem = !showManualItem"
-                      class="min-h-[34px] rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-50">
-                      Manual
-                    </button>
-                  </div>
-
-                  <div *ngIf="showManualItem" class="grid gap-1.5 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                    <input
-                      type="text"
-                      [(ngModel)]="adHoc.description"
-                      [ngModelOptions]="{standalone: true}"
-                      placeholder="Descripción del ítem manual"
-                      class="min-h-[30px] rounded-md border border-slate-200 bg-white px-2 text-[11px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
-                    <button
-                      type="button"
-                      (click)="addAdHocLine()"
-                      class="min-h-[30px] rounded-md border border-primary/20 bg-primary/5 px-2.5 text-[11px] font-semibold text-primary">
-                      Agregar manual
-                    </button>
                   </div>
                 </div>
               </div>

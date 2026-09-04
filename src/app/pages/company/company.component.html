@@ -8,14 +8,35 @@
           tone="primary"
           shape="rounded"
           size="medium"
-          [disabled]="isSaving || isLoadingCompany"
+          [disabled]="isSaving || isLoadingCompany || !canEditLiteSetup"
           (click)="save()">
-          {{ isSaving ? 'Guardando...' : 'Guardar' }}
+          {{ isSaving ? 'Guardando...' : (isLiteMode ? 'Guardar configuración Lite' : 'Guardar') }}
         </app-button>
       </div>
 
       <form [formGroup]="form" (ngSubmit)="save()" class="grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs"
         [class.form-busy]="isSaving || isLoadingCompany">
+        <div *ngIf="isLiteMode && activeBusiness" class="lg:col-span-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+          Empresa activa: <span class="font-semibold">{{ activeBusiness.business_name || activeBusiness.businessname || activeBusiness.name }}</span>
+        </div>
+        <div *ngIf="isLiteMode && !canEditLiteSetup" class="lg:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          Solo el administrador del negocio puede modificar la configuración tributaria.
+        </div>
+        <div *ngIf="isLiteMode && liteSetupReady === false"
+          class="lg:col-span-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p class="font-bold">Configuración Lite pendiente</p>
+              <p class="mt-1 text-amber-800">Completa los datos pendientes para habilitar la emisión de facturas.</p>
+            </div>
+            <span class="rounded-full border border-amber-300 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+              Asistente de configuración
+            </span>
+          </div>
+          <p *ngIf="liteSetupMissingLabel" class="mt-2 font-semibold text-amber-800">
+            Pendiente: {{ liteSetupMissingLabel }}.
+          </p>
+        </div>
         <div class="space-y-5">
        
 
@@ -25,7 +46,7 @@
             </div>
 
             <div class="p-4 space-y-3">
-              <input #logoInput type="file" accept="image/*" class="sr-only" (change)="onLogoSelected($event)" />
+              <input #logoInput type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" class="sr-only" (change)="onLogoSelected($event)" />
 
               <div class="dropzone" [class.dropzone--active]="isDraggingLogo" role="button" tabindex="0"
                 aria-label="Zona para soltar o seleccionar el logo" (click)="logoInput.click()"
@@ -59,9 +80,20 @@
             </div>
 
             <div class="p-4 space-y-4">
-              <label class="inline-flex items-center cursor-pointer relative">
+              <div *ngIf="isLiteMode" class="space-y-2">
+                <label class="block font-medium mb-1">Ambiente de emisión</label>
+                <select class="input" [value]="ambiente" (change)="onLiteEnvironmentSelected($any($event.target).value)"
+                  [disabled]="isSaving || isLoadingCompany">
+                  <option value="PRUEBAS">Pruebas</option>
+                  <option value="PRODUCCION">Produccion</option>
+                </select>
+                <p class="text-xs text-slate-500">La facturación utilizará la secuencia activa del ambiente seleccionado.</p>
+                <p class="text-xs font-medium text-red-600" *ngIf="liteSequenceError">{{ liteSequenceError }}</p>
+              </div>
+
+              <label *ngIf="!isLiteMode" class="inline-flex items-center cursor-pointer relative">
                 <input type="checkbox" class="sr-only peer" formControlName="ambiente" (change)="cambiarAmbiente()"
-                  [disabled]="isSaving || isLoadingCompany" />
+                  [disabled]="isSaving || isLoadingCompany || isLiteMode" />
                 <div class="w-11 h-6 bg-gray-300 rounded-full peer-checked:bg-green-600 transition-colors"></div>
                 <div
                   class="absolute w-5 h-5 bg-white rounded-full transform translate-x-1 top-0.5 left-0.5 peer-checked:translate-x-5 transition-transform">
@@ -94,7 +126,38 @@
                 </div>
               </div>
 
-              <div>
+              <div *ngIf="isLiteMode" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-medium mb-1">Nombre del establecimiento</label>
+                  <input type="text" class="input" formControlName="establishment_name" placeholder="Matriz" />
+                </div>
+                <div>
+                  <label class="block font-medium mb-1">Nombre del punto de emisión</label>
+                  <input type="text" class="input" formControlName="emission_point_name" placeholder="Caja 001" />
+                </div>
+              </div>
+
+              <div *ngIf="!isLiteMode">
+                <label class="block font-medium mb-1">URL del servicio FacturADA</label>
+                <input type="text" class="input" formControlName="service_base_url"
+                  placeholder="URL del servicio de emisión" />
+                <p class="mt-1 text-[11px] text-gray-500">Configuración disponible únicamente para instalaciones no Lite.</p>
+              </div>
+
+              <div *ngIf="isLiteMode" class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <h4 class="text-sm font-semibold text-gray-700">Secuencia de factura</h4>
+                <label class="mt-2 block font-medium mb-1">Número actual</label>
+                <input type="number" min="0" class="input no-spinner bg-gray-100 cursor-not-allowed"
+                  formControlName="current_number" readonly aria-readonly="true" />
+                <p class="mt-1 text-[11px] text-gray-500" *ngIf="hasValidLiteInvoiceSequence">
+                  Ambiente {{ ambiente === 'PRODUCCION' ? 'Produccion' : 'Pruebas' }} · Secuencia activa.
+                </p>
+                <p class="mt-1 text-[11px] text-red-600" *ngIf="!hasValidLiteInvoiceSequence">
+                  No existe una secuencia activa para este ambiente.
+                </p>
+              </div>
+
+              <div *ngIf="!isLiteMode">
                 <h4 class="text-sm font-semibold text-gray-700 mt-1">Secuencias</h4>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                   <div>
@@ -148,25 +211,17 @@
             </div>
 
             <div class="p-4 space-y-4">
-              <label class="inline-flex items-center relative opacity-75 cursor-not-allowed">
-                <input type="checkbox" class="sr-only peer" formControlName="enable_provider_ruc"
-                  (click)="$event.preventDefault()" tabindex="-1" aria-readonly="true" />
-                <div class="w-11 h-6 bg-gray-300 rounded-full peer-checked:bg-green-600 transition-colors"></div>
-                <div
-                  class="absolute w-5 h-5 bg-white rounded-full transform translate-x-1 top-0.5 left-0.5 peer-checked:translate-x-5 transition-transform">
-                </div>
-                <span class="ml-3 text-sm font-semibold text-gray-700">Incluir RUC del proveedor del sistema</span>
-              </label>
-
-              <div *ngIf="f['enable_provider_ruc'].value">
+              <div *ngIf="f['provider_ruc'].value; else providerRucNotConfigured">
                 <label class="block font-medium mb-1">RUC del proveedor del sistema</label>
                 <input appOnlyNumbers type="text" maxlength="13" class="input bg-gray-100 cursor-not-allowed"
-                  formControlName="provider_ruc" readonly aria-readonly="true"
-                  [class.border-red-500]="f['provider_ruc'].invalid" />
-                <small *ngIf="f['provider_ruc'].invalid" class="text-red-600">
-                  El RUC configurado debe tener exactamente 13 dígitos numéricos.
-                </small>
+                  formControlName="provider_ruc"
+                  readonly aria-readonly="true"
+                  tabindex="-1" />
+                <small class="text-[11px] text-gray-500">Configurado por el sistema. No se puede modificar desde aquí.</small>
               </div>
+              <ng-template #providerRucNotConfigured>
+                <p class="text-sm text-gray-500">RUC del proveedor no configurado.</p>
+              </ng-template>
             </div>
           </div>
 
@@ -217,6 +272,10 @@
                     <p class="font-bold uppercase tracking-wide text-slate-500">Restantes</p>
                     <p class="mt-1 font-black text-slate-900">{{ planRemainingLabel }}</p>
                   </div>
+                  <div class="col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                    <p class="font-bold uppercase tracking-wide text-slate-500">Modalidad de consumo</p>
+                    <p class="mt-1 font-black text-slate-900">{{ planConsumptionLabel }}</p>
+                  </div>
                   <div *ngIf="shouldShowAutoRenew" class="col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
                     <p class="font-bold uppercase tracking-wide text-slate-500">Renovación automática</p>
                     <p class="mt-1 font-black text-slate-900">{{ autoRenewLabel }}</p>
@@ -249,7 +308,8 @@
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label class="block font-medium mb-1">RUC</label>
-                  <input appOnlyNumbers type="text" maxlength="13" class="input no-spinner" formControlName="ruc"
+                  <input appOnlyNumbers type="text" maxlength="13" class="input no-spinner bg-gray-100 cursor-not-allowed"
+                    formControlName="ruc" readonly aria-readonly="true" tabindex="-1" [disabled]="true"
                     [class.border-red-500]="f['ruc'].invalid && submitted" />
                   <small *ngIf="f['ruc'].errors?.['required'] && submitted" class="text-red-600">Campo
                     requerido</small>
@@ -268,10 +328,12 @@
               <div>
                 <label class="block font-medium mb-1">Tipo de operación</label>
                 <select class="input" formControlName="business_mode"
+                  [disabled]="true"
                   aria-readonly="true"
                   [class.border-red-500]="f['business_mode'].invalid && submitted">
                   <option value="RESTAURANTE">Restaurante / POS</option>
                   <option value="FACTURADOR">Facturador</option>
+                  <option value="FACTURADA_LITE">FacturADA Lite</option>
                 </select>
                 <p class="mt-1 text-[11px] text-gray-500">
                   Solo lectura. Este valor lo define el administrador del sistema.
@@ -304,15 +366,15 @@
             </div>
 
             <div class="p-4 space-y-4">
-              <input #firmaInput type="file" accept=".p12" class="sr-only" (change)="onFirmaSelected($event)" />
+              <input #firmaInput type="file" accept=".p12,.pfx" class="sr-only" (change)="onFirmaSelected($event)" />
 
               <div class="dropzone" [class.dropzone--active]="isDraggingFirma" role="button" tabindex="0"
-                aria-label="Zona para soltar o seleccionar archivo .p12" (click)="firmaInput.click()"
+                aria-label="Zona para soltar o seleccionar archivo .p12 o .pfx" (click)="firmaInput.click()"
                 (keydown.enter)="firmaInput.click()" (keydown.space)="firmaInput.click()"
                 (dragover)="onFirmaDragOver($event)" (dragleave)="onFirmaDragLeave($event)"
                 (drop)="onFirmaDrop($event)">
                 <div class="text-center pointer-events-none">
-                  <div class="text-[12px] font-medium">Arrastra tu archivo .p12 aqui</div>
+                  <div class="text-[12px] font-medium">Arrastra tu certificado .p12 o .pfx aqui</div>
                   <div class="text-[11px] text-gray-500">o haz clic para seleccionar (max 5MB)</div>
                 </div>
               </div>
@@ -330,7 +392,7 @@
               <div class="relative">
                 <label class="block font-medium mb-1">
                   Clave de la firma
-                  <span *ngIf="hasFirmaAvailable" class="text-red-600">*</span>
+                  <span *ngIf="requiresCertificatePassword" class="text-red-600">*</span>
                 </label>
                 <input [type]="showClave ? 'text' : 'password'" id="clave" class="input pr-16" formControlName="clave"
                   [class.border-red-500]="f['clave'].invalid && submitted" placeholder="••••••••"
@@ -343,18 +405,54 @@
                 </button>
 
                 <small *ngIf="f['clave'].invalid && submitted" class="text-red-600">
-                  Campo requerido cuando existe firma
+                  Campo requerido al cargar un certificado nuevo
                 </small>
               </div>
 
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px]">
+                <span class="font-semibold text-slate-700">Certificado configurado:</span>
+                <span class="ml-1 font-bold" [ngClass]="certificateConfigured ? 'text-emerald-700' : 'text-slate-500'">
+                  {{ certificateConfigured ? 'Sí' : 'No' }}
+                </span>
+              </div>
+
+              <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="text-[11px] font-semibold text-slate-700">Estado del certificado</span>
+                  <span class="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                    [ngClass]="certificateStatusClasses">
+                    {{ certificateStatusLabel }}
+                  </span>
+                </div>
+                <p *ngIf="certificateIsBlocking" class="mt-1 text-[11px] font-semibold text-red-700">
+                  {{ certInfo?.lastError || 'La emisión de facturas está bloqueada hasta corregir el certificado.' }}
+                </p>
+              </div>
+
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label class="block font-medium mb-1">Emitido a / Nombre</label>
-                  <input class="input" [value]="certInfo?.subject || ''" readonly placeholder="(se llenara al validar)">
+                  <label class="block font-medium mb-1">Válida desde</label>
+                  <input class="input" [value]="formatCertificateDate(certInfo?.validFrom)" readonly placeholder="Pendiente de validar">
                 </div>
                 <div>
-                  <label class="block font-medium mb-1">Fecha de expiracion</label>
-                  <input class="input" [value]="certInfo?.notAfter || ''" readonly placeholder="(se llenara al validar)">
+                  <label class="block font-medium mb-1">Válida hasta</label>
+                  <input class="input" [value]="formatCertificateDate(certInfo?.validTo)" readonly placeholder="Pendiente de validar">
+                </div>
+                <div>
+                  <label class="block font-medium mb-1">Días restantes</label>
+                  <input class="input" [value]="certificateDaysRemaining === null ? 'Pendiente de validar' : certificateDaysRemaining" readonly>
+                </div>
+                <div>
+                  <label class="block font-medium mb-1">Titular</label>
+                  <input class="input" [value]="certInfo?.subject || ''" readonly placeholder="Pendiente de validar">
+                </div>
+                <div>
+                  <label class="block font-medium mb-1">Emisor</label>
+                  <input class="input" [value]="certInfo?.issuer || ''" readonly placeholder="Pendiente de validar">
+                </div>
+                <div>
+                  <label class="block font-medium mb-1">Número de serie</label>
+                  <input class="input" [value]="certInfo?.serialNumber || ''" readonly placeholder="Pendiente de validar">
                 </div>
               </div>
             </div>

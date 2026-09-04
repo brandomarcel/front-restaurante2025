@@ -15,7 +15,6 @@ import { NgSelectModule } from '@ng-select/ng-select';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { catchError, debounceTime, distinctUntilChanged, finalize, of, Subject, switchMap, takeUntil } from 'rxjs';
-import { OnlyNumbersDirective } from 'src/app/core/directives/only-numbers.directive';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
 import { MenuService } from 'src/app/modules/layout/services/menu.service';
 import { AlertService } from 'src/app/core/services/alert.service';
@@ -29,12 +28,13 @@ import { environment } from 'src/environments/environment';
 import { CartService } from '../services/cart.service';
 import { canSellProduct, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { UtilsService } from 'src/app/core/services/utils.service';
 import { buildSinglePaymentPayload, findPaymentMethod, getDefaultPaymentValue, getPaymentDisplayLabel, isCashPayment } from 'src/app/shared/utils/payment.utils';
 
 @Component({
   selector: 'app-pos-caja',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, OnlyNumbersDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule],
   templateUrl: './pos-caja.component.html',
   styles: [':host { display: block; height: 100%; min-height: 0; }']
 })
@@ -94,11 +94,19 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     private printService: PrintService,
     public cartService: CartService,
     public alertService: AlertService,
-    private capabilities: CompanyCapabilitiesService
+    private capabilities: CompanyCapabilitiesService,
+    private utilsService: UtilsService
   ) { }
 
   ngOnInit(): void {
-    this.ambiente = localStorage.getItem('ambiente') ?? '---';
+    this.ambiente = this.utilsService.getAmbienteActual()
+      || localStorage.getItem('ambiente')
+      || '---';
+    this.utilsService.ambiente$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((ambiente) => {
+        if (ambiente) this.ambiente = ambiente;
+      });
     this.today = this.buildEcuadorIsoDate();
     this.loadFavorites();
     this.initClienteForm();
@@ -132,7 +140,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   get canEmitInvoice(): boolean {
-    return this.capabilities.validateFeatureUse('direct_invoice').allowed;
+    return this.capabilities.canEmit();
   }
 
   get invoicePlanBlockMessage(): string | null {
@@ -177,7 +185,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.spinner.show();
     this.productsService.getAll(1).pipe(finalize(() => this.spinner.hide())).subscribe({
       next: (res: any) => {
-        this.products = res?.message?.data || [];
+        this.products = Array.isArray(res) ? res : (res?.message?.data || []);
         this.applyFilters();
       },
       error: () => {
@@ -227,7 +235,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       finalize(() => this.spinner.hide())
     ).subscribe({
       next: (res: any) => {
-        this.customer = res?.message || null;
+        this.customer = res?.data || res?.message?.data || (res?.message && typeof res.message === 'object' ? res.message : res) || null;
         if (this.customer) {
           this.selectCustomer(this.customer);
           return;
@@ -372,7 +380,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (res: any) => {
         toast.success('Cliente creado exitosamente.');
-        this.customer = res?.message?.data;
+        this.customer = Array.isArray(res) ? res[0] : (res?.data || res?.message?.data || res?.message || res);
         this.identificationCustomer = this.customer?.num_identificacion || '';
         this.customerSearchTerm = this.formatCustomerSearchLabel(this.customer);
         this.cerrarModal();
@@ -962,7 +970,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   private refreshProductsSilently(): void {
     this.productsService.getAll(1).subscribe({
       next: (res: any) => {
-        this.products = res?.message?.data || [];
+        this.products = Array.isArray(res) ? res : (res?.message?.data || []);
         this.applyFilters();
       }
     });

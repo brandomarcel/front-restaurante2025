@@ -16,6 +16,15 @@
             <div class="flex w-full flex-col gap-2 sm:flex-row">
                 <input class="input" type="text" [(ngModel)]="search"
                     placeholder="Buscar por #factura, clave de acceso, cliente, identificacion o estado..." />
+                <select class="input sm:max-w-[180px]" [(ngModel)]="statusFiltro" (change)="page = 1; loadInvoices()">
+                    <option value="">Todos los estados</option>
+                    <option value="BORRADOR">Borrador</option>
+                    <option value="PENDIENTE EMISION">Pendiente de emisión</option>
+                    <option value="EMITIDA">Emitida / procesando</option>
+                    <option value="AUTORIZADO">Autorizado</option>
+                    <option value="RECHAZADO">Rechazado</option>
+                    <option value="ANULADA">Anulada</option>
+                </select>
             </div>
             <div class="flex gap-2">
                 <app-button (click)="limpiarFiltros()" impact="bold" tone="light" shape="rounded" size="small">
@@ -50,8 +59,8 @@
                         <td class="app-td">{{ inv.customer?.fullName || inv.customer?.name || '—' }}</td>
                         <td class="app-td text-right font-semibold">{{ inv.total | currency:'USD':'symbol':'1.2-2' }}</td>
                         <td class="app-td">
-                            <span class="badge" [ngClass]="getSriStatusBadge(inv.status)">
-                                {{ getSriStatusLabel(inv.status) }}
+                            <span class="badge" [ngClass]="getInvoiceStatusBadge(inv)">
+                                {{ getInvoiceStatusLabel(inv) }}
                             </span>
                         </td>
                         <td class="app-td text-center">
@@ -96,8 +105,11 @@
 
             <!-- Acciones -->
             <div class="mb-4 flex flex-wrap gap-2">
-                <button class="btn btn-warn" (click)="getFacturaPdf()" [disabled]="!invoiceSelected?.sri?.invoice">
-                    Descargar Factura
+                <button class="btn btn-warn" (click)="getFacturaPdf()" [disabled]="!invoiceSelected?.sri?.invoice && !invoiceSelected?.name">
+                    Descargar RIDE
+                </button>
+                <button *ngIf="capabilities.isLiteMode" class="btn btn-outline" (click)="getTicketPdf()">
+                    Descargar ticket
                 </button>
 
                 <button *ngIf="invoiceSelected?.order" class="btn btn-outline"
@@ -105,9 +117,9 @@
                     Ver Orden: {{ invoiceSelected?.order }}
                 </button>
 
-                <button *ngIf="invoiceSelected?.sri?.status !== 'AUTORIZADO'" class="btn btn-primary"
-                    (click)="reenviarFactura()">
-                    Reenviar Factura
+                <button *ngIf="!capabilities.isLiteMode ? invoiceSelected?.sri?.status !== 'AUTORIZADO' : (isLiteProcessing(invoiceSelected) || isLiteRetryable(invoiceSelected))" class="btn btn-primary"
+                    (click)="reenviarFactura()" [disabled]="actionRunning">
+                    {{ sriActionLabel }}
                 </button>
             </div>
 
@@ -163,22 +175,8 @@
                 <ul class="space-y-1">
                     <li>
                         <strong>Estado SRI:</strong>
-                        <span class="badge" [ngClass]="{
-              'badge-green': invoiceSelected?.sri?.status === 'AUTORIZADO',
-              'badge-red': invoiceSelected?.sri?.status === 'Rejected' || invoiceSelected?.sri?.status === 'Error',
-              'badge-yellow': invoiceSelected?.sri?.status !== 'AUTORIZADO'
-                                && invoiceSelected?.sri?.status !== 'Rejected'
-                                && invoiceSelected?.sri?.status !== 'Error'
-            }">
-                            {{
-                            invoiceSelected?.sri?.status === 'AUTORIZADO' ? 'AUTORIZADO' :
-                            invoiceSelected?.sri?.status === 'Rejected' ? 'Rechazada' :
-                            invoiceSelected?.sri?.status === 'Error' ? 'Error' :
-                            invoiceSelected?.sri?.status === 'Queued' ? 'En cola' :
-                            invoiceSelected?.sri?.status === 'Processing' ? 'En proceso' :
-                            invoiceSelected?.sri?.status === 'Draft' ? 'Borrador' :
-                            (invoiceSelected?.sri?.status || '—')
-                            }}
+                        <span class="badge" [ngClass]="getSriStatusBadge(invoiceSelected?.sri?.status)">
+                            {{ getSriStatusLabel(invoiceSelected?.sri?.status) }}
                         </span>
                     </li>
 
@@ -196,6 +194,9 @@
                     </li>
                     <li *ngIf="invoiceSelected?.sri?.authorization_datetime">
                         <strong>F. Autorización:</strong> {{ invoiceSelected?.sri?.authorization_datetime }}
+                    </li>
+                    <li *ngIf="invoiceSelected?.sri?.authorization_number">
+                        <strong>Número de autorización:</strong> {{ invoiceSelected?.sri?.authorization_number }}
                     </li>
                 </ul>
             </div>

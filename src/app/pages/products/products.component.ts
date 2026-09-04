@@ -11,6 +11,7 @@ import { CategoryService } from 'src/app/services/category.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { TaxesService } from 'src/app/services/taxes.service';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import {
   getInventoryUnit,
   hasInventoryControl,
@@ -66,14 +67,41 @@ export class ProductsComponent implements OnInit {
     public spinner: NgxSpinnerService,
     private fb: FormBuilder,
     private frappeErrorService: FrappeErrorService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private capabilities: CompanyCapabilitiesService
   ) { }
 
   ngOnInit() {
     this.resetForm();
+
+    // El contexto de Lite puede negar products.read aunque el módulo haya
+    // quedado visible por un contexto antiguo. Evita una llamada innecesaria
+    // y conserva al usuario en la pantalla para que pueda continuar con los
+    // módulos que sí tiene habilitados.
+    if (!this.canReadProducts) {
+      this.alertService.error('No tienes permisos para consultar productos en la empresa seleccionada.');
+      return;
+    }
+
     this.cargarProductos();
     this.loadCategory();
     this.loadTaxes();
+  }
+
+  get isLiteMode(): boolean {
+    return this.capabilities.isLiteMode;
+  }
+
+  get inventoryEnabled(): boolean {
+    return this.capabilities.isEnabled('inventory');
+  }
+
+  get canReadProducts(): boolean {
+    return this.capabilities.isEnabled('products');
+  }
+
+  get canManageProducts(): boolean {
+    return this.capabilities.isEnabled('products');
   }
 
   get searchTerm(): string {
@@ -105,7 +133,7 @@ export class ProductsComponent implements OnInit {
     this.spinner.show();
     this.productsService.getAll().subscribe({
       next: (res: any) => {
-        const data = res?.message?.data || [];
+        const data = Array.isArray(res) ? res : (res?.message?.data || []);
         this.productos = Array.isArray(data) ? data : [];
         this.actualizarProductosFiltrados();
       },
@@ -121,12 +149,13 @@ export class ProductsComponent implements OnInit {
 
   loadCategory() {
     this.spinner.show();
-    this.categoryService.getAll().subscribe({
+    this.categoryService.getAll(this.isLiteMode ? 1 : undefined).subscribe({
       next: (res: any) => {
-        this.categories = res?.message?.data || [];
+        this.categories = Array.isArray(res) ? res : (res?.message?.data || res?.data || []);
       },
-      error: () => {
+      error: (error: any) => {
         this.categories = [];
+        this.alertService.error(this.frappeErrorService.handle(error));
       },
       complete: () => {
         this.spinner.hide();
@@ -157,7 +186,8 @@ export class ProductsComponent implements OnInit {
       const nombre = String(product?.nombre || '').toLowerCase();
       const codigo = String(product?.codigo || '').toLowerCase();
       const byText = !term || nombre.includes(term) || codigo.includes(term);
-      const byCat = !cat || product?.categoria === cat;
+      const productCategory = product?.categoria || (product as any)?.category || '';
+      const byCat = !cat || String(productCategory).toLowerCase().includes(cat.toLowerCase());
       const byActive = !this.soloActivos || toInventoryBool(product?.isactive);
       const byLowStock = !this.soloBajoStock || this.isLowStock(product);
 
@@ -179,6 +209,11 @@ export class ProductsComponent implements OnInit {
   }
 
   abrirModal(producto: Product | null = null) {
+    if (!this.canManageProducts) {
+      this.alertService.error('No tienes permiso products.manage para crear o editar productos.');
+      return;
+    }
+
     this.mostrarModal = true;
     this.submitted = false;
     this.productoEditando = producto;
@@ -194,7 +229,7 @@ export class ProductsComponent implements OnInit {
       nombre: producto.nombre,
       descripcion: producto.descripcion,
       precio: producto.precio,
-      tax: producto.tax,
+      tax: this.resolveTaxControlValue(producto),
       categoria: producto.categoria,
       codigo: producto.codigo,
       isactive: toInventoryBool(producto.isactive),
@@ -222,6 +257,11 @@ export class ProductsComponent implements OnInit {
   }
 
   guardarProducto() {
+    if (!this.canManageProducts) {
+      this.alertService.error('No tienes permiso products.manage para guardar productos.');
+      return;
+    }
+
     this.submitted = true;
     this.syncInventoryValidators();
 
@@ -282,6 +322,11 @@ export class ProductsComponent implements OnInit {
   }
 
   eliminar(id: string) {
+    if (!this.canManageProducts) {
+      this.alertService.error('No tienes permiso products.manage para eliminar productos.');
+      return;
+    }
+
     this.alertService.confirm('Se eliminara el producto seleccionado.', 'Confirmar').then((result) => {
       if (!result.isConfirmed) {
         return;
@@ -337,7 +382,7 @@ export class ProductsComponent implements OnInit {
       descripcion: [''],
       precio: [null, [Validators.required, Validators.min(0)]],
       tax: [null, Validators.required],
-      categoria: ['', Validators.required],
+      categoria: ['', this.isLiteMode ? [] : [Validators.required]],
       codigo: [''],
       isactive: [true],
       controlar_inventario: [false],
@@ -368,9 +413,9 @@ export class ProductsComponent implements OnInit {
       this.f['unidad_inventario'].setValidators([Validators.required, Validators.maxLength(12)]);
       this.f['stock_minimo'].setValidators([Validators.required, Validators.min(0)]);
 
-      if (!this.productoEditando) {
+      if (!this.isLiteMode && !this.productoEditando) {
         this.f['stock_inicial'].setValidators([Validators.required, Validators.min(0)]);
-      } else if (this.stockEditMode === 'absolute') {
+      } else if (!this.isLiteMode && this.stockEditMode === 'absolute') {
         this.f['stock_objetivo'].setValidators([Validators.min(0)]);
       }
     }
@@ -389,11 +434,27 @@ export class ProductsComponent implements OnInit {
       descripcion: raw.descripcion,
       precio: Number(raw.precio || 0),
       tax: raw.tax,
-      categoria: raw.categoria,
-      codigo: raw.codigo,
+      tax_value: this.resolveTaxRate(raw.tax),
+      codigo: String(raw.codigo || '').trim(),
       isactive: !!raw.isactive,
       controlar_inventario: !!raw.controlar_inventario,
     };
+
+    if (!this.isLiteMode || raw.categoria) {
+      payload.categoria = raw.categoria;
+    }
+    if (this.isLiteMode) {
+      const rawCategory = String(raw.categoria || '').trim();
+      const selectedCategory = this.categories.find((category: any) =>
+        String(category?.name || '') === rawCategory ||
+        String(category?.category_name || category?.nombre || '').trim().toLowerCase() === rawCategory.toLowerCase()
+      );
+      // Solo se envía el identificador interno. Si la lista aún no llegó,
+      // conservamos el valor para permitir editar sin perder una referencia
+      // válida; las nuevas selecciones siempre provienen del <select>.
+      payload.category = selectedCategory?.name || (this.categories.length === 0 ? rawCategory : '');
+      payload.description = String(raw.descripcion || '').trim();
+    }
 
     if (payload.controlar_inventario) {
       payload.unidad_inventario = String(raw.unidad_inventario || '').trim();
@@ -412,9 +473,9 @@ export class ProductsComponent implements OnInit {
     return payload;
   }
 
-  getNameCategory(categoryId: string): string {
+  getNameCategory(categoryId?: string | null): string {
     const document = this.categories.find((d) => d.name === categoryId);
-    return document ? document.nombre : 'No disponible';
+    return document?.nombre || categoryId || '—';
   }
 
   hasInventory(product: Partial<Product> | null | undefined): boolean {
@@ -439,6 +500,38 @@ export class ProductsComponent implements OnInit {
     }
 
     return `${toInventoryNumber(product?.stock_actual, 0)} ${this.getInventoryUnit(product)}`;
+  }
+
+  private resolveTaxRate(selectedTax: any): number {
+    const tax = this.taxes.find((item) =>
+      String(item?.name ?? '').trim() === String(selectedTax ?? '').trim() ||
+      String(item?.value ?? '').trim() === String(selectedTax ?? '').trim()
+    );
+
+    const value = tax?.value ?? tax?.rate ?? tax?.tax_rate ?? selectedTax;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+
+    const direct = Number(value);
+    if (Number.isFinite(direct)) return direct;
+
+    const match = String(value || '').match(/\d+(\.\d+)?/);
+    return match ? Number(match[0]) : 0;
+  }
+
+  private resolveTaxControlValue(product: Partial<Product> | null | undefined): any {
+    const selected = (product as any)?.tax ?? (product as any)?.tax_id;
+    const rate = Number((product as any)?.tax_value ?? (product as any)?.iva ?? (product as any)?.tax_rate);
+
+    if (selected && this.taxes.some((tax) => String(tax?.name ?? '') === String(selected))) {
+      return selected;
+    }
+
+    if (Number.isFinite(rate)) {
+      const match = this.taxes.find((tax) => Number(tax?.value ?? tax?.rate ?? tax?.tax_rate) === rate);
+      if (match) return match.name ?? match.value;
+    }
+
+    return selected ?? null;
   }
 
   trackByName = (_: number, item: Product) => item?.name || item?.codigo || item?.nombre;

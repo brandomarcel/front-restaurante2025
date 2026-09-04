@@ -18,12 +18,14 @@ export class Menu {
           label: 'POS',
           route: '/dashboard/pos',
           featureKey: 'tables',
+          hideInLite: true,
         },
         {
           icon: 'assets/icons/tablericons/chart-donut-3.svg',
           label: 'Ordenes en vivo',
           route: '/dashboard/orders-realtime',
           featureKey: 'kitchen',
+          hideInLite: true,
         },
       ],
     },
@@ -32,7 +34,7 @@ export class Menu {
     {
       group: 'Facturación',
       separator: true,
-      allowedRoles: ['GERENTE', 'CAJERO'],
+      allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'],
       items: [
         {
           icon: 'assets/icons/tablericons/cash-register.svg',
@@ -58,13 +60,14 @@ export class Menu {
     {
       group: 'Caja',
       separator: false,
-      allowedRoles: ['GERENTE', 'CAJERO'],
+      allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'],
       items: [
         {
           icon: 'assets/icons/tablericons/cash-banknote.svg',
           label: 'Caja',
           route: '/caja',
           featureKey: 'cash_register',
+          hideInLite: true,
           children: [
             { label: 'Apertura', route: '/caja/apertura' },
             { label: 'Retiros', route: '/caja/retiro' },
@@ -78,6 +81,7 @@ export class Menu {
           label: 'Lista Órdenes',
           route: '/dashboard/orders',
           featureKey: 'orders',
+          hideInLite: true,
         },
       ],
     },
@@ -86,6 +90,7 @@ export class Menu {
       group: 'Reportes',
       separator: false,
       allowedRoles: ['SYSTEM MANAGER', 'GERENTE', 'CAJERO'],
+      hideInLite: true,
       items: [
         {
           icon: 'assets/icons/tablericons/report-analytics.svg',
@@ -98,7 +103,7 @@ export class Menu {
     {
       group: 'Configuracion',
       separator: false,
-      allowedRoles: ['GERENTE'],
+      allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'],
       items: [
         {
           icon: 'assets/icons/tablericons/users.svg',
@@ -121,13 +126,14 @@ export class Menu {
           icon: 'assets/icons/tablericons/repeat.svg',
           label: 'Inventario',
           route: '/dashboard/inventory',
-          featureKey: 'products',
+          featureKey: 'inventory',
         },
         {
           icon: 'assets/icons/tablericons/shopping-bag.svg',
           label: 'Lista Órdenes',
           route: '/dashboard/orders',
           featureKey: 'orders',
+          hideInLite: true,
         },
         {
           icon: 'assets/icons/tablericons/category.svg',
@@ -139,6 +145,7 @@ export class Menu {
           icon: 'assets/icons/tablericons/users.svg',
           label: 'Usuarios',
           route: '/dashboard/users',
+          hideInLite: true,
         },
       ],
     },
@@ -155,6 +162,7 @@ export class Menu {
           label: 'Lista Órdenes',
           route: '/dashboard/orders',
           featureKey: 'orders',
+          hideInLite: true,
         },
 
         {
@@ -162,6 +170,7 @@ export class Menu {
           label: 'POS',
           route: '/dashboard/pos',
           featureKey: 'tables',
+          hideInLite: true,
         },
 
       ],
@@ -177,6 +186,7 @@ export class Menu {
           label: 'Ordenes en vivo',
           route: '/dashboard/orders-realtime',
           featureKey: 'kitchen',
+          hideInLite: true,
         },
       ],
     },

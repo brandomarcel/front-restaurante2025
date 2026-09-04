@@ -83,7 +83,23 @@
     Verifica usuario y contraseña para continuar.
   </div>
 
-  <div class="space-y-3 pt-1">
+  <div *ngIf="needsBusinessSelection" class="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3 text-left">
+    <div>
+      <p class="text-sm font-bold text-slate-900">Selecciona tu empresa</p>
+      <p class="text-[11px] text-slate-500">Debes elegir una empresa para continuar.</p>
+    </div>
+    <select class="login-input" [(ngModel)]="selectedBusinessId" [ngModelOptions]="{standalone: true}" required>
+      <option value="">Selecciona una empresa</option>
+      <option *ngFor="let business of businessOptions" [value]="business.name || business.business">
+        {{ business.business_name || business.businessname || business.name || business.business }}
+      </option>
+    </select>
+    <app-button type="button" full impact="bold" tone="primary" shape="rounded" size="medium" [disabled]="isSubmitting || !selectedBusinessId" (buttonClick)="selectBusiness()">
+      Continuar con esta empresa
+    </app-button>
+  </div>
+
+  <div *ngIf="!needsBusinessSelection" class="space-y-3 pt-1">
     <app-button full impact="bold" tone="primary" shape="rounded" size="medium" shadow="small" [disabled]="isSubmitting">
       <span class="flex items-center justify-center gap-2">
         <svg-icon
