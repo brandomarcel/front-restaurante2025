@@ -31,6 +31,7 @@ interface CompanyData {
   address?: string;
   environment?: string;
   firma?: boolean;
+  certificateStatus?: string;
   cert_not_after?: string;
   cert_not_before?: string;
 }
@@ -59,6 +60,9 @@ export class NftComponent implements OnInit, OnDestroy {
   montoApertura = 0;
   totalRetiros = 0;
   efectivoSistema = 0;
+  efectivoEsperadoBackend = 0;
+  cashIsOpen = false;
+  cashPayments: Record<string, unknown> = {};
   topProducts: any[] = [];
   today = new Date();
   certDaysLeft: number | null = null;
@@ -111,7 +115,10 @@ export class NftComponent implements OnInit, OnDestroy {
       || localStorage.getItem('active_business')
       || localStorage.getItem('businessId')
       || undefined;
-    const companyRequest = this.isLiteMode && activeBusiness
+    // El certificado pertenece al perfil tributario de FacturADA Business.
+    // También en Restaurante se obtiene de get_lite_setup, no del contexto
+    // reducido de usuario que puede omitir certificate_reference.
+    const companyRequest = activeBusiness
       ? this.companyService.getLiteSetup(activeBusiness)
       : this.companyService.get_empresa(activeBusiness);
 
@@ -119,13 +126,13 @@ export class NftComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: async (empresa: any) => {
-          if (this.isLiteMode) this.capabilities.setLiteSetupState(empresa);
+          if (activeBusiness) this.capabilities.setLiteSetupState(empresa);
           else this.capabilities.setFromResponse(empresa);
           this.businessMode = this.capabilities.businessMode;
           this.currentPlan = this.capabilities.plan;
           this.procesarEmpresa(empresa);
 
-          if (this.isLiteMode) {
+          if (this.isBillingDashboard) {
             this.initializeLiteDateRange();
             await this.loadLiteDashboard();
             this.actualizarVisualizaciones();
@@ -160,9 +167,12 @@ export class NftComponent implements OnInit, OnDestroy {
       const resp: any = await firstValueFrom(this.cajasService.getDatosCierre(userEmail));
       const data = resp?.message || {};
       this.idApertura = data.apertura;
+      this.cashIsOpen = data.is_open === true || !!data.apertura;
       this.montoApertura = data.monto_apertura || 0;
       this.totalRetiros = data.total_retiros || 0;
       this.efectivoSistema = data.efectivo_sistema || 0;
+      this.efectivoEsperadoBackend = this.dashboardNumber(data.expected_cash ?? data.efectivo_esperado);
+      this.cashPayments = data.payments && typeof data.payments === 'object' ? data.payments : {};
       this.actualizarVisualizaciones();
     } catch (error) {
       console.error('Error cargando datos de caja:', error);
@@ -170,7 +180,7 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   async loadLiteDashboard(): Promise<void> {
-    if (!this.isLiteMode) return;
+    if (this.isRestaurantMode) return;
     if (!this.liteFromDate || !this.liteToDate) this.initializeLiteDateRange();
 
     this.liteDashboardLoading = true;
@@ -227,16 +237,95 @@ export class NftComponent implements OnInit, OnDestroy {
 
   private procesarDashboard(response: any): void {
     try {
-      const data = response?.message;
-      if (data) {
-        this.totalOrdersToday = data.total_orders_today || 0;
-        this.total_sales_today = data.total_sales_today || 0;
-        this.topProducts = data.top_products || [];
-        this.actualizarVisualizaciones();
+      // Frappe puede entregar el resultado como message.data o directamente
+      // en message. El endpoint nuevo de Restaurante usa ambos formatos
+      // según la versión instalada.
+      const envelope = response?.message ?? response ?? {};
+      const payload = envelope?.data && typeof envelope.data === 'object'
+        ? envelope.data
+        : (envelope?.dashboard ?? envelope?.metrics ?? envelope);
+      const data = payload?.dashboard && typeof payload.dashboard === 'object'
+        ? payload.dashboard
+        : (payload?.metrics && typeof payload.metrics === 'object' ? payload.metrics : payload);
+      if (data?.dashboard_type && String(data.dashboard_type).toLowerCase() !== 'restaurant') {
+        return;
       }
+      const sales = data?.sales && typeof data.sales === 'object' ? data.sales : {};
+      const orders = data?.orders && typeof data.orders === 'object' ? data.orders : {};
+      const cash = data?.cash && typeof data.cash === 'object' ? data.cash : {};
+      const rawTopProducts = data?.top_products
+        ?? data?.topProducts
+        ?? data?.top_productos
+        ?? data?.top_productos_vendidos
+        ?? data?.top_selling_products
+        ?? data?.product_sales
+        ?? data?.products
+        ?? [];
+
+      this.totalOrdersToday = this.dashboardNumber(
+        data?.total_orders_today
+        ?? data?.orders_today
+        ?? data?.orders_count
+        ?? data?.total_orders
+        ?? orders.today
+        ?? orders.count
+        ?? orders.total_orders
+        ?? orders.today_count
+        ?? sales.orders_count
+        ?? 0
+      );
+      this.total_sales_today = this.dashboardNumber(
+        data?.total_sales_today
+        ?? data?.sales_today
+        ?? data?.total_sales
+        ?? data?.sales_total
+        ?? sales.sales_total
+        ?? sales.total_sales
+        ?? sales.total_ventas
+        ?? sales.total
+        ?? 0
+      );
+      this.topProducts = Array.isArray(rawTopProducts)
+        ? rawTopProducts.map((product: any) => ({
+            ...product,
+            name: product?.name
+              ?? product?.item_name
+              ?? product?.product_name
+              ?? product?.producto
+              ?? product?.product
+              ?? 'Sin nombre',
+            count: this.dashboardNumber(
+              product?.count
+              ?? product?.quantity
+              ?? product?.qty
+              ?? product?.cantidad
+              ?? product?.cantidad_vendida
+              ?? product?.quantity_sold
+              ?? product?.units_sold
+              ?? product?.total_qty
+              ?? product?.units
+              ?? 0
+            )
+          }))
+        : [];
+      // El backend ya separa efectivo de tarjeta/transferencia y devuelve el
+      // valor correcto. No recalcular expected_cash con total_sales_today.
+      this.cashIsOpen = cash.is_open === true || cash.is_open === 1 || `${cash.is_open ?? ''}`.trim() === '1' || `${cash.is_open ?? ''}`.toLowerCase() === 'true';
+      this.montoApertura = this.dashboardNumber(cash.monto_apertura);
+      this.totalRetiros = this.dashboardNumber(cash.total_retiros);
+      this.efectivoSistema = this.dashboardNumber(cash.efectivo_sistema);
+      this.efectivoEsperadoBackend = this.dashboardNumber(cash.expected_cash);
+      this.cashPayments = cash.payments && typeof cash.payments === 'object' ? cash.payments : {};
+      if (!this.cashIsOpen) this.idApertura = '';
+      this.actualizarVisualizaciones();
     } catch (error) {
       console.error('Error procesando dashboard:', error);
     }
+  }
+
+  private dashboardNumber(value: unknown): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
   }
 
   procesarEmpresa(data: any) {
@@ -253,13 +342,29 @@ export class NftComponent implements OnInit, OnDestroy {
           ?? business.urlfirma
           ?? business.certificate_reference
           ?? resp.certificate_reference;
+        const certificateStatus = String(
+          taxProfile.certificate_status
+          ?? business.certificate_status
+          ?? resp.certificate_status
+          ?? ''
+        ).trim();
+        const hasCertificatePassword = taxProfile.has_certificate_password;
+        const certificateConfigured = hasCertificatePassword !== undefined && hasCertificatePassword !== null
+          ? hasCertificatePassword === true || hasCertificatePassword === 1 || `${hasCertificatePassword}`.trim() === '1' || `${hasCertificatePassword}`.toUpperCase().trim() === 'TRUE'
+          : !isNullOrEmpty(certificateReference);
+        const normalizedCertificateStatus = certificateStatus
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toUpperCase();
+        const unavailableCertificate = ['NO CONFIGURADO', 'VENCIDO', 'NO VIGENTE', 'ERROR DE LECTURA'].includes(normalizedCertificateStatus);
         this.companyData = {
           name: business.businessname || business.business_name || business.trade_name || business.legal_name || business.name || 'Sin nombre',
           phone: taxProfile.phone || business.phone,
           email: taxProfile.email || business.email,
           address: taxProfile.main_address || business.address || business.main_address,
           environment: taxProfile.environment || taxProfile.ambiente || business.environment || business.ambiente,
-          firma: isNullOrEmpty(certificateReference),
+          firma: !certificateConfigured || unavailableCertificate,
+          certificateStatus,
           cert_not_after: taxProfile.certificate_valid_to || business.cert_not_after,
           cert_not_before: taxProfile.certificate_valid_from || business.cert_not_before
 
@@ -286,17 +391,17 @@ export class NftComponent implements OnInit, OnDestroy {
   private generarAvisos(): void {
     // Limpiar avisos previos
     this.avisos = [];
-    if (this.isLiteMode && this.liteDashboardError) {
+    if (this.isBillingDashboard && this.liteDashboardError) {
       this.agregarAviso('Dashboard', this.liteDashboardError, 'error');
     }
-    if (this.isLiteMode && this.litePlanIsInactive) {
+    if (this.isBillingDashboard && this.litePlanIsInactive) {
       this.agregarAviso('Plan actual', 'El plan no está activo. La emisión de comprobantes está bloqueada.', 'warning');
-    } else if (this.isLiteMode && this.litePlan && !this.litePlanUnlimited && (Number(this.litePlan.remaining_authorized_documents) || 0) <= 0) {
+    } else if (this.isBillingDashboard && this.litePlan && !this.litePlanUnlimited && (Number(this.litePlan.remaining_authorized_documents) || 0) <= 0) {
       this.agregarAviso('Comprobantes', 'Se agotó el límite de comprobantes autorizados del plan.', 'warning');
-    } else if (this.isLiteMode && this.litePlanExpiringSoon) {
+    } else if (this.isBillingDashboard && this.litePlanExpiringSoon) {
       this.agregarAviso('Plan actual', `El plan vence en ${this.litePlanDaysToExpire} día(s).`, 'warning');
     }
-    if (this.isLiteMode && this.liteStockAlert) {
+    if (this.isBillingDashboard && this.liteStockAlert) {
       this.agregarAviso('Inventario', `Hay ${this.liteDashboard?.inventory.out_of_stock_items.length || 0} producto(s) sin stock.`, 'warning');
     }
     if (this.companyData?.firma) {
@@ -312,7 +417,8 @@ export class NftComponent implements OnInit, OnDestroy {
       );
     }
 
-    const dateEndCert: string = String(this.companyData?.cert_not_after || null);
+    const certificateEnd = this.companyData?.cert_not_after;
+    const dateEndCert = certificateEnd ? String(certificateEnd).trim() : '';
     if (dateEndCert) {
       const dias = diasRestantes(dateEndCert);
       this.certDaysLeft = dias;
@@ -402,19 +508,24 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   get cajaAbierta(): boolean {
-    return !!this.idApertura;
+    return this.cashIsOpen || !!this.idApertura;
   }
 
   get isFacturadorMode(): boolean {
-    return this.businessMode === 'FACTURADOR' || this.businessMode === 'FACTURADA_LITE';
+    return !this.isRestaurantMode;
+  }
+
+  /** Dashboard informativo de facturación cuando no está habilitado Restaurante. */
+  get isBillingDashboard(): boolean {
+    return !this.isRestaurantMode;
   }
 
   get isLiteMode(): boolean {
-    return this.businessMode === 'FACTURADA_LITE';
+    return this.businessMode === 'FACTURADA_LITE' && !this.isRestaurantMode;
   }
 
   get isRestaurantMode(): boolean {
-    return !this.isFacturadorMode;
+    return this.capabilities.isEnabled('restaurant');
   }
 
   get modeLabel(): string {
@@ -446,15 +557,22 @@ export class NftComponent implements OnInit, OnDestroy {
         { label: 'Clientes', detail: 'Datos fiscales', route: '/dashboard/customers', tone: 'bg-slate-900 text-white', feature: 'customers' },
         { label: 'Productos', detail: 'Catálogo facturable', route: '/dashboard/products', tone: 'bg-emerald-600 text-white', feature: 'products' },
         { label: 'Notas crédito', detail: 'Anulaciones y ajustes', route: '/dashboard/credit-notes', tone: 'bg-amber-600 text-white', feature: 'credit_note' }
-      ]).slice(0, 4);
+      ]).slice(0, 5);
     }
 
-    return this.filterAllowedActions([
-      { label: 'Abrir POS', detail: 'Venta y orden rápida', route: '/dashboard/pos', tone: 'bg-primary text-white', feature: 'tables' },
+    const restaurantActions: DashboardAction[] = [
+      { label: 'Abrir POS', detail: 'Venta y orden rápida', route: '/dashboard/pos', tone: 'bg-primary text-white', feature: 'restaurant_pos' },
       { label: 'Órdenes', detail: 'Seguimiento del día', route: '/dashboard/orders', tone: 'bg-slate-900 text-white', feature: 'orders' },
       { label: 'Tiempo real', detail: 'Cocina y atención', route: '/dashboard/orders-realtime', tone: 'bg-sky-600 text-white', feature: 'kitchen' },
       { label: this.cajaAbierta ? 'Cerrar caja' : 'Abrir caja', detail: 'Control del turno', route: this.cajaAbierta ? '/caja/cierre' : '/caja/apertura', tone: 'bg-emerald-600 text-white', feature: 'cash_register' }
-    ]);
+    ];
+    // Facturación no pertenece al POS: puede coexistir con Restaurante y se
+    // muestra sin depender de restaurant_pos, mesas, cocina o caja.
+    const billingActions: DashboardAction[] = [
+      { label: 'Emitir factura', detail: 'Factura directa al SRI', route: '/dashboard/invoicing', tone: 'bg-violet-600 text-white', feature: 'direct_invoice', requiresEmission: true },
+      { label: 'Notas crédito', detail: 'Ajustes tributarios', route: '/dashboard/credit-notes', tone: 'bg-amber-600 text-white', feature: 'credit_note' }
+    ];
+    return this.filterAllowedActions([...restaurantActions, ...billingActions]).slice(0, 6);
   }
 
   private filterAllowedActions(actions: DashboardAction[]): DashboardAction[] {
@@ -610,7 +728,7 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   get litePlanBlockMessage(): string | null {
-    if (!this.isLiteMode) return this.capabilities.getPlanBlockMessage('direct_invoice');
+    if (!this.isBillingDashboard) return this.capabilities.getPlanBlockMessage('direct_invoice');
     if (!this.litePlan) return 'La empresa no tiene un plan asignado para emitir comprobantes.';
     if (this.litePlanIsInactive) return 'El plan de la empresa no está activo.';
     if (!this.litePlanUnlimited && (Number(this.litePlan.remaining_authorized_documents) || 0) <= 0) {
@@ -694,7 +812,7 @@ export class NftComponent implements OnInit, OnDestroy {
       return 'Sin firma';
     }
     if (this.certDaysLeft === null) {
-      return 'Sin certificado';
+      return 'Pendiente de validar';
     }
     if (this.certDaysLeft <= 0) {
       return 'Vencida';
@@ -706,9 +824,10 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   get firmaClasses(): string {
-    if (this.companyData?.firma || this.certDaysLeft === null || this.certDaysLeft <= 0) {
+    if (this.companyData?.firma || this.certDaysLeft !== null && this.certDaysLeft <= 0) {
       return 'bg-red-100 text-red-700';
     }
+    if (this.certDaysLeft === null) return 'bg-amber-100 text-amber-700';
     if (this.certDaysLeft <= 30) {
       return 'bg-amber-100 text-amber-700';
     }
@@ -766,7 +885,7 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   get efectivoEsperado(): number {
-    return this.montoApertura + this.total_sales_today - this.totalRetiros;
+    return this.efectivoEsperadoBackend;
   }
 
   get diferenciaCaja(): number {
@@ -857,7 +976,7 @@ export class NftComponent implements OnInit, OnDestroy {
 
   get estadoTurnoLabel(): string {
     if (this.isFacturadorMode) {
-      if (this.companyData?.firma || this.certDaysLeft === null || this.certDaysLeft <= 0) return 'Revisar firma';
+      if (this.companyData?.firma || this.certDaysLeft !== null && this.certDaysLeft <= 0) return 'Revisar firma';
       if (!this.totalOrdersToday) return 'Listo para emitir';
       return 'Facturación activa';
     }
@@ -875,7 +994,7 @@ export class NftComponent implements OnInit, OnDestroy {
 
   get estadoTurnoClasses(): string {
     if (this.isFacturadorMode) {
-      if (this.companyData?.firma || this.certDaysLeft === null || this.certDaysLeft <= 0) return 'bg-red-100 text-red-700';
+      if (this.companyData?.firma || this.certDaysLeft !== null && this.certDaysLeft <= 0) return 'bg-red-100 text-red-700';
       if (!this.totalOrdersToday) return 'bg-sky-100 text-sky-700';
       return 'bg-emerald-100 text-emerald-700';
     }
@@ -900,7 +1019,7 @@ export class NftComponent implements OnInit, OnDestroy {
   get resumenCajaClaro(): string {
     if (this.isFacturadorMode) {
       if (this.companyData?.firma) return 'Falta registrar la firma electrónica para emitir comprobantes.';
-      if (this.certDaysLeft === null) return 'No se detectó fecha de certificado. Revisa configuración de firma.';
+      if (this.certDaysLeft === null) return 'Certificado configurado; su vigencia está pendiente de validar.';
       if (this.certDaysLeft <= 0) return 'La firma está vencida. Debes renovarla antes de emitir.';
       return `Firma activa. Certificado con ${this.certDaysLeft} día(s) disponibles.`;
     }

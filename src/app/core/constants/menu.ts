@@ -17,7 +17,7 @@ export class Menu {
           icon: 'assets/icons/tablericons/building-store.svg',
           label: 'POS',
           route: '/dashboard/pos',
-          featureKey: 'tables',
+          featureKey: 'restaurant_pos',
           hideInLite: true,
         },
         {
@@ -41,18 +41,21 @@ export class Menu {
           label: 'Facturar',
           route: '/dashboard/invoicing',
           featureKey: 'direct_invoice',
+          permissionKey: 'billing.create',
         },
         {
           icon: 'assets/icons/tablericons/file-invoice.svg',
           label: 'Lista Facturas',
           route: '/dashboard/invoices',
           featureKey: 'direct_invoice',
+          permissionKey: 'billing.read',
         },
         {
           icon: 'assets/icons/tablericons/file-invoice.svg',
           label: 'Lista Notas Crédito',
           route: '/dashboard/credit-notes',
           featureKey: 'credit_note',
+          permissionKey: 'billing.read',
         },
       ],
     },
@@ -60,7 +63,7 @@ export class Menu {
     {
       group: 'Caja',
       separator: false,
-      allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'],
+      allowedRoles: ['GERENTE', 'CAJERO'],
       items: [
         {
           icon: 'assets/icons/tablericons/cash-banknote.svg',
@@ -90,12 +93,12 @@ export class Menu {
       group: 'Reportes',
       separator: false,
       allowedRoles: ['SYSTEM MANAGER', 'GERENTE', 'CAJERO'],
-      hideInLite: true,
       items: [
         {
           icon: 'assets/icons/tablericons/report-analytics.svg',
           label: 'Reportes',
           route: '/report',
+          permissionKey: 'reports.view',
         },
       ],
     },
@@ -110,6 +113,7 @@ export class Menu {
           label: 'Clientes',
           route: '/dashboard/customers',
           featureKey: 'customers',
+          permissionKey: 'customers.read',
         },
         // {
         //   icon: 'assets/icons/tablericons/users-plus.svg',
@@ -121,12 +125,14 @@ export class Menu {
           label: 'Productos',
           route: '/dashboard/products',
           featureKey: 'products',
+          permissionKey: 'products.read',
         },
         {
           icon: 'assets/icons/tablericons/repeat.svg',
           label: 'Inventario',
           route: '/dashboard/inventory',
           featureKey: 'inventory',
+          permissionKey: 'inventory.read',
         },
         {
           icon: 'assets/icons/tablericons/shopping-bag.svg',
@@ -140,6 +146,7 @@ export class Menu {
           label: 'Categorias',
           route: '/dashboard/categories',
           featureKey: 'products',
+          permissionKey: 'products.read',
         },
         {
           icon: 'assets/icons/tablericons/users.svg',
@@ -169,7 +176,7 @@ export class Menu {
           icon: 'assets/icons/tablericons/building-store.svg',
           label: 'POS',
           route: '/dashboard/pos',
-          featureKey: 'tables',
+          featureKey: 'restaurant_pos',
           hideInLite: true,
         },
 

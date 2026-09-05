@@ -42,7 +42,7 @@
 
   <app-avisos [avisos]="avisos" (eliminar)="eliminarAviso($event)" class="mb-3 block"></app-avisos>
 
-  <section *ngIf="!isLiteMode" class="mb-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+  <section *ngIf="isRestaurantMode" class="mb-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <div class="min-w-0">
         <div class="mb-1 flex items-center gap-2">
@@ -83,7 +83,7 @@
     </div>
   </section>
 
-  <section *ngIf="!isLiteMode" class="mb-3 grid grid-cols-2 gap-2 xl:grid-cols-4">
+  <section *ngIf="isRestaurantMode" class="mb-3 grid grid-cols-2 gap-2 xl:grid-cols-4">
     <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
       <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">
         {{ isFacturadorMode ? 'Documentos/ventas' : 'Pedidos' }}
@@ -118,7 +118,7 @@
     </article>
   </section>
 
-  <section *ngIf="!isLiteMode" class="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
+  <section *ngIf="isRestaurantMode" class="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
     <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-7">
       <div class="mb-2 flex items-center justify-between gap-2">
         <div>
@@ -253,7 +253,7 @@
   </ng-container>
 
   <ng-template #facturadorDashboard>
-    <ng-container *ngIf="isLiteMode; else facturadorStandardDashboard">
+    <ng-container *ngIf="isBillingDashboard; else facturadorStandardDashboard">
       <section class="mb-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
         <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>

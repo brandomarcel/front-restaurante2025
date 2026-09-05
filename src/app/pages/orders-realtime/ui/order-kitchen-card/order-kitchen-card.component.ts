@@ -81,7 +81,7 @@ export class OrderKitchenCardComponent implements OnInit, OnDestroy {
   }
 
   getItemName(it: any): string {
-    return String(it?.productName ?? it?.product ?? '—');
+    return String(it?.item_name ?? it?.product_name ?? it?.productName ?? it?.product ?? '—');
   }
 
   get visibleItems(): any[] {

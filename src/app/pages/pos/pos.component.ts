@@ -23,6 +23,7 @@ import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
 import { canSellProduct, canUseInventoryQuantity, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { buildSinglePaymentPayload, findPaymentMethod, getDefaultPaymentValue, isCashPayment } from 'src/app/shared/utils/payment.utils';
+import { liteEmissionMessages, liteEmissionState } from 'src/app/core/utils/lite-invoice-emission';
 
 type RoleName = 'Cajero' | 'Mesero' | 'Gerente' | 'Desconocido';
 
@@ -526,7 +527,7 @@ export class PosComponent implements OnInit {
                 const orderId = res.message?.name;
                 this.pendingOrderId = orderId;
                 this.refreshProductsSilently();
-                toast.success(`Pedido guardado. ${this.isSelectedPaymentCash ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
+                this.notifyOrderResult(res, true);
                 this.openPrintModal(orderId);
               },
               error: () => { },
@@ -549,6 +550,30 @@ export class PosComponent implements OnInit {
       },
       error: () => { }
     });
+  }
+
+  /** La orden con estado Factura ya emite en el backend restaurante. */
+  private notifyOrderResult(response: any, isInvoice: boolean): void {
+    const emission = response?.message?.emission ?? response?.message?.data?.emission;
+    if (!isInvoice || !emission) {
+      toast.success(`Pedido guardado. ${this.isSelectedPaymentCash ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
+      return;
+    }
+
+    const message = liteEmissionMessages(emission)[0];
+    switch (liteEmissionState(emission)) {
+      case 'AUTHORIZED':
+        toast.success('Factura autorizada.' + (this.isSelectedPaymentCash ? ` Cambio: $${this.change.toFixed(2)}` : ''));
+        break;
+      case 'PROCESSING':
+        toast.info(message || 'Factura emitida. La autorización del SRI está en proceso.');
+        break;
+      case 'REJECTED':
+        toast.error(message || 'La factura fue rechazada por el SRI.');
+        break;
+      default:
+        toast.error(message || 'La orden fue creada, pero no se pudo completar la emisión electrónica.');
+    }
   }
 
   // ======= Flujo Mesero (enviar a cocina) =======

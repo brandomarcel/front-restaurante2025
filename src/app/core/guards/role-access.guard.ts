@@ -44,10 +44,13 @@ export class RoleAccessGuard implements CanActivate {
     const allowedRoles = this.normalizeRoles(route.data?.['allowedRoles']);
     const currentRoles = this.readCurrentRoles();
     const featureKey = route.data?.['featureKey'] as CompanyFeatureKey | undefined;
+    const permissionKey = route.data?.['permissionKey'] as string | undefined;
     const liteBlocked = route.data?.['liteBlocked'] === true;
     const isAdmin = this.hasAdminRole(currentRoles);
 
-    if (this.capabilities.isLiteMode && liteBlocked) {
+    // Un negocio Lite puede incluir restaurante. `restaurant` es la bandera
+    // explícita que manda; no se bloquea la ruta por el nombre del modo.
+    if (this.capabilities.isLiteMode && liteBlocked && !this.capabilities.isEnabled('restaurant')) {
       toast.error('Este módulo no está disponible en FacturADA Lite.');
       return this.redirectToAvailable(state.url, currentRoles, 'lite');
     }
@@ -56,6 +59,14 @@ export class RoleAccessGuard implements CanActivate {
     if (!featureAccess.allowed) {
       toast.error(featureAccess.message || 'Este módulo no está disponible para la empresa.');
       return this.redirectToAvailable(state.url, currentRoles, 'feature');
+    }
+    // Las features determinan si un módulo forma parte del plan. Los permisos
+    // determinan si la persona puede operar dentro de él. System Manager y
+    // Administrador conservan acceso administrativo completo.
+    console.log('RoleAccessGuard - currentRoles:', currentRoles, 'isAdmin:', isAdmin, 'permissionKey:', permissionKey, 'deniedRoles:', deniedRoles, 'allowedRoles:', allowedRoles);
+    if (permissionKey && !isAdmin && !this.capabilities.hasPermission(permissionKey)) {
+      toast.error('No tienes permiso para realizar esta operación.');
+      return this.redirectToAvailable(state.url, currentRoles, 'permission');
     }
     if (deniedRoles.length && currentRoles.some((role) => deniedRoles.includes(role))) {
       toast.error('No tienes permisos para ingresar a esta sección.');
@@ -109,6 +120,10 @@ export class RoleAccessGuard implements CanActivate {
   }
 
   private hasAdminRole(roles: string[]): boolean {
-    return roles.includes('SYSTEM MANAGER') || roles.includes('ADMINISTRATOR') || roles.includes('ADMINISTRADOR DEL NEGOCIO');
+    return roles.includes('SYSTEM MANAGER')
+      || roles.includes('ADMINISTRATOR')
+      || roles.includes('ADMINISTRADOR')
+      || roles.includes('ADMINISTRADOR DEL NEGOCIO')
+      || roles.includes('GERENTE');
   }
 }

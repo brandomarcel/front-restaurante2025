@@ -9,7 +9,6 @@ import { finalize } from 'rxjs/operators';
 
 import { EcuadorTimePipe } from 'src/app/core/pipes/ecuador-time-pipe.pipe';
 import { PrintService } from 'src/app/services/print.service';
-import { InvoicesService } from 'src/app/services/invoices.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { environment } from 'src/environments/environment';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
@@ -78,7 +77,6 @@ export class OrderDetailPageComponent implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
-    private invoicesSvc: InvoicesService,
     private productsSvc: ProductsService,
     private printSvc: PrintService,
     private router: Router,
@@ -110,9 +108,9 @@ export class OrderDetailPageComponent implements OnInit {
   // =============== Cargar Orden y Productos ===============
   fetch(id: string) {
     this.loading = true; this.error = ''; this.order = null;
-    this.invoicesSvc.getOrderDetail(id).subscribe({
+    this.ordersSvc.getById(id).subscribe({
       next: (res: any) => {
-        this.order = (res?.message?.data || res?.data);
+        this.order = res?.message?.data || res?.data || null;
         console.log('Orden cargada:', this.order);
         this.loading = false;
         if (!this.order) {
@@ -120,7 +118,10 @@ export class OrderDetailPageComponent implements OnInit {
           return;
         }
         this.hydrateOrderItems(this.order);
-        this.loadOrderSplits();
+        // El módulo facturada_restaurante no expone todavía operaciones de
+        // división; no se consulta ningún endpoint heredado.
+        this.orderSplits = [];
+        this.splitRemainingItems = [];
       },
       error: (err) => {
         this.loading = false;
@@ -146,18 +147,18 @@ export class OrderDetailPageComponent implements OnInit {
     const items = order?.items || [];
     console.log('Items originales de la orden:', items);
     this.orderItems = items.map((it: any): OrderItem => ({
-      productId: it.productId,
-      productName: it.productName,
-      description: it.productName,
-      quantity: this.safeNumber(it.quantity, 1),
-      price: this.safeMoney(it.price),
+      productId: it.product ?? it.item ?? it.productId,
+      productName: it.item_name ?? it.product_name ?? it.productName ?? it.nombre,
+      description: it.item_name ?? it.product_name ?? it.productName ?? it.nombre,
+      quantity: this.safeNumber(it.qty ?? it.quantity, 1),
+      price: this.safeMoney(it.rate ?? it.price),
       tax: null,
       tax_value: it.tax_rate ?? 0,
       iva: this.safeMoney(
         it.iva,
-        this.round2(this.safeNumber(it.quantity, 1) * this.round2(this.safeMoney(it.price) * ((it.tax_rate ?? 0) / 100)))
+        this.round2(this.safeNumber(it.qty ?? it.quantity, 1) * this.round2(this.safeMoney(it.rate ?? it.price) * ((it.tax_rate ?? 0) / 100)))
       ),
-      total: this.round2(this.safeNumber(it.subtotal, this.safeNumber(it.quantity, 1) * this.safeMoney(it.price)))
+      total: this.round2(this.safeNumber(it.subtotal, this.safeNumber(it.qty ?? it.quantity, 1) * this.safeMoney(it.rate ?? it.price)))
     }));
     this.recalculateOrder();
   }
@@ -212,12 +213,7 @@ export class OrderDetailPageComponent implements OnInit {
   }
 
   facturarDesdeOrden(order: any) {
-    if (!this.canCreateInvoice) {
-      toast.error(this.createInvoiceBlockedReason || 'La orden ya esta facturada.');
-      return;
-    }
-    if (!order?.name) return;
-    this.router.navigate(['/dashboard/invoicing', order.name]);
+    toast.info('La factura debe crearse al registrar la orden con estado Factura.');
   }
 
   // =================== Edición de Ítems ===================
@@ -311,11 +307,11 @@ export class OrderDetailPageComponent implements OnInit {
   }
 
   get canOpenSplit(): boolean {
-    return !this.isLocked && this.pendingOrderToSplit > 0;
+    return false;
   }
 
   get canShowCreateInvoice(): boolean {
-    return this.order?.type === 'Nota Venta' && !this.isMesero;
+    return false;
   }
 
   get canCreateInvoice(): boolean {
@@ -714,14 +710,43 @@ export class OrderDetailPageComponent implements OnInit {
   }
 
   get canEditOrder(): boolean {
-    if (this.isLocked) return false;
-    if (this.isClosed) return false;
-    if (this.isReadOnlyView) return false;
-    return true;
+    // El contrato actual sólo define transiciones de estado, no edición de
+    // líneas de una orden existente.
+    return false;
   }
 
   get canCloseOrder(): boolean {
-    return !!this.order?.name && !this.isClosed && !this.isLocked;
+    const status = this.normalizeStatus(this.order?.status);
+    return !!this.order?.name && !this.isLocked && (status.includes('prepar') || status.includes('lista'));
+  }
+
+  get canStartPreparation(): boolean {
+    return !!this.order?.name && !this.isLocked && this.normalizeStatus(this.order?.status).includes('ingres');
+  }
+
+  get canMarkReady(): boolean {
+    return !!this.order?.name && !this.isLocked && this.normalizeStatus(this.order?.status).includes('prepar');
+  }
+
+  get canCancelOrder(): boolean {
+    const status = this.normalizeStatus(this.order?.status);
+    return !!this.order?.name && !this.isLocked && (status.includes('ingres') || status.includes('prepar') || status.includes('lista'));
+  }
+
+  get supportsSplits(): boolean { return false; }
+
+  setOrderStatus(status: 'Preparacion' | 'Lista' | 'Cancelada'): void {
+    if (!this.order?.name || this.closingOrder) return;
+    this.closingOrder = true;
+    this.ordersSvc.updateStatus(this.order.name, status)
+      .pipe(finalize(() => this.closingOrder = false))
+      .subscribe({
+        next: () => {
+          toast.success(status === 'Cancelada' ? 'Orden cancelada.' : `Orden marcada como ${status === 'Preparacion' ? 'en preparación' : 'lista'}.`);
+          this.fetch(this.order.name);
+        },
+        error: () => toast.error('No se pudo actualizar el estado de la orden.')
+      });
   }
 
   get orderStatusLabel(): string {

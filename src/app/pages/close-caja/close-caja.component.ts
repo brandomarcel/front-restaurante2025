@@ -106,7 +106,7 @@ export class CloseCajaComponent implements OnInit {
         this.cierre.monto_apertura = Number(respuesta?.monto_apertura) || 0;
         this.cierre.efectivo_sistema = Number(respuesta?.efectivo_sistema) || 0;
         this.cierre.total_retiros = Number(respuesta?.total_retiros) || 0;
-        this.detallePorMetodo = respuesta?.detalle || {};
+        this.detallePorMetodo = respuesta?.payments ?? respuesta?.detalle ?? {};
         this.calcularDiferencia();
       },
       error: (error) => {
@@ -137,14 +137,14 @@ export class CloseCajaComponent implements OnInit {
       return;
     }
 
-    const detalle = Object.keys(this.detallePorMetodo).map(key => ({
+    const payments = Object.keys(this.detallePorMetodo).map(key => ({
       metodo_pago: key,
       monto: this.detallePorMetodo[key]
     }));
 
     const data = {
       ...this.cierre,
-      detalle
+      payments
     };
 
     this.saving = true;

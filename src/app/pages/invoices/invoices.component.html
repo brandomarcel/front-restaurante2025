@@ -55,7 +55,7 @@
                                 <span class="text-[11px] text-muted-foreground">{{ inv.name }}</span>
                             </div>
                         </td>
-                        <td class="app-td">{{ inv.createdAt | ecuadorTime }}</td>
+                        <td class="app-td">{{ inv.creation | ecuadorTime }}</td>
                         <td class="app-td">{{ inv.customer?.fullName || inv.customer?.name || '—' }}</td>
                         <td class="app-td text-right font-semibold">{{ inv.total | currency:'USD':'symbol':'1.2-2' }}</td>
                         <td class="app-td">

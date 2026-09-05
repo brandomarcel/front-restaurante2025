@@ -147,7 +147,7 @@ export class ReportCierreCajaComponent implements OnInit {
         this.endLoading();
       })
     ).subscribe({
-      next: (res) => {
+      next: (res:any) => {
         const data = res?.message?.data || res?.data || res;
         this.cierres = Array.isArray(data) ? data : [];
 

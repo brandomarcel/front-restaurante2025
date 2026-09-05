@@ -79,7 +79,8 @@ export class RealtimeOrdersService {
   private readonly STATUS_ORDER: Record<string, number> = {
     'Ingresada': 0,
     'Preparación': 1,
-    'Cerrada': 2
+    'Lista': 2,
+    'Cerrada': 3
   };
 
   constructor(
@@ -156,6 +157,14 @@ export class RealtimeOrdersService {
   streamTotal() { return this.total$.asObservable(); }
   markNewSeen() { this.newCount$.next(0); }
 
+  /** Reemplaza la cola cuando cocina consume get_kitchen_orders. */
+  replaceOrders(rows: any[]): void {
+    const list = Array.isArray(rows) ? rows.map((row) => this.mapOne(row)) : [];
+    this.orders$.next(list);
+    this.total$.next(list.length);
+    this.newCount$.next(0);
+  }
+
   /* ================= Internos ================= */
 
   private refreshOne(name: string, action: 'insert' | 'update') {
@@ -225,41 +234,44 @@ export class RealtimeOrdersService {
 
   /* ================= MAPEO EXACTO A TU RAW ================= */
 
-  private mapOne(o: any): OrderVM {
-    const createdISO = o.createdAtISO || this.toIsoLike(o.createdAt);
+  mapOne(o: any): OrderVM {
+    const createdAt = o.createdAt ?? o.creation ?? o.posting_date ?? o.date ?? '';
+    const createdISO = o.createdAtISO || this.toIsoLike(createdAt);
     const status = this.normalizeStatus(o.status);
-    const type = this.normalizeType(o.type);
+    const type = this.normalizeType(o.type ?? o.estado);
+    const customer = o.customer && typeof o.customer === 'object' ? o.customer : {};
+    const electronic = o.electronic ?? o.sri ?? {};
 
     return {
       name: o.name,
       alias: o.alias ?? '',
       status,
       type,
-      createdAt: o.createdAt ?? '',
+      createdAt,
       createdAtISO: createdISO,
 
-      subtotal: Number(o.subtotal ?? 0),
-      iva: Number(o.iva ?? 0),
-      total: Number(o.total ?? 0),
+      subtotal: Number(o.subtotal ?? o.totals?.subtotal ?? 0),
+      iva: Number(o.iva ?? o.totals?.iva ?? 0),
+      total: Number(o.total ?? o.grand_total ?? o.totals?.grand_total ?? 0),
 
       customer: {
-        nombre: o.customer?.nombre ?? 'Consumidor Final',
-        num_identificacion: o.customer?.num_identificacion ?? '',
-        correo: o.customer?.correo ?? '',
-        telefono: o.customer?.telefono ?? '',
-        direccion: o.customer?.direccion ?? ''
+        nombre: customer.nombre ?? customer.customer_name ?? o.customer_name ?? 'Consumidor Final',
+        num_identificacion: customer.num_identificacion ?? customer.identification_number ?? o.customer_identification_number ?? '',
+        correo: customer.correo ?? customer.email ?? '',
+        telefono: customer.telefono ?? customer.phone ?? '',
+        direccion: customer.direccion ?? customer.address ?? ''
       },
 
       sri: {
-        status: o.sri?.status ?? '',
-        authorization_datetime: o.sri?.authorization_datetime ?? '',
-        access_key: o.sri?.access_key ?? '',
-        invoice: o.sri?.invoice ?? '',
-        number: o.sri?.number ?? '',
-        grand_total: Number(o.sri?.grand_total ?? 0)
+        status: electronic.status ?? electronic.provider_status ?? o.provider_status ?? '',
+        authorization_datetime: electronic.authorization_datetime ?? '',
+        access_key: electronic.access_key ?? '',
+        invoice: o.lite_invoice ?? electronic.invoice ?? '',
+        number: electronic.document_number ?? electronic.number ?? '',
+        grand_total: Number(electronic.grand_total ?? o.grand_total ?? 0)
       },
 
-      usuario: o.usuario ?? '',
+      usuario: o.waiter ?? o.usuario ?? '',
       items: Array.isArray(o.items) ? o.items : [],
       payments: Array.isArray(o.payments) ? o.payments : [],
 
@@ -284,7 +296,8 @@ export class RealtimeOrdersService {
 
     if (value.includes('ingres')) return 'Ingresada';
     if (value.includes('prepar')) return 'Preparación';
-    if (value.includes('cerr') || value.includes('lista') || value.includes('entreg')) return 'Cerrada';
+    if (value.includes('lista')) return 'Lista';
+    if (value.includes('cerr') || value.includes('entreg')) return 'Cerrada';
 
     return source || 'Ingresada';
   }

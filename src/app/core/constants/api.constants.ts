@@ -16,5 +16,6 @@ export const API_ENDPOINT = {
   AnalyzeFirma: "/method/restaurante_app.restaurante_bmarc.api.analyze_company_firma",
   FacturadaLite: "/method/facturada_lite.api.frontend",
   FacturadaLiteSetup: "/method/facturada_lite.api.setup",
+  FacturadaRestaurant: "/method/facturada_restaurante.api.frontend",
   
 };

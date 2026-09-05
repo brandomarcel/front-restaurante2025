@@ -4,28 +4,29 @@ import { environment } from 'src/environments/environment';
 import { HttpContext, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
+import { CompanyCapabilitiesService } from '../core/services/company-capabilities.service';
 @Injectable({ providedIn: 'root' })
 export class PrintService {
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private capabilities: CompanyCapabilitiesService) {}
     private baseUrl = environment.apiUrl;
 
   getOrderPdf(orderId: string) {
-    const url = `/printview?doctype=orders&name=${orderId}&trigger_print=1&format=Nota%20y%20Comanda&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
-    return url;
+    return this.getComanda(orderId);
   }
   getRecibo(orderId: string) {
-    const url = `/printview?doctype=orders&name=${orderId}&trigger_print=1&format=Nota%20de%20Venta&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
-    return url;
+    // El contrato actual sólo provee el ticket de cocina para órdenes.
+    return this.getComanda(orderId);
   }
 
   getComanda(orderId: string) {
-    const url = `/printview?doctype=orders&name=${orderId}&trigger_print=1&format=Comanda&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
+    const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || '';
+    const url = `/api/method/facturada_restaurante.api.frontend.download_kitchen_ticket?order_name=${encodeURIComponent(orderId)}${business ? `&business=${encodeURIComponent(business)}` : ''}`;
     return url;
   }
 
   getFacturaPdf(factId: string) {
-    const url = `/api/method/frappe.utils.print_format.download_pdf?doctype=Sales Invoice&name=${factId}&trigger_print=1&format=Sales Invoice&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
-    return url;
+    const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || '';
+    return `/api/method/facturada_lite.api.frontend.download_lite_invoice_pdf?invoice_name=${encodeURIComponent(factId)}&format=FacturADA%20Lite%20RIDE&no_letterhead=1${business ? `&business=${encodeURIComponent(business)}` : ''}`;
   }
 
   /** Descarga el RIDE/ticket Lite generado por el backend como archivo. */
@@ -33,11 +34,13 @@ export class PrintService {
     invoiceName: string,
     format: 'FACTURADA RIDE' | 'FacturADA Lite Ticket' | 'Credit Note' = 'FACTURADA RIDE'
   ): Observable<Blob> {
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('invoice_name', invoiceName)
       .set('format', format)
       .set('print_format', format)
       .set('no_letterhead', '1');
+    const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId');
+    if (business) params = params.set('business', business);
     return this.http.get(
       `${this.baseUrl}/method/facturada_lite.api.frontend.download_lite_invoice_pdf`,
       {
@@ -51,8 +54,10 @@ export class PrintService {
 
   /** Descarga el XML de una factura Lite como archivo privado. */
   downloadLiteInvoiceXml(invoiceName: string): Observable<Blob> {
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('invoice_name', invoiceName);
+    const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId');
+    if (business) params = params.set('business', business);
     return this.http.get(
       `${this.baseUrl}/method/facturada_lite.api.frontend.download_lite_invoice_xml`,
       {
@@ -65,13 +70,12 @@ export class PrintService {
   }
 
   getNotaVentaPdf(orderId: string) {
-    const url = `/api/method/frappe.utils.print_format.download_pdf?doctype=orders&name=${orderId}&format=Nota%20de%20Venta&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC_lang`;
-    return url;
+    return this.getComanda(orderId);
   }
 
     getCreditNotePdf(factId: string) {
-    const url = `/api/method/frappe.utils.print_format.download_pdf?doctype=Credit Note&name=${factId}&trigger_print=1&format=Credit Note&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
-    return url;
+    const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || '';
+    return `/api/method/facturada_lite.api.frontend.download_lite_invoice_pdf?invoice_name=${encodeURIComponent(factId)}&format=Credit%20Note&no_letterhead=1${business ? `&business=${encodeURIComponent(business)}` : ''}`;
   }
 
   

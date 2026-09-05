@@ -18,36 +18,19 @@ export class CreditNoteService {
   ) { }
 
   emit_credit_note_v2(invoice_name: string, motivo = '', additionalFields: any[] = []) {
-    if (this.capabilities.isLiteMode) {
-      return this.createLiteCreditNote(invoice_name, motivo, additionalFields);
-    }
-
-    const url = `${this.api}/method/restaurante_app.facturacion_bmarc.einvoice.ui_new.emit_credit_note_v2`;
-
-    return this.http.post<any>(
-      url,
-      { invoice_name, motivo },
-      {context: new HttpContext().set(REQUIRE_AUTH, true) }
-    ).pipe(
-      catchError((e) => {
-        const msg = this.err.handle(e) || 'Error al crear la nota de crédito.';
-        // Propaga el error al suscriptor
-        return throwError(() => msg);
-      })
-    );
+    return this.createLiteCreditNote(invoice_name, motivo, additionalFields);
   }
 
   /** Crea y emite una nota de crédito Lite a partir de una factura autorizada. */
   createLiteCreditNote(invoiceName: string, motivo = '', additionalFields: any[] = []) {
-    if (!this.capabilities.isLiteMode) {
-      return throwError(() => 'La creación de notas de crédito Lite solo está disponible en FacturADA Lite.');
-    }
-
     const url = `${this.api}/method/facturada_lite.api.frontend.create_lite_credit_note`;
     const payload: any = {
       invoice_name: invoiceName,
       additional_fields: Array.isArray(additionalFields) ? additionalFields : []
     };
+    const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId');
+    if (!business) return throwError(() => new Error('Selecciona un negocio para crear la nota de crédito.'));
+    payload.business = business;
     // El contrato Lite permite omitirlo, pero el frontend envía explícitamente
     // el motivo predeterminado para mantener el payload visible y consistente.
     payload.motivo = String(motivo || '').trim() || 'Devolucion de mercaderia o servicio';
@@ -66,12 +49,11 @@ export class CreditNoteService {
 
 
   getAllCreditNotes(limit: number = 10, offset: number = 0, status?: string) {
-    if (this.capabilities.isLiteMode) {
       let params = new HttpParams()
         .set('limit', limit.toString())
         .set('offset', offset.toString());
       if (status) params = params.set('status', status);
-      const business = this.capabilities.activeBusinessId || localStorage.getItem('active_business');
+      const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId');
       if (!business) return throwError(() => new Error('Selecciona un negocio para consultar las notas de crédito.'));
       params = params.set('business', business);
       return this.http.get<any>(
@@ -116,37 +98,18 @@ export class CreditNoteService {
           };
         })
       );
-    }
-
-    let params = new HttpParams()
-      .set('limit', limit.toString())
-      .set('offset', offset.toString());
-    if (status) params = params.set('status', status);
-
-    return this.http.get(
-      `${this.api}/method/restaurante_app.facturacion_bmarc.einvoice.credit_note_api.get_all_credit_notes`,
-      {context: new HttpContext().set(REQUIRE_AUTH, true), params }
-    );
   }
 
 
   getCreditNoteDetail(name: string) {
-    if (this.capabilities.isLiteMode) {
       let params = new HttpParams().set('invoice_name', name);
-      const business = this.capabilities.activeBusinessId || localStorage.getItem('active_business');
+      const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId');
       if (!business) return throwError(() => new Error('Selecciona un negocio para consultar la nota de crédito.'));
       params = params.set('business', business);
       return this.http.get(
         `${this.api}/method/facturada_lite.api.frontend.get_lite_invoice_detail`,
         { context: new HttpContext().set(REQUIRE_AUTH, true), params }
       );
-    }
-
-    const params = new HttpParams().set('name', name);
-    return this.http.get(
-      `${environment.apiUrl}/method/restaurante_app.facturacion_bmarc.einvoice.credit_note_api.get_credit_note_detail`,
-      {context: new HttpContext().set(REQUIRE_AUTH, true), params }
-    );
   }
 
 

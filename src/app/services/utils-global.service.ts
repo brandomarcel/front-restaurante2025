@@ -19,29 +19,18 @@ export class UtilsGlobalService {
   ) {}
 
   getAllCreditNotes(limit: number = 10, offset: number = 0) {
-  if (this.capabilities.isLiteMode) {
-    return throwError(() => 'Notas de crédito no disponibles en FacturADA Lite.');
-  }
-
-  const params = new HttpParams()
-    .set('limit', limit.toString())
-    .set('offset', offset.toString());
-
-  return this.http.get(
-    `${this.api}/method/restaurante_app.facturacion_bmarc.einvoice.credit_note_api.get_all_credit_notes`,
-    { context: new HttpContext().set(REQUIRE_AUTH, true), params }
-  );
+    return throwError(() => 'Usa CreditNoteService.getAllCreditNotes para el contrato actual.');
 }
 
 
   getMotivosAnulacion() {
-    if (this.capabilities.isLiteMode) {
-      return of({ message: [] });
-    }
-
-    return this.http.get(
-      `${environment.apiUrl}/method/restaurante_app.facturacion_bmarc.einvoice.utils.get_motivos_anulacion_list`
-    );
+    return of({ message: [
+      'Error en datos del comprobante',
+      'Devolución total de mercadería o servicio',
+      'Devolución parcial de mercadería o servicio',
+      'Cliente o identificación incorrecta',
+      'Anulación por acuerdo comercial'
+    ] });
   }
 
 

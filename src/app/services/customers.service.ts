@@ -18,17 +18,10 @@ export interface Customer {
 export class CustomersService {
   private readonly apiUrl = environment.apiUrl; // Cambia si usás otro backend
 
-  private urlBase: string = '';
-
-
-
   constructor(
     private http: HttpClient,
     private capabilities: CompanyCapabilitiesService
-  ) {
-
-    this.urlBase = this.apiUrl + API_ENDPOINT.Cliente;
-  }
+  ) {}
 
   // Obtener todos
   // findAll(): Observable<any[]> {
@@ -37,11 +30,7 @@ export class CustomersService {
 
   // Buscar por ID
   findOne(id: number): Observable<any> {
-    if (this.capabilities.isLiteMode) {
-      return this.get_cliente_by_identificacion(String(id));
-    }
-
-    return this.http.get<any>(`${this.apiUrl}/${id}`);
+    return this.get_cliente_by_identificacion(String(id));
   }
 
 
@@ -63,19 +52,15 @@ export class CustomersService {
     if (isactive !== undefined && isactive !== null) {
       params = params.set('isactive', isactive.toString());
     }
-    if (this.capabilities.isLiteMode) params = this.withLiteBusiness(params);
+    params = this.withLiteBusiness(params);
 
-    const url = this.capabilities.isLiteMode
-      ? `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_clientes`
-      : `${this.urlBase}.get_clientes`;
+    const url = `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_clientes`;
 
     const request$ = this.http.get(url, {
       params,
       context: new HttpContext().set(REQUIRE_AUTH, true)
     });
-    return this.capabilities.isLiteMode
-      ? request$.pipe(map((res: any) => frappeList<any>(res).map((item) => this.fromLiteCustomer(item))))
-      : request$.pipe(map((res: any) => this.normalizeListResponse(res)));
+    return request$.pipe(map((res: any) => frappeList<any>(res).map((item) => this.fromLiteCustomer(item))));
   }
 
   searchClientes(search: string, limit = 10, isactive = 1): Observable<any[]> {
@@ -86,11 +71,9 @@ export class CustomersService {
     if (isactive !== undefined && isactive !== null) {
       params = params.set('isactive', String(isactive));
     }
-    if (this.capabilities.isLiteMode) params = this.withLiteBusiness(params);
+    params = this.withLiteBusiness(params);
 
-    const url = this.capabilities.isLiteMode
-      ? `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.search_clientes`
-      : `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.api.cliente.search_clientes`;
+    const url = `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.search_clientes`;
 
     return this.http.get<any>(url, {
       params,
@@ -111,34 +94,18 @@ export class CustomersService {
   // }
 
   create(data: Omit<any, 'name'>): Observable<any> {
-    const url = this.capabilities.isLiteMode
-      ? `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.create_cliente`
-      : `${this.urlBase}.create_cliente`;
+    const url = `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.create_cliente`;
 
-    const payload = this.capabilities.isLiteMode
-      ? { ...this.toLiteCustomerPayload(data), business: this.capabilities.businessId || localStorage.getItem('businessId') || undefined }
-      : data;
+    const payload = { ...this.toLiteCustomerPayload(data), business: this.capabilities.activeBusinessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || undefined };
     return this.http.post<any>(url, payload, {
       context: new HttpContext().set(REQUIRE_AUTH, true)
-    }).pipe(map((res: any) => this.capabilities.isLiteMode
-      ? this.fromLiteCustomer(frappeData<any>(res))
-      : this.normalizeSingleDataResponse(res)));
+    }).pipe(map((res: any) => this.fromLiteCustomer(frappeData<any>(res))));
       }
   update(data: any) {
-    const url = this.capabilities.isLiteMode
-      ? `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.update_cliente`
-      : `${this.urlBase}.update_cliente`;
-
-    if (this.capabilities.isLiteMode) {
-      const payload = { ...this.toLiteCustomerPayload(data), business: this.capabilities.businessId || localStorage.getItem('businessId') || undefined };
-      return this.http.post(url, payload, {
-        context: new HttpContext().set(REQUIRE_AUTH, true)
-      }).pipe(map((res: any) => this.fromLiteCustomer(frappeData<any>(res))));
-    }
-
-    return this.http.put(url, data, {
+    const payload = { ...this.toLiteCustomerPayload(data), business: this.capabilities.activeBusinessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || undefined };
+    return this.http.post(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.update_cliente`, payload, {
       context: new HttpContext().set(REQUIRE_AUTH, true)
-    });
+    }).pipe(map((res: any) => this.fromLiteCustomer(frappeData<any>(res))));
   }
 
 
@@ -150,39 +117,25 @@ export class CustomersService {
   // }
 
   delete(name: string) {
-    if (this.capabilities.isLiteMode) {
-      let params = new HttpParams().set('name', name);
-      params = this.withLiteBusiness(params);
-      return this.http.post(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.delete_cliente`, {}, {
-        params,
-        context: new HttpContext().set(REQUIRE_AUTH, true)
-      }).pipe(map((res: any) => frappeData<any>(res)));
-    }
-
-    return this.http.delete(`${this.apiUrl}/resource/Cliente/${name}`, {
+    let params = new HttpParams().set('name', name);
+    params = this.withLiteBusiness(params);
+    return this.http.post(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.delete_cliente`, {}, {
+      params,
       context: new HttpContext().set(REQUIRE_AUTH, true)
-    });
+    }).pipe(map((res: any) => frappeData<any>(res)));
   }
 
 
   get_cliente_by_identificacion(identification: string): Observable<any> {
-    if (this.capabilities.isLiteMode) {
-      let params = new HttpParams().set('num_identificacion', String(identification || '').trim());
-      params = this.withLiteBusiness(params);
-      return this.http.get<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_cliente_by_identificacion`, {
-        params,
-        context: new HttpContext().set(REQUIRE_AUTH, true)
-      }).pipe(map((res: any) => {
-        const data = frappeData<any>(res);
-        return data ? this.fromLiteCustomer(data) : null;
-      }));
-    }
-
-    const params = new HttpParams().set('num_identificacion', String(identification || '').trim());
-    return this.http.get<any>(`${this.urlBase}.get_cliente_by_identificacion`, {
+    let params = new HttpParams().set('num_identificacion', String(identification || '').trim());
+    params = this.withLiteBusiness(params);
+    return this.http.get<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_cliente_by_identificacion`, {
       params,
       context: new HttpContext().set(REQUIRE_AUTH, true)
-    }).pipe(map((res: any) => this.normalizeSingleDataResponse(res)));
+    }).pipe(map((res: any) => {
+      const data = frappeData<any>(res);
+      return data ? this.fromLiteCustomer(data) : null;
+    }));
   }
 
   private normalizeListResponse(res: any): any {
@@ -246,7 +199,10 @@ export class CustomersService {
   }
 
   private withLiteBusiness(params: HttpParams): HttpParams {
-    const business = this.capabilities.businessId || localStorage.getItem('businessId');
+    const business = this.capabilities.activeBusinessId
+      || this.capabilities.businessId
+      || localStorage.getItem('active_business')
+      || localStorage.getItem('businessId');
     return business ? params.set('business', business) : params;
   }
 

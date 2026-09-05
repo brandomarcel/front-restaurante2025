@@ -54,10 +54,9 @@ export class UserService {
     if (usuario) params.usuario = usuario;
     if (rol) params.rol = rol;
 
-    const query = new URLSearchParams(params).toString();
-    const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.api.utils.get_usuarios_con_roles${query ? '?' + query : ''}`;
-
-    return this.http.get<any>(url, { context: new HttpContext().set(REQUIRE_AUTH, true) });
+    return new Observable<any>((subscriber) => {
+      subscriber.error(new Error('El contrato actual no expone aún la gestión de usuarios de restaurante.'));
+    });
   }
 
 

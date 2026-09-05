@@ -31,26 +31,26 @@ const routes: Routes = [
       { path: '', redirectTo: 'main', pathMatch: 'full' },
       { path: 'main', component: NftComponent, canActivate: [RoleAccessGuard], data: { allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
       // { path: 'pos', component: PosComponent },
-      { path: 'pos', component: PosShellComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { featureKey: 'tables', allowedRoles: ['GERENTE', 'CAJERO', 'MESERO'], liteBlocked: true } },
-      { path: 'customers', component: CustomersComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'customers', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'] } },
+      { path: 'pos', component: PosShellComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { featureKey: 'restaurant_pos', allowedRoles: ['GERENTE', 'CAJERO', 'MESERO'], liteBlocked: true } },
+      { path: 'customers', component: CustomersComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'customers', permissionKey: 'customers.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'] } },
       { path: 'suppliers', component: SuppliersComponent, canActivate: [RoleAccessGuard], data: { allowedRoles: ['GERENTE'], liteBlocked: true } },
-      { path: 'inventory', component: InventoryComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'inventory', allowedRoles: ['GERENTE'] } },
+      { path: 'inventory', component: InventoryComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'inventory', permissionKey: 'inventory.read', allowedRoles: ['GERENTE'] } },
       { path: 'products', component: ProductsComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'products', permissionKey: 'products.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'] } },
-      { path: 'company', component: CompanyComponent, canActivate: [RoleAccessGuard], data: { allowedRoles: ['GERENTE'] } },
+      { path: 'company', component: CompanyComponent, canActivate: [RoleAccessGuard], data: { permissionKey: 'business.settings.manage', allowedRoles: ['GERENTE'] } },
       { path: 'orders', component: OrdersComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'orders', allowedRoles: ['GERENTE', 'CAJERO', 'MESERO'], liteBlocked: true } },
       { path: 'orders/:id', component: OrderDetailPageComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { featureKey: 'orders', allowedRoles: ['GERENTE', 'CAJERO', 'MESERO'], liteBlocked: true } },
 
       { path: 'categories', component: CategorysComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'products', permissionKey: 'products.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'] } },
       { path: 'users', component: UsersComponent, canActivate: [RoleAccessGuard], data: { allowedRoles: ['GERENTE'], liteBlocked: true } },
       
-      { path: 'invoicing', component: InvoicingComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'] } },
+      { path: 'invoicing', component: InvoicingComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', permissionKey: 'billing.create', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'] } },
       { path: 'invoicing/:order_name', component: InvoicingComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { featureKey: 'orders', allowedRoles: ['GERENTE', 'CAJERO'], liteBlocked: true } },
 
-      { path: 'invoices', component: InvoicesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
-      { path: 'invoices/:id', component: InvoiceDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
+      { path: 'invoices', component: InvoicesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', permissionKey: 'billing.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
+      { path: 'invoices/:id', component: InvoiceDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', permissionKey: 'billing.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
 
-      { path: 'credit-notes', component: CreditNotesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'credit_note', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'] } },
-      { path: 'credit-note/:id', component: CreditNoteDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'credit_note', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'] } },
+      { path: 'credit-notes', component: CreditNotesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'credit_note', permissionKey: 'billing.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'] } },
+      { path: 'credit-note/:id', component: CreditNoteDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'credit_note', permissionKey: 'billing.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'] } },
       { path: 'no-access', component: NoAccessComponent },
 
       {

@@ -32,13 +32,15 @@ export class DashboardComponent implements OnInit {
     // En Lite el ambiente tributario solo es confiable desde get_lite_setup,
     // específicamente desde tax_profile.environment. El contexto de usuario
     // no siempre incluye ese bloque.
-    const companyRequest = this.capabilities.isLiteMode && activeBusiness
+    // El perfil tributario (incluida la firma) se consulta por Business para
+    // Lite y Restaurante del modelo nuevo.
+    const companyRequest = activeBusiness
       ? this.service.getLiteSetup(activeBusiness)
       : this.service.get_empresa(activeBusiness);
 
     companyRequest.subscribe({
       next: (data: any) => {
-        const liteSetup = this.capabilities.isLiteMode;
+        const liteSetup = !!activeBusiness;
         if (liteSetup) this.capabilities.setLiteSetupState(data);
         else this.capabilities.setFromResponse(data);
 

@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subscription } from 'rxjs';
+import { forkJoin, Subscription } from 'rxjs';
 import { toast } from 'ngx-sonner';
 
 import { RealtimeOrdersService, OrderVM } from 'src/app/services/realtime-orders.service';
@@ -66,7 +66,8 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     this.statusFilter = this.viewMode === 'cocina' ? 'ACTIVAS' : 'ALL';
 
     const today = this.utils.getSoloFechaEcuador();
-    this.rt.loadInitial(80, 0, today, today);
+    if (this.viewMode === 'cocina') this.loadKitchenOrders();
+    else this.rt.loadInitial(80, 0, today, today);
 
     this.sub.add(
       this.rt.streamOrders().subscribe(list => {
@@ -91,6 +92,11 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     this.viewMode = mode;
     this.statusFilter = mode === 'cocina' ? 'ACTIVAS' : 'ALL';
     this.kitchenOnlyUrgent = false;
+    if (mode === 'cocina') this.loadKitchenOrders();
+    else {
+      const today = this.utils.getSoloFechaEcuador();
+      this.rt.loadInitial(80, 0, today, today, undefined, true);
+    }
     this.rt.markNewSeen();
   }
 
@@ -123,7 +129,8 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
 
   refreshRealtime() {
     const today = this.utils.getSoloFechaEcuador();
-    this.rt.loadInitial(80, 0, today, today, undefined, true);
+    if (this.viewMode === 'cocina') this.loadKitchenOrders();
+    else this.rt.loadInitial(80, 0, today, today, undefined, true);
     this.rt.markNewSeen();
     toast.success('Ordenes actualizadas.');
   }
@@ -142,6 +149,11 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     if (!this.allowStatusActions || this.pendingActions.has(o.name)) return;
     if (o.status !== 'Ingresada') return;
 
+    if (this.viewMode === 'cocina') {
+      this.updateKitchenItems(o, 'En preparacion');
+      return;
+    }
+
     const prev = o.status;
     o.status = 'Preparación';
     this.pendingActions.add(o.name);
@@ -157,6 +169,11 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   toCerrada(o: OrderVM) {
     if (!this.allowStatusActions || this.pendingActions.has(o.name)) return;
     if (o.status !== 'Preparación') return;
+
+    if (this.viewMode === 'cocina') {
+      this.updateKitchenItems(o, 'Listo');
+      return;
+    }
 
     const prev = o.status;
     this.pendingActions.add(o.name);
@@ -309,7 +326,7 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   }
 
   get kitchenCerradas(): OrderVM[] {
-    const list = this.kitchenBaseOrders.filter(o => this.normalizeStatus(o.status) === 'Cerrada');
+    const list = this.kitchenBaseOrders.filter(o => ['Lista', 'Cerrada'].includes(this.normalizeStatus(o.status)));
     return this.sortKitchenOrders(list);
   }
 
@@ -347,6 +364,38 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     if (filter === 'ALL') return true;
     if (filter === 'ACTIVAS') return status === 'Ingresada' || status === 'Preparación';
     return status === filter;
+  }
+
+  private loadKitchenOrders(): void {
+    this.ordersApi.getKitchenOrders().subscribe({
+      next: (response: any) => {
+        const body = response?.message ?? response ?? {};
+        const rows = Array.isArray(body?.data) ? body.data : [];
+        this.rt.replaceOrders(rows);
+      },
+      error: () => toast.error('No se pudo cargar la cola de cocina.')
+    });
+  }
+
+  private updateKitchenItems(order: OrderVM, kitchenStatus: 'En preparacion' | 'Listo'): void {
+    if (this.pendingActions.has(order.name)) return;
+    const rows = (order.items || [])
+      .map((item: any) => String(item?.name ?? item?.row_id ?? item?.id ?? '').trim())
+      .filter(Boolean);
+    if (!rows.length) {
+      toast.error('La orden no incluye identificadores de ítems para cocina.');
+      return;
+    }
+
+    this.pendingActions.add(order.name);
+    forkJoin(rows.map((rowId) => this.ordersApi.updateKitchenItemStatus(order.name, rowId, kitchenStatus)))
+      .subscribe({
+        next: () => {
+          toast.success(kitchenStatus === 'Listo' ? 'Ítems marcados como listos.' : 'Ítems enviados a preparación.');
+          this.loadKitchenOrders();
+        },
+        error: () => toast.error('No se pudo actualizar el estado de cocina.')
+      }).add(() => this.pendingActions.delete(order.name));
   }
 
   private normalizeStatus(raw?: string): 'Ingresada' | 'Preparación' | 'Cerrada' | string {

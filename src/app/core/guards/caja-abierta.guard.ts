@@ -4,6 +4,7 @@ import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { toast } from 'ngx-sonner';
 import { CajasService } from 'src/app/services/cajas.service';
+import { CompanyCapabilitiesService } from '../services/company-capabilities.service';
 
 @Injectable({
   providedIn: 'root'
@@ -13,12 +14,22 @@ export class CajaAbiertaGuard implements CanActivate {
 
   constructor(
     private cajasService: CajasService,
-    private router: Router
+    private router: Router,
+    private capabilities: CompanyCapabilitiesService
   ) { }
 
   canActivate(_route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<boolean | UrlTree> {
+    // La apertura pertenece a POS. Si el negocio tiene restaurante pero no
+    // contrató caja, la navegación de órdenes/POS no debe bloquearse por una
+    // validación de apertura que no aplica.
+    if (!this.capabilities.isEnabled('cash_register')) {
+      return of(true);
+    }
     const user = this.readCurrentUser();
-    const roles = this.readNormalizedRoles(user?.roles);
+    const roles = this.readNormalizedRoles([
+      ...(Array.isArray(user?.roles) ? user.roles : []),
+      this.capabilities.businessRole || ''
+    ]);
 
     if (!this.requiresCajaValidation(roles)) {
       return of(true);
@@ -66,11 +77,8 @@ export class CajaAbiertaGuard implements CanActivate {
   }
 
   private readNormalizedRoles(roles: unknown): string[] {
-    if (!Array.isArray(roles)) {
-      return [];
-    }
-
-    return roles
+    const values = Array.isArray(roles) ? roles : [];
+    return values
       .map((role) => this.normalizeText(String(role || '')))
       .filter((role) => !!role);
   }

@@ -13,7 +13,11 @@ export type CompanyFeatureKey =
   | 'customers'
   | 'products'
   | 'additional_fields'
-  | 'inventory';
+  | 'inventory'
+  | 'restaurant'
+  | 'pos'
+  | 'restaurant_pos'
+  | 'billing';
 
 export type CompanyFeatures = Record<CompanyFeatureKey, boolean>;
 
@@ -67,7 +71,11 @@ const RESTAURANT_FALLBACK: CompanyFeatures = {
   customers: true,
   products: true,
   additional_fields: true,
-  inventory: true
+  inventory: true,
+  restaurant: false,
+  pos: false,
+  restaurant_pos: false,
+  billing: false
 };
 
 @Injectable({ providedIn: 'root' })
@@ -168,8 +176,11 @@ export class CompanyCapabilitiesService {
       message?.mode ??
       message?.app_mode;
     const received = message?.features ?? normalizedCompany?.features ?? nestedCompany?.features ?? response?.features;
+    // El modo comercial sigue siendo informativo. La presentación de los
+    // módulos se controla exclusivamente con las banderas explícitas del
+    // contexto, nunca por inferencias basadas en órdenes, mesas o caja.
     let businessMode = this.resolveBusinessMode(businessModeValue);
-    if (!businessModeValue && this.looksLikeLiteFeatures(received)) {
+    if (!businessModeValue && this.hasExplicitBillingFeature(received)) {
       businessMode = 'FACTURADA_LITE';
     }
     const features = received && typeof received === 'object'
@@ -256,9 +267,17 @@ export class CompanyCapabilitiesService {
       features: data?.features && typeof data.features === 'object'
         ? this.mergeFeatures(current.features, data.features)
         : current.features,
+      // No conservar "NO CONFIGURADO" de un contexto anterior cuando el
+      // setup recién consultado confirma que existe contraseña/certificado.
+      // Si el backend aún no publica vigencia, queda pendiente de validar y
+      // no se inventa ni se bloquea por un estado obsoleto.
       certificateStatus: taxProfile.certificate_status
-        ?? (hasCertificatePassword !== undefined && hasCertificatePassword !== null && this.toBoolean(hasCertificatePassword) === false
-          ? 'NO CONFIGURADO'
+        ?? (hasCertificatePassword !== undefined && hasCertificatePassword !== null
+          ? (this.toBoolean(hasCertificatePassword)
+            ? (this.normalize(String(current.certificateStatus || '')) === 'NO CONFIGURADO'
+              ? 'PENDIENTE DE VALIDAR'
+              : current.certificateStatus)
+            : 'NO CONFIGURADO')
           : current.certificateStatus),
       certificateLastError: taxProfile.certificate_last_error ?? current.certificateLastError,
       liteSetupReady: data?.ready === undefined || data?.ready === null ? current.liteSetupReady : this.toBoolean(data.ready),
@@ -331,14 +350,31 @@ export class CompanyCapabilitiesService {
 
   isEnabled(feature?: CompanyFeatureKey): boolean {
     if (!feature) return true;
-    if ((this.businessMode === 'FACTURADOR' || this.isLiteMode) && this.restaurantOnlyFeatures.includes(feature)) {
-      return false;
+    const features = this.features;
+    const isRestaurant = features.restaurant === true;
+
+    if (feature === 'restaurant') return isRestaurant;
+    if (feature === 'restaurant_pos') return isRestaurant && features.restaurant_pos === true;
+    if (feature === 'pos') return isRestaurant && features.pos === true;
+    // `cash_register` es el alias histórico de `pos` para apertura, cierre
+    // y retiros. Se conserva para no romper rutas existentes.
+    if (feature === 'cash_register') return isRestaurant && (features.pos === true || features.cash_register === true);
+
+    // Facturación no depende del modo restaurante. `billing` habilita la
+    // experiencia facturable completa; las claves previas se aceptan como
+    // compatibilidad granular cuando billing aún no llegue del backend.
+    if (feature === 'direct_invoice') return features.billing === true || features.direct_invoice === true;
+    if (feature === 'credit_note') return features.billing === true || features.credit_note === true;
+
+    if (this.restaurantOnlyFeatures.includes(feature)) {
+      return isRestaurant && features[feature] === true;
     }
-    return this.features[feature] === true;
+    return features[feature] === true;
   }
 
   hasPermission(permission?: string): boolean {
     if (!permission || !this.permissions) return true;
+    if (this.hasAdminRole(this.roles)) return true;
     const permissions = this.permissions;
     const normalizedPermission = String(permission).trim();
 
@@ -452,7 +488,8 @@ export class CompanyCapabilitiesService {
       return { allowed: false, message: 'El plan actual no permite operar en modo facturador.' };
     }
 
-    if (!this.hasUnlimitedVouchers(plan) && Number(plan.remaining_authorized_vouchers || 0) <= 0) {
+    const remaining = plan.remaining_authorized_documents ?? plan.remaining_authorized_vouchers;
+    if (!this.hasUnlimitedVouchers(plan) && (remaining === null || remaining === undefined || Number(remaining) <= 0)) {
       return { allowed: false, message: 'No quedan comprobantes disponibles en el plan actual.' };
     }
 
@@ -484,20 +521,20 @@ export class CompanyCapabilitiesService {
   }
 
   getLandingRoute(userRoles: unknown): string {
-    if (this.isLiteMode && this.hasRole(userRoles, ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO', 'ADMINISTRADOR DEL NEGOCIO', 'ALL'])) {
+    if (!this.isEnabled('restaurant') && this.isLiteMode && this.hasRole(userRoles, ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO', 'ADMINISTRADOR DEL NEGOCIO', 'ALL'])) {
       return '/dashboard/main';
     }
     if (this.businessMode === 'FACTURADOR' && this.hasRole(userRoles, ['GERENTE', 'CAJERO'])) {
       return '/dashboard/main';
     }
-    if (this.canAccess('tables', ['GERENTE', 'CAJERO', 'MESERO'], userRoles)) return '/dashboard/pos';
+    if (this.canAccess('restaurant_pos', ['GERENTE', 'CAJERO', 'MESERO'], userRoles)) return '/dashboard/pos';
     if (this.canAccess('direct_invoice', ['GERENTE', 'CAJERO', 'FACTURACION'], userRoles)) return '/dashboard/invoicing';
     if (this.canAccess('kitchen', ['GERENTE', 'COCINA'], userRoles)) return '/dashboard/orders-realtime';
     return '/dashboard/no-access';
   }
 
   getPosExitRoute(userRoles: unknown): string {
-    if (this.isLiteMode && this.canAccess('direct_invoice', ['GERENTE', 'CAJERO', 'FACTURACION'], userRoles)) return '/dashboard/invoicing';
+    if (!this.isEnabled('restaurant') && this.isLiteMode && this.canAccess('direct_invoice', ['GERENTE', 'CAJERO', 'FACTURACION'], userRoles)) return '/dashboard/invoicing';
     if (this.canAccess('orders', ['GERENTE', 'CAJERO', 'MESERO'], userRoles)) return '/dashboard/orders';
     if (this.canAccess('direct_invoice', ['GERENTE', 'CAJERO', 'FACTURACION'], userRoles)) return '/dashboard/invoicing';
     if (this.canAccess('kitchen', ['GERENTE', 'COCINA'], userRoles)) return '/dashboard/orders-realtime';
@@ -512,11 +549,11 @@ export class CompanyCapabilitiesService {
   }
 
   private get featureKeys(): CompanyFeatureKey[] {
-    return ['orders', 'tables', 'kitchen', 'cash_register', 'direct_invoice', 'credit_note', 'customers', 'products', 'additional_fields', 'inventory'];
+    return ['restaurant', 'restaurant_pos', 'pos', 'billing', 'orders', 'tables', 'kitchen', 'cash_register', 'direct_invoice', 'credit_note', 'customers', 'products', 'additional_fields', 'inventory'];
   }
 
   private get restaurantOnlyFeatures(): CompanyFeatureKey[] {
-    return ['orders', 'tables', 'kitchen', 'cash_register'];
+    return ['restaurant_pos', 'pos', 'orders', 'tables', 'kitchen', 'cash_register'];
   }
 
   private readStored(): CompanyCapabilitiesConfig {
@@ -674,21 +711,21 @@ export class CompanyCapabilitiesService {
         customers: true,
         products: true,
         additional_fields: true,
-        inventory: false
+        inventory: false,
+        restaurant: false,
+        pos: false,
+        restaurant_pos: false,
+        billing: false
       };
     }
 
     return { ...RESTAURANT_FALLBACK };
   }
 
-  private looksLikeLiteFeatures(features: unknown): boolean {
+  private hasExplicitBillingFeature(features: unknown): boolean {
     if (!features || typeof features !== 'object') return false;
     const value = features as Partial<Record<CompanyFeatureKey, unknown>>;
-    return this.coerceOptionalBoolean(value.direct_invoice) === true &&
-      this.coerceOptionalBoolean(value.orders) === false &&
-      this.coerceOptionalBoolean(value.tables) === false &&
-      this.coerceOptionalBoolean(value.kitchen) === false &&
-      this.coerceOptionalBoolean(value.cash_register) === false;
+    return this.coerceOptionalBoolean(value.billing) === true;
   }
 
   private normalizeRoles(value: unknown): string[] {

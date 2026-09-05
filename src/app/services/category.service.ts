@@ -11,101 +11,61 @@ import { frappeData, frappeList } from '../core/utils/frappe-response';
 export class CategoryService {
   private readonly apiUrl = environment.apiUrl; // Cambia si usás otro backend
 
-  private urlBase: string = '';
-  constructor(private http: HttpClient, private capabilities: CompanyCapabilitiesService) { 
-        this.urlBase = this.apiUrl + API_ENDPOINT.Categoria;
-  }
+  constructor(private http: HttpClient, private capabilities: CompanyCapabilitiesService) {}
 
 
   getAll(isactive?: number) {
-    if (this.capabilities.isLiteMode) {
-      const business = this.getLiteBusiness();
-      if (!business) return throwError(() => new Error('No hay un negocio Lite seleccionado.'));
+    const business = this.getLiteBusiness();
+    if (!business) return throwError(() => new Error('No hay un negocio seleccionado.'));
 
-      let params = new HttpParams().set('business', business);
-      if (isactive !== undefined && isactive !== null) {
-        params = params.set('isactive', String(isactive));
-      }
-
-      return this.http.get(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_categorias`, {
-        params,
-        context: new HttpContext().set(REQUIRE_AUTH, true)
-      }).pipe(map((response: any) => frappeList<any>(response).map((category) => this.fromLiteCategory(category))));
-    }
-
-    let params = new HttpParams();
-
+    let params = new HttpParams().set('business', business);
     if (isactive !== undefined && isactive !== null) {
-      params = params.set('isactive', isactive.toString());
+      params = params.set('isactive', String(isactive));
     }
 
-    return this.http.get(`${this.urlBase}.get_categorias`, {
+    return this.http.get(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_categorias`, {
       params,
       context: new HttpContext().set(REQUIRE_AUTH, true)
-    });
+    }).pipe(map((response: any) => frappeList<any>(response).map((category) => this.fromLiteCategory(category))));
   }
 
   create(data: any) {
-    if (this.capabilities.isLiteMode) {
-      if (!this.canManageLiteCategories()) return throwError(() => new Error('No tienes permiso products.manage para crear categorías.'));
-      const business = this.getLiteBusiness();
-      if (!business) return throwError(() => new Error('No hay un negocio Lite seleccionado.'));
-      return this.http.post(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.create_categoria`, {
-        ...this.toLitePayload(data),
-        business
-      }, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
-        map((response: any) => this.fromLiteCategory(frappeData<any>(response)))
-      );
-    }
-
-    return this.http.post(`${environment.apiUrl}/resource/categorias`, data, {
-      context: new HttpContext().set(REQUIRE_AUTH, true)
-    });
+    if (!this.canManageLiteCategories()) return throwError(() => new Error('No tienes permiso para crear categorías.'));
+    const business = this.getLiteBusiness();
+    if (!business) return throwError(() => new Error('No hay un negocio seleccionado.'));
+    return this.http.post(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.create_categoria`, {
+      ...this.toLitePayload(data),
+      business
+    }, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
+      map((response: any) => this.fromLiteCategory(frappeData<any>(response)))
+    );
   }
 
   getByName(name: string) {
-    if (this.capabilities.isLiteMode) {
-      return throwError(() => new Error('La consulta individual de categorías no está disponible en Lite.'));
-    }
-
-    return this.http.get(`${environment.apiUrl}/resource/categorias/${name}`, {
-      context: new HttpContext().set(REQUIRE_AUTH, true)
-    });
+    return throwError(() => new Error('La consulta individual de categorías no está disponible.'));
   }
 
   update(name: string, data: any) {
-    if (this.capabilities.isLiteMode) {
-      if (!this.canManageLiteCategories()) return throwError(() => new Error('No tienes permiso products.manage para editar categorías.'));
-      const business = this.getLiteBusiness();
-      if (!business) return throwError(() => new Error('No hay un negocio Lite seleccionado.'));
-      return this.http.post(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.update_categoria`, {
-        ...this.toLitePayload(data),
-        name,
-        business
-      }, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
-        map((response: any) => this.fromLiteCategory(frappeData<any>(response)))
-      );
-    }
-
-    return this.http.put(`${environment.apiUrl}/resource/categorias/${name}`, data, {
-      context: new HttpContext().set(REQUIRE_AUTH, true)
-    });
+    if (!this.canManageLiteCategories()) return throwError(() => new Error('No tienes permiso para editar categorías.'));
+    const business = this.getLiteBusiness();
+    if (!business) return throwError(() => new Error('No hay un negocio seleccionado.'));
+    return this.http.post(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.update_categoria`, {
+      ...this.toLitePayload(data),
+      name,
+      business
+    }, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
+      map((response: any) => this.fromLiteCategory(frappeData<any>(response)))
+    );
   }
 
   delete(name: string) {
-    if (this.capabilities.isLiteMode) {
-      if (!this.canManageLiteCategories()) return throwError(() => new Error('No tienes permiso products.manage para desactivar categorías.'));
-      const business = this.getLiteBusiness();
-      if (!business) return throwError(() => new Error('No hay un negocio Lite seleccionado.'));
-      // El endpoint Lite desactiva la categoría; no se elimina físicamente.
-      return this.http.post(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.delete_categoria`, { name, business }, {
-        context: new HttpContext().set(REQUIRE_AUTH, true)
-      }).pipe(map((response: any) => frappeData<any>(response)));
-    }
-
-    return this.http.delete(`${environment.apiUrl}/resource/categorias/${name}`, {
+    if (!this.canManageLiteCategories()) return throwError(() => new Error('No tienes permiso para desactivar categorías.'));
+    const business = this.getLiteBusiness();
+    if (!business) return throwError(() => new Error('No hay un negocio seleccionado.'));
+    // El endpoint Lite desactiva la categoría; no se elimina físicamente.
+    return this.http.post(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.delete_categoria`, { name, business }, {
       context: new HttpContext().set(REQUIRE_AUTH, true)
-    });
+    }).pipe(map((response: any) => frappeData<any>(response)));
   }
 
   private getLiteBusiness(): string {

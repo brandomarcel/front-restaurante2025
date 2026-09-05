@@ -17,6 +17,7 @@ export interface SubMenuItem {
   children?: Array<SubMenuItem>;
   allowedRoles?: Role[]; // opcional: regla a nivel grupo
   featureKey?: import('../services/company-capabilities.service').CompanyFeatureKey;
+  permissionKey?: string;
   hideInLite?: boolean;
 }
 export type Role = 'SYSTEM MANAGER' | 'GERENTE' | 'CAJERO' | 'FACTURACION' | 'MESERO' | 'COCINA' | 'USUARIO';

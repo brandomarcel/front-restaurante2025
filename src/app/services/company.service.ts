@@ -198,7 +198,9 @@ export class CompanyService {
         // Mantener sincronizado el negocio activo, rol y permisos cada vez
         // que se recarga el contexto (incluido un cambio de negocio).
         this.capabilities.setFromResponse(response);
-        return frappeData<any>(response);
+        // get_user_context no es un listado: su contrato expone el contexto
+        // directamente en `response.message`, no en `response.message.data`.
+        return response?.message ?? response;
       }),
       catchError((error: any) => {
         if (error?.status === 403 && !this.isPermissionError(error)) {
@@ -382,16 +384,20 @@ export class CompanyService {
       ''
     ).toUpperCase();
 
-    if (mode.includes('LITE')) return true;
+    const businessModel = String(company?.business_model ?? company?.businessModel ?? '').toUpperCase();
+    if (mode.includes('LITE') || businessModel.includes('FACTURACION SIMPLE')) return true;
+
+    // El mismo contexto se utiliza también para FacturADA Restaurante. No se
+    // debe rechazar por no ser Lite si el backend ya entregó un negocio válido.
+    if (typeof rawBusiness === 'string' && rawBusiness.trim()) return true;
+    if (company && typeof company === 'object' && (company.name || company.business)) return true;
 
     const features = message?.features ?? company?.features;
     if (!features || typeof features !== 'object') return false;
 
-    return this.toBool(features.direct_invoice) &&
-      this.toBool(features.orders) === false &&
-      this.toBool(features.tables) === false &&
-      this.toBool(features.kitchen) === false &&
-      this.toBool(features.cash_register) === false;
+    // Solo aceptamos banderas explícitas del contrato nuevo; nunca deducimos
+    // el modo por la ausencia de órdenes, mesas o caja.
+    return this.toBool(features.billing) || this.toBool(features.restaurant);
   }
 
   private isPermissionError(error: any): boolean {

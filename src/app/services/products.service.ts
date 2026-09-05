@@ -11,10 +11,7 @@ import { frappeData, frappeList } from '../core/utils/frappe-response';
 export class ProductsService {
   private readonly apiUrl = environment.apiUrl; // Cambia si usás otro backend
 
-  private urlBase: string = '';
-  constructor(private http: HttpClient, private capabilities: CompanyCapabilitiesService) {
-    this.urlBase = this.apiUrl + API_ENDPOINT.Producto;
-  }
+  constructor(private http: HttpClient, private capabilities: CompanyCapabilitiesService) {}
 
   // getAll() {
   //   const campos = ['name', 'nombre', 'precio', 'descripcion', 'categoria', 'tax','isactive','is_out_of_stock'];
@@ -30,110 +27,64 @@ export class ProductsService {
       if (isactive !== undefined && isactive !== null) {
         params = params.set('isactive', isactive.toString());
       }
-      if (this.capabilities.isLiteMode) params = this.withLiteBusiness(params);
-  
-      const url = this.capabilities.isLiteMode
-        ? `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_productos`
-        : `${this.urlBase}.get_productos`;
+      params = this.withLiteBusiness(params);
+      const url = `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_productos`;
 
       const request$ = this.http.get(url, {
         context: new HttpContext().set(REQUIRE_AUTH, true),
         params,
       });
-      return this.capabilities.isLiteMode
-        ? request$.pipe(map((res: any) => frappeList<any>(res).map((item) => this.fromLiteProduct(item))))
-        : request$.pipe(map((res: any) => this.normalizeListResponse(res)));
+      return request$.pipe(map((res: any) => frappeList<any>(res).map((item) => this.fromLiteProduct(item))));
     }
 
   searchProductos(search: string, limit = 10) {
     const params = new HttpParams()
       .set('search', String(search || '').trim())
       .set('limit', String(limit));
-    const requestParams = this.capabilities.isLiteMode ? this.withLiteBusiness(params) : params;
-
-    const url = this.capabilities.isLiteMode
-      ? `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.search_productos`
-      : `${this.urlBase}.get_productos`;
+    const requestParams = this.withLiteBusiness(params);
+    const url = `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.search_productos`;
 
     return this.http.get(url, {
       context: new HttpContext().set(REQUIRE_AUTH, true),
       params: requestParams
-    }).pipe(map((res: any) => this.capabilities.isLiteMode
-      ? frappeList<any>(res).map((item) => this.fromLiteProduct(item))
-      : this.normalizeListResponse(res)));
+    }).pipe(map((res: any) => frappeList<any>(res).map((item) => this.fromLiteProduct(item))));
   }
 
 
   getById(id: number) {
     let params = new HttpParams().set('product_id', String(id));
-    if (this.capabilities.isLiteMode) params = this.withLiteBusiness(params);
-    if (this.capabilities.isLiteMode) {
-      return this.http.get<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_producto_by_id`, {
-        context: new HttpContext().set(REQUIRE_AUTH, true),
-        params,
-      }).pipe(map((res: any) => this.fromLiteProduct(frappeData<any>(res))));
-    }
-
-    return this.http.get<any>(`${this.urlBase}.get_producto_by_id`, {
+    params = this.withLiteBusiness(params);
+    return this.http.get<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_producto_by_id`, {
       context: new HttpContext().set(REQUIRE_AUTH, true),
       params,
-    });
+    }).pipe(map((res: any) => this.fromLiteProduct(frappeData<any>(res))));
   }
 
   create(data: any) {
-    const url = this.capabilities.isLiteMode
-      ? `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.create_producto`
-      : `${this.urlBase}.create_producto`;
-
-    const payload = this.capabilities.isLiteMode
-      ? { ...this.toLiteProductPayload(data, true), business: this.capabilities.businessId || localStorage.getItem('businessId') || undefined }
-      : data;
+    const url = `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.create_producto`;
+    const payload = { ...this.toLiteProductPayload(data, true), business: this.activeBusiness() };
     return this.http.post(url, payload, {
       context: new HttpContext().set(REQUIRE_AUTH, true),
-    }).pipe(map((res: any) => this.capabilities.isLiteMode ? this.fromLiteProduct(frappeData<any>(res)) : res));
+    }).pipe(map((res: any) => this.fromLiteProduct(frappeData<any>(res))));
   }
 
 
   update(name: string, data: any) {
     const payload = { name, ...data };
-    if (this.capabilities.isLiteMode) {
-      const litePayload = { ...this.toLiteProductPayload(payload, false), business: this.capabilities.businessId || localStorage.getItem('businessId') || undefined };
-      return this.http.post(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.update_producto`, litePayload, {
-        context: new HttpContext().set(REQUIRE_AUTH, true),
-      }).pipe(map((res: any) => this.fromLiteProduct(frappeData<any>(res))));
-    }
-
-    return this.http.put(`${this.urlBase}.update_producto`, payload, {
+    const litePayload = { ...this.toLiteProductPayload(payload, false), business: this.activeBusiness() };
+    return this.http.post(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.update_producto`, litePayload, {
       context: new HttpContext().set(REQUIRE_AUTH, true),
-      
-    });
+    }).pipe(map((res: any) => this.fromLiteProduct(frappeData<any>(res))));
   }
 
 
   delete(name: string) {
-    if (this.capabilities.isLiteMode) {
-      let params = new HttpParams().set('name', name);
-      params = this.withLiteBusiness(params);
-      return this.http.post(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.delete_producto`, {}, {
-        context: new HttpContext().set(REQUIRE_AUTH, true),
-        params
-      }).pipe(map((res: any) => frappeData<any>(res)));
-    }
-
-    return this.http.delete(`${this.apiUrl}/resource/Producto/${name}`, {
+    let params = new HttpParams().set('name', name);
+    params = this.withLiteBusiness(params);
+    return this.http.post(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.delete_producto`, {}, {
       context: new HttpContext().set(REQUIRE_AUTH, true),
-      
-    });
-  }
-
-  private normalizeListResponse(res: any): any {
-    const data = res?.message?.data ?? res?.data ?? res?.message ?? [];
-    return { ...res, message: { ...(typeof res?.message === 'object' && !Array.isArray(res.message) ? res.message : {}), data: Array.isArray(data) ? data.map((item: any) => this.fromLiteProduct(item)) : [] } };
-  }
-
-  private normalizeSingleResponse(res: any): any {
-    const data = res?.message?.data ?? res?.data ?? res?.message ?? null;
-    return { ...res, message: { ...(typeof res?.message === 'object' && !Array.isArray(res.message) ? res.message : {}), data: this.fromLiteProduct(data) } };
+      params
+    }).pipe(map((res: any) => frappeData<any>(res)));
   }
 
   private toLiteProductPayload(data: any, isCreate = false): any {
@@ -214,8 +165,16 @@ export class ProductsService {
     return match ? Number(match[0]) : 0;
   }
 
+  private activeBusiness(): string | undefined {
+    return this.capabilities.activeBusinessId
+      || this.capabilities.businessId
+      || localStorage.getItem('active_business')
+      || localStorage.getItem('businessId')
+      || undefined;
+  }
+
   private withLiteBusiness(params: HttpParams): HttpParams {
-    const business = this.capabilities.businessId || localStorage.getItem('businessId');
+    const business = this.activeBusiness();
     return business ? params.set('business', business) : params;
   }
 }

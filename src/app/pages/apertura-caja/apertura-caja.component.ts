@@ -76,7 +76,7 @@ export class AperturaCajaComponent implements OnInit {
       })
     ).subscribe({
       next: (res: any) => {
-        this.cajaActiva = Array.isArray(res?.data) && res.data.length > 0;
+        this.cajaActiva = !!(res?.message?.apertura ?? (Array.isArray(res?.data) && res.data.length > 0));
       },
       error: (error) => {
         console.error('Error al verificar apertura activa:', error);

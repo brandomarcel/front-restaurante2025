@@ -61,7 +61,11 @@ export class ReportsHomeComponent {
   constructor(private capabilities: CompanyCapabilitiesService) {}
 
   get visibleReports(): ReportCard[] {
-    return this.reports.filter((report) => !report.featureKey || this.capabilities.isEnabled(report.featureKey));
+    const allowed = this.reports.filter((report) => !report.featureKey || this.capabilities.isEnabled(report.featureKey));
+    if (this.capabilities.features.restaurant === true) {
+      return allowed.filter((report) => report.route === '/report/orders' || report.route === '/report/ventas-forma-pago');
+    }
+    return allowed;
   }
 
   trackByReport = (_: number, report: ReportCard) => report.route;

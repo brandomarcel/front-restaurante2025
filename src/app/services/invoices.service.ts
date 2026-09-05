@@ -23,39 +23,15 @@ export class InvoicesService {
 
   create_and_emit_from_ui_v2(payload: any): Observable<any> {
 
-  const url = this.capabilities.isLiteMode
-    ? `${this.api}${API_ENDPOINT.FacturadaLite}.create_and_emit_from_ui_v2`
-    : `${this.api}/method/restaurante_app.facturacion_bmarc.einvoice.ui_new.create_and_emit_from_ui_v2`;
+  const url = `${this.api}${API_ENDPOINT.FacturadaLite}.create_and_emit_from_ui_v2`;
     return this.http.post<any>(
       url,
-      this.capabilities.isLiteMode ? this.normalizeLiteInvoicePayload(payload) : payload,
+      this.normalizeLiteInvoicePayload(payload),
       { context: new HttpContext().set(REQUIRE_AUTH, true) }
     ).pipe(
       // Keep `emission` and `data` together. Unwrapping with frappeData here
       // would discard the SRI result because body.data is the invoice itself.
-      map((response: any) => this.capabilities.isLiteMode
-        ? normalizeLiteEmissionResponse(response)
-        : response),
-      catchError((e) => {
-        const msg = this.err.handle(e) || 'Error al crear la factura.';
-        if (!this.capabilities.isLiteMode) toast.error(msg);
-        return throwError(() => e);
-      })
-    );
-  }
-
-  emit_existing_invoice_v2(invoice_name: string): Observable<any> {
-    if (this.capabilities.isLiteMode) {
-      return throwError(() => new Error('El reenvío de factura aún no está disponible en FacturADA Lite.'));
-    }
-
-  const  url =`${this.api}/method/restaurante_app.facturacion_bmarc.einvoice.ui_new.emit_existing_invoice_v2`;
-    return this.http.post<any>(
-      url,
-      {invoice_name:invoice_name},
-      { context: new HttpContext().set(REQUIRE_AUTH, true) }
-    ).pipe(
-      map((response: any) => frappeData<any>(response)),
+      map((response: any) => normalizeLiteEmissionResponse(response)),
       catchError((e) => {
         const msg = this.err.handle(e) || 'Error al crear la factura.';
         toast.error(msg);
@@ -64,11 +40,11 @@ export class InvoicesService {
     );
   }
 
-  refreshLiteInvoiceStatus(invoiceName: string): Observable<any> {
-    if (!this.capabilities.isLiteMode) {
-      return this.emit_existing_invoice_v2(invoiceName);
-    }
+  emit_existing_invoice_v2(invoice_name: string): Observable<any> {
+    return this.retryLiteInvoice(invoice_name);
+  }
 
+  refreshLiteInvoiceStatus(invoiceName: string): Observable<any> {
     const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || '';
     return this.http.post<any>(
       `${this.api}${API_ENDPOINT.FacturadaLite}.refresh_lite_invoice_status`,
@@ -78,17 +54,13 @@ export class InvoicesService {
       map((response: any) => normalizeLiteEmissionResponse(response)),
       catchError((e) => {
         const msg = this.err.handle(e) || 'No se pudo refrescar el estado de la factura.';
-        if (!this.capabilities.isLiteMode) toast.error(msg);
+        toast.error(msg);
         return throwError(() => e);
       })
     );
   }
 
   retryLiteInvoice(invoiceName: string): Observable<any> {
-    if (!this.capabilities.isLiteMode) {
-      return throwError(() => new Error('El reintento de factura solo está disponible en FacturADA Lite.'));
-    }
-
     const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || '';
     return this.http.post<any>(
       `${this.api}${API_ENDPOINT.FacturadaLite}.retry_lite_invoice`,
@@ -98,17 +70,13 @@ export class InvoicesService {
       map((response: any) => normalizeLiteEmissionResponse(response)),
       catchError((e) => {
         const msg = this.err.handle(e) || 'No se pudo reintentar el envío.';
-        if (!this.capabilities.isLiteMode) toast.error(msg);
+        toast.error(msg);
         return throwError(() => e);
       })
     );
   }
 
   reissueLiteInvoice(invoiceName: string, postingDate: string): Observable<any> {
-    if (!this.capabilities.isLiteMode) {
-      return throwError(() => new Error('La reemisión solo está disponible en FacturADA Lite.'));
-    }
-
     const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || '';
     return this.http.post<any>(
       `${this.api}${API_ENDPOINT.FacturadaLite}.reissue_lite_invoice`,
@@ -118,25 +86,23 @@ export class InvoicesService {
       map((response: any) => normalizeLiteEmissionResponse(response)),
       catchError((e) => {
         const msg = this.err.handle(e) || 'No se pudo reemitir la factura.';
-        if (!this.capabilities.isLiteMode) toast.error(msg);
+        toast.error(msg);
         return throwError(() => e);
       })
     );
   }
 
   sendLiteInvoiceEmail(invoiceName: string): Observable<any> {
-    if (!this.capabilities.isLiteMode) {
-      return throwError(() => new Error('El envío por correo solo está disponible en FacturADA Lite.'));
-    }
+    const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || '';
     return this.http.post<any>(
       `${this.api}${API_ENDPOINT.FacturadaLite}.send_lite_invoice_email`,
-      { invoice_name: invoiceName },
+      { invoice_name: invoiceName, ...(business ? { business } : {}) },
       { context: new HttpContext().set(REQUIRE_AUTH, true) }
     ).pipe(
       map((response: any) => response),
       catchError((e) => {
         const msg = this.err.handle(e) || 'No se pudo enviar la factura por correo.';
-        if (!this.capabilities.isLiteMode) toast.error(msg);
+        toast.error(msg);
         return throwError(() => e);
       })
     );
@@ -144,72 +110,44 @@ export class InvoicesService {
 
 
   queue(invoice_name: string): Observable<any> {
-    if (this.capabilities.isLiteMode) {
-      return throwError(() => new Error('La cola de facturación no está disponible en FacturADA Lite.'));
-    }
-
-    return this.http.post<any>(
-      `${this.api}/method/restaurante_app.facturacion_bmarc.doctype.sales_invoice.sales_invoice.queue_einvoice`,
-      { invoice_name },
-      { context: new HttpContext().set(REQUIRE_AUTH, true) }
-    );
+    return this.retryLiteInvoice(invoice_name);
   }
 
   getAllInvoices(limit: number = 10, offset: number = 0, status?: string) {
   let params = new HttpParams()
     .set('limit', limit.toString())
     .set('offset', offset.toString());
-  if (status) params = params.set('status', this.capabilities.isLiteMode ? this.normalizeLiteStatusFilter(status) : status);
-  if (this.capabilities.isLiteMode) {
-    const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId');
-    if (business) params = params.set('business', business);
-  }
+  if (status) params = params.set('status', this.normalizeLiteStatusFilter(status));
+  const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId');
+  if (business) params = params.set('business', business);
 
   const request$ = this.http.get(
-    this.capabilities.isLiteMode
-      ? `${this.api}${API_ENDPOINT.FacturadaLite}.get_all_invoices`
-      : `${this.api}/method/restaurante_app.facturacion_bmarc.einvoice.invoices_api.get_all_invoices`,
+    `${this.api}${API_ENDPOINT.FacturadaLite}.get_all_invoices`,
     { context: new HttpContext().set(REQUIRE_AUTH, true), params }
   );
-  return this.capabilities.isLiteMode
-    ? request$.pipe(map((res: any) => {
+  return request$.pipe(map((res: any) => {
         const rows = frappeList<any>(res).map((item) => this.fromLiteInvoice(item));
         const message = res?.message ?? res ?? {};
         return { data: rows, total: Number(message?.total ?? res?.total ?? rows.length) };
-      }))
-    : request$.pipe(map((res: any) => this.normalizeListResponse(res)));
+      }));
 }
 
 getOrderDetail(name: string) {
-  if (this.capabilities.isLiteMode) {
-    return throwError(() => new Error('Las órdenes de restaurante no están disponibles en FacturADA Lite.'));
-  }
-
-  const params = new HttpParams().set('name', name);
-  return this.http.get(
-    `${environment.apiUrl}/method/restaurante_app.facturacion_bmarc.einvoice.invoices_api.get_order_detail`,
-    { context: new HttpContext().set(REQUIRE_AUTH, true), params }
-  );
+  return throwError(() => new Error('Consulta la orden mediante facturada_restaurante.api.frontend.get_order_with_details.'));
 }
 
   getInvoiceDetail(name: string) {
     let params = new HttpParams().set('name', name);
-    if (this.capabilities.isLiteMode) {
-      // El contrato Lite usa `name` para identificar la factura. Mantener el
-      // business activo evita consultar documentos de otra empresa.
-      params = new HttpParams().set('name', name);
-      const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId');
-      if (business) params = params.set('business', business);
-    }
+    // El contrato Lite usa `name` para identificar la factura. Mantener el
+    // business activo evita consultar documentos de otra empresa.
+    params = new HttpParams().set('name', name);
+    const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId');
+    if (business) params = params.set('business', business);
     const request$ = this.http.get(
-      this.capabilities.isLiteMode
-        ? `${environment.apiUrl}${API_ENDPOINT.FacturadaLite}.get_lite_invoice_detail`
-        : `${environment.apiUrl}/method/restaurante_app.facturacion_bmarc.einvoice.invoices_api.get_invoice_detail`,
+      `${environment.apiUrl}${API_ENDPOINT.FacturadaLite}.get_lite_invoice_detail`,
       { context: new HttpContext().set(REQUIRE_AUTH, true), params }
     );
-    return this.capabilities.isLiteMode
-      ? request$.pipe(map((res: any) => this.fromLiteInvoice(frappeData<any>(res))))
-      : request$.pipe(map((res: any) => this.normalizeDetailResponse(res)));
+    return request$.pipe(map((res: any) => this.fromLiteInvoice(frappeData<any>(res))));
   }
 
   /** Detalle de una nota de crédito Lite usando el parámetro contractual invoice_name. */

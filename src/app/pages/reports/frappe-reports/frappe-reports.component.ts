@@ -11,6 +11,7 @@ import {
 } from 'src/app/services/frappe-query-report.service';
 import { PaymentsService } from 'src/app/services/payments.service';
 import { UtilsService } from 'src/app/core/services/utils.service';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 type FilterType = 'date' | 'number' | 'text' | 'select' | 'payment';
 
@@ -46,7 +47,7 @@ interface ReportDefinition {
   templateUrl: './frappe-reports.component.html'
 })
 export class FrappeReportsComponent implements OnInit, OnDestroy {
-  readonly reports: ReportDefinition[] = [
+  reports: ReportDefinition[] = [
     {
       name: 'Orders Report',
       title: 'Órdenes',
@@ -167,16 +168,57 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
     private reportSvc: FrappeQueryReportService,
     private paymentsSvc: PaymentsService,
     private utils: UtilsService,
-    private spinner: NgxSpinnerService
+    private spinner: NgxSpinnerService,
+    private capabilities: CompanyCapabilitiesService
   ) {}
 
   ngOnInit(): void {
+    if (this.capabilities.features.restaurant === true) {
+      this.reports = this.restaurantReports();
+      this.selectedReportName = this.reports[0].name;
+    }
     this.loadPayments();
     this.routeSub = this.route.data.subscribe((data) => {
       const defaultReport = data?.['defaultReport'];
       this.selectReport(defaultReport || this.selectedReportName, false);
       this.runReport();
     });
+  }
+
+  private restaurantReports(): ReportDefinition[] {
+    return [
+      {
+        name: 'FacturADA Restaurant Orders',
+        title: 'Órdenes de restaurante',
+        description: 'Seguimiento por estado, tipo de consumo y forma de pago.',
+        badge: 'Restaurante',
+        accent: 'from-indigo-500 to-violet-500',
+        defaultLimit: 50,
+        visibleColumns: ['Orden', 'Fecha', 'Cliente', 'Tipo Orden', 'Estado Orden', 'Subtotal', 'IVA', 'Total'],
+        filters: [
+          { key: 'from_date', label: 'Desde', type: 'date', required: true },
+          { key: 'to_date', label: 'Hasta', type: 'date', required: true },
+          { key: 'status', label: 'Estado', type: 'select', options: this.options(['Ingresada', 'Preparacion', 'Lista', 'Cerrada', 'Cancelada']) },
+          { key: 'type_orden', label: 'Tipo', type: 'select', options: this.options(['Servirse', 'Llevar', 'Domicilio']) },
+          { key: 'limit', label: 'Límite', type: 'number' }
+        ]
+      },
+      {
+        name: 'FacturADA Restaurant Sales by Payment',
+        title: 'Ventas por forma de pago',
+        description: 'Cobros de restaurante agrupados por método de pago.',
+        badge: 'Pagos',
+        accent: 'from-emerald-500 to-teal-500',
+        defaultLimit: 100,
+        visibleColumns: ['Forma de Pago', 'Cantidad', 'Total', 'Fecha'],
+        filters: [
+          { key: 'from_date', label: 'Desde', type: 'date', required: true },
+          { key: 'to_date', label: 'Hasta', type: 'date', required: true },
+          { key: 'payment_method', label: 'Forma de pago', type: 'payment' },
+          { key: 'limit', label: 'Límite', type: 'number' }
+        ]
+      }
+    ];
   }
 
   ngOnDestroy(): void {

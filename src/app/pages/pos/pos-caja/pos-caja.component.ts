@@ -30,6 +30,7 @@ import { canSellProduct, getAvailableStock, getInventoryUnit, hasInventoryContro
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { UtilsService } from 'src/app/core/services/utils.service';
 import { buildSinglePaymentPayload, findPaymentMethod, getDefaultPaymentValue, getPaymentDisplayLabel, isCashPayment } from 'src/app/shared/utils/payment.utils';
+import { liteEmissionMessages, liteEmissionState } from 'src/app/core/utils/lite-invoice-emission';
 
 @Component({
   selector: 'app-pos-caja',
@@ -847,11 +848,29 @@ export class PosCajaComponent implements OnInit, OnDestroy {
           toast.error('No se recibio numero de orden.');
           return;
         }
-        toast.success(`Pedido guardado${this.isSelectedPaymentCash ? `. Cambio: $${this.change.toFixed(2)}` : ''}`);
+        this.notifyOrderResult(res, payload?.estado === 'Factura');
         this.refreshProductsSilently();
         this.openPrintModal(orderId);
       }
     });
+  }
+
+  /** La factura se emite dentro de create_order_v2; no se crea una segunda factura desde POS. */
+  private notifyOrderResult(response: any, isInvoice: boolean): void {
+    const emission = response?.message?.emission ?? response?.message?.data?.emission;
+    if (!isInvoice || !emission) {
+      toast.success(`Pedido guardado${this.isSelectedPaymentCash ? `. Cambio: $${this.change.toFixed(2)}` : ''}`);
+      return;
+    }
+
+    const message = liteEmissionMessages(emission)[0];
+    const change = this.isSelectedPaymentCash ? `. Cambio: $${this.change.toFixed(2)}` : '';
+    switch (liteEmissionState(emission)) {
+      case 'AUTHORIZED': toast.success(`Factura autorizada${change}`); break;
+      case 'PROCESSING': toast.info(message || 'Factura emitida. La autorización del SRI está en proceso.'); break;
+      case 'REJECTED': toast.error(message || 'La factura fue rechazada por el SRI.'); break;
+      default: toast.error(message || 'La orden fue creada, pero la emisión electrónica no se completó.');
+    }
   }
 
   private openPrintWindow(path: string): void {

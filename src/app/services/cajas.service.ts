@@ -1,6 +1,6 @@
-import { HttpClient, HttpContext } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { catchError, Observable, shareReplay, throwError } from 'rxjs';
+import { catchError, map, Observable, shareReplay, throwError } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { FrappeErrorService } from '../core/services/frappe-error.service';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
@@ -9,6 +9,7 @@ import { CompanyCapabilitiesService } from '../core/services/company-capabilitie
 @Injectable({ providedIn: 'root' })
 export class CajasService {
   private readonly apiUrl = environment.apiUrl;
+  private readonly restaurantApi = `${environment.apiUrl}/method/facturada_restaurante.api.frontend`;
 
   constructor(private http: HttpClient,
     private frappeErrorService: FrappeErrorService,
@@ -17,8 +18,8 @@ export class CajasService {
 
 
   getAllCategorias() {
-    if (this.capabilities.isLiteMode) {
-      return throwError(() => new Error('Caja no está disponible en FacturADA Lite.'));
+    if (!this.capabilities.isEnabled('cash_register')) {
+      return throwError(() => new Error('Caja no está habilitada para este negocio.'));
     }
 
     const campos = ['name', 'nombre', 'description', 'isactive'];
@@ -29,12 +30,12 @@ export class CajasService {
 
 
   verificarAperturaActiva(usuario: string) {
-    if (this.capabilities.isLiteMode) {
-      return throwError(() => new Error('Caja no está disponible en FacturADA Lite.'));
-    }
-
-    const url = `${this.apiUrl}/resource/Apertura de Caja?fields=["name"]&filters=[["usuario","=","${usuario}"],["estado","=","Abierta"]]`;
-    return this.http.get<any>(url, { context: new HttpContext().set(REQUIRE_AUTH, true) });
+    const business = this.activeBusinessOrError();
+    if (business instanceof Error) return throwError(() => business);
+    return this.http.get<any>(`${this.restaurantApi}.get_current_cash_opening`, {
+      context: new HttpContext().set(REQUIRE_AUTH, true),
+      params: new HttpParams().set('business', business).set('usuario', usuario || '')
+    }).pipe(map((response: any) => this.normalizeCurrentOpening(response)));
   }
 
 
@@ -44,12 +45,7 @@ export class CajasService {
   // }
 
   create_apertura_de_caja(data: any) {
-    if (this.capabilities.isLiteMode) {
-      return throwError(() => new Error('Caja no está disponible en FacturADA Lite.'));
-    }
-
-    const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.apertura_de_caja.apertura_de_caja.create_apertura_de_caja`;
-    return this.http.post(url, data, { context: new HttpContext().set(REQUIRE_AUTH, true) });
+    return this.postRestaurant('open_cash_register', data);
   }
 
   // registrarRetiro(data: any) {
@@ -58,21 +54,11 @@ export class CajasService {
   // }
 
   create_retiro_de_caja(data: any) {
-    if (this.capabilities.isLiteMode) {
-      return throwError(() => new Error('Caja no está disponible en FacturADA Lite.'));
-    }
-
-    const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.retiro_de_caja.retiro_de_caja.create_retiro_de_caja`;
-    return this.http.post(url, data, { context: new HttpContext().set(REQUIRE_AUTH, true) });
+    return this.postRestaurant('create_cash_withdrawal', data);
   }
 
   getDatosCierre(usuario: string):Observable<any> {
-    if (this.capabilities.isLiteMode) {
-      return throwError(() => new Error('Caja no está disponible en FacturADA Lite.'));
-    }
-
-    const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.cierre_de_caja.cierre_de_caja.calcular_datos_para_cierre`;
-    return this.http.get<any>(`${url}?usuario=${usuario}`, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
+    return this.verificarAperturaActiva(usuario).pipe(
       catchError((e) => throwError(() => this.frappeErrorService.handle(e)))
       ,
       shareReplay(1)
@@ -80,12 +66,7 @@ export class CajasService {
   }
 
   create_cierre_de_caja(data: any) {
-    if (this.capabilities.isLiteMode) {
-      return throwError(() => new Error('Caja no está disponible en FacturADA Lite.'));
-    }
-
-    const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.cierre_de_caja.cierre_de_caja.create_cierre_de_caja`;
-    return this.http.post(url, data, { context: new HttpContext().set(REQUIRE_AUTH, true) });
+    return this.postRestaurant('close_cash_register', data);
   }
 
   // crearCierreCaja(data: any) {
@@ -97,45 +78,55 @@ export class CajasService {
 
   /** Obtener retiros del turno actual */
   getRetirosPorApertura(aperturaId: string) {
-    if (this.capabilities.isLiteMode) {
-      return throwError(() => new Error('Caja no está disponible en FacturADA Lite.'));
-    }
-
-    const filters = encodeURIComponent(JSON.stringify([
-      ["relacionado_a", "=", aperturaId]
-    ]));
-    const fields = encodeURIComponent(JSON.stringify(["name", "fecha_hora", "motivo", "monto"]));
-    const url = `/api/resource/Retiro de Caja?fields=${fields}&filters=${filters}&order_by=fecha_hora desc`;
-    return this.http.get<any>(url, { context: new HttpContext().set(REQUIRE_AUTH, true) });
+    return this.verificarAperturaActiva('');
   }
 
 
   eliminarRetiro(name: string) {
-    if (this.capabilities.isLiteMode) {
-      return throwError(() => new Error('Caja no está disponible en FacturADA Lite.'));
-    }
-
-    return this.http.delete(`/api/resource/Retiro de Caja/${name}`, {
-      context: new HttpContext().set(REQUIRE_AUTH, true)
-    });
+    return throwError(() => new Error('El contrato nuevo no permite eliminar retiros de caja.'));
   }
 
 
   /** 📄 Obtener reporte de cierres de caja */
   obtenerReporteCierres(usuario?: string, desde?: string, hasta?: string) {
-    if (this.capabilities.isLiteMode) {
-      return throwError(() => new Error('Caja no está disponible en FacturADA Lite.'));
-    }
+    return throwError(() => new Error('El reporte de cierres debe consumirse desde el reporte nuevo de restaurante.'));
+  }
 
-    let params: any = {};
-    if (usuario) params.usuario = usuario;
-    if (desde) params.desde = desde;
-    if (hasta) params.hasta = hasta;
+  private activeBusinessOrError(): string | Error {
+    const business = this.capabilities.activeBusinessId || localStorage.getItem('active_business') || localStorage.getItem('businessId');
+    return business ? business : new Error('Selecciona un negocio para operar caja.');
+  }
 
-    const query = new URLSearchParams(params).toString();
-    const url = `${this.apiUrl}/method/restaurante_app.restaurante_bmarc.doctype.cierre_de_caja.cierre_de_caja.obtener_reporte_cierres?${query}`;
+  private postRestaurant(method: string, data: any) {
+    const business = this.activeBusinessOrError();
+    if (business instanceof Error) return throwError(() => business);
+    return this.http.post<any>(`${this.restaurantApi}.${method}`, { ...(data || {}), business }, {
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    });
+  }
 
-    return this.http.get<any>(url, { context: new HttpContext().set(REQUIRE_AUTH, true) });
+  private normalizeCurrentOpening(response: any): any {
+    const body = response?.message ?? response ?? {};
+    const data = body?.data ?? body;
+    const opening = data?.apertura ?? data?.cash_opening ?? data?.opening
+      ?? (data?.name ? data : null);
+    const payments = data?.payments ?? data?.detalle ?? {};
+    return {
+      ...response,
+      data: opening ? [opening] : [],
+      message: {
+        ...(typeof body === 'object' ? body : {}),
+        ...data,
+        apertura: opening,
+        monto_apertura: data?.monto_apertura ?? opening?.monto_apertura ?? 0,
+        efectivo_sistema: data?.efectivo_sistema ?? 0,
+        efectivo_real: data?.efectivo_real ?? 0,
+        total_retiros: data?.total_retiros ?? 0,
+        diferencia: data?.diferencia ?? 0,
+        payments,
+        detalle: payments
+      }
+    };
   }
 
 

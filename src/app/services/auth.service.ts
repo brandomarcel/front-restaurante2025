@@ -268,16 +268,18 @@ login(username: string, password: string) {
       ''
     ).toUpperCase();
 
-    if (mode.includes('LITE')) return true;
+    const businessModel = String(company?.business_model ?? company?.businessModel ?? '').toUpperCase();
+    if (mode.includes('LITE') || businessModel.includes('FACTURACION SIMPLE')) return true;
+
+    // El endpoint de contexto sirve también a restaurantes del modelo nuevo.
+    if (typeof rawBusiness === 'string' && rawBusiness.trim()) return true;
+    if (company && typeof company === 'object' && (company.name || company.business)) return true;
 
     const features = message?.features ?? company?.features;
     if (!features || typeof features !== 'object') return false;
 
-    return this.toBool(features.direct_invoice) &&
-      this.toBool(features.orders) === false &&
-      this.toBool(features.tables) === false &&
-      this.toBool(features.kitchen) === false &&
-      this.toBool(features.cash_register) === false;
+    // La API nueva declara el tipo mediante banderas explícitas.
+    return this.toBool(features.billing) || this.toBool(features.restaurant);
   }
 
   private toBool(value: any): boolean {

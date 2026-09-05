@@ -97,6 +97,7 @@ export class InvoicesComponent implements OnInit {
 
       return byText && byOrden;
     });
+    console.log('lista filtrada:', lista  );
 
     this.invoicesFiltradas = lista;
   }

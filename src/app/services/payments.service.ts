@@ -11,17 +11,12 @@ import { frappeList } from '../core/utils/frappe-response';
 export class PaymentsService {
   private readonly apiUrl = environment.apiUrl; // Cambia si usás otro backend
 
-  private urlBase: string = '';
-  constructor(private http: HttpClient, private capabilities: CompanyCapabilitiesService) {
-    this.urlBase = this.apiUrl + API_ENDPOINT.Payments;
-  }
+  constructor(private http: HttpClient, private capabilities: CompanyCapabilitiesService) {}
     getAll() {
-      const url = this.capabilities.isLiteMode
-        ? `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_payments`
-        : `${this.urlBase}.get_payments`;
+      const url = `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_payments`;
 
-      const business = this.capabilities.businessId || localStorage.getItem('businessId') || '';
-      const params = this.capabilities.isLiteMode && business
+      const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || '';
+      const params = business
         ? new HttpParams().set('business', business)
         : undefined;
       return this.http.get<any>(url, {

@@ -82,13 +82,15 @@ export class FrappeQueryReportService {
 
   private cleanFilters(filters: Record<string, any>): Record<string, any> {
     const source = { ...(filters || {}) };
-    if (this.capabilities.isLiteMode) {
-      delete source['company'];
-      delete source['company_id'];
-      if (!source['business']) {
-        const business = this.capabilities.activeBusinessId || localStorage.getItem('businessId') || '';
-        if (business) source['business'] = business;
-      }
+    delete source['company'];
+    delete source['company_id'];
+    if (!source['business']) {
+      const business = this.capabilities.activeBusinessId
+        || this.capabilities.businessId
+        || localStorage.getItem('active_business')
+        || localStorage.getItem('businessId')
+        || '';
+      if (business) source['business'] = business;
     }
     return Object.entries(source).reduce((acc, [key, value]) => {
       if (

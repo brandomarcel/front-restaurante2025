@@ -97,12 +97,13 @@ export class MenuService implements OnDestroy {
       roles?.map((r) => String(r).trim().toUpperCase() as Role);
 
     const filterItem = (item: SubMenuItem, inheritedRoles?: Role[], inheritedFeature?: SubMenuItem['featureKey']): SubMenuItem | null => {
-      if (this.capabilities.isLiteMode && item.hideInLite) return null;
+      if (this.capabilities.isLiteMode && !this.capabilities.isEnabled('restaurant') && item.hideInLite) return null;
 
       const rolesForThisItem = normRoles(item.allowedRoles) ?? normRoles(inheritedRoles);
       const featureKey = item.featureKey ?? inheritedFeature;
       const allowedByRole = !rolesForThisItem || rolesForThisItem.some(role => currentRoles.includes(role));
-      const allowed = allowedByRole && this.capabilities.isEnabled(featureKey);
+      const allowedByPermission = !item.permissionKey || this.capabilities.hasPermission(item.permissionKey);
+      const allowed = allowedByRole && allowedByPermission && this.capabilities.isEnabled(featureKey);
 
       const children = item.children
         ?.map((child) => filterItem(child, rolesForThisItem, featureKey))
@@ -114,7 +115,7 @@ export class MenuService implements OnDestroy {
 
     return groups
       .map((group) => {
-        if (this.capabilities.isLiteMode && group.hideInLite) return null;
+        if (this.capabilities.isLiteMode && !this.capabilities.isEnabled('restaurant') && group.hideInLite) return null;
 
         const groupRoles = normRoles(group.allowedRoles);
         const groupAllowed = !groupRoles || groupRoles.some(role => currentRoles.includes(role));

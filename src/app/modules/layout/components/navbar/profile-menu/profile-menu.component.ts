@@ -86,6 +86,7 @@ export class ProfileMenuComponent implements OnInit {
   ngOnInit(): void {
     this.user = JSON.parse(localStorage.getItem('user') || '{}');
 
+    console.log('ProfileMenuComponent - user:', this.user);
     // Normaliza el rol desde varias posibles propiedades
     const rawRole =
       this.user?.businessRole ??
