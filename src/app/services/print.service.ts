@@ -10,19 +10,35 @@ export class PrintService {
   constructor(private http: HttpClient, private capabilities: CompanyCapabilitiesService) {}
     private baseUrl = environment.apiUrl;
 
+  // getOrderPdf(orderId: string) {
+  //   return this.getComanda(orderId);
+  // }
+  // getRecibo(orderId: string) {
+  //   // El contrato actual sólo provee el ticket de cocina para órdenes.
+  //   return this.getComanda(orderId);
+  // }
+
   getOrderPdf(orderId: string) {
-    return this.getComanda(orderId);
+    const url = `/printview?doctype=FacturADA Restaurant Order&name=${orderId}&trigger_print=1&format=FacturADA Restaurant Note and Kitchen Ticket&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
+    return url;
   }
   getRecibo(orderId: string) {
-    // El contrato actual sólo provee el ticket de cocina para órdenes.
-    return this.getComanda(orderId);
+    const url = `/printview?doctype=FacturADA Restaurant Order&name=${orderId}&trigger_print=1&format=FacturADA Restaurant Sale Note&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
+    return url;
   }
 
   getComanda(orderId: string) {
-    const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || '';
-    const url = `/api/method/facturada_restaurante.api.frontend.download_kitchen_ticket?order_name=${encodeURIComponent(orderId)}${business ? `&business=${encodeURIComponent(business)}` : ''}`;
+    const url = `/printview?doctype=FacturADA Restaurant Order&name=${orderId}&trigger_print=1&format=FacturADA Restaurant Kitchen Ticket&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
     return url;
   }
+
+
+
+  // getComanda(orderId: string) {
+  //   const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || '';
+  //   const url = `/api/method/facturada_restaurante.api.frontend.download_kitchen_ticket?order_name=${encodeURIComponent(orderId)}${business ? `&business=${encodeURIComponent(business)}` : ''}`;
+  //   return url;
+  // }
 
   getFacturaPdf(factId: string) {
     const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || '';
