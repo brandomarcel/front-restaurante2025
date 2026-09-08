@@ -338,11 +338,13 @@ export class SplitOrderDialogComponent implements OnChanges {
   private rebuildOrderItemOptions(): void {
     this.orderItemOptions = (this.orderItemsSource || []).map((it: any, idx: number) => {
       const orderItemRef = String(it?.order_item || it?.name || '').trim() || undefined;
-      const fallbackProduct = String(it?.product || it?.productId || '').trim() || undefined;
+      const fallbackProduct = String(it?.item || it?.product || it?.productId || '').trim() || undefined;
       const rowId = orderItemRef || `product:${fallbackProduct || idx + 1}`;
-      const productName = String(
-        it?.product_name || it?.productName || it?.description || it?.product || 'Producto'
+      const rawProductName = String(
+        it?.item_name || it?.product_name || it?.productName || it?.description || it?.product || 'Producto'
       );
+      const itemCode = String(it?.item_code || it?.product_code || it?.codigo || '').trim();
+      const productName = itemCode ? `${rawProductName}` : rawProductName;
       const remainingQty = this.toPositive(it?.remaining_qty, 0);
       const quantity = this.toPositive(it?.quantity ?? it?.qty, 0);
       const originalQty = this.toPositive(it?.original_qty, 0);
@@ -557,9 +559,22 @@ export class SplitOrderDialogComponent implements OnChanges {
 
     const normalizedPayments = this.payments.map((p) => {
       const selectedPayment = findPaymentMethod(this.paymentOptions, p.formas_de_pago);
+      const paymentMethod = getInternalPaymentValue(selectedPayment) || String(p.formas_de_pago || '').trim();
+      const amount = this.round2(this.toPositive(p.monto, 0));
       return {
-        formas_de_pago: getInternalPaymentValue(selectedPayment) || String(p.formas_de_pago || '').trim(),
-        monto: this.round2(this.toPositive(p.monto, 0))
+        // El endpoint restaurante usa los nombres nuevos; se mantienen los
+        // aliases para que el diálogo pueda validar pagos con el mismo modelo.
+        payment_method: paymentMethod,
+        payment_code: String(
+          selectedPayment?.codigo
+          || (selectedPayment as any)?.payment_code
+          || (selectedPayment as any)?.forma_pago
+          || ''
+        ).trim(),
+        amount,
+        reference: '',
+        formas_de_pago: paymentMethod,
+        monto: amount
       };
     });
 
@@ -607,8 +622,9 @@ export class SplitOrderDialogComponent implements OnChanges {
   private round2(n: number): number {
     const value = Number(n);
     if (!Number.isFinite(value)) return 0;
-    // Sin EPSILON para no forzar el 0.5 hacia arriba y alinearnos al comportamiento observado del backend.
-    return Math.round(value * 100) / 100;
+    // Todas las operaciones de pagos y subcuentas se expresan en centavos.
+    // EPSILON evita que representaciones binarias como 1.005 pierdan un centavo.
+    return Math.round((value + Number.EPSILON) * 100) / 100;
   }
 
   private toCents(n: number): number {

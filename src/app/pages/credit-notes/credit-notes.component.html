@@ -17,7 +17,7 @@
                 <input class="input" type="text" [(ngModel)]="search"
                     placeholder="Buscar por #nota, clave, cliente, identificacion o estado..." />
 
-                <select class="select" [(ngModel)]="statusFilter" (ngModelChange)="onStatusChange()">
+                <select class="input sm:max-w-[190px]" [(ngModel)]="statusFilter" (ngModelChange)="onStatusChange()">
                     <option value="">Todos los estados</option>
                     <option value="Autorizada">Autorizada</option>
                     <option value="Emitida">Emitida</option>
@@ -94,7 +94,7 @@
 
             <div class="pager">
                 <button class="pager-btn" (click)="prevPage()" [disabled]="page === 1">« Anterior</button>
-                <span class="text-sm">Pagina {{ page }} de {{ totalPages }}</span>
+                <span class="text-sm">Página {{ page }} de {{ totalPages }}</span>
                 <button class="pager-btn" (click)="nextPage()" [disabled]="page === totalPages">Siguiente »</button>
             </div>
         </section>
@@ -103,7 +103,7 @@
     <ng-template #empty>
         <div class="app-card">
             <div class="app-card-body text-center text-gray-500">
-                No hay notas de credito para mostrar.
+                No hay notas de crédito para los filtros seleccionados.
             </div>
         </div>
     </ng-template>

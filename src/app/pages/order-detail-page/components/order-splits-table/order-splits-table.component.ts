@@ -14,20 +14,25 @@ export class OrderSplitsTableComponent {
   @Input() actionLoadingSplitName = '';
   @Input() deleteLoadingSplitName = '';
   @Input() orderGrandTotal = 0;
+  @Input() canInvoice = false;
+  @Input() canDelete = false;
   @Output() invoiceSplit = new EventEmitter<OrderSplitRow>();
   @Output() deleteSplit = new EventEmitter<OrderSplitRow>();
+  @Output() viewInvoice = new EventEmitter<string>();
   expandedSplitName = '';
   showDetailModal = false;
   detailRow: OrderSplitRow | null = null;
 
   onInvoice(row: OrderSplitRow | null | undefined): void {
     if (!row?.name) return;
+    if (!this.canInvoice || this.hasInvoice(row)) return;
     if (this.isInvoicing(row) || this.isDeleting(row)) return;
     this.invoiceSplit.emit(row);
   }
 
   onDelete(row: OrderSplitRow | null | undefined): void {
     if (!row?.name) return;
+    if (!this.canDelete || this.hasInvoice(row)) return;
     if (this.isInvoicing(row) || this.isDeleting(row)) return;
     this.deleteSplit.emit(row);
   }
@@ -41,7 +46,30 @@ export class OrderSplitsTableComponent {
   }
 
   getSriStatus(row: OrderSplitRow | null | undefined): string {
-    return row?.sri?.status || 'Sin factura';
+    return row?.provider_status || row?.sri?.status || 'Sin factura';
+  }
+
+  hasInvoice(row: OrderSplitRow | null | undefined): boolean {
+    return !!String(row?.lite_invoice || row?.invoice || row?.sri?.invoice || '').trim();
+  }
+
+  openInvoice(row: OrderSplitRow): void {
+    const invoice = String(row?.lite_invoice || row?.invoice || row?.sri?.invoice || '').trim();
+    if (invoice) this.viewInvoice.emit(invoice);
+  }
+
+  getCustomerName(row: OrderSplitRow | null | undefined): string {
+    const customer = row?.customer as any;
+    return String(row?.customer_name || customer?.customer_name || customer?.nombre || customer?.fullName || customer || 'Consumidor final');
+  }
+
+  getStatusClass(row: OrderSplitRow): string {
+    const status = String(row?.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    if (status.includes('PAGADA') || status.includes('FACTURADA') || status.includes('AUTORIZ')) return 'bg-emerald-100 text-emerald-700';
+    if (status.includes('PENDIENTE')) return 'bg-amber-100 text-amber-700';
+    if (status.includes('RECHAZ') || status.includes('ERROR')) return 'bg-red-100 text-red-700';
+    if (status.includes('CANCEL')) return 'bg-slate-200 text-slate-600';
+    return 'bg-sky-100 text-sky-700';
   }
 
   toggleExpanded(row: OrderSplitRow | null | undefined): void {
@@ -74,7 +102,7 @@ export class OrderSplitsTableComponent {
   }
 
   get splitTotalSum(): number {
-    return this.round2(this.splits.reduce((acc, row) => acc + this.toNumber(row?.total), 0));
+    return this.round2(this.splits.reduce((acc, row) => acc + this.round2(this.toNumber(row?.total)), 0));
   }
 
   get pendingToSplitFromOrder(): number {
@@ -91,13 +119,11 @@ export class OrderSplitsTableComponent {
 
   // Suma de subcuentas que SI tienen pagos registrados.
   get splitTotalWithPaymentsSum(): number {
-
-    console.log('this.splits',this.splits);
     return this.round2(
       this.splits.reduce((acc, row) => {
         const hasPayments = (row?.payments || []).length > 0;
         if (!hasPayments) return acc;
-        return acc + this.toNumber(row?.total);
+        return acc + this.round2(this.toNumber(row?.total));
       }, 0)
     );
   }
@@ -122,18 +148,18 @@ export class OrderSplitsTableComponent {
     const payments = Array.isArray(row?.payments) ? row.payments : [];
     return this.round2(payments.reduce((acc, p: any) => {
       const amount = this.toNumber(p?.monto ?? p?.amount);
-      return acc + amount;
+      return acc + this.round2(amount);
     }, 0));
   }
 
   hasPaymentMismatch(row: OrderSplitRow | null | undefined): boolean {
     const payments = Array.isArray(row?.payments) ? row.payments : [];
     if (!payments.length) return false;
-    return this.round2(this.toNumber(row?.total) - this.getPaymentsSum(row)) !== 0;
+    return this.round2(this.round2(this.toNumber(row?.total)) - this.getPaymentsSum(row)) !== 0;
   }
 
   getPaymentDifference(row: OrderSplitRow | null | undefined): number {
-    return this.round2(this.toNumber(row?.total) - this.getPaymentsSum(row));
+    return this.round2(this.round2(this.toNumber(row?.total)) - this.getPaymentsSum(row));
   }
 
   getPaymentDifferenceLabel(row: OrderSplitRow | null | undefined): string {
@@ -144,7 +170,9 @@ export class OrderSplitsTableComponent {
   }
 
   getItemName(item: any): string {
-    return String(item?.productName || item?.product_name || item?.productId || item?.product || 'Producto');
+    const name = String(item?.item_name || item?.productName || item?.product_name || item?.productId || item?.product || item?.item || 'Producto');
+    const code = String(item?.item_code || item?.product_code || item?.codigo || '').trim();
+    return code ? `${code} · ${name}` : name;
   }
 
   getItemQty(item: any): number {
@@ -156,7 +184,7 @@ export class OrderSplitsTableComponent {
   }
 
   getPaymentMethod(payment: any): string {
-    return String(payment?.formas_de_pago || payment?.method || 'Metodo');
+    return String(payment?.payment_method || payment?.formas_de_pago || payment?.method || 'Metodo');
   }
 
   getPaymentAmount(payment: any): number {

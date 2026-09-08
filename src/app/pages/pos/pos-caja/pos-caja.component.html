@@ -2,6 +2,17 @@
 
     <div class="flex h-full w-full min-h-0 flex-col px-3 py-3 sm:px-4 lg:px-5">
 
+        <section *ngIf="currentFiscalLocation || posTerminalBlockMessage"
+            class="mb-2 flex-shrink-0 rounded-lg border px-3 py-2 text-[10px]"
+            [ngClass]="posTerminalBlockMessage ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-white text-slate-600'">
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span class="font-bold uppercase tracking-wide text-primary">Ubicación de emisión</span>
+                <span *ngIf="currentFiscalLocation">{{ fiscalLocationLabel(currentFiscalLocation) }} <em *ngIf="terminalAssignmentLabel" class="not-italic text-primary">({{ terminalAssignmentLabel }})</em></span>
+                <span *ngIf="currentFiscalLocation?.environment"><b>Ambiente:</b> {{ currentFiscalLocation.environment }}</span>
+            </div>
+            <p *ngIf="posTerminalBlockMessage" class="mt-1 font-semibold">{{ posTerminalBlockMessage }}</p>
+        </section>
+
         <div class="grid flex-1 min-h-0 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_330px]">
 
             <!-- ================= IZQUIERDA ================= -->

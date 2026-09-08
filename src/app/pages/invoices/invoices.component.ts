@@ -12,6 +12,7 @@ import { environment } from 'src/environments/environment';
 import { toast } from 'ngx-sonner';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { liteEmissionMessages } from 'src/app/core/utils/lite-invoice-emission';
+import { canConsultLiteInvoice, canRetryLiteInvoice, getLiteInvoiceAction } from 'src/app/core/utils/lite-invoice-actions';
 
 @Component({
   selector: 'app-invoices',
@@ -64,7 +65,7 @@ export class InvoicesComponent implements OnInit {
       },
       error: (err: any) => {
         this.spinner.hide();
-        console.error('Error al cargar facturas:', err);
+        toast.error(String(err?.error?.message || err?.message || 'No se pudieron cargar las facturas.'));
       }
     });
   }
@@ -83,10 +84,16 @@ export class InvoicesComponent implements OnInit {
       const byText = [
         inv?.name,
         inv?.sri?.number,
+        inv?.document_number,
         inv?.sri?.access_key,
         inv?.customer?.fullName,
         inv?.customer?.num_identificacion,
-        inv?.sri?.status
+        inv?.customer_name,
+        inv?.customer_identification_number,
+        inv?.status,
+        inv?.sri?.status,
+        inv?.sri?.provider_status,
+        inv?.email_status
       ].map(x => (x ?? '').toString().toLowerCase()).some(x => x.includes(term));
 
       const hasOrder = !!inv?.order;
@@ -97,8 +104,6 @@ export class InvoicesComponent implements OnInit {
 
       return byText && byOrden;
     });
-    console.log('lista filtrada:', lista  );
-
     this.invoicesFiltradas = lista;
   }
 
@@ -106,7 +111,8 @@ export class InvoicesComponent implements OnInit {
     this._search = '';
     this.statusFiltro = '';
     this.conOrdenFiltro = '';
-    this.aplicarFiltros();
+    this.page = 1;
+    this.loadInvoices();
   }
 
   nextPage(): void { if (this.page < this.totalPages) { this.page++; this.loadInvoices(); } }
@@ -179,10 +185,11 @@ export class InvoicesComponent implements OnInit {
       return;
     }
 
+    const liteAction = this.capabilities.isLiteMode ? getLiteInvoiceAction(this.invoiceSelected) : 'retry';
     this.actionRunning = true;
     this.spinner.show();
     const request$ = this.capabilities.isLiteMode
-      ? (this.isLiteRetryable(this.invoiceSelected)
+      ? (liteAction === 'retry'
         ? this.svc.retryLiteInvoice(invoiceName)
         : this.svc.refreshLiteInvoiceStatus(invoiceName))
       : this.svc.emit_existing_invoice_v2(invoiceName);
@@ -195,11 +202,16 @@ export class InvoicesComponent implements OnInit {
           ...liteEmissionMessages(res?.emission),
           ...liteEmissionMessages(res?.data)
         ].filter(Boolean);
-        toast.success(messages[0] || (this.capabilities.isLiteMode && this.isLiteRetryable(this.invoiceSelected)
+        toast.success(messages[0] || (this.capabilities.isLiteMode && liteAction === 'retry'
           ? 'Reintento de emisión enviado.'
           : 'Estado SRI actualizado'));
         this.loadInvoices();
+        const replacementName = String(res?.invoiceName ?? res?.data?.name ?? '').trim();
         this.closeModal();
+        if (replacementName && replacementName !== invoiceName) {
+          toast.info('La factura original fue reemplazada por una nueva emisión.');
+          this.router.navigate(['/dashboard/invoices', replacementName]);
+        }
       },
       error: (error) => {
         const message = this.readActionError(error);
@@ -218,12 +230,17 @@ export class InvoicesComponent implements OnInit {
 
   getSriStatusLabel(status: string | undefined | null): string {
     const value = String(status || '').trim().toUpperCase();
-    if (value === 'AUTORIZADO' || value === 'AUTORIZADA' || value === 'AUTHORIZED' || value === 'SRI_AUTHORIZED') return 'AUTORIZADO';
+    if (value === 'AUTORIZADO' || value === 'AUTORIZADA' || value === 'AUTHORIZED' || value === 'SRI_AUTHORIZED') return 'Autorizada';
     if (value === 'REJECTED' || value === 'RECHAZADO' || value === 'RECHAZADA' || value === 'NOT_AUTHORIZED' || value === 'SRI_REJECTED') return 'Rechazada';
     if (value === 'ERROR') return 'Error';
+    if (value === 'ERROR DE ENVIO' || value === 'ERROR DE ENVÍO') return 'Error de envío';
     if (value === 'QUEUED' || value === 'EN COLA') return 'En cola';
     if (value === 'PROCESSING' || value === 'ENVIADO' || value === 'FIRMADO') return 'En proceso';
+    if (value === 'PENDIENTE EMISION' || value === 'PENDIENTE EMISIÓN') return 'Pendiente emisión';
+    if (value === 'EMITIDA') return 'Emitida';
     if (value === 'DRAFT' || value === 'BORRADOR') return 'Borrador';
+    if (value === 'REEMPLAZADA' || value === 'REPLACED') return 'Reemplazada';
+    if (value === 'ANULADA') return 'Anulada';
     return value || '—';
   }
 
@@ -238,31 +255,53 @@ export class InvoicesComponent implements OnInit {
     const status = String(invoice?.status || invoice?.sri?.status || '').trim().toUpperCase();
     const provider = String(invoice?.sri?.provider_status || invoice?.provider_status || '').trim().toUpperCase();
     const code = String(invoice?.sri?.sri_code || invoice?.sri?.status_code || invoice?.sri?.code || invoice?.sri_code || invoice?.status_code || invoice?.provider_status_code || '').trim().toUpperCase();
-    if (provider === 'AUTHORIZED') return 'AUTORIZADO';
+    if (provider === 'AUTHORIZED') return 'Autorizada';
     if (status === 'EMITIDA' && (['PROCESSING', 'RECEIVED', 'PENDING'].includes(provider) || code === '70')) return 'Procesando';
     return this.getSriStatusLabel(status);
   }
 
   getInvoiceStatusBadge(invoice: any): string {
     const label = this.getInvoiceStatusLabel(invoice);
-    if (label === 'AUTORIZADO') return 'badge-green';
-    if (label === 'Rechazada' || label === 'Error') return 'badge-red';
+    if (label === 'Autorizada') return 'badge-green';
+    if (label === 'Rechazada' || label === 'Error' || label === 'Error de envío' || label === 'Anulada') return 'badge-red';
+    if (label === 'Reemplazada') return 'badge-gray';
     return 'badge-yellow';
   }
 
+  documentNumber(invoice: any): string {
+    return String(invoice?.document_number ?? invoice?.sri?.number ?? '—');
+  }
+
+  postingDate(invoice: any): string {
+    return String(invoice?.posting_date ?? invoice?.createdAt ?? invoice?.creation ?? '—');
+  }
+
+  customerName(invoice: any): string {
+    return String(invoice?.customer?.fullName ?? invoice?.customer?.customer_name ?? invoice?.customer_name ?? invoice?.nombre_cliente ?? '—');
+  }
+
+  customerIdentification(invoice: any): string {
+    return String(invoice?.customer?.num_identificacion ?? invoice?.customer?.identification_number ?? invoice?.customer_identification_number ?? invoice?.identificacion_cliente ?? '—');
+  }
+
+  providerStatus(invoice: any): string {
+    return String(invoice?.sri?.provider_status ?? invoice?.electronic?.provider_status ?? invoice?.provider_status ?? '—');
+  }
+
+  sriMessage(invoice: any): string {
+    return String(invoice?.sri?.sri_message ?? invoice?.electronic?.sri_message ?? invoice?.sri_message ?? invoice?.emission_error ?? '—');
+  }
+
+  emailStatus(invoice: any): string {
+    return String(invoice?.email?.status ?? invoice?.email_status ?? 'No enviado');
+  }
+
   isLiteProcessing(invoice: any): boolean {
-    const value = String(invoice?.status || invoice?.sri?.status || '').trim().toUpperCase();
-    const provider = String(invoice?.sri?.provider_status || invoice?.provider_status || '').trim().toUpperCase();
-    const code = String(invoice?.sri?.sri_code || invoice?.sri?.status_code || invoice?.sri?.code || invoice?.sri_code || invoice?.status_code || invoice?.provider_status_code || '').trim().toUpperCase();
-    return ['PROCESSING', 'PENDING', 'PENDIENTE EMISION', 'PENDIENTE EMISIÓN', 'EN COLA', 'FIRMADO', 'ENVIADO', 'QUEUED'].includes(value) ||
-      code === '70' || (value === 'EMITIDA' && ['PROCESSING', 'RECEIVED', 'PENDING'].includes(provider));
+    return canConsultLiteInvoice(invoice);
   }
 
   isLiteRetryable(invoice: any): boolean {
-    const value = String(invoice?.status || invoice?.sri?.status || '').trim().toUpperCase();
-    const provider = String(invoice?.sri?.provider_status || invoice?.provider_status || '').trim().toUpperCase();
-    return ['ERROR DE ENVIO', 'ERROR DE ENVÍO', 'RECHAZADO', 'RECHAZADA', 'REJECTED'].includes(value) ||
-      ['ERROR', 'FAILED', 'REJECTED', 'NOT_AUTHORIZED'].includes(provider);
+    return canRetryLiteInvoice(invoice);
   }
 
   get sriActionLabel(): string {

@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import {
   AbstractControl,
   FormBuilder,
@@ -40,6 +41,8 @@ import { liteEmissionMessages, liteEmissionState } from 'src/app/core/utils/lite
   styles: [':host { display: block; height: 100%; min-height: 0; }']
 })
 export class PosCajaComponent implements OnInit, OnDestroy {
+  @Input() selectedTableId = '';
+  @Input() selectedTableLabel = '';
   ambiente = '';
   showPaymentModal = false;
   showCustomerModal = false;
@@ -96,10 +99,12 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     public cartService: CartService,
     public alertService: AlertService,
     private capabilities: CompanyCapabilitiesService,
-    private utilsService: UtilsService
+    private utilsService: UtilsService,
+    private router: Router
   ) { }
 
   ngOnInit(): void {
+    if (this.selectedTableLabel && !this.alias) this.alias = this.selectedTableLabel;
     this.ambiente = this.utilsService.getAmbienteActual()
       || localStorage.getItem('ambiente')
       || '---';
@@ -141,11 +146,32 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   get canEmitInvoice(): boolean {
-    return this.capabilities.canEmit();
+    return this.capabilities.canEmit() && !this.capabilities.getPosTerminalBlockMessage();
+  }
+
+  get currentFiscalLocation(): any | null {
+    return this.capabilities.activeFiscalLocation;
+  }
+
+  get terminalAssignmentLabel(): string {
+    return this.currentFiscalLocation?.terminal && this.capabilities.terminalAccessRequired ? 'Asignado a tu usuario' : '';
+  }
+
+  get posTerminalBlockMessage(): string | null {
+    return this.capabilities.getPosTerminalBlockMessage();
+  }
+
+  fiscalLocationLabel(location: any): string {
+    const establishment = location?.establishment;
+    const point = location?.emissionPoint;
+    const establishmentCode = establishment?.establishment_code || '—';
+    const pointCode = point?.emission_point_code || '—';
+    return establishment || point ? `${establishmentCode}-${pointCode}` : 'No configurado';
   }
 
   get invoicePlanBlockMessage(): string | null {
-    return this.capabilities.getPlanBlockMessage('direct_invoice');
+    return this.capabilities.getPlanBlockMessage('direct_invoice')
+      || this.capabilities.getPosTerminalBlockMessage();
   }
 
   get visibleProductList(): any[] {
@@ -811,6 +837,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     }
 
     return {
+      table: this.selectedTableId || null,
       customer: this.customer?.name,
       alias: this.alias.trim(),
       estado: typePago,
@@ -836,6 +863,13 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   private submitOrder(payload: any): void {
+    if (payload?.estado === 'Factura') {
+      const terminalBlockMessage = this.capabilities.getPosTerminalBlockMessage();
+      if (terminalBlockMessage) {
+        toast.error(terminalBlockMessage);
+        return;
+      }
+    }
     this.isSubmittingOrder = true;
     this.spinner.show();
     this.ordersService.create_order_v2(payload).pipe(finalize(() => {
@@ -843,13 +877,18 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       this.spinner.hide();
     })).subscribe({
       next: (res: any) => {
-        const orderId = res?.message?.name;
+        const orderId = String(res?.message?.data?.name ?? res?.message?.name ?? res?.data?.name ?? '').trim();
         if (!orderId) {
           toast.error('No se recibio numero de orden.');
           return;
         }
         this.notifyOrderResult(res, payload?.estado === 'Factura');
         this.refreshProductsSilently();
+        window.dispatchEvent(new CustomEvent('facturada:restaurant-data-changed'));
+        if (this.selectedTableId) {
+          this.router.navigate(['/dashboard/orders', orderId]);
+          return;
+        }
         this.openPrintModal(orderId);
       }
     });

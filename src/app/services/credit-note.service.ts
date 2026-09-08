@@ -30,7 +30,16 @@ export class CreditNoteService {
     };
     const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId');
     if (!business) return throwError(() => new Error('Selecciona un negocio para crear la nota de crédito.'));
+    const documentConfiguration = this.capabilities.getLiteDocumentConfiguration('Nota de Credito');
+    if (!documentConfiguration) {
+      return throwError(() => new Error('No existe una secuencia activa para la nota de crédito en el establecimiento, punto de emisión y ambiente seleccionados.'));
+    }
     payload.business = business;
+    payload.environment = documentConfiguration.environment;
+    payload.establishment = documentConfiguration.establishment.name;
+    payload.emission_point = documentConfiguration.emissionPoint.name;
+    payload.establishment_code = documentConfiguration.establishment.establishment_code;
+    payload.emission_point_code = documentConfiguration.emissionPoint.emission_point_code;
     // El contrato Lite permite omitirlo, pero el frontend envía explícitamente
     // el motivo predeterminado para mantener el payload visible y consistente.
     payload.motivo = String(motivo || '').trim() || 'Devolucion de mercaderia o servicio';

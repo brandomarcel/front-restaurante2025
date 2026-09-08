@@ -26,13 +26,14 @@ describe('InvoicesService (FacturADA Lite)', () => {
 
   afterEach(() => http.verify());
 
-  it('sends the Lite payload using posting_date, item and payment_method', () => {
+  it('lets the backend assign the Lite issue date and normalizes item and payment_method', () => {
     service.create_and_emit_from_ui_v2({
       customer: 'FLC-1', posting_date: '2026-09-02',
       items: [{ item_code: 'FLI-1', qty: 1, rate: 10, tax_rate: 15 }],
       payments: [{ formas_de_pago: 'PAY-1', monto: 11.5 }]
     }).subscribe();
     const req = http.expectOne((request) => request.url.includes('create_and_emit_from_ui_v2'));
+    expect(req.request.body.posting_date).toBeUndefined();
     expect(req.request.body.items[0].item).toBe('FLI-1');
     expect(req.request.body.payments[0]).toEqual({ payment_method: 'PAY-1', payment_code: '', amount: 11.5 });
     req.flush({ message: { emission: { ok: true, code: 'SRI_AUTHORIZED' }, data: { name: 'FLINV-1' } } });

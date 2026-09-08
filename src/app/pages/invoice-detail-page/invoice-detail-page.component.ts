@@ -8,18 +8,19 @@ import { toast } from 'ngx-sonner';
 import { PrintService } from 'src/app/services/print.service';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { finalize, lastValueFrom } from 'rxjs';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CreditNoteService } from 'src/app/services/credit-note.service';
 import { NgxSpinnerComponent, NgxSpinnerService } from 'ngx-spinner';
 import { AdditionalFieldPayload, normalizeAdditionalFields } from 'src/app/core/models/additional-field';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { roundMoney } from 'src/app/shared/utils/payment.utils';
 import { LiteEmissionState, liteEmissionMessages, liteEmissionState } from 'src/app/core/utils/lite-invoice-emission';
+import { canConsultLiteInvoice, canRetryLiteInvoice } from 'src/app/core/utils/lite-invoice-actions';
 
 @Component({
   selector: 'app-invoice-detail-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, EcuadorTimePipe, FontAwesomeModule, FormsModule, ReactiveFormsModule, NgxSpinnerComponent],
+  imports: [CommonModule, RouterModule, EcuadorTimePipe, FontAwesomeModule, ReactiveFormsModule, NgxSpinnerComponent],
   templateUrl: './invoice-detail-page.component.html'
 })
 export class InvoiceDetailPageComponent implements OnInit {
@@ -34,8 +35,6 @@ export class InvoiceDetailPageComponent implements OnInit {
     'Otro'
   ];
   showMotivoModal = false;
-  showReissueModal = false;
-  reissueDate = '';
   liteActionRunning = false;
   emailActionRunning = false;
   documentActionRunning = false;
@@ -294,40 +293,20 @@ this.spinner.hide();
         this.applyLiteActionResponse(res);
         const messages = this.liteActionMessages(res);
         this.showLiteActionResult(res, messages, 'Reintento de emisión enviado.');
+        // Al reintentar una factura de un día anterior el backend puede crear
+        // un reemplazo con fecha y clave de acceso nuevas. El nuevo documento
+        // es el único que debemos volver a consultar.
+        const newName = String(res?.invoiceName ?? res?.data?.name ?? '').trim();
+        if (newName && newName !== name) {
+          toast.info('La factura anterior fue reemplazada por una nueva emisión.');
+          this.router.navigate(['/dashboard/invoices', newName]);
+          return;
+        }
         this.fetch(name);
       },
       error: (err) => toast.error(this.getActionError(err))
     });
   }
-
-  openReissue(): void {
-    this.reissueDate = new Date().toISOString().slice(0, 10);
-    this.showReissueModal = true;
-  }
-
-  closeReissue(): void { this.showReissueModal = false; }
-
-  reissueLiteInvoice(): void {
-    const name = this.invoice?.name;
-    if (!name || !this.reissueDate || !this.canReissueLite || this.liteActionRunning) return;
-    this.liteActionRunning = true;
-    this.spinner.show();
-    this.invoicesSvc.reissueLiteInvoice(name, this.reissueDate).pipe(finalize(() => { this.spinner.hide(); this.liteActionRunning = false; })).subscribe({
-      next: (res: any) => {
-        const newName = String(res?.invoiceName || res?.data?.name || '').trim();
-        toast.success(`Nueva factura generada: ${newName || 'consulte el listado'}.`);
-        this.closeReissue();
-        if (newName && newName !== name) {
-          this.router.navigate(['/dashboard/invoices', newName]);
-        } else {
-          this.fetch(name);
-        }
-      },
-      error: (err) => toast.error(this.getActionError(err))
-    });
-  }
-
-
 
   // abrir/cerrar
   openMotivo() {
@@ -419,7 +398,6 @@ this.spinner.hide();
   @HostListener('document:keydown.escape')
   onEsc() {
     if (this.showMotivoModal) this.closeMotivo();
-    if (this.showReissueModal) this.closeReissue();
   }
 
   get invoiceItems(): any[] {
@@ -446,7 +424,7 @@ this.spinner.hide();
     const providerStatus = this.liteProviderStatus;
     const providerCode = this.liteProviderCode;
     if (status === 'AUTORIZADO' || status === 'AUTORIZADA' || status === 'AUTHORIZED' || status === 'SRI_AUTHORIZED' || providerStatus === 'AUTHORIZED') return 'AUTHORIZED';
-    if (providerCode === '70' || ['PROCESSING', 'PENDING', 'PENDIENTE EMISION', 'PENDIENTE EMISIÓN', 'EN COLA', 'FIRMADO', 'ENVIADO', 'QUEUED'].includes(status)) return 'PROCESSING';
+    if (providerCode === '70' || providerCode === '43' || ['PROCESSING', 'PENDING', 'PENDIENTE EMISION', 'PENDIENTE EMISIÓN', 'EN COLA', 'FIRMADO', 'ENVIADO', 'QUEUED'].includes(status)) return 'PROCESSING';
     if (status === 'EMITIDA' && ['PROCESSING', 'RECEIVED', 'PENDING'].includes(providerStatus)) return 'PROCESSING';
     if (['RECHAZADO', 'RECHAZADA', 'REJECTED', 'NOT_AUTHORIZED', 'SRI_REJECTED'].includes(status)) return 'REJECTED';
     if (['ERROR', 'ERRONEO', 'ERROR DE ENVIO', 'ERROR DE ENVÍO'].includes(status)) return 'ERROR';
@@ -488,23 +466,11 @@ this.spinner.hide();
     return status || '—';
   }
   get canConsultAuthorization(): boolean {
-    return this.capabilities.isLiteMode && !this.isLiteAuthorized &&
-      (this.liteProviderCode === '70' || this.liteProviderCode === '43' || this.hasAccessKeyRegistered ||
-        ['PROCESSING', 'PENDING', 'PENDIENTE EMISION', 'PENDIENTE EMISIÓN', 'EN COLA', 'FIRMADO', 'ENVIADO'].includes(this.invoiceStatusRaw) ||
-        (this.invoiceStatusRaw === 'EMITIDA' && ['PROCESSING', 'RECEIVED', 'PENDING'].includes(this.liteProviderStatus)));
+    return this.capabilities.isLiteMode && canConsultLiteInvoice(this.invoice);
   }
   get canRetryLite(): boolean {
-    const provider = this.liteProviderStatus;
-    if (!this.capabilities.isLiteMode || this.isLiteAuthorized || this.hasAccessKeyRegistered ||
-      (this.isAuthorizationPending && !['PENDIENTE EMISION', 'PENDIENTE EMISIÓN'].includes(this.invoiceStatusRaw))) return false;
-    return ['ERROR DE ENVIO', 'ERROR DE ENVÍO', 'RECHAZADO', 'RECHAZADA', 'REJECTED', 'PENDIENTE EMISION', 'PENDIENTE EMISIÓN'].includes(this.invoiceStatusRaw) ||
-      ['ERROR', 'FAILED', 'REJECTED', 'NOT_AUTHORIZED'].includes(provider);
+    return this.capabilities.isLiteMode && canRetryLiteInvoice(this.invoice);
   }
-  get canReissueLite(): boolean {
-    return this.capabilities.isLiteMode && !this.hasAccessKeyRegistered && !this.isAuthorizationPending &&
-      ['ERROR DE ENVIO', 'ERROR DE ENVÍO', 'RECHAZADO', 'RECHAZADA', 'REJECTED'].includes(this.invoiceStatusRaw);
-  }
-
   get canAnnul(): boolean {
     return !this.annulBlockReason;
   }
@@ -667,7 +633,8 @@ this.spinner.hide();
         provider_status: data?.provider_status ?? electronic?.provider_status ?? currentSri.provider_status,
         sri_message: data?.sri_message ?? electronic?.sri_message ?? currentSri.sri_message,
         emission_error: data?.emission_error ?? electronic?.emission_error ?? currentSri.emission_error
-      }
+      },
+      emission: response?.emission ?? data?.emission ?? this.invoice?.emission
     };
     this.additionalFields = normalizeAdditionalFields(this.invoice?.additionalFields ?? this.invoice?.additional_fields);
   }

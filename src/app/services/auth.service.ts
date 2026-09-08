@@ -141,11 +141,20 @@ login(username: string, password: string) {
   selectLiteBusiness(business: string): Observable<any> {
     const businessId = String(business || '').trim();
     if (!businessId) return throwError(() => new Error('__LITE_BUSINESS_SELECTION_REQUIRED__'));
-    const selected = this.capabilities.businesses.find((item: any) =>
-      String(item?.name || item?.business || '') === businessId
+    // Refrescar el catálogo antes de cambiar evita que una lista resumida del
+    // contexto deje el <select> mostrando otra empresa. Solo se persiste una
+    // empresa que el endpoint autorizado confirmó para este usuario.
+    return this.getLiteBusinesses().pipe(
+      switchMap((businesses) => {
+        this.capabilities.setBusinesses(businesses);
+        const selected = businesses.find((item: any) =>
+          String(item?.name || item?.business || '') === businessId
+        );
+        if (!selected) return throwError(() => ({ status: 403, message: 'No tiene permisos para acceder a esta empresa.' }));
+        this.capabilities.setActiveBusiness(selected, businesses);
+        return this.getLiteUserContext(businessId);
+      })
     );
-    if (selected) this.capabilities.setActiveBusiness(selected);
-    return this.getLiteUserContext(businessId);
   }
 
   getLoggedUser() {
@@ -180,6 +189,7 @@ login(username: string, password: string) {
         const roles = this.readRolesFromContext(message);
         const userData = message?.user_data ?? message?.user ?? {};
         const userEmail = message?.user_email ?? message?.email ?? userData?.email ?? userData?.name ?? message?.user;
+        const businesses = Array.isArray(message?.businesses) ? message.businesses : this.capabilities.businesses;
 
         const user = {
           email: userEmail,
@@ -188,7 +198,7 @@ login(username: string, password: string) {
           businessRole: message?.business_role ?? business?.business_role ?? null,
           permissions: message?.permissions ?? null,
           user_data: userData,
-          businesses: Array.isArray(message?.businesses) ? message.businesses : [],
+          businesses,
           activeBusiness: business,
           companyId: business?.company || null,
           businessId: business?.name || business?.business || (typeof rawBusiness === 'string' ? rawBusiness : null)

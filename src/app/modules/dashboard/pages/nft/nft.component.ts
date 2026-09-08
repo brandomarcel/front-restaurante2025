@@ -86,6 +86,9 @@ export class NftComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private avisoCounter = 0;
   private cashDataRequested = false;
+  private readonly restaurantDataChanged = () => {
+    if (this.isRestaurantMode) void this.loadData();
+  };
 
   constructor(
     private ordersService: OrdersService,
@@ -98,11 +101,13 @@ export class NftComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.businessMode = this.capabilities.businessMode;
     this.currentPlan = this.capabilities.plan;
+    window.addEventListener('facturada:restaurant-data-changed', this.restaurantDataChanged);
     this.actualizarVisualizaciones();
     this.loadData();
   }
 
   ngOnDestroy(): void {
+    window.removeEventListener('facturada:restaurant-data-changed', this.restaurantDataChanged);
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -596,15 +601,18 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   get hasCurrentPlan(): boolean {
-    return !!this.currentPlan;
+    return !!this.currentPlan || !!this.liteDashboard?.plan;
   }
 
   get planName(): string {
-    return this.currentPlan?.plan_name || this.currentPlan?.plan || 'Sin plan asignado';
+    return this.currentPlan?.plan_name
+      || this.currentPlan?.plan
+      || this.liteDashboard?.plan?.name
+      || 'Sin plan asignado';
   }
 
   get planStatus(): string {
-    return `${this.currentPlan?.status || 'SIN PLAN'}`.toUpperCase();
+    return `${this.currentPlan?.status || this.liteDashboard?.plan?.status || 'SIN PLAN'}`.toUpperCase();
   }
 
   get planStatusClasses(): string {
@@ -612,25 +620,31 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   get planIsInactive(): boolean {
-    return !!this.currentPlan && this.currentPlan.active === false;
+    const status = `${this.currentPlan?.status || this.liteDashboard?.plan?.status || ''}`.toUpperCase();
+    return (this.currentPlan?.active === false)
+      || (this.liteDashboard?.plan?.active === false)
+      || ['VENCIDO', 'SUSPENDIDO', 'CANCELADO', 'INACTIVO'].includes(status);
   }
 
   get planUnlimitedVouchers(): boolean {
-    return !!this.currentPlan?.unlimited_authorized_vouchers || Number(this.currentPlan?.remaining_authorized_vouchers) === -1;
+    return !!this.currentPlan?.unlimited_authorized_vouchers
+      || Number(this.currentPlan?.remaining_authorized_vouchers) === -1
+      || this.liteDashboard?.plan?.unlimited_documents === true
+      || Number(this.liteDashboard?.plan?.remaining_authorized_documents) === -1;
   }
 
   get planUsedVouchers(): number {
-    return Number(this.currentPlan?.used_authorized_vouchers) || 0;
+    return Number(this.currentPlan?.used_authorized_vouchers ?? this.liteDashboard?.plan?.used_authorized_documents) || 0;
   }
 
   get planPurchasedVouchers(): number {
-    return Number(this.currentPlan?.purchased_authorized_vouchers) || 0;
+    return Number(this.currentPlan?.purchased_authorized_vouchers ?? this.liteDashboard?.plan?.max_authorized_documents) || 0;
   }
 
   get planRemainingLabel(): string {
-    if (!this.currentPlan) return '—';
+    if (!this.currentPlan && !this.liteDashboard?.plan) return '—';
     if (this.planUnlimitedVouchers) return 'Ilimitados';
-    return `${Number(this.currentPlan.remaining_authorized_vouchers) || 0}`;
+    return `${Number(this.currentPlan?.remaining_authorized_vouchers ?? this.liteDashboard?.plan?.remaining_authorized_documents) || 0}`;
   }
 
   get planVoucherUsageLabel(): string {
@@ -640,13 +654,16 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   get planVigenciaLabel(): string {
-    if (!this.currentPlan) return '—';
-    return `${this.formatPlanDate(this.currentPlan.start_date)} hasta ${this.formatPlanDate(this.currentPlan.end_date)}`;
+    const start = this.currentPlan?.start_date || this.liteDashboard?.plan?.start_date;
+    const end = this.currentPlan?.end_date || this.liteDashboard?.plan?.end_date;
+    if (!start && !end) return '—';
+    return `${this.formatPlanDate(start)} hasta ${this.formatPlanDate(end)}`;
   }
 
   get planDaysToExpire(): number | null {
-    if (!this.currentPlan?.end_date) return null;
-    const end = this.parsePlanDate(this.currentPlan.end_date);
+    const endDate = this.currentPlan?.end_date || this.liteDashboard?.plan?.end_date;
+    if (!endDate) return null;
+    const end = this.parsePlanDate(endDate);
     if (!end) return null;
     const today = new Date();
     today.setHours(0, 0, 0, 0);

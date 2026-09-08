@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { CartService } from '../services/cart.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { CategoryService } from 'src/app/services/category.service';
@@ -10,6 +11,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { canSellProduct, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 type OrderType = 'Servirse' | 'Llevar' | 'Domicilio';
 
@@ -21,6 +23,8 @@ type OrderType = 'Servirse' | 'Llevar' | 'Domicilio';
   styles: [':host { display: block; height: 100%; min-height: 0; }']
 })
 export class PosMeseroComponent implements OnInit {
+  @Input() selectedTableId = '';
+  @Input() selectedTableLabel = '';
 
   products: any[] = [];
   filteredProductList: any[] = [];
@@ -45,10 +49,13 @@ export class PosMeseroComponent implements OnInit {
     private categoryService: CategoryService,
     private ordersService: OrdersService,
     private spinner: NgxSpinnerService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private router: Router,
+    private capabilities: CompanyCapabilitiesService
   ) {}
 
   ngOnInit(): void {
+    if (this.selectedTableLabel && !this.alias) this.alias = this.selectedTableLabel;
     this.loadFavorites();
     this.loadProducts();
     this.loadCategories();
@@ -68,6 +75,26 @@ export class PosMeseroComponent implements OnInit {
 
   get total(): number {
     return this.cartService.total;
+  }
+
+  get currentFiscalLocation(): any | null {
+    return this.capabilities.activeFiscalLocation;
+  }
+
+  get posTerminalBlockMessage(): string | null {
+    return this.capabilities.getPosTerminalBlockMessage();
+  }
+
+  get terminalAssignmentLabel(): string {
+    return this.currentFiscalLocation?.terminal && this.capabilities.terminalAccessRequired ? 'Asignado a tu usuario' : '';
+  }
+
+  fiscalLocationLabel(location: any): string {
+    const establishment = location?.establishment;
+    const point = location?.emissionPoint;
+    const establishmentCode = establishment?.establishment_code || '—';
+    const pointCode = point?.emission_point_code || '—';
+    return establishment || point ? `${establishmentCode}-${pointCode}` : 'No configurado';
   }
 
   get visibleProductList(): any[] {
@@ -240,6 +267,7 @@ export class PosMeseroComponent implements OnInit {
     }
 
     const order = {
+      table: this.selectedTableId || null,
       alias: this.alias.trim().toUpperCase(),
       estado: 'Nota Venta',
       total: this.cartService.total.toFixed(2),
@@ -272,9 +300,15 @@ export class PosMeseroComponent implements OnInit {
         this.spinner.hide();
       })
     ).subscribe({
-      next: () => {
+      next: (response: any) => {
         toast.success('Orden creada correctamente');
         this.refreshProductsSilently();
+        window.dispatchEvent(new CustomEvent('facturada:restaurant-data-changed'));
+        const orderName = String(response?.message?.name ?? response?.message?.data?.name ?? response?.data?.name ?? '').trim();
+        if (this.selectedTableId && orderName) {
+          this.router.navigate(['/dashboard/orders', orderName]);
+          return;
+        }
         this.resetOrderForm();
       },
       error: () => { }
@@ -388,4 +422,3 @@ export class PosMeseroComponent implements OnInit {
     });
   }
 }
-

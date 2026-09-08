@@ -1,193 +1,192 @@
-<div class="app-container space-y-4">
-    <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <h2 class="text-xl font-bold">Usuarios</h2>
-                <p class="text-xs text-primary-foreground/80">Gestion de accesos y roles del sistema.</p>
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-                <div class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
-                    Registros: {{ filtered.length }}
-                </div>
-                <div class="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold">
-                    Activos: {{ activeCount }}
-                </div>
-                <div class="rounded-full bg-rose-500/20 px-3 py-1 text-xs font-semibold">
-                    Inactivos: {{ inactiveCount }}
-                </div>
-                <app-button impact="bold" tone="light" shape="rounded" size="small" (click)="abrirModal()">
-                    Nuevo Usuario
-                </app-button>
-            </div>
-        </div>
-    </section>
-
-    <section class="rounded-xl border border-primary/15 bg-white p-4 shadow-sm">
-        <div class="toolbar !mb-0 gap-2">
-            <input class="input !w-full md:!w-[360px]" type="text" [(ngModel)]="search" placeholder="Buscar por nombre o email..." />
-            <select class="select !w-full md:!w-[220px]" [ngModel]="roleFilter" (ngModelChange)="setRoleFilter($event)">
-                <option value="all">Todos los roles</option>
-                <option value="gerente">Gerente</option>
-                <option value="cajero">Cajero</option>
-                <option value="mesero">Mesero</option>
-            </select>
-            <div class="flex gap-2 md:ml-auto">
-                <app-button impact="bold" tone="light" shape="rounded" size="small" (click)="search=''; filtrar()">
-                    Limpiar
-                </app-button>
-            </div>
-        </div>
-    </section>
-
-    <ng-container *ngIf="filtered.length; else emptyState">
-        <section class="app-table-wrap">
-            <table class="app-table text-xs">
-                <thead class="app-thead">
-                    <tr>
-                        <th class="app-th">Email</th>
-                        <th class="app-th">Nombre</th>
-                        <th class="app-th">Telefono</th>
-                        <th class="app-th">Rol</th>
-                        <th class="app-th text-center">Estado</th>
-                        <th class="app-th text-center">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr *ngFor="let u of filtered; trackBy: trackBy" class="app-tr">
-                        <td class="app-td">{{ u.email }}</td>
-                        <td class="app-td">{{ (u.first_name || '') + ' ' + (u.last_name || '') }}</td>
-                        <td class="app-td">{{ u.phone || '—' }}</td>
-                        <td class="app-td capitalize">{{ u.role_key || (u.role_profile_name || '—') }}</td>
-                        <td class="app-td text-center">
-                            <button
-                                class="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold transition"
-                                [ngClass]="u.enabled
-                                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                                  : 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'"
-                                (click)="toggleEnabled(u)"
-                            >
-                                {{ u.enabled ? 'Activo' : 'Inactivo' }}
-                            </button>
-                        </td>
-                        <td class="app-td text-center">
-                            <div class="inline-flex gap-2">
-                                <button class="btn btn-outline" (click)="abrirModal(u)">Editar</button>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
-    </ng-container>
-
-    <ng-template #emptyState>
-        <div class="app-card">
-            <div class="app-card-body text-center text-gray-500">No hay usuarios para mostrar.</div>
-        </div>
-    </ng-template>
-
-    <!-- MODAL -->
-    <div *ngIf="mostrarModal" class="app-modal-backdrop">
-        <div class="app-modal !max-w-3xl overflow-hidden !rounded-2xl !border-slate-200 !bg-white !shadow-2xl">
-            <div class="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur md:px-5">
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <h3 class="text-base font-semibold text-slate-800 md:text-lg">
-                            {{ editando ? 'Editar Usuario' : 'Nuevo Usuario' }}
-                        </h3>
-                        <p class="mt-0.5 text-xs text-slate-500">
-                            Define credenciales, rol y estado del usuario.
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-                        (click)="cerrarModal()"
-                        aria-label="Cerrar modal"
-                    >
-                        ×
-                    </button>
-                </div>
-            </div>
-
-            <form [formGroup]="form" (ngSubmit)="guardar()" class="space-y-4 px-4 py-4 text-sm md:px-5 md:py-5">
-                <section class="rounded-xl border border-slate-200 bg-slate-50/60 p-3 md:p-4">
-                    <p class="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                        Datos de acceso
-                    </p>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div>
-                            <label class="block mb-1 font-medium">Email</label>
-                            <input class="input" type="email" formControlName="email" [readonly]="!!editando" />
-                            <div *ngIf="submitted && form.get('email')?.invalid" class="field-error">Email inválido.</div>
-                        </div>
-
-                        <div>
-                            <label class="block mb-1 font-medium">Contraseña
-                                <span *ngIf="!editando" class="text-red-600">*</span>
-                            </label>
-                            <input
-                                autocomplete="new-password"
-                                class="input"
-                                type="password"
-                                placeholder="{{ editando ? '(dejar vacío para no cambiar)' : '' }}"
-                                formControlName="password"
-                            />
-                            <div *ngIf="submitted && !editando && !form.value.password" class="field-error">
-                                Contraseña requerida al crear.
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="rounded-xl border border-slate-200 bg-white p-3 md:p-4">
-                    <p class="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                        Perfil
-                    </p>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div>
-                            <label class="block mb-1 font-medium">Nombres</label>
-                            <input class="input" type="text" formControlName="first_name" />
-                        </div>
-
-                        <div>
-                            <label class="block mb-1 font-medium">Apellidos</label>
-                            <input class="input" type="text" formControlName="last_name" />
-                        </div>
-
-                        <div>
-                            <label class="block mb-1 font-medium">Teléfono</label>
-                            <input class="input no-spinner" type="tel" maxlength="10" formControlName="phone" />
-                        </div>
-
-                        <div>
-                            <label class="block mb-1 font-medium">Rol</label>
-                            <select class="select" formControlName="role_key">
-                                <option value="gerente">Gerente</option>
-                                <option value="cajero">Cajero</option>
-                                <option value="mesero">Mesero</option>
-                            </select>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="rounded-xl border border-slate-200 bg-white p-3 md:p-4">
-                    <label class="inline-flex items-center gap-2">
-                        <input id="enabled" type="checkbox" formControlName="enabled" />
-                        <span class="font-medium text-slate-700">Usuario activo</span>
-                    </label>
-                    <p class="mt-1 text-xs text-slate-500">
-                        Si está inactivo no podrá ingresar al sistema.
-                    </p>
-                </section>
-
-                <div class="sticky bottom-0 -mx-4 border-t border-slate-200 bg-white px-4 py-3 md:-mx-5 md:px-5">
-                    <div class="flex justify-end gap-2">
-                        <button type="button" class="btn btn-outline" (click)="cerrarModal()">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Guardar</button>
-                    </div>
-                </div>
-            </form>
-        </div>
+<main class="app-container space-y-4">
+  <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg md:px-5">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-wider text-primary-foreground/70">Configuración del negocio</p>
+        <h1 class="mt-1 text-lg font-bold md:text-xl">Usuarios del negocio</h1>
+        <p class="mt-1 text-xs text-primary-foreground/80">
+          Asigna usuarios Frappe existentes y define su rol dentro de FacturADA.
+        </p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold">{{ currentBusinessRole }}</span>
+        <button class="btn bg-white !px-3 !py-2 !text-xs !text-primary hover:!bg-slate-100" type="button" (click)="openCreate()" [disabled]="!canManageUsers || loading">
+          + Asignar usuario
+        </button>
+      </div>
     </div>
-</div>
+  </section>
+
+  <section class="rounded-xl border border-primary/15 bg-white p-3 shadow-sm md:p-4">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Negocio activo</p>
+        <p class="text-sm font-semibold text-slate-800">{{ activeBusinessName }}</p>
+        <p class="text-[11px] text-slate-500">{{ activeBusinessId || 'Sin negocio seleccionado' }}</p>
+      </div>
+      <div class="flex gap-2 text-center">
+        <div class="rounded-lg bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700"><b class="block text-sm">{{ activeCount }}</b>Activos</div>
+        <div class="rounded-lg bg-slate-100 px-3 py-1.5 text-xs text-slate-600"><b class="block text-sm">{{ inactiveCount }}</b>Inactivos</div>
+      </div>
+    </div>
+  </section>
+
+  <section *ngIf="error && !loading" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+    {{ error }}
+  </section>
+
+  <ng-container *ngIf="canManageUsers && activeBusinessId">
+    <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
+      <div class="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_180px_160px_auto]">
+        <input class="input" [(ngModel)]="search" (ngModelChange)="applyFilters()" placeholder="Buscar por nombre o correo" aria-label="Buscar usuarios" />
+        <select class="select" [(ngModel)]="roleFilter" (ngModelChange)="applyFilters()" aria-label="Filtrar por rol">
+          <option value="all">Todos los roles</option>
+          <option *ngFor="let role of roles" [value]="roleName(role)">{{ roleName(role) }}</option>
+        </select>
+        <select class="select" [(ngModel)]="statusFilter" (ngModelChange)="applyFilters()" aria-label="Filtrar por estado">
+          <option value="all">Todos los estados</option>
+          <option value="Activo">Activos</option>
+          <option value="Inactivo">Inactivos</option>
+        </select>
+        <button type="button" class="btn btn-outline !py-2 !text-xs" (click)="search=''; roleFilter='all'; statusFilter='all'; applyFilters()">Limpiar</button>
+      </div>
+    </section>
+
+    <section *ngIf="loading" class="app-card p-8 text-center text-sm text-slate-500">Cargando usuarios del negocio…</section>
+
+    <section *ngIf="!loading && filtered.length" class="app-table-wrap">
+      <table class="app-table text-xs">
+        <thead class="app-thead">
+          <tr>
+            <th class="app-th">Usuario Frappe</th>
+            <th class="app-th">Rol FacturADA</th>
+            <th class="app-th">Negocio</th>
+            <th class="app-th text-center">Predeterminado</th>
+            <th class="app-th text-center">Estado</th>
+            <th class="app-th text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let user of filtered; trackBy: trackBy" class="app-tr">
+            <td class="app-td">
+              <p class="font-semibold text-slate-800">{{ fullName(user) }}</p>
+              <p class="mt-0.5 text-[11px] text-slate-500">{{ email(user) }}</p>
+            </td>
+            <td class="app-td"><span class="inline-flex rounded-full bg-violet-50 px-2 py-1 text-[11px] font-semibold text-violet-700">{{ roleName(user) }}</span></td>
+            <td class="app-td"><span class="text-slate-600">{{ activeBusinessName }}</span></td>
+            <td class="app-td text-center"><span *ngIf="isDefault(user)" class="inline-flex rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">Sí</span><span *ngIf="!isDefault(user)" class="text-slate-400">—</span></td>
+            <td class="app-td text-center">
+              <span class="inline-flex rounded-full px-2 py-1 text-[11px] font-semibold" [ngClass]="isActive(user) ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'">{{ isActive(user) ? 'Activo' : 'Inactivo' }}</span>
+            </td>
+            <td class="app-td">
+              <div class="flex justify-end gap-2">
+                <button class="btn btn-outline !px-2.5 !py-1 !text-[11px]" type="button" (click)="openEdit(user)" [disabled]="saving">Editar</button>
+                <button *ngIf="isActive(user)" class="btn btn-danger !px-2.5 !py-1 !text-[11px]" type="button" (click)="deactivate(user)" [disabled]="saving">Desactivar</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section *ngIf="!loading && !filtered.length && !error" class="app-card p-8 text-center">
+      <h2 class="text-sm font-semibold text-slate-800">No hay usuarios asignados</h2>
+      <p class="mt-1 text-xs text-slate-500">Asigna un usuario Frappe existente a {{ activeBusinessName }}.</p>
+    </section>
+  </ng-container>
+
+  <div *ngIf="mostrarModal" class="app-modal-backdrop">
+    <section class="app-modal !max-w-2xl overflow-hidden !rounded-2xl !border-slate-200 !bg-white !shadow-2xl" aria-modal="true" role="dialog">
+      <header class="border-b border-slate-200 px-4 py-3 md:px-5">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-800">{{ selectedUser ? 'Editar asignación' : (selectedFrappeUser ? 'Asignar usuario existente' : 'Crear usuario Frappe') }}</h2>
+            <p class="mt-0.5 text-xs text-slate-500">Busca un usuario existente o crea una cuenta Frappe y asígnala a este negocio.</p>
+          </div>
+          <button type="button" class="btn btn-ghost !px-2" (click)="closeModal()" aria-label="Cerrar">×</button>
+        </div>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="space-y-4 p-4 md:p-5">
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+          <b class="text-slate-700">Negocio:</b> {{ activeBusinessName }}
+          <span class="text-slate-400"> · {{ activeBusinessId }}</span>
+        </div>
+
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-slate-700">Usuario Frappe</label>
+          <div class="relative">
+            <input class="input" type="email" formControlName="user" placeholder="Escriba nombre o correo" [readonly]="!!selectedUser" (input)="searchFrappeUsers($any($event.target).value)" autocomplete="off" />
+            <div *ngIf="frappeUsers.length && !selectedUser" class="absolute inset-x-0 top-full z-30 mt-1 max-h-64 overflow-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl">
+              <button *ngFor="let candidate of frappeUsers" type="button" class="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-xs hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60" [disabled]="!isFrappeUserEnabled(candidate) || !!candidate.assignment" (click)="selectFrappeUser(candidate)">
+                <span class="min-w-0">
+                  <span class="block truncate font-semibold text-slate-700">{{ frappeUserName(candidate) }}</span>
+                  <span class="block truncate text-[11px] text-slate-500">{{ candidate.email || candidate.user }}</span>
+                </span>
+                <span *ngIf="candidate.assignment" class="shrink-0 text-[10px] font-semibold text-amber-600">Ya asignado</span>
+                <span *ngIf="!isFrappeUserEnabled(candidate)" class="shrink-0 text-[10px] font-semibold text-rose-600">Frappe inactivo</span>
+              </button>
+            </div>
+          </div>
+          <p class="mt-1 text-[11px] text-slate-500">Frappe valida que el usuario exista y esté habilitado.</p>
+          <p *ngIf="submitted && form.get('user')?.invalid" class="field-error">Ingrese un correo válido.</p>
+        </div>
+
+        <div *ngIf="!selectedUser && !selectedFrappeUser" class="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div>
+            <label class="mb-1 block text-xs font-semibold text-slate-700">Nombres</label>
+            <input class="input" type="text" formControlName="first_name" placeholder="Juan" />
+            <p *ngIf="submitted && form.get('first_name')?.hasError('required')" class="field-error">Ingrese los nombres.</p>
+          </div>
+          <div>
+            <label class="mb-1 block text-xs font-semibold text-slate-700">Apellidos</label>
+            <input class="input" type="text" formControlName="last_name" placeholder="Pérez" />
+            <p *ngIf="submitted && form.get('last_name')?.hasError('required')" class="field-error">Ingrese los apellidos.</p>
+          </div>
+          <div class="md:col-span-2">
+            <label class="mb-1 block text-xs font-semibold text-slate-700">Contraseña inicial</label>
+            <input class="input" type="password" formControlName="new_password" autocomplete="new-password" placeholder="Clave segura" />
+            <p class="mt-1 text-[11px] text-slate-500">Se envía solo al crear la cuenta y no se almacena ni se muestra.</p>
+            <p *ngIf="submitted && form.get('new_password')?.hasError('required')" class="field-error">Ingrese una contraseña inicial.</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div>
+            <label class="mb-1 block text-xs font-semibold text-slate-700">Rol FacturADA</label>
+            <select class="select" formControlName="business_role">
+              <option value="" disabled>Seleccione un rol</option>
+              <option *ngFor="let role of assignableRoles" [value]="roleName(role)">{{ roleName(role) }}</option>
+            </select>
+            <p *ngIf="submitted && form.get('business_role')?.invalid" class="field-error">Seleccione un rol.</p>
+          </div>
+          <div>
+            <label class="mb-1 block text-xs font-semibold text-slate-700">Estado</label>
+            <select class="select" formControlName="status">
+              <option value="Activo">Activo</option>
+              <option value="Inactivo">Inactivo</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 p-3 text-sm">
+          <input class="mt-0.5" type="checkbox" formControlName="is_default" />
+          <span><b class="block text-slate-700">Negocio predeterminado</b><span class="text-xs text-slate-500">Solo puede existir uno activo por usuario. El backend aplica la validación final.</span></span>
+        </label>
+
+        <section class="rounded-xl border border-primary/15 bg-primary/5 p-3">
+          <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">Permisos del rol</p>
+          <div *ngIf="selectedRolePermissions.length; else noPermissions" class="mt-2 flex flex-wrap gap-1.5">
+            <span *ngFor="let permission of selectedRolePermissions" class="rounded-full bg-white px-2 py-1 text-[11px] text-slate-600 shadow-sm">{{ permission }}</span>
+          </div>
+          <ng-template #noPermissions><p class="mt-1 text-xs text-slate-500">Seleccione un rol para consultar sus permisos.</p></ng-template>
+        </section>
+
+        <footer class="flex justify-end gap-2 border-t border-slate-200 pt-3">
+          <button type="button" class="btn btn-outline" (click)="closeModal()" [disabled]="saving">Cancelar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving || !assignableRoles.length">{{ saving ? 'Guardando…' : (selectedUser || selectedFrappeUser ? 'Guardar asignación' : 'Crear y asignar') }}</button>
+        </footer>
+      </form>
+    </section>
+  </div>
+</main>

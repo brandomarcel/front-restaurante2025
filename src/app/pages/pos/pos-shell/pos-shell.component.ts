@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { AuthService } from 'src/app/services/auth.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { PosMeseroComponent } from '../pos-mesero/pos-mesero.component';
@@ -17,13 +18,18 @@ type RoleName = 'Cajero' | 'Mesero' | 'Gerente' | 'Desconocido';
 export class PosShellComponent implements OnInit {
 
   roleName: RoleName = 'Desconocido';
+  selectedTableId = '';
+  selectedTableLabel = '';
 
   constructor(
     private auth: AuthService,
-    private capabilities: CompanyCapabilitiesService
+    private capabilities: CompanyCapabilitiesService,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
+    this.selectedTableId = String(this.route.snapshot.queryParamMap.get('table') || '').trim();
+    this.selectedTableLabel = String(this.route.snapshot.queryParamMap.get('table_label') || '').trim();
     const me: any = this.auth.getCurrentUser();
     // El rol de negocio del contexto decide la experiencia POS. Los roles
     // Frappe quedan solo como compatibilidad para sesiones antiguas.

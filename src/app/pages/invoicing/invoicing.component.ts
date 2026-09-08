@@ -5,7 +5,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
-import { catchError, debounceTime, distinctUntilChanged, finalize, firstValueFrom, of, Subject, Subscription, switchMap, takeUntil } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, finalize, of, Subject, Subscription, switchMap, takeUntil } from 'rxjs';
 
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
 import { AlertService } from '../../core/services/alert.service';
@@ -18,7 +18,7 @@ import { InvoicesService } from 'src/app/services/invoices.service';
 import { UtilsService } from '../../core/services/utils.service';
 import { Customer } from 'src/app/core/models/customer';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { canSellProduct, canUseInventoryQuantity, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { AdditionalFieldPayload, normalizeAdditionalFields } from 'src/app/core/models/additional-field';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
@@ -68,7 +68,6 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   private subscriptions: Subscription[] = [];
   private readonly customerSearch$ = new Subject<string>();
   private readonly destroy$ = new Subject<void>();
-  order: any | null = null;
   isEmitting = false;
   emissionState: LiteEmissionState | null = null;
   emissionMessages: string[] = [];
@@ -76,6 +75,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   emissionAccessKey = '';
   emissionAuthorizationNumber = '';
   emissionAuthorizationDatetime = '';
+  emissionPostingDate = '';
 
   get additionalFields(): FormArray {
     return this.invoiceForm.get('additional_fields') as FormArray;
@@ -91,8 +91,6 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private invoicesService: InvoicesService,
     private utilsService: UtilsService,
-    private route: ActivatedRoute,
-    private router: Router,
     private capabilities: CompanyCapabilitiesService
 
   ) { }
@@ -112,13 +110,6 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     this.initializeForms();
     this.initCustomerSearch();
     this.loadInitialData();
-    const orderName = this.route.snapshot.paramMap.get('order_name');
-
-    if (orderName) {
-      this.getOrderDetail(orderName);
-
-    }
-
   }
 
   ngOnDestroy(): void {
@@ -126,76 +117,6 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
   }
-
-  async getOrderDetail(orderName: string) {
-
-    try {
-      const response: any = await firstValueFrom(this.invoicesService.getOrderDetail(orderName));
-
-      this.order = response?.message?.data || response?.data;
-      this.loadOrderData(this.order);
-
-    } catch (error) {
-      toast.error('No se pudo cargar la orden para facturar.');
-    }
-  }
-
-  private loadOrderData(order: any): void {
-    if (!order) return;
-
-    // 🧾 Cargar datos del cliente
-    const c = order.customer || {};
-
-    this.customerForm.patchValue({
-      nombre: c.fullName || c.nombre || '',
-      num_identificacion: c.num_identificacion || '',
-      tipo_identificacion: this.detectarTipoIdentificacion(c.num_identificacion),
-      correo: c.correo || '',
-      telefono: c.telefono || '',
-      direccion: c.direccion || '',
-    }, { emitEvent: false });
-
-    this.selectedCustomer = { ...this.customerForm.getRawValue(), name: c.name || '' };
-    this.customerSearchTerm = this.formatCustomerSearchLabel(this.selectedCustomer);
-
-    // 💳 Cargar datos de la factura
-    this.invoiceForm.patchValue({
-      selectedCustomer: c.name || null,
-      alias: order.name || '',
-      postingDate: this.utilsService.getSoloFechaEcuador(),
-      paymentMethod: this.defaultPaymentMethodValue
-    });
-
-    // 🛒 Cargar productos en una variable local (para renderizar en la tabla)
-    this.cartItems = order.items.map((it: any) => ({
-      name: it.productId,                  // clave del producto en Frappe
-      nombre: it.productName,              // nombre legible
-      codigo: it.productId,                // si manejas código interno
-      price: it.price,
-      quantity: it.quantity,
-      discount_pct: 0,                     // si no aplica descuento
-      tax: null,                           // no necesitas el ID, ya viene el valor
-      tax_value: it.tax_rate ?? 0,         // porcentaje IVA
-      subtotal: it.subtotal,
-      iva: it.iva,
-      total: it.total
-    }));
-
-    this.updateCartTotals();
-
-    const orderAdditionalFields = normalizeAdditionalFields(
-      order.additionalFields ?? order.additional_fields
-    );
-    orderAdditionalFields.forEach(field => this.addAdditionalField(field));
-  }
-  private detectarTipoIdentificacion(id: string): string {
-    if (!id) return '05 - Cedula';
-    if (id === '9999999999999') return '07 - Consumidor Final';
-    if (id.length === 10) return '05 - Cedula';
-    if (id.length === 13) return '04 - RUC';
-    return '05 - Cedula';
-  }
-
 
   // ------------------ Inicialización ------------------
   private initializeForms(): void {
@@ -495,11 +416,10 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   onProductSearchChange(term: string): void {
     this.productSearchTerm = term || '';
     this.refreshProductSuggestions();
-    this.isProductSearchOpen = !this.order;
+    this.isProductSearchOpen = true;
   }
 
   openProductSearch(): void {
-    if (this.order) return;
     this.refreshProductSuggestions();
     this.isProductSearchOpen = true;
   }
@@ -648,6 +568,39 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     return this.round2(this.subtotal + this.iva);
   }
 
+  get selectedPosTerminal(): any | null {
+    return this.capabilities.activePosTerminal;
+  }
+
+  get terminalAssignmentLabel(): string {
+    return this.selectedPosTerminal && this.capabilities.terminalAccessRequired ? 'Asignado a tu usuario' : '';
+  }
+
+  get currentFiscalLocation(): any | null {
+    return this.capabilities.activeFiscalLocation;
+  }
+
+  get posTerminalBlockMessage(): string | null {
+    return this.capabilities.getPosTerminalBlockMessage();
+  }
+
+  posTerminalLabel(terminal: any): string {
+    if (!terminal) return 'Sin terminal seleccionado';
+    return `${terminal?.establishment_code || '—'}-${terminal?.emission_point_code || '—'}`;
+  }
+
+  fiscalEstablishmentLabel(location: any): string {
+    const establishment = location?.establishment;
+    if (!establishment) return 'No configurado';
+    return String(establishment?.establishment_code || '—');
+  }
+
+  fiscalEmissionPointLabel(location: any): string {
+    const point = location?.emissionPoint;
+    if (!point) return 'No configurado';
+    return String(point?.emission_point_code || '—');
+  }
+
 
   // ------------------ Factura ------------------
   finalizeInvoice(): void {
@@ -671,13 +624,37 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       return;
     }
     const emissionEnvironment = this.getLiteEmissionEnvironment();
-    if (this.capabilities.isLiteMode) {
+    let liteDocumentConfiguration: ReturnType<CompanyCapabilitiesService['getLiteDocumentConfiguration']> = null;
+    // Restaurante nuevo y Lite comparten la infraestructura tributaria cuando
+    // billing está habilitado; no depende únicamente del nombre del modo.
+    const usesFacturadaInfrastructure = this.capabilities.isLiteMode || this.capabilities.features.billing === true;
+    if (usesFacturadaInfrastructure) {
+      const terminalBlockMessage = this.capabilities.getPosTerminalBlockMessage();
+      if (terminalBlockMessage) {
+        toast.error(terminalBlockMessage);
+        return;
+      }
+      if (!this.capabilities.isEnabled('direct_invoice')) {
+        toast.error('La facturación no está habilitada para este negocio.');
+        return;
+      }
+      if (!this.capabilities.hasPermission('billing.create')) {
+        toast.error('No tiene permisos para emitir facturas.');
+        return;
+      }
       if (!emissionEnvironment) {
         toast.error('No se pudo determinar el ambiente de emisión.');
         return;
       }
-      if (!this.capabilities.hasActiveInvoiceSequence(emissionEnvironment)) {
-        toast.error('No existe una secuencia activa para este ambiente.');
+      liteDocumentConfiguration = this.capabilities.getLiteDocumentConfiguration('Factura', emissionEnvironment);
+      if (!liteDocumentConfiguration) {
+        if (!this.capabilities.selectedLiteEstablishment) {
+          toast.error('Configure un establecimiento activo antes de emitir.');
+        } else if (!this.capabilities.selectedLiteEmissionPoint) {
+          toast.error('Configure un punto de emisión activo para el establecimiento seleccionado.');
+        } else {
+          toast.error('No existe una secuencia activa para esta combinación de establecimiento, punto de emisión y ambiente.');
+        }
         return;
       }
     }
@@ -687,12 +664,24 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const TYPE_IDENTIFICATION_RUC = '07 - Consumidor Final';
-    const UMBRAL = 50;
-    const isConsumidorFinal = this.selectedCustomer?.tipo_identificacion === TYPE_IDENTIFICATION_RUC;
+    const UMBRAL_CONSUMIDOR_FINAL = 50;
+    const selectedCustomer = this.selectedCustomer as any;
+    const identificationType = String(
+      selectedCustomer?.tipo_identificacion ??
+      selectedCustomer?.identification_type ??
+      selectedCustomer?.tipoIdentificacion ?? ''
+    ).trim().toLocaleLowerCase();
+    const identificationNumber = String(
+      selectedCustomer?.num_identificacion ??
+      selectedCustomer?.identification_number ??
+      selectedCustomer?.cedula_ruc ?? ''
+    ).trim();
+    const isConsumidorFinal = identificationType === 'consumidor final' ||
+      identificationType.includes('consumidor final') ||
+      identificationNumber === '9999999999999';
     const total = Number(this.total);
-    if (isConsumidorFinal && total >= UMBRAL) {
-      toast.error(`El consumidor final no puede facturar por un monto mayor o igual a $${UMBRAL}.`);
+    if (isConsumidorFinal && total > UMBRAL_CONSUMIDOR_FINAL) {
+      toast.error('No se puede emitir una factura a CONSUMIDOR FINAL por un valor superior a USD 50 IVA incluido. Seleccione un cliente identificado.');
       return;
     }
 
@@ -708,8 +697,18 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     const payload = {
       customer: customerName,
       total: total,
-      ...(this.capabilities.isLiteMode ? { environment: emissionEnvironment } : {}),
-      posting_date: this.invoiceForm.get('postingDate')?.value,
+      ...(liteDocumentConfiguration ? {
+        business: liteDocumentConfiguration.business,
+        environment: liteDocumentConfiguration.environment,
+        ...(this.capabilities.activePosTerminal?.name
+          ? { pos_terminal: this.capabilities.activePosTerminal.name }
+          : {
+              establishment: liteDocumentConfiguration.establishment.name,
+              emission_point: liteDocumentConfiguration.emissionPoint.name,
+              establishment_code: liteDocumentConfiguration.establishment.establishment_code,
+              emission_point_code: liteDocumentConfiguration.emissionPoint.emission_point_code
+            })
+      } : {}),
       items: this.cartItems.map(it => ({
         item_code: it.name || 'ADHOC',
         item_name: it.nombre || it.description,
@@ -721,7 +720,6 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       })),
       payments: paymentResult.payments,
       auto_queue: true, // 👈 firma+envío por el microservicio
-      order_name: this.order?.name,
       additional_fields: this.canUseAdditionalFields ? normalizeAdditionalFields(this.additionalFields.getRawValue()) : []
     };
 
@@ -744,6 +742,9 @@ export class InvoicingComponent implements OnInit, OnDestroy {
               this.emissionAccessKey = String(res?.accessKey || res?.emission?.access_key || '').trim();
               this.emissionAuthorizationNumber = String(res?.authorizationNumber || res?.emission?.authorization_number || '').trim();
               this.emissionAuthorizationDatetime = String(res?.authorizationDatetime || res?.emission?.authorization_datetime || '').trim();
+              this.emissionPostingDate = String(
+                res?.data?.posting_date ?? res?.data?.electronic?.issue_date ?? ''
+              ).trim();
 
               if (this.emissionState === 'AUTHORIZED') {
                 toast.success('Factura autorizada por el SRI.');
@@ -753,7 +754,6 @@ export class InvoicingComponent implements OnInit, OnDestroy {
                   .then(printResult => {
                     if (printResult.isConfirmed && inv) this.printInvoice(inv, 'ride');
                     this.clearInvoiceForm();
-                    if (this.order) this.router.navigate(['/dashboard/invoicing']);
                   });
               } else if (this.emissionState === 'PROCESSING') {
                 toast.info('Comprobante recibido. Autorización pendiente.');
@@ -838,6 +838,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     this.emissionAccessKey = '';
     this.emissionAuthorizationNumber = '';
     this.emissionAuthorizationDatetime = '';
+    this.emissionPostingDate = '';
   }
 
   private refreshProductsAfterInvoice(): void {

@@ -54,6 +54,11 @@ export interface CompanyInfo {
   emission_point_name?: string;
   current_number?: number;
   software_provider_ruc?: string;
+  obliged_accounting?: boolean | number | string;
+  rimpe?: boolean | number | string;
+  withholding_agent?: boolean | number | string;
+  emission_type?: string;
+  invoice_xml_version?: string;
   ready?: boolean;
   missing?: string[];
   establishments?: any[];
@@ -85,6 +90,169 @@ export class CompanyService {
 
   get_empresa(business?: string) {
     return this.getLiteContext(business);
+  }
+
+  getLiteEstablishments(business: string) {
+    const params = new HttpParams().set('business', business);
+    return this.http.get<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.get_lite_establishments`, {
+      params,
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(map((response: any) => {
+      const data = response?.message?.data ?? response?.data ?? [];
+      return Array.isArray(data) ? data : [];
+    }));
+  }
+
+  getLiteEstablishment(business: string, name: string) {
+    const params = new HttpParams().set('business', business).set('name', name);
+    return this.http.get<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.get_lite_establishment`, {
+      params,
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(map((response: any) => response?.message?.data ?? response?.data ?? null));
+  }
+
+  createLiteEstablishment(payload: any) {
+    return this.http.post<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.create_lite_establishment`, payload, {
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(map((response: any) => response?.message?.data ?? response?.data ?? response));
+  }
+
+  saveLiteEstablishment(payload: any) {
+    return this.http.put<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.save_lite_establishment`, payload, {
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(map((response: any) => response?.message?.data ?? response?.data ?? response));
+  }
+
+  deactivateLiteEstablishment(name: string, business: string) {
+    return this.http.post<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.deactivate_lite_establishment`, {
+      name,
+      business
+    }, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
+      map((response: any) => response?.message?.data ?? response?.data ?? response)
+    );
+  }
+
+  getLiteEmissionPoints(business: string, establishment: string) {
+    const params = new HttpParams()
+      .set('business', business)
+      .set('establishment', establishment);
+    return this.http.get<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.get_lite_emission_points`, {
+      params,
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(map((response: any) => {
+      const data = response?.message?.data ?? response?.data ?? [];
+      return Array.isArray(data) ? data : [];
+    }));
+  }
+
+  createLiteEmissionPoint(payload: any) {
+    return this.http.post<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.create_lite_emission_point`, payload, {
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(map((response: any) => response?.message?.data ?? response?.data ?? response));
+  }
+
+  saveLiteEmissionPoint(payload: any) {
+    return this.http.put<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.save_lite_emission_point`, payload, {
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(map((response: any) => response?.message?.data ?? response?.data ?? response));
+  }
+
+  deactivateLiteEmissionPoint(name: string, business: string) {
+    return this.http.post<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.deactivate_lite_emission_point`, {
+      name,
+      business
+    }, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
+      map((response: any) => response?.message?.data ?? response?.data ?? response)
+    );
+  }
+
+  getLiteDocumentSequences(business: string, establishment: string, emissionPoint: string) {
+    const params = new HttpParams()
+      .set('business', business)
+      .set('establishment', establishment)
+      .set('emission_point', emissionPoint);
+    return this.http.get<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.get_lite_document_sequences`, {
+      params,
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(map((response: any) => {
+      const data = response?.message?.data ?? response?.data ?? [];
+      return Array.isArray(data) ? data : [];
+    }));
+  }
+
+  getLiteDocumentSequence(business: string, name: string) {
+    const params = new HttpParams().set('business', business).set('name', name);
+    return this.http.get<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.get_lite_document_sequence`, {
+      params,
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(map((response: any) => response?.message?.data ?? response?.data ?? null));
+  }
+
+  createLiteDocumentSequence(payload: any) {
+    return this.http.post<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.create_lite_document_sequence`, payload, {
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(map((response: any) => response?.message?.data ?? response?.data ?? response));
+  }
+
+  saveLiteDocumentSequence(payload: any) {
+    return this.http.put<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.save_lite_document_sequence`, payload, {
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(map((response: any) => response?.message?.data ?? response?.data ?? response));
+  }
+
+  deactivateLiteDocumentSequence(name: string, business: string) {
+    return this.http.post<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.deactivate_lite_document_sequence`, {
+      name,
+      business
+    }, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
+      map((response: any) => response?.message?.data ?? response?.data ?? response)
+    );
+  }
+
+  getLitePosTerminals(business: string, status = 'Activo') {
+    let params = new HttpParams().set('business', business);
+    if (status) params = params.set('status', status);
+    return this.http.get<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.get_lite_pos_terminals`, {
+      params,
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(map((response: any) => {
+      const raw = response?.message?.data ?? response?.data ?? [];
+      const data = Array.isArray(raw) ? raw : (raw?.pos_terminals ?? raw?.terminals ?? []);
+      return Array.isArray(data) ? data : [];
+    }));
+  }
+
+  getLitePosTerminal(business: string, name: string) {
+    const params = new HttpParams().set('business', business).set('name', name);
+    return this.http.get<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.get_lite_pos_terminal`, {
+      params,
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(map((response: any) => response?.message?.data ?? response?.data ?? null));
+  }
+
+  createLitePosTerminal(payload: any) {
+    // El endpoint administrativo recibe el objeto serializado dentro de
+    // `payload`, tal como exige Frappe para este contrato.
+    return this.http.post<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.create_lite_pos_terminal`, {
+      payload: JSON.stringify(payload || {})
+    }, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
+      map((response: any) => response?.message?.data ?? response?.data ?? response)
+    );
+  }
+
+  saveLitePosTerminal(payload: any) {
+    return this.http.put<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.save_lite_pos_terminal`, payload, {
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(map((response: any) => response?.message?.data ?? response?.data ?? response));
+  }
+
+  deactivateLitePosTerminal(name: string, business: string) {
+    return this.http.post<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.deactivate_lite_pos_terminal`, {
+      business,
+      name
+    }, { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
+      map((response: any) => response?.message?.data ?? response?.data ?? response)
+    );
   }
 
   getOne(name: string) {
@@ -295,16 +463,32 @@ export class CompanyService {
     // get_lite_setup mantiene catálogos separados para establecimiento,
     // punto de emisión y secuencia. Normalízalos al modelo que consume el
     // formulario para que una configuración existente se muestre completa.
-    const establishment = Array.isArray(message?.establishments)
-      ? (message.establishments[0] || {})
-      : (message?.establishment && typeof message.establishment === 'object' ? message.establishment : {});
-    const emissionPoint = Array.isArray(message?.emission_points)
-      ? (message.emission_points[0] || {})
-      : (message?.emission_point && typeof message.emission_point === 'object' ? message.emission_point : {});
-    const sequence = Array.isArray(message?.sequences)
-      ? (message.sequences[0] || {})
-      : (message?.sequence && typeof message.sequence === 'object' ? message.sequence : {});
     const taxProfile = message?.tax_profile && typeof message.tax_profile === 'object' ? message.tax_profile : {};
+    const activeEstablishments = Array.isArray(message?.establishments)
+      ? message.establishments.filter((item: any) => String(item?.status || 'Activo').toLowerCase() === 'activo')
+      : [];
+    // El endpoint está acotado al business consultado. Aun así, no se toma el
+    // primer registro arbitrariamente: solo el principal o el único activo.
+    const fallbackEstablishment = message?.establishment && typeof message.establishment === 'object' ? message.establishment : {};
+    const establishment = activeEstablishments.find((item: any) => Number(item?.is_main) === 1 || item?.is_main === true)
+      || (activeEstablishments.length === 1 ? activeEstablishments[0] : fallbackEstablishment);
+    const activePoints = Array.isArray(message?.emission_points)
+      ? message.emission_points.filter((item: any) => String(item?.status || 'Activo').toLowerCase() === 'activo'
+        && (!establishment?.name || String(item?.establishment || '') === String(establishment.name)))
+      : [];
+    const fallbackEmissionPoint = message?.emission_point && typeof message.emission_point === 'object' ? message.emission_point : {};
+    const emissionPoint = activePoints.find((item: any) => Number(item?.is_default) === 1 || item?.is_default === true)
+      || (activePoints.length === 1 ? activePoints[0] : fallbackEmissionPoint);
+    const configuredEnvironment = String(taxProfile?.environment ?? taxProfile?.ambiente ?? '').toLowerCase();
+    const matchingSequences = Array.isArray(message?.sequences)
+      ? message.sequences.filter((item: any) => String(item?.status || '').toLowerCase() === 'activo'
+        && String(item?.document_type || '').toLowerCase() === 'factura'
+        && (!configuredEnvironment || String(item?.environment || '').toLowerCase() === configuredEnvironment)
+        && (!establishment?.name || String(item?.establishment || '') === String(establishment.name))
+        && (!emissionPoint?.name || String(item?.emission_point || '') === String(emissionPoint.name)))
+      : [];
+    const sequence = matchingSequences.length === 1 ? matchingSequences[0]
+      : (message?.sequence && typeof message.sequence === 'object' ? message.sequence : {});
     return {
       ...(company || {}),
       name: company?.name ?? company?.business ?? message?.business,
@@ -348,6 +532,11 @@ export class CompanyService {
       service_base_url: taxProfile?.service_base_url ?? company?.service_base_url ?? message?.service_base_url,
       obligado_a_llevar_contabilidad: taxProfile?.obliged_accounting ?? taxProfile?.obligado_a_llevar_contabilidad
         ?? company?.obligado_a_llevar_contabilidad ?? message?.obligado_a_llevar_contabilidad,
+      obliged_accounting: taxProfile?.obliged_accounting ?? taxProfile?.obligado_a_llevar_contabilidad,
+      rimpe: taxProfile?.rimpe,
+      withholding_agent: taxProfile?.withholding_agent,
+      emission_type: taxProfile?.emission_type,
+      invoice_xml_version: taxProfile?.invoice_xml_version,
       invoiceseq_pruebas: company?.invoiceseq_pruebas ?? company?.current_number ?? message?.current_number
         ?? sequence?.current_number ?? sequence?.currentNumber ?? sequence?.next_number,
       current_number: company?.current_number ?? message?.current_number

@@ -48,6 +48,49 @@
       </div>
     </div>
 
+    @if (hasMultipleBusinesses) {
+      <div class="mb-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+        <label class="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500" for="active-business">
+          Empresa activa
+        </label>
+        <select
+          id="active-business"
+          class="input h-8 w-full text-xs"
+          [(ngModel)]="selectedBusinessId"
+          [ngModelOptions]="{ standalone: true }"
+          [disabled]="changingBusiness"
+          (ngModelChange)="changeBusiness($event)">
+          @for (business of capabilities.businesses; track business.name || business.business) {
+            <option [value]="business.name || business.business">
+              {{ business.business_name || business.businessname || business.name }}
+            </option>
+          }
+        </select>
+        <p class="mt-1 truncate text-[10px] text-slate-500">{{ activeBusinessLabel }}</p>
+      </div>
+    }
+
+    @if (visiblePosTerminals.length || capabilities.terminalAccessRequired) {
+      <div class="mb-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+        <label class="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500" for="active-pos-terminal">
+          Terminal POS
+        </label>
+        <select
+          id="active-pos-terminal"
+          class="input h-auto min-h-8 w-full text-[11px]"
+          [(ngModel)]="selectedTerminalId"
+          [ngModelOptions]="{ standalone: true }"
+          [disabled]="!visiblePosTerminals.length"
+          (ngModelChange)="changeTerminal($event)">
+          <option value="">{{ capabilities.requiresTerminalSelection ? 'Seleccione un terminal' : 'Sin terminal seleccionado' }}</option>
+          @for (terminal of visiblePosTerminals; track terminal.name) {
+            <option [value]="terminal.name">{{ terminalLabel(terminal) }}</option>
+          }
+        </select>
+        <p *ngIf="terminalAccessMessage" class="mt-1 text-[10px] font-semibold text-amber-700">{{ terminalAccessMessage }}</p>
+      </div>
+    }
+
     <ul class="my-1 flex flex-col gap-1">
       @for (item of visibleProfileMenu; track $index) {
       <li

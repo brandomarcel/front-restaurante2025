@@ -1,0 +1,156 @@
+<main class="app-container space-y-4">
+  <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg md:px-5">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-wider text-primary-foreground/70">Infraestructura tributaria</p>
+        <h1 class="mt-1 text-lg font-bold md:text-xl">Establecimientos</h1>
+        <p class="mt-1 text-xs text-primary-foreground/80">{{ activeBusinessName }} · {{ activeBusinessId || 'Sin negocio seleccionado' }}</p>
+      </div>
+      <button type="button" class="btn bg-white !px-3 !py-2 !text-xs !text-primary hover:!bg-slate-100" (click)="openCreate()" [disabled]="!canManage || loading">
+        + Crear establecimiento
+      </button>
+    </div>
+  </section>
+
+  <section class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
+    <div>
+      <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Rol actual</p>
+      <p class="text-sm font-semibold text-slate-800">{{ roleLabel }}</p>
+      <p class="mt-1 text-[11px] text-slate-500">{{ canManage ? 'Puede administrar establecimientos' : 'Modo lectura' }}</p>
+    </div>
+    <div class="rounded-lg bg-emerald-50 px-4 py-2 text-center text-xs text-emerald-700">
+      <b class="block text-lg">{{ activeCount }}</b>Activos
+    </div>
+  </section>
+
+  <section *ngIf="error && !loading" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">{{ error }}</section>
+  <section *ngIf="loading" class="app-card p-8 text-center text-sm text-slate-500">Cargando establecimientos…</section>
+
+  <section *ngIf="!loading && establishments.length" class="app-table-wrap">
+    <table class="app-table text-xs">
+      <thead class="app-thead">
+        <tr>
+          <th class="app-th">Código</th>
+          <th class="app-th">Establecimiento</th>
+          <th class="app-th">Datos del establecimiento</th>
+          <th class="app-th">Estado</th>
+          <th class="app-th text-center">Principal</th>
+          <th class="app-th text-right" *ngIf="canManage">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let establishment of establishments; trackBy: trackBy" class="app-tr">
+          <td class="app-td font-semibold text-slate-800">{{ establishment.establishment_code || '—' }}</td>
+          <td class="app-td">
+            <span class="font-semibold text-slate-800">{{ establishment.establishment_name || establishment.name || '—' }}</span>
+            <span class="mt-0.5 block text-[10px] text-slate-400">{{ establishment.name || '—' }}</span>
+          </td>
+          <td class="app-td text-slate-600">
+            <span class="block">{{ (isLiteBusiness ? establishment.address : establishment.address_link) || 'Sin dirección configurada' }}</span>
+            <span *ngIf="isLiteBusiness" class="mt-0.5 block text-[11px]">{{ establishment.phone || 'Sin teléfono' }}<span *ngIf="establishment.email"> · {{ establishment.email }}</span></span>
+            <span *ngIf="!isLiteBusiness" class="mt-0.5 block text-[11px]">{{ establishment.contact || 'Sin contacto ERPNext' }}</span>
+          </td>
+          <td class="app-td"><span class="inline-flex rounded-full px-2 py-1 text-[11px] font-semibold" [ngClass]="isActive(establishment) ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'">{{ establishment.status || '—' }}</span></td>
+          <td class="app-td text-center"><span *ngIf="isMain(establishment)" class="inline-flex rounded-full bg-violet-50 px-2 py-1 text-[11px] font-semibold text-violet-700">Principal</span><span *ngIf="!isMain(establishment)" class="text-slate-400">—</span></td>
+          <td class="app-td" *ngIf="canManage">
+            <div class="flex justify-end gap-2">
+              <button type="button" class="btn btn-outline !px-2.5 !py-1 !text-[11px]" (click)="openEdit(establishment)" [disabled]="saving">Editar</button>
+              <button type="button" class="btn btn-danger !px-2.5 !py-1 !text-[11px]" (click)="deactivate(establishment)" [disabled]="saving || !isActive(establishment)">Desactivar</button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section *ngIf="!loading && !establishments.length && !error" class="app-card p-8 text-center">
+    <h2 class="text-sm font-semibold text-slate-800">No hay establecimientos configurados</h2>
+    <p class="mt-1 text-xs text-slate-500">Los usuarios sin rol Administrador o Gerente pueden consultar esta lista en modo lectura.</p>
+  </section>
+
+  <div *ngIf="modalOpen" class="app-modal-backdrop">
+    <section class="app-modal !max-w-2xl overflow-hidden !rounded-2xl !border-slate-200 !bg-white !shadow-2xl" role="dialog" aria-modal="true">
+      <header class="border-b border-slate-200 px-4 py-3 md:px-5">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-800">{{ editing ? 'Editar establecimiento' : 'Crear establecimiento' }}</h2>
+            <p class="mt-0.5 text-xs text-slate-500">El negocio activo se envía automáticamente y no puede cambiarse desde este formulario.</p>
+          </div>
+          <button type="button" class="btn btn-ghost !px-2" (click)="closeModal()" aria-label="Cerrar">×</button>
+        </div>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="space-y-4 p-4 md:p-5">
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div>
+            <label class="mb-1 block text-xs font-semibold text-slate-700">Código del establecimiento</label>
+            <input class="input" formControlName="establishment_code" maxlength="3" inputmode="numeric" placeholder="001" />
+            <p *ngIf="submitted && form.get('establishment_code')?.hasError('required')" class="field-error">Ingrese el código.</p>
+            <p *ngIf="submitted && form.get('establishment_code')?.hasError('pattern')" class="field-error">Debe tener exactamente 3 dígitos.</p>
+          </div>
+          <div>
+            <label class="mb-1 block text-xs font-semibold text-slate-700">Nombre</label>
+            <input class="input" formControlName="establishment_name" placeholder="Matriz" />
+            <p *ngIf="submitted && form.get('establishment_name')?.invalid" class="field-error">Ingrese el nombre.</p>
+          </div>
+          <div>
+            <label class="mb-1 block text-xs font-semibold text-slate-700">Estado</label>
+            <select class="select" formControlName="status"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select>
+          </div>
+          <ng-container *ngIf="isLiteBusiness; else erpIntegration">
+            <div class="md:col-span-2">
+              <label class="mb-1 block text-xs font-semibold text-slate-700">Dirección</label>
+              <input class="input" formControlName="address" placeholder="Av. Principal y Calle Uno" />
+              <p class="mt-1 text-[11px] text-slate-400">Dirección física de esta sucursal.</p>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-semibold text-slate-700">Teléfono</label>
+              <input class="input" formControlName="phone" inputmode="tel" placeholder="0999999999" />
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-semibold text-slate-700">Correo</label>
+              <input class="input" type="email" formControlName="email" placeholder="sucursal@empresa.com" />
+              <p *ngIf="submitted && form.get('email')?.hasError('email')" class="field-error">Ingrese un correo válido.</p>
+            </div>
+          </ng-container>
+          <ng-template #erpIntegration>
+            <div class="md:col-span-2 rounded-xl border border-sky-100 bg-sky-50/60 p-3">
+              <p class="text-xs font-semibold text-sky-800">Integración ERPNext</p>
+              <p class="mt-1 text-[11px] text-sky-700">Use los identificadores reales de documentos ERPNext. Estos campos no aplican a negocios Lite.</p>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-semibold text-slate-700">Dirección ERPNext</label>
+              <input class="input" formControlName="address_link" placeholder="ADDR-00001" />
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-semibold text-slate-700">Contacto ERPNext</label>
+              <input class="input" formControlName="contact" placeholder="CONT-00001" />
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-semibold text-slate-700">Bodega</label>
+              <input class="input" formControlName="warehouse" placeholder="Bodega Principal - EMP" />
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-semibold text-slate-700">Centro de costo</label>
+              <input class="input" formControlName="cost_center" placeholder="Principal - EMP" />
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-semibold text-slate-700">Perfil POS</label>
+              <input class="input" formControlName="pos_profile" placeholder="Caja Principal" />
+            </div>
+          </ng-template>
+        </div>
+
+        <label class="flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 p-3 text-sm">
+          <input class="mt-0.5" type="checkbox" formControlName="is_main" />
+          <span><b class="block text-slate-700">Establecimiento principal</b><span class="text-xs text-slate-500">Solo puede existir un principal activo. El backend valida duplicados y estados.</span></span>
+        </label>
+
+        <footer class="flex justify-end gap-2 border-t border-slate-200 pt-3">
+          <button type="button" class="btn btn-outline" (click)="closeModal()" [disabled]="saving">Cancelar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving">{{ saving ? 'Guardando…' : 'Guardar establecimiento' }}</button>
+        </footer>
+      </form>
+    </section>
+  </div>
+</main>

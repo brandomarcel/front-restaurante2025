@@ -395,11 +395,36 @@ export class PosComponent implements OnInit {
   }
 
   get canEmitInvoice(): boolean {
-    return this.capabilities.canEmit();
+    return this.capabilities.canEmit() && !this.capabilities.getPosTerminalBlockMessage();
+  }
+
+  get currentFiscalLocation(): any | null {
+    return this.capabilities.activeFiscalLocation;
+  }
+
+  get selectedPosTerminal(): any | null {
+    return this.capabilities.activePosTerminal;
+  }
+
+  get terminalAssignmentLabel(): string {
+    return this.selectedPosTerminal && this.capabilities.terminalAccessRequired ? 'Asignado a tu usuario' : '';
+  }
+
+  get posTerminalBlockMessage(): string | null {
+    return this.capabilities.getPosTerminalBlockMessage();
+  }
+
+  fiscalLocationLabel(location: any): string {
+    const establishment = location?.establishment;
+    const point = location?.emissionPoint;
+    const establishmentCode = establishment?.establishment_code || '—';
+    const pointCode = point?.emission_point_code || '—';
+    return establishment || point ? `${establishmentCode}-${pointCode}` : 'No configurado';
   }
 
   get invoicePlanBlockMessage(): string | null {
-    return this.capabilities.getPlanBlockMessage('direct_invoice');
+    return this.capabilities.getPlanBlockMessage('direct_invoice')
+      || this.capabilities.getPosTerminalBlockMessage();
   }
 
   decrease(item: any) {
@@ -518,6 +543,11 @@ export class PosComponent implements OnInit {
     };
 
     if (typePago === 'Factura') {
+      const terminalBlockMessage = this.capabilities.getPosTerminalBlockMessage();
+      if (terminalBlockMessage) {
+        toast.error(terminalBlockMessage);
+        return;
+      }
       this.alertService.confirm('¿Deseas continuar con la factura?', 'Esta acción no se puede deshacer.').then((result) => {
         if (result.isConfirmed) {
           this.spinner.show();

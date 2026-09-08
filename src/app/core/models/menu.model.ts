@@ -20,4 +20,4 @@ export interface SubMenuItem {
   permissionKey?: string;
   hideInLite?: boolean;
 }
-export type Role = 'SYSTEM MANAGER' | 'GERENTE' | 'CAJERO' | 'FACTURACION' | 'MESERO' | 'COCINA' | 'USUARIO';
+export type Role = 'SYSTEM MANAGER' | 'ADMINISTRADOR' | 'GERENTE' | 'CAJERO' | 'FACTURACION' | 'MESERO' | 'COCINA' | 'USUARIO';

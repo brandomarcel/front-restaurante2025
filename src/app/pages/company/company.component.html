@@ -1,13 +1,18 @@
-<div class="flex flex-col">
-  <div class="app-card">
+<div class="company-settings flex flex-col">
+  <div class="app-card settings-shell">
     <div class="app-card-body">
-      <div class="app-page-header">
-        <h2 class="app-page-title">Configuracion de la Empresa y Secuencias</h2>
+      <div class="settings-hero">
+        <div class="min-w-0">
+          <p class="settings-kicker">CENTRO DE CONFIGURACIÓN</p>
+          <h2 class="app-page-title">{{ isLiteMode ? 'Configuración FacturADA' : 'Configuración de la empresa' }}</h2>
+          <p class="settings-subtitle">{{ isLiteMode ? activeSettingsTitle + ' · datos protegidos y sincronizados con tu negocio.' : 'Administra los datos operativos de tu empresa.' }}</p>
+        </div>
         <app-button
           impact="bold"
-          tone="primary"
+          tone="light"
           shape="rounded"
           size="medium"
+          shadow="small"
           [disabled]="isSaving || isLoadingCompany || !canEditLiteSetup"
           (click)="save()">
           {{ isSaving ? 'Guardando...' : (isLiteMode ? 'Guardar configuración Lite' : 'Guardar') }}
@@ -16,13 +21,31 @@
 
       <form [formGroup]="form" (ngSubmit)="save()" class="grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs"
         [class.form-busy]="isSaving || isLoadingCompany">
-        <div *ngIf="isLiteMode && activeBusiness" class="lg:col-span-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-          Empresa activa: <span class="font-semibold">{{ activeBusiness.business_name || activeBusiness.businessname || activeBusiness.name }}</span>
+        <div *ngIf="isLiteMode && activeBusiness" class="settings-business-bar lg:col-span-2">
+          <div class="settings-business-avatar">
+            <img *ngIf="activeBusiness.logo" [src]="activeBusiness.logo" alt="Logo de empresa" />
+            <span *ngIf="!activeBusiness.logo">{{ (activeBusiness.business_name || activeBusiness.businessname || activeBusiness.name || 'E').slice(0, 1) }}</span>
+          </div>
+          <div class="min-w-0">
+            <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Empresa activa</p>
+            <p class="truncate text-sm font-bold text-slate-900">{{ activeBusiness.business_name || activeBusiness.businessname || activeBusiness.name }}</p>
+          </div>
+          <span class="settings-ready-chip" [ngClass]="liteSetupReady ? 'is-ready' : 'is-pending'">{{ liteSetupReady ? 'Lista para emitir' : 'Configuración pendiente' }}</span>
         </div>
+        <nav *ngIf="isLiteMode" aria-label="Secciones de configuración Lite" class="settings-tabs lg:col-span-2">
+          <a routerLink="/settings/lite" class="settings-tab" [class.is-active]="activeSettingsTab === 'general'">General</a>
+          <a routerLink="/settings/lite/tax-profile" class="settings-tab" [class.is-active]="activeSettingsTab === 'tax-profile'">Perfil tributario</a>
+          <a routerLink="/settings/lite/establishments" class="settings-tab" [class.is-active]="activeSettingsTab === 'establishments'">Establecimientos</a>
+          <a routerLink="/settings/lite/emission-points" class="settings-tab" [class.is-active]="activeSettingsTab === 'emission-points'">Puntos de emisión</a>
+          <a routerLink="/settings/lite/sequences" class="settings-tab" [class.is-active]="activeSettingsTab === 'sequences'">Secuencias</a>
+          <a routerLink="/settings/lite/pos-terminals" class="settings-tab" [class.is-active]="activeSettingsTab === 'pos-terminals'">Terminales POS</a>
+          <a routerLink="/settings/lite/readiness" class="settings-tab" [class.is-active]="activeSettingsTab === 'readiness'">Preparación</a>
+          <a *ngIf="capabilities.isEnabled('api')" routerLink="/settings/lite/api-clients" class="settings-tab settings-tab--api" [class.is-active]="activeSettingsTab === 'api'">API</a>
+        </nav>
         <div *ngIf="isLiteMode && !canEditLiteSetup" class="lg:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          Solo el administrador del negocio puede modificar la configuración tributaria.
+          Solo Administrador o Gerente pueden modificar la configuración tributaria.
         </div>
-        <div *ngIf="isLiteMode && liteSetupReady === false"
+        <div *ngIf="isLiteMode && liteSetupReady === false && showSettingsSection('general', 'readiness')"
           class="lg:col-span-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
           <div class="flex flex-wrap items-start justify-between gap-2">
             <div>
@@ -37,7 +60,7 @@
             Pendiente: {{ liteSetupMissingLabel }}.
           </p>
         </div>
-        <div class="space-y-5">
+        <div *ngIf="!isLiteMode || showSettingsSection('general', 'tax-profile')" class="settings-column space-y-5">
        
 
           <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -105,7 +128,19 @@
               </label>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
+                <div *ngIf="isLiteMode; else legacyEstablishmentCode">
+                  <label class="block font-medium mb-1">Establecimiento activo</label>
+                  <select class="input" formControlName="selected_establishment"
+                    (change)="onLiteEstablishmentSelected($any($event.target).value)"
+                    [disabled]="isSaving || isLoadingCompany || !canEditLiteSetup">
+                    <option value="">Selecciona un establecimiento</option>
+                    <option *ngFor="let establishment of activeLiteEstablishments" [value]="establishment.name">
+                      {{ establishment.establishment_code }} - {{ establishment.establishment_name }}
+                    </option>
+                  </select>
+                  <small *ngIf="!activeLiteEstablishments.length" class="text-red-600">Configure un establecimiento activo.</small>
+                </div>
+                <ng-template #legacyEstablishmentCode><div>
                   <label class="block font-medium mb-1">Codigo Establecimiento</label>
                   <input appOnlyNumbers type="text" maxlength="3" class="input" formControlName="establishmentcode"
                     [class.border-red-500]="f['establishmentcode'].invalid && submitted" />
@@ -113,9 +148,21 @@
                     requerido</small>
                   <small *ngIf="f['establishmentcode'].errors?.['pattern'] && submitted" class="text-red-600">3
                     digitos</small>
-                </div>
+                </div></ng-template>
 
-                <div>
+                <div *ngIf="isLiteMode; else legacyEmissionPointCode">
+                  <label class="block font-medium mb-1">Punto de emisión activo</label>
+                  <select class="input" formControlName="selected_emission_point"
+                    (change)="onLiteEmissionPointSelected($any($event.target).value)"
+                    [disabled]="isSaving || isLoadingCompany || !selectedLiteEstablishment || !canEditLiteSetup">
+                    <option value="">Selecciona un punto de emisión</option>
+                    <option *ngFor="let point of activeLiteEmissionPoints" [value]="point.name">
+                      {{ point.emission_point_code }} - {{ point.emission_point_name }}
+                    </option>
+                  </select>
+                  <small *ngIf="selectedLiteEstablishment && !activeLiteEmissionPoints.length" class="text-red-600">Configure un punto de emisión activo para este establecimiento.</small>
+                </div>
+                <ng-template #legacyEmissionPointCode><div>
                   <label class="block font-medium mb-1">Punto Emision</label>
                   <input appOnlyNumbers type="text" maxlength="3" class="input" formControlName="emissionpoint"
                     [class.border-red-500]="f['emissionpoint'].invalid && submitted" />
@@ -123,17 +170,17 @@
                     requerido</small>
                   <small *ngIf="f['emissionpoint'].errors?.['pattern'] && submitted" class="text-red-600">3
                     digitos</small>
-                </div>
+                </div></ng-template>
               </div>
 
               <div *ngIf="isLiteMode" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label class="block font-medium mb-1">Nombre del establecimiento</label>
-                  <input type="text" class="input" formControlName="establishment_name" placeholder="Matriz" />
+                  <input type="text" class="input bg-gray-100 cursor-not-allowed" formControlName="establishment_name" readonly aria-readonly="true" />
                 </div>
                 <div>
                   <label class="block font-medium mb-1">Nombre del punto de emisión</label>
-                  <input type="text" class="input" formControlName="emission_point_name" placeholder="Caja 001" />
+                  <input type="text" class="input bg-gray-100 cursor-not-allowed" formControlName="emission_point_name" readonly aria-readonly="true" />
                 </div>
               </div>
 
@@ -152,8 +199,9 @@
                 <p class="mt-1 text-[11px] text-gray-500" *ngIf="hasValidLiteInvoiceSequence">
                   Ambiente {{ ambiente === 'PRODUCCION' ? 'Produccion' : 'Pruebas' }} · Secuencia activa.
                 </p>
+                <p *ngIf="hasValidLiteInvoiceSequence" class="mt-1 text-[11px] text-slate-600">Próximo comprobante: <span class="font-mono font-bold">{{ liteSequenceNextNumber }}</span> · {{ liteSequenceDocumentNumber }}</p>
                 <p class="mt-1 text-[11px] text-red-600" *ngIf="!hasValidLiteInvoiceSequence">
-                  No existe una secuencia activa para este ambiente.
+                  No existe una secuencia activa para esta combinación de establecimiento, punto de emisión y ambiente.
                 </p>
               </div>
 
@@ -228,7 +276,7 @@
           
         </div>
 
-        <div class="space-y-5">
+        <div *ngIf="!isLiteMode || showSettingsSection('general', 'tax-profile')" class="settings-column space-y-5">
           <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
             <div class="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
               <div>
@@ -357,6 +405,45 @@
                 <small *ngIf="f['email'].errors?.['email'] && submitted" class="text-red-600">Correo
                   invalido</small>
               </div>
+
+              <ng-container *ngIf="isLiteMode">
+                <div class="border-t border-slate-100 pt-3">
+                  <p class="text-sm font-semibold text-slate-800">Perfil tributario</p>
+                  <p class="mt-0.5 text-[11px] text-slate-500">Estos datos se guardan en el perfil tributario del negocio activo.</p>
+                </div>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <label class="inline-flex items-center gap-2 text-[11px] font-medium text-slate-700">
+                    <input type="checkbox" formControlName="obliged_accounting" />
+                    Obligado a llevar contabilidad
+                  </label>
+                  <label class="inline-flex items-center gap-2 text-[11px] font-medium text-slate-700">
+                    <input type="checkbox" formControlName="rimpe" />
+                    Régimen RIMPE
+                  </label>
+                  <label class="inline-flex items-center gap-2 text-[11px] font-medium text-slate-700">
+                    <input type="checkbox" formControlName="withholding_agent" />
+                    Agente de retención
+                  </label>
+                  <div>
+                    <label class="mb-1 block font-medium">Tipo de emisión</label>
+                    <input type="text" class="input" formControlName="emission_type" placeholder="Normal" />
+                  </div>
+                  <div>
+                    <label class="mb-1 block font-medium">Versión XML</label>
+                    <input type="text" class="input" formControlName="invoice_xml_version" placeholder="2.1.0" />
+                  </div>
+                  <div>
+                    <label class="mb-1 block font-medium">RUC proveedor de software</label>
+                    <input appOnlyNumbers type="text" maxlength="13" class="input" formControlName="software_provider_ruc" />
+                    <small *ngIf="f['software_provider_ruc'].invalid && submitted" class="text-red-600">Debe tener 13 dígitos.</small>
+                  </div>
+                  <div class="sm:col-span-2">
+                    <label class="mb-1 block font-medium">URL base del servicio</label>
+                    <input type="url" class="input" formControlName="service_base_url" placeholder="https://servicio.example.com" />
+                    <p class="mt-1 text-[10px] text-slate-500">La URL es configuración del perfil; no se envía dentro de una factura.</p>
+                  </div>
+                </div>
+              </ng-container>
             </div>
           </div>
 
@@ -460,6 +547,125 @@
 
           
         </div>
+
+        <section *ngIf="isLiteMode && showSettingsSection('general', 'establishments', 'emission-points', 'sequences', 'readiness', 'api')" class="lg:col-span-2 grid grid-cols-1 gap-5 xl:grid-cols-3">
+          <article *ngIf="showSettingsSection('general', 'establishments')" class="settings-summary-card rounded-lg border border-slate-200 bg-white shadow-sm">
+            <header class="border-b border-slate-100 px-4 py-3">
+              <h3 class="text-sm font-semibold text-slate-900">Establecimientos</h3>
+              <p class="mt-0.5 text-[11px] text-slate-500">Datos configurados para la empresa activa.</p>
+            </header>
+            <div class="p-3">
+              <div *ngIf="liteEstablishments.length; else noEstablishments" class="space-y-2">
+                <div *ngFor="let establishment of liteEstablishments" class="rounded-lg border border-slate-100 bg-slate-50 p-2.5 text-[11px]">
+                  <div class="flex items-start justify-between gap-2">
+                    <p class="font-bold text-slate-800">{{ establishment.establishment_name || establishment.name }}</p>
+                    <span class="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                      [ngClass]="establishment.status === 'Activo' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'">
+                      {{ establishment.status || 'Sin estado' }}
+                    </span>
+                  </div>
+                  <p class="mt-1 text-slate-600">Código: <span class="font-semibold">{{ establishment.establishment_code || '—' }}</span><span *ngIf="establishment.is_main"> · Principal</span></p>
+                </div>
+              </div>
+              <ng-template #noEstablishments><p class="py-3 text-center text-[11px] text-slate-500">No hay establecimientos configurados.</p></ng-template>
+              <p class="mt-3 rounded-md bg-slate-50 px-2 py-1.5 text-[10px] text-slate-500">La gestión avanzada de establecimientos estará disponible cuando el backend publique sus endpoints.</p>
+            </div>
+          </article>
+
+          <article *ngIf="showSettingsSection('general', 'emission-points')" class="settings-summary-card rounded-lg border border-slate-200 bg-white shadow-sm">
+            <header class="border-b border-slate-100 px-4 py-3">
+              <h3 class="text-sm font-semibold text-slate-900">Puntos de emisión</h3>
+              <p class="mt-0.5 text-[11px] text-slate-500">Solo pertenecen al negocio seleccionado.</p>
+            </header>
+            <div class="p-3">
+              <div *ngIf="liteEmissionPoints.length; else noEmissionPoints" class="space-y-2">
+                <div *ngFor="let point of liteEmissionPoints" class="rounded-lg border border-slate-100 bg-slate-50 p-2.5 text-[11px]">
+                  <div class="flex items-start justify-between gap-2">
+                    <p class="font-bold text-slate-800">{{ point.emission_point_name || point.name }}</p>
+                    <span class="rounded-full px-2 py-0.5 text-[10px] font-bold" [ngClass]="point.is_default ? 'bg-primary/10 text-primary' : 'bg-slate-200 text-slate-600'">{{ point.is_default ? 'Predeterminado' : (point.status || 'Sin estado') }}</span>
+                  </div>
+                  <p class="mt-1 text-slate-600">{{ point.emission_point_code || '—' }} · {{ establishmentLabel(point.establishment) }}</p>
+                </div>
+              </div>
+              <ng-template #noEmissionPoints><p class="py-3 text-center text-[11px] text-slate-500">No hay puntos de emisión configurados.</p></ng-template>
+              <p class="mt-3 rounded-md bg-slate-50 px-2 py-1.5 text-[10px] text-slate-500">No se crean puntos secundarios desde el frontend sin un endpoint administrativo específico.</p>
+            </div>
+          </article>
+
+          <article *ngIf="showSettingsSection('general', 'sequences')" class="settings-summary-card rounded-lg border border-slate-200 bg-white shadow-sm">
+            <header class="border-b border-slate-100 px-4 py-3">
+              <h3 class="text-sm font-semibold text-slate-900">Secuencias oficiales</h3>
+              <p class="mt-0.5 text-[11px] text-slate-500">Separadas por documento y ambiente.</p>
+            </header>
+            <div class="p-3">
+              <div *ngIf="liteSequences.length; else noSequences" class="space-y-2">
+                <div *ngFor="let sequence of liteSequences" class="rounded-lg border border-slate-100 bg-slate-50 p-2.5 text-[11px]">
+                  <div class="flex items-start justify-between gap-2">
+                    <p class="font-bold text-slate-800">{{ sequence.document_type || 'Documento' }} · {{ sequence.environment || '—' }}</p>
+                    <span class="rounded-full px-2 py-0.5 text-[10px] font-bold" [ngClass]="sequence.status === 'Activo' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'">{{ sequence.status || 'Sin estado' }}</span>
+                  </div>
+                  <p class="mt-1 text-slate-600">{{ establishmentLabel(sequence.establishment) }} · {{ emissionPointLabel(sequence.emission_point) }}</p>
+                  <p class="mt-1 text-slate-600">Secuencial actual: <span class="font-mono font-bold text-slate-800">{{ formatSequenceNumber(sequence.current_number) }}</span></p>
+                  <p class="mt-1 text-slate-600">Próximo comprobante: <span class="font-mono font-bold text-slate-800">{{ formatNextSequenceNumber(sequence.current_number) }}</span></p>
+                </div>
+              </div>
+              <ng-template #noSequences><p class="py-3 text-center text-[11px] text-slate-500">No hay secuencias configuradas.</p></ng-template>
+              <p class="mt-3 rounded-md bg-slate-50 px-2 py-1.5 text-[10px] text-slate-500">El secuencial es informativo; FacturADA lo asigna e incrementa de forma segura.</p>
+            </div>
+          </article>
+
+          <article *ngIf="showSettingsSection('readiness')" class="settings-summary-card xl:col-span-3 rounded-lg border border-slate-200 bg-white shadow-sm">
+            <header class="border-b border-slate-100 px-4 py-3">
+              <h3 class="text-sm font-semibold text-slate-900">Estado de preparación para emisión</h3>
+              <p class="mt-0.5 text-[11px] text-slate-500">Se calcula únicamente con la respuesta de <code>get_lite_setup</code>.</p>
+            </header>
+            <div class="p-4">
+              <div *ngIf="liteSetupReady; else setupPending" class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-800">
+                La empresa tiene la configuración mínima lista para emitir comprobantes.
+              </div>
+              <ng-template #setupPending>
+                <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+                  <p class="font-semibold">Aún falta completar configuración.</p>
+                  <p class="mt-1">{{ liteSetupMissingLabel || 'El backend aún no indicó los elementos pendientes.' }}</p>
+                </div>
+              </ng-template>
+            </div>
+          </article>
+
+          <article *ngIf="capabilities.isEnabled('api') && showSettingsSection('general', 'api')" class="settings-summary-card xl:col-span-3 rounded-lg border border-sky-200 bg-sky-50/40 shadow-sm">
+            <header class="flex flex-wrap items-start justify-between gap-2 border-b border-sky-100 px-4 py-3">
+              <div>
+                <h3 class="text-sm font-semibold text-slate-900">API e infraestructura tributaria</h3>
+                <p class="mt-0.5 text-[11px] text-slate-600">La API opera con el negocio, certificado y secuencia oficial configurados aquí.</p>
+              </div>
+              <span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-700">API habilitada</span>
+            </header>
+            <div class="grid grid-cols-1 gap-4 p-4 lg:grid-cols-2">
+              <div>
+                <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Headers de cliente</p>
+                <pre class="mt-2 overflow-auto rounded-lg bg-slate-900 p-3 text-[11px] leading-5 text-slate-100">X-API-Key: &lt;api_key&gt;
+X-API-Secret: &lt;secret_key&gt;
+Content-Type: application/json</pre>
+                <p class="mt-2 text-[10px] text-slate-500">La Secret Key se muestra únicamente al crearla. Nunca se guarda ni se registra en el navegador.</p>
+              </div>
+              <div>
+                <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Endpoints disponibles para integradores</p>
+                <ul class="mt-2 space-y-1 font-mono text-[10px] leading-5 text-slate-700">
+                  <li>GET /api/v1/facturada/license</li>
+                  <li>POST /api/v1/facturada/invoices</li>
+                  <li>POST /api/v1/facturada/invoices/emit</li>
+                  <li>GET /api/v1/facturada/invoices</li>
+                  <li>POST /api/v1/facturada/credit-notes</li>
+                  <li>GET /api/v1/facturada/openapi.json</li>
+                </ul>
+                <p class="mt-2 text-[10px] text-slate-500">RUC, establecimiento, punto de emisión y ambiente deben coincidir con esta configuración.</p>
+              </div>
+            </div>
+            <div class="mx-4 mb-4 rounded-lg border border-sky-200 bg-white px-3 py-2 text-[11px] text-slate-600">
+              Clientes API y logs quedan preparados en estas rutas. Se habilitarán cuando el backend publique endpoints administrativos específicos; no se usa <code>/api/resource</code> como sustituto.
+            </div>
+          </article>
+        </section>
       </form>
     </div>
   </div>

@@ -1,92 +1,90 @@
 <div class="app-container space-y-4">
-    <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <h2 class="text-xl font-bold">Facturas</h2>
-                <p class="text-xs text-primary-foreground/80">Listado unificado de comprobantes emitidos.</p>
-            </div>
-            <div class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
-                Registros: {{ total }}
-            </div>
-        </div>
+  <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 class="text-xl font-bold">Facturas</h2>
+        <p class="text-xs text-primary-foreground/80">Comprobantes electrónicos de la empresa activa.</p>
+      </div>
+      <div class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">Registros: {{ total }}</div>
+    </div>
+  </section>
+
+  <section class="rounded-xl border border-primary/15 bg-white p-4 shadow-sm">
+    <div class="toolbar !mb-0">
+      <div class="flex w-full flex-col gap-2 sm:flex-row">
+        <input class="input" type="search" [(ngModel)]="search" placeholder="Buscar documento, clave, cliente o identificación..." />
+        <select class="input sm:max-w-[190px]" [(ngModel)]="statusFiltro" (change)="page = 1; loadInvoices()">
+          <option value="">Todos los estados</option>
+          <option value="Borrador">Borrador</option>
+          <option value="Pendiente Emision">Pendiente emisión</option>
+          <option value="Emitida">Emitida</option>
+          <option value="Autorizada">Autorizada</option>
+          <option value="Rechazada">Rechazada</option>
+          <option value="Error de Envio">Error de envío</option>
+          <option value="Anulada">Anulada</option>
+        </select>
+      </div>
+      <app-button (click)="limpiarFiltros()" impact="bold" tone="light" shape="rounded" size="small">Limpiar</app-button>
+    </div>
+  </section>
+
+  <ng-container *ngIf="invoicesFiltradas.length > 0; else empty">
+    <section class="app-table-wrap">
+      <table class="app-table text-xs">
+        <thead class="app-thead">
+          <tr>
+            <th class="app-th">Documento</th>
+            <th class="app-th">Fecha emisión</th>
+            <th class="app-th">Cliente / identificación</th>
+            <th class="app-th text-right">Total</th>
+            <th class="app-th">Moneda</th>
+            <th class="app-th">Estado</th>
+            <th class="app-th">Proveedor / SRI</th>
+            <th class="app-th">Correo</th>
+            <th class="app-th text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let inv of invoicesFiltradas" class="app-tr">
+            <td class="app-td">
+              <div class="flex flex-col">
+                <span class="font-semibold">{{ documentNumber(inv) }}</span>
+                <span class="text-[11px] text-muted-foreground">{{ inv.name || '—' }}</span>
+              </div>
+            </td>
+            <td class="app-td">{{ postingDate(inv) }}</td>
+            <td class="app-td">
+              <div>{{ customerName(inv) }}</div>
+              <div class="text-[10px] text-muted-foreground">{{ customerIdentification(inv) }}</div>
+            </td>
+            <td class="app-td text-right font-semibold">{{ (inv.total ?? inv.grand_total ?? 0) | currency:(inv.currency || 'USD'):'symbol':'1.2-2' }}</td>
+            <td class="app-td">{{ inv.currency || 'USD' }}</td>
+            <td class="app-td">
+              <span class="badge" [ngClass]="getInvoiceStatusBadge(inv)">{{ getInvoiceStatusLabel(inv) }}</span>
+            </td>
+            <td class="app-td">
+              <div>{{ providerStatus(inv) }}</div>
+              <div class="max-w-[220px] truncate text-[10px] text-muted-foreground" [title]="sriMessage(inv)">{{ sriMessage(inv) }}</div>
+            </td>
+            <td class="app-td">{{ emailStatus(inv) }}</td>
+            <td class="app-td text-center">
+              <button class="btn btn-outline" [routerLink]="['/dashboard/invoices', inv.name]">Abrir</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="pager">
+        <button class="pager-btn" (click)="prevPage()" [disabled]="page === 1">« Anterior</button>
+        <span class="text-sm">Página {{ page }} de {{ totalPages }}</span>
+        <button class="pager-btn" (click)="nextPage()" [disabled]="page === totalPages">Siguiente »</button>
+      </div>
     </section>
+  </ng-container>
 
-    <section class="rounded-xl border border-primary/15 bg-white p-4 shadow-sm">
-        <div class="toolbar !mb-0">
-            <div class="flex w-full flex-col gap-2 sm:flex-row">
-                <input class="input" type="text" [(ngModel)]="search"
-                    placeholder="Buscar por #factura, clave de acceso, cliente, identificacion o estado..." />
-                <select class="input sm:max-w-[180px]" [(ngModel)]="statusFiltro" (change)="page = 1; loadInvoices()">
-                    <option value="">Todos los estados</option>
-                    <option value="BORRADOR">Borrador</option>
-                    <option value="PENDIENTE EMISION">Pendiente de emisión</option>
-                    <option value="EMITIDA">Emitida / procesando</option>
-                    <option value="AUTORIZADO">Autorizado</option>
-                    <option value="RECHAZADO">Rechazado</option>
-                    <option value="ANULADA">Anulada</option>
-                </select>
-            </div>
-            <div class="flex gap-2">
-                <app-button (click)="limpiarFiltros()" impact="bold" tone="light" shape="rounded" size="small">
-                    Limpiar
-                </app-button>
-            </div>
-        </div>
-    </section>
-
-    <ng-container *ngIf="invoicesFiltradas.length > 0; else empty">
-        <section class="app-table-wrap">
-            <table class="app-table text-xs">
-                <thead class="app-thead">
-                    <tr>
-                        <th class="app-th">N° Factura</th>
-                        <th class="app-th">Fecha Emision</th>
-                        <th class="app-th">Cliente</th>
-                        <th class="app-th text-right">Total</th>
-                        <th class="app-th">Estado SRI</th>
-                        <th class="app-th text-center">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr *ngFor="let inv of invoicesFiltradas" class="app-tr">
-                        <td class="app-td">
-                            <div class="flex flex-col">
-                                <span class="font-semibold">{{ inv.sri?.number || '—' }}</span>
-                                <span class="text-[11px] text-muted-foreground">{{ inv.name }}</span>
-                            </div>
-                        </td>
-                        <td class="app-td">{{ inv.creation | ecuadorTime }}</td>
-                        <td class="app-td">{{ inv.customer?.fullName || inv.customer?.name || '—' }}</td>
-                        <td class="app-td text-right font-semibold">{{ inv.total | currency:'USD':'symbol':'1.2-2' }}</td>
-                        <td class="app-td">
-                            <span class="badge" [ngClass]="getInvoiceStatusBadge(inv)">
-                                {{ getInvoiceStatusLabel(inv) }}
-                            </span>
-                        </td>
-                        <td class="app-td text-center">
-                            <button class="btn btn-outline" [routerLink]="['/dashboard/invoices', inv.name]">
-                                Abrir
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <div class="pager">
-                <button class="pager-btn" (click)="prevPage()" [disabled]="page === 1">« Anterior</button>
-                <span class="text-sm">Pagina {{ page }} de {{ totalPages }}</span>
-                <button class="pager-btn" (click)="nextPage()" [disabled]="page === totalPages">Siguiente »</button>
-            </div>
-        </section>
-    </ng-container>
-
-    <ng-template #empty>
-        <div class="app-card">
-            <div class="app-card-body text-center text-gray-500">
-                No hay facturas para mostrar.
-            </div>
-        </div>
-    </ng-template>
+  <ng-template #empty>
+    <div class="app-card"><div class="app-card-body text-center text-gray-500">No hay facturas para los filtros seleccionados.</div></div>
+  </ng-template>
 </div>
 
 

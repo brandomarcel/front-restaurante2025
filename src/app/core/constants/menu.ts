@@ -86,6 +86,12 @@ export class Menu {
           featureKey: 'orders',
           hideInLite: true,
         },
+        {
+          icon: 'assets/icons/heroicons/outline/building-storefront.svg',
+          label: 'Mesas',
+          route: '/dashboard/tables',
+          featureKey: 'tables',
+        },
       ],
     },
 
@@ -106,7 +112,7 @@ export class Menu {
     {
       group: 'Configuracion',
       separator: false,
-      allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'],
+      allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'MESERO', 'COCINA', 'USUARIO'],
       items: [
         {
           icon: 'assets/icons/tablericons/users.svg',
@@ -142,6 +148,18 @@ export class Menu {
           hideInLite: true,
         },
         {
+          icon: 'assets/icons/heroicons/outline/building-storefront.svg',
+          label: 'Mesas',
+          route: '/dashboard/tables',
+          featureKey: 'tables',
+        },
+        {
+          icon: 'assets/icons/heroicons/outline/building-office.svg',
+          label: 'Establecimientos',
+          route: '/settings/lite/establishments',
+          allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'MESERO', 'COCINA', 'FACTURACION', 'USUARIO'],
+        },
+        {
           icon: 'assets/icons/tablericons/category.svg',
           label: 'Categorias',
           route: '/dashboard/categories',
@@ -152,7 +170,7 @@ export class Menu {
           icon: 'assets/icons/tablericons/users.svg',
           label: 'Usuarios',
           route: '/dashboard/users',
-          hideInLite: true,
+          allowedRoles: ['ADMINISTRADOR', 'GERENTE'],
         },
       ],
     },
@@ -170,6 +188,13 @@ export class Menu {
           route: '/dashboard/orders',
           featureKey: 'orders',
           hideInLite: true,
+        },
+        {
+          allowedRoles: ['MESERO'],
+          icon: 'assets/icons/heroicons/outline/building-storefront.svg',
+          label: 'Mesas',
+          route: '/dashboard/tables',
+          featureKey: 'tables',
         },
 
         {

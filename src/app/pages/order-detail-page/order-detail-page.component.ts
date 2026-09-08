@@ -18,9 +18,11 @@ import { OrderSplitRow, SplitOrderPayload } from 'src/app/services/order-split.t
 import { SplitOrderDialogComponent } from './components/split-order-dialog/split-order-dialog.component';
 import { OrderSplitsTableComponent } from './components/order-splits-table/order-splits-table.component';
 import { PaymentsService } from 'src/app/services/payments.service';
+import { CustomersService } from 'src/app/services/customers.service';
 import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { InvoicePaymentPayload, roundMoney, validatePaymentsTotal } from 'src/app/shared/utils/payment.utils';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 type Product = any; // usa tu modelo si lo tienes
 type OrderItem = {
@@ -59,6 +61,8 @@ export class OrderDetailPageComponent implements OnInit {
 
   // UI/estado
   products: Product[] = [];
+  customers: any[] = [];
+  orderCustomerId = '';
   orderItems: OrderItem[] = [];
   showCustomerModal = false;
   customerForm!: FormGroup;
@@ -67,10 +71,14 @@ export class OrderDetailPageComponent implements OnInit {
   splitActionLoadingName = '';
   splitDeleteLoadingName = '';
   splitsLoading = false;
+  splitsLoaded = false;
   closingOrder = false;
+  savingOrderChanges = false;
+  orderInvoiceEmitting = false;
   orderSplits: OrderSplitRow[] = [];
   splitRemainingItems: any[] = [];
   paymentMethods: any[] = [];
+  orderPayments: any[] = [];
 
   private baseUrl = environment.URL;
   roleName: 'Gerente' | 'Cajero' | 'Mesero' | 'Desconocido' = 'Desconocido';
@@ -84,7 +92,9 @@ export class OrderDetailPageComponent implements OnInit {
     private ordersSvc: OrdersService,
     private orderSplitSvc: OrderSplitService,
     private paymentsSvc: PaymentsService,
+    private customersSvc: CustomersService,
     private alertService: AlertService,
+    private capabilities: CompanyCapabilitiesService,
   ) { }
 
   ngOnInit(): void {
@@ -102,31 +112,32 @@ export class OrderDetailPageComponent implements OnInit {
     const id = this.route.snapshot.paramMap.get('id')!;
     this.fetch(id);
     this.loadProducts();
+    this.loadCustomers();
     this.loadPaymentMethods();
   }
 
   // =============== Cargar Orden y Productos ===============
   fetch(id: string) {
     this.loading = true; this.error = ''; this.order = null;
+    this.orderSplits = [];
+    this.splitRemainingItems = [];
+    this.splitsLoaded = false;
     this.ordersSvc.getById(id).subscribe({
       next: (res: any) => {
         this.order = res?.message?.data || res?.data || null;
-        console.log('Orden cargada:', this.order);
         this.loading = false;
         if (!this.order) {
           this.error = 'Orden no encontrada';
           return;
         }
+        this.orderCustomerId = this.getOrderCustomerId(this.order);
+        this.orderPayments = this.normalizeOrderPayments(this.order?.payments || []);
         this.hydrateOrderItems(this.order);
-        // El módulo facturada_restaurante no expone todavía operaciones de
-        // división; no se consulta ningún endpoint heredado.
-        this.orderSplits = [];
-        this.splitRemainingItems = [];
+        if (this.supportsSplits) this.loadOrderSplits();
       },
-      error: (err) => {
+      error: () => {
         this.loading = false;
         this.error = 'No se pudo cargar la orden';
-        console.error(err);
       }
     });
   }
@@ -145,7 +156,6 @@ export class OrderDetailPageComponent implements OnInit {
     // Tu JSON ya trae por ítem: quantity, price, tax_rate, subtotal (SIN IVA), iva, total (CON IVA)
     // Para edición homogénea con invoicing, trabajamos con total = subtotal SIN IVA y tax_value = tax_rate.
     const items = order?.items || [];
-    console.log('Items originales de la orden:', items);
     this.orderItems = items.map((it: any): OrderItem => ({
       productId: it.product ?? it.item ?? it.productId,
       productName: it.item_name ?? it.product_name ?? it.productName ?? it.nombre,
@@ -212,8 +222,82 @@ export class OrderDetailPageComponent implements OnInit {
     this.router.navigate(['/invoices', invName]);
   }
 
-  facturarDesdeOrden(order: any) {
-    toast.info('La factura debe crearse al registrar la orden con estado Factura.');
+  async emitirFacturaOrden(): Promise<void> {
+    if (!this.order?.name || this.orderInvoiceEmitting) return;
+    const terminalBlockMessage = this.capabilities.getPosTerminalBlockMessage();
+    if (terminalBlockMessage) {
+      toast.error(terminalBlockMessage);
+      return;
+    }
+    if (!this.canCreateInvoice) {
+      toast.error(this.isCancelled
+        ? 'No se puede facturar una orden cancelada.'
+        : 'La orden ya tiene una factura asociada o no tiene permisos para facturar.');
+      return;
+    }
+    if (!this.belongsToActiveBusiness(this.order)) {
+      toast.error('La orden no pertenece al negocio seleccionado.');
+      return;
+    }
+    if (this.hasUnsavedInvoiceChanges) {
+      toast.info('Guarda los cambios de cliente o ítems antes de facturar la orden.');
+      return;
+    }
+    if (this.isCurrentOrderFinalConsumer() && this.orderTotal > 50) {
+      toast.error('No se puede emitir una factura a CONSUMIDOR FINAL por un valor superior a USD 50 IVA incluido. Seleccione un cliente identificado.');
+      return;
+    }
+
+    const confirmation = await this.alertService.confirm(
+      'Se emitirá la factura con el cliente e ítems actuales de la orden. Esta acción no permite modificar la orden.',
+      'Facturar orden'
+    );
+    if (!confirmation.isConfirmed) return;
+
+    const orderName = this.order.name;
+    this.orderInvoiceEmitting = true;
+    this.ordersSvc.emitInvoiceForOrder(orderName)
+      .pipe(finalize(() => this.orderInvoiceEmitting = false))
+      .subscribe({
+        next: (response: any) => {
+          const message = response?.message ?? response ?? {};
+          const data = message?.data ?? response?.data ?? {};
+          const emission = message?.emission ?? data?.emission ?? {};
+          const status = this.normalizeStatus(emission?.status ?? data?.provider_status ?? data?.status);
+          const linkedInvoice = data?.lite_invoice ?? data?.order?.lite_invoice ?? data?.invoice ?? data?.sri?.invoice;
+          const invoice = String(
+            typeof linkedInvoice === 'object' ? linkedInvoice?.name : linkedInvoice || ''
+          ).trim();
+
+          if (status === 'authorized' || status === 'autorizada') {
+            toast.success('Factura autorizada por el SRI.');
+          } else if (status.includes('processing') || status.includes('proces') || status.includes('pendiente') || String(emission?.code || '') === '70') {
+            toast.info('La factura fue recibida y está pendiente de autorización. Consulta su estado; no la emitas nuevamente.');
+          } else if (status.includes('rechaz') || status.includes('not authorized')) {
+            toast.error(this.getEmissionMessage(emission, data) || 'La factura fue rechazada. Revisa el detalle para reintentar si corresponde.');
+          } else if (status.includes('error')) {
+            toast.error(this.getEmissionMessage(emission, data) || 'Ocurrió un error al emitir la factura.');
+          } else {
+            toast.success('Solicitud de facturación procesada.');
+          }
+
+          this.fetch(orderName);
+          if (invoice) this.router.navigate(['/dashboard/invoices', invoice]);
+        },
+        error: (error) => toast.error(this.extractBackendError(error))
+      });
+  }
+
+  private loadCustomers(): void {
+    this.customersSvc.getAll(1).subscribe({
+      next: (customers: any[]) => {
+        this.customers = (Array.isArray(customers) ? customers : []).map((customer: any) => ({
+          ...customer,
+          nombre: customer?.nombre || customer?.customer_name || customer?.fullName || customer?.name
+        }));
+      },
+      error: () => { this.customers = []; }
+    });
   }
 
   // =================== Edición de Ítems ===================
@@ -301,36 +385,55 @@ export class OrderDetailPageComponent implements OnInit {
 
   get pendingOrderToSplit(): number {
     const splitTotal = this.round2(
-      (this.orderSplits || []).reduce((acc, row) => acc + this.safeNumber(row?.total, 0), 0)
+      (this.orderSplits || []).reduce((acc, row) => acc + this.safeMoney(row?.total, 0), 0)
     );
     return Math.max(0, this.round2(this.orderTotal - splitTotal));
   }
 
   get canOpenSplit(): boolean {
-    return false;
+    return this.supportsSplits
+      && this.canCreateSplit
+      && !this.isCancelled
+      && !this.isLocked
+      && this.splitItemsSource.some((item: any) => this.safeNumber(item?.remaining_qty ?? item?.qty ?? item?.quantity, 0) > 0);
   }
 
   get canShowCreateInvoice(): boolean {
-    return false;
+    return !!this.order?.name
+      && !this.isCancelled
+      && !this.isLocked
+      && this.capabilities.isEnabled('orders')
+      && (this.capabilities.isEnabled('billing') || this.capabilities.isEnabled('direct_invoice'))
+      && this.capabilities.hasPermission('billing.create');
+  }
+
+  get currentFiscalLocation(): any | null {
+    return this.capabilities.activeFiscalLocation;
+  }
+
+  get posTerminalBlockMessage(): string | null {
+    return this.capabilities.getPosTerminalBlockMessage();
+  }
+
+  get terminalAssignmentLabel(): string {
+    return this.currentFiscalLocation?.terminal && this.capabilities.terminalAccessRequired ? 'Asignado a tu usuario' : '';
   }
 
   get canCreateInvoice(): boolean {
-    return this.canShowCreateInvoice && !this.isLocked;
+    return this.canShowCreateInvoice && !this.isLocked && !this.posTerminalBlockMessage;
   }
 
   get createInvoiceBlockedReason(): string {
     if (!this.canShowCreateInvoice) return '';
     if (this.isLocked) return 'La orden ya tiene facturacion asociada.';
+    if (this.posTerminalBlockMessage) return this.posTerminalBlockMessage;
     return '';
   }
 
   get splitItemsSource(): any[] {
-    // Si ya hay subcuentas, usar solo remanente para evitar reusar items ya asignados.
-    if ((this.orderSplits || []).length > 0) {
-      return Array.isArray(this.splitRemainingItems) ? this.splitRemainingItems : [];
-    }
-    // Primera división: usar remanente si ya está, o items de la orden como fallback inicial.
-    if (Array.isArray(this.splitRemainingItems) && this.splitRemainingItems.length) {
+    // Una vez consultado el backend, `remaining` es la única fuente válida
+    // para evitar asignar una fila dos veces.
+    if (this.splitsLoaded) {
       return this.splitRemainingItems;
     }
     return Array.isArray(this.order?.items) ? this.order.items : [];
@@ -338,6 +441,7 @@ export class OrderDetailPageComponent implements OnInit {
 
   // =================== Guardado ===================
   saveOrderChanges(): void {
+  if (this.savingOrderChanges) return;
   if (!this.canEditOrder) {
     toast.error(this.isClosed ? 'La orden ya está cerrada.' : 'La orden ya está facturada.');
     return;
@@ -363,15 +467,35 @@ export class OrderDetailPageComponent implements OnInit {
   });
 
   const payload = {
-    name: this.order.name,              // requerido por tu endpoint
+    order_name: this.order.name,
+    customer: this.orderCustomerId || this.getOrderCustomerId(this.order),
+    alias: this.order?.alias || '',
     items,
-    subtotal: this.orderSubtotal,       // totales de cabecera
-    iva:      this.orderIva,
-    total:    this.orderTotal
-    // alias/email/estado/payments si también los actualizas desde la UI
+    payments: this.orderPayments,
+    notes: this.order?.notes || this.order?.observaciones || ''
   };
 
-  this.ordersSvc.update(payload).subscribe({
+  if (!payload.customer) {
+    toast.error('Debes seleccionar un cliente activo para la orden.');
+    return;
+  }
+
+  const paymentValidation = validatePaymentsTotal(
+    this.orderPayments.map((payment: any) => ({
+      formas_de_pago: payment.payment_method,
+      monto: payment.amount
+    })),
+    this.orderTotal
+  );
+  if (paymentValidation) {
+    toast.error(paymentValidation);
+    return;
+  }
+
+  this.savingOrderChanges = true;
+  this.ordersSvc.updateOrderForInvoice(payload)
+    .pipe(finalize(() => this.savingOrderChanges = false))
+    .subscribe({
     next: () => {
       toast.success('Orden actualizada.');
       this.loadProducts();
@@ -379,7 +503,7 @@ export class OrderDetailPageComponent implements OnInit {
         this.fetch(this.order.name);
       }
     },
-    error: () => toast.error('Error al actualizar la orden.')
+    error: (error) => toast.error(this.extractBackendError(error))
   });
 
 }
@@ -408,7 +532,7 @@ export class OrderDetailPageComponent implements OnInit {
 
     const orderName = this.order.name;
     this.closingOrder = true;
-    this.ordersSvc.updateStatus(orderName, 'Cerrada')
+    this.ordersSvc.updateStatus(orderName, 'Cerrada', this.order?.status)
       .pipe(finalize(() => this.closingOrder = false))
       .subscribe({
         next: () => {
@@ -416,9 +540,10 @@ export class OrderDetailPageComponent implements OnInit {
           if (this.order) {
             this.order.status = 'Cerrada';
           }
+          window.dispatchEvent(new CustomEvent('facturada:restaurant-data-changed'));
           this.fetch(orderName);
         },
-        error: () => toast.error('No se pudo cerrar la orden.')
+        error: (error) => toast.error(this.extractBackendError(error))
       });
   }
 
@@ -460,15 +585,20 @@ export class OrderDetailPageComponent implements OnInit {
 
   openSplitDialog(): void {
     if (!this.order?.name) return;
+    if (!this.canCreateSplit) {
+      toast.error('No tiene permisos para dividir esta cuenta.');
+      return;
+    }
+    if (this.isCancelled) {
+      toast.error('No se puede dividir una orden cancelada.');
+      return;
+    }
     if (this.isLocked) {
       toast.info('No se puede dividir una orden facturada.');
       return;
     }
-    if (this.pendingOrderToSplit <= 0) {
-      toast.info('La cuenta ya está totalmente dividida/pagada.');
-      return;
-    }
     this.showSplitDialog = true;
+    this.loadOrderSplits();
   }
 
   closeSplitDialog(): void {
@@ -477,7 +607,15 @@ export class OrderDetailPageComponent implements OnInit {
   }
 
   createSplit(payload: SplitOrderPayload): void {
-    if (this.splitSubmitting) return;
+    if (this.splitSubmitting || !this.canOpenSplit) return;
+    if (!this.belongsToActiveBusiness(this.order)) {
+      toast.error('La orden no pertenece al negocio seleccionado.');
+      return;
+    }
+    if (payload.customer && !this.belongsToActiveBusiness(this.order?.customer_data)) {
+      toast.error('El cliente no pertenece al negocio seleccionado.');
+      return;
+    }
 
     this.splitSubmitting = true;
     this.orderSplitSvc.splitOrder(payload)
@@ -486,7 +624,8 @@ export class OrderDetailPageComponent implements OnInit {
         next: () => {
           toast.success('Subcuenta creada correctamente.');
           this.showSplitDialog = false;
-          this.loadOrderSplits();
+          if (this.order?.name) this.fetch(this.order.name);
+          else this.loadOrderSplits();
         },
         error: (e) => {
           toast.error(this.extractBackendError(e));
@@ -496,6 +635,19 @@ export class OrderDetailPageComponent implements OnInit {
 
   invoiceSplit(row: OrderSplitRow): void {
     if (!row?.name || this.splitActionLoadingName || this.splitDeleteLoadingName) return;
+    const terminalBlockMessage = this.capabilities.getPosTerminalBlockMessage();
+    if (terminalBlockMessage) {
+      toast.error(terminalBlockMessage);
+      return;
+    }
+    if (!this.canInvoiceSplit) {
+      toast.error('No tiene permisos para facturar una cuenta dividida.');
+      return;
+    }
+    if (this.splitHasInvoice(row)) {
+      toast.info('Esta cuenta ya tiene una factura asociada.');
+      return;
+    }
 
     const payments = this.getValidatedSplitPayments(row);
     if (!payments) return;
@@ -504,11 +656,12 @@ export class OrderDetailPageComponent implements OnInit {
     this.orderSplitSvc.createAndEmitFromSplit(row.name, payments)
       .pipe(finalize(() => { this.splitActionLoadingName = ''; }))
       .subscribe({
-        next: () => {
-          toast.success('Subcuenta facturada correctamente.');
-          this.loadOrderSplits();
+        next: (response: any) => {
+          this.showSplitEmissionResult(response);
           if (this.order?.name) {
             this.fetch(this.order.name);
+          } else {
+            this.loadOrderSplits();
           }
         },
         error: (e) => {
@@ -519,6 +672,14 @@ export class OrderDetailPageComponent implements OnInit {
 
   deleteSplit(row: OrderSplitRow): void {
     if (!row?.name || this.splitActionLoadingName || this.splitDeleteLoadingName) return;
+    if (!this.canDeleteSplit) {
+      toast.error('No tiene permisos para eliminar una cuenta dividida.');
+      return;
+    }
+    if (this.splitHasInvoice(row)) {
+      toast.error('No se puede eliminar una cuenta que ya tiene factura.');
+      return;
+    }
 
     const splitLabel = row?.split_label || row?.alias || row?.name;
     const ok = window.confirm(`¿Eliminar la subcuenta "${splitLabel}"? Esta acción no se puede deshacer.`);
@@ -530,7 +691,8 @@ export class OrderDetailPageComponent implements OnInit {
       .subscribe({
         next: () => {
           toast.success('Subcuenta eliminada correctamente.');
-          this.loadOrderSplits();
+          if (this.order?.name) this.fetch(this.order.name);
+          else this.loadOrderSplits();
         },
         error: (e) => {
           toast.error(this.extractBackendError(e));
@@ -542,21 +704,27 @@ export class OrderDetailPageComponent implements OnInit {
     if (!this.order?.name) {
       this.orderSplits = [];
       this.splitRemainingItems = [];
+      this.splitsLoaded = false;
       return;
     }
 
+    const orderName = this.order.name;
     this.splitsLoading = true;
-    this.orderSplitSvc.getOrderSplits(this.order.name)
+    this.orderSplitSvc.getOrderSplits(orderName)
       .pipe(finalize(() => { this.splitsLoading = false; }))
       .subscribe({
         next: (res) => {
+          if (this.order?.name !== orderName) return;
           const mapped = this.mapSplitsResponse(res);
           this.orderSplits = mapped.splits;
           this.splitRemainingItems = mapped.remaining;
+          this.splitsLoaded = true;
         },
         error: (e) => {
+          if (this.order?.name !== orderName) return;
           this.orderSplits = [];
           this.splitRemainingItems = [];
+          this.splitsLoaded = false;
           toast.error(this.extractBackendError(e));
         }
       });
@@ -595,7 +763,7 @@ export class OrderDetailPageComponent implements OnInit {
   }
 
   private mapSplitsResponse(res: any): { splits: OrderSplitRow[]; remaining: any[] } {
-    const payload = res?.message ?? res ?? {};
+    const payload = res?.message?.data ?? res?.data ?? res?.message ?? res ?? {};
 
     const splitsRaw =
       (Array.isArray(payload?.splits) && payload.splits) ||
@@ -609,14 +777,46 @@ export class OrderDetailPageComponent implements OnInit {
       (Array.isArray(res?.remaining) && res.remaining) ||
       [];
 
-    const splits = (splitsRaw as any[]).map((row: any) => ({
-      ...row,
-      invoice: row?.sales_invoice || row?.invoice || row?.factura || null,
-      sri: row?.sri ?? {
-        status: row?.sri_status,
-        invoice: row?.sales_invoice || row?.invoice || row?.factura
-      }
-    }));
+    const activeBusiness = String(this.capabilities.activeBusinessId || '').trim();
+    const splits = (splitsRaw as any[])
+      .filter((row: any) => {
+        const rowBusiness = String(row?.business || '').trim();
+        return !rowBusiness || rowBusiness === activeBusiness;
+      })
+      .map((row: any) => {
+        // Cada subcuenta es un documento monetario: sus totales se trabajan
+        // siempre en centavos. El backend puede entregar fracciones internas
+        // (p. ej. 23.125); no se deben sumar crudas si la UI muestra 23.13.
+        const subtotal = this.safeMoney(row?.subtotal ?? row?.total_without_tax ?? row?.net_total, 0);
+        const iva = this.safeMoney(row?.iva ?? row?.total_taxes ?? row?.tax_amount, 0);
+        const rawTotal = this.safeNumber(row?.total ?? row?.grand_total, Number.NaN);
+        const total = Number.isFinite(rawTotal) ? this.round2(rawTotal) : this.round2(subtotal + iva);
+        const payments = Array.isArray(row?.payments)
+          ? row.payments.map((payment: any) => {
+              const amount = this.safeMoney(payment?.monto ?? payment?.amount, 0);
+              return { ...payment, monto: amount, amount };
+            })
+          : [];
+
+        return {
+          ...row,
+          subtotal,
+          iva,
+          total,
+          payments,
+          invoice: row?.lite_invoice || row?.sales_invoice || row?.invoice || row?.factura || null,
+          lite_invoice: row?.lite_invoice || row?.sales_invoice || row?.invoice || row?.factura || null,
+          customer_name: row?.customer_name ?? row?.customer_data?.customer_name ?? row?.customer_data?.nombre,
+          customer_identification_number: row?.customer_identification_number ?? row?.customer_data?.identification_number ?? row?.customer_data?.num_identificacion,
+          provider_status: row?.provider_status ?? row?.electronic?.provider_status,
+          sri_message: row?.sri_message ?? row?.electronic?.sri_message,
+          sri: row?.sri ?? {
+            status: row?.sri_status ?? row?.provider_status,
+            invoice: row?.lite_invoice || row?.sales_invoice || row?.invoice || row?.factura,
+            access_key: row?.access_key ?? row?.electronic?.access_key
+          }
+        };
+      });
 
     return { splits, remaining };
   }
@@ -653,6 +853,38 @@ export class OrderDetailPageComponent implements OnInit {
     return 'Error inesperado.';
   }
 
+  private getOrderCustomerId(order: any): string {
+    return String(
+      order?.customer?.name
+      || order?.customer_data?.name
+      || (typeof order?.customer === 'string' ? order.customer : '')
+      || ''
+    ).trim();
+  }
+
+  /** Validación preventiva; el backend conserva la validación definitiva. */
+  private isCurrentOrderFinalConsumer(): boolean {
+    const customerId = this.orderCustomerId || this.getOrderCustomerId(this.order);
+    const selected = this.customers.find((customer: any) => String(customer?.name || '') === customerId);
+    const source = selected || this.order?.customer_data || this.order?.customer || {};
+    const identificationType = String(
+      source?.identification_type ?? source?.tipo_identificacion ?? this.order?.tipo_identificacion_cliente ?? ''
+    ).trim().toLocaleLowerCase();
+    const identificationNumber = String(
+      source?.identification_number ?? source?.num_identificacion ?? this.order?.identificacion_cliente ?? ''
+    ).trim();
+    return identificationType.includes('consumidor final') || identificationNumber === '9999999999999';
+  }
+
+  private normalizeOrderPayments(payments: any[]): any[] {
+    return (Array.isArray(payments) ? payments : []).map((payment: any) => ({
+      payment_method: String(payment?.payment_method || payment?.formas_de_pago || payment?.method || '').trim(),
+      payment_code: String(payment?.payment_code || payment?.forma_pago || payment?.codigo || '').trim(),
+      amount: this.round2(this.safeNumber(payment?.amount ?? payment?.monto, 0)),
+      reference: String(payment?.reference || '').trim()
+    }));
+  }
+
   private safeNumber(v: any, def = 0): number {
     const n = Number(v);
     return Number.isFinite(n) ? n : def;
@@ -684,16 +916,20 @@ export class OrderDetailPageComponent implements OnInit {
   // B) bloquear si ya fue AUTORIZADA en SRI (recomendado)
     const linkedInvoice = String(
       this.order?.sri?.invoice ||
+      this.order?.lite_invoice ||
       this.order?.sales_invoice ||
       this.order?.invoice ||
       this.order?.factura ||
       ''
     ).trim();
 
-    const sriStatus = this.normalizeStatus(this.order?.sri?.status);
-    const hasRealSriStatus = !!sriStatus && sriStatus !== this.normalizeStatus('Sin factura');
-
-    return !!linkedInvoice || this.order?.type === 'Factura' || hasRealSriStatus;
+    return !!linkedInvoice
+      || this.normalizeStatus(this.order?.fiscal_status) === 'factura'
+      // Compatibilidad con órdenes antiguas. El contrato nuevo usa
+      // `fiscal_status` y `lite_invoice`; un estado SRI aislado no debe
+      // bloquear una orden que todavía no tiene comprobante asociado.
+      || this.normalizeStatus(this.order?.estado) === 'factura'
+      || this.order?.type === 'Factura';
 }
 
   get isMesero(): boolean {
@@ -702,7 +938,7 @@ export class OrderDetailPageComponent implements OnInit {
 
   get isClosed(): boolean {
     const status = this.normalizeStatus(this.order?.status);
-    return status.includes('cerr') || status.includes('lista') || status.includes('entreg');
+    return status.includes('cerr');
   }
 
   get isReadOnlyView(): boolean {
@@ -710,9 +946,114 @@ export class OrderDetailPageComponent implements OnInit {
   }
 
   get canEditOrder(): boolean {
-    // El contrato actual sólo define transiciones de estado, no edición de
-    // líneas de una orden existente.
-    return false;
+    return !!this.order?.name
+      && !this.isCancelled
+      && !this.isLocked
+      && this.capabilities.isEnabled('orders')
+      && (this.capabilities.isEnabled('billing') || this.capabilities.isEnabled('direct_invoice'))
+      && this.capabilities.hasPermission('billing.create')
+      && ['GERENTE', 'CAJERO', 'FACTURACION', 'ADMINISTRADOR'].includes(this.currentBusinessRole);
+  }
+
+  get hasUnsavedInvoiceChanges(): boolean {
+    if (!this.order) return false;
+    if (this.orderCustomerId !== this.getOrderCustomerId(this.order)) return true;
+    const originalItems = Array.isArray(this.order?.items) ? this.order.items : [];
+    if (originalItems.length !== this.orderItems.length) return true;
+
+    const itemsChanged = this.orderItems.some((item, index) => {
+      const original = originalItems[index] || {};
+      const originalProduct = String(original?.product || original?.item || original?.productId || '').trim();
+      const originalQty = this.safeNumber(original?.qty ?? original?.quantity, 0);
+      const originalRate = this.safeMoney(original?.rate ?? original?.price);
+      const originalTax = this.safeNumber(original?.tax_rate ?? original?.tax_value, 0);
+      return String(item.productId || '').trim() !== originalProduct
+        || this.safeNumber(item.quantity, 0) !== originalQty
+        || this.safeMoney(item.price) !== originalRate
+        || this.safeNumber(item.tax_value, 0) !== originalTax;
+    });
+    if (itemsChanged) return true;
+
+    const originalPayments = this.normalizeOrderPayments(this.order?.payments || []);
+    if (originalPayments.length !== this.orderPayments.length) return true;
+    return this.orderPayments.some((payment: any, index: number) => {
+      const original = originalPayments[index] || {};
+      return payment.payment_method !== original.payment_method
+        || payment.payment_code !== original.payment_code
+        || this.round2(this.safeNumber(payment.amount, 0)) !== this.round2(this.safeNumber(original.amount, 0))
+        || String(payment.reference || '') !== String(original.reference || '');
+    });
+  }
+
+  addOrderPayment(): void {
+    const defaultPayment = this.paymentMethods[0];
+    this.orderPayments.push({
+      payment_method: defaultPayment?.name || '',
+      payment_code: defaultPayment?.codigo || '',
+      amount: 0,
+      reference: ''
+    });
+  }
+
+  removeOrderPayment(index: number): void {
+    this.orderPayments.splice(index, 1);
+  }
+
+  onOrderPaymentMethodChange(payment: any): void {
+    const selected = this.paymentMethods.find((item: any) => item?.name === payment?.payment_method);
+    payment.payment_code = selected?.codigo || selected?.payment_code || selected?.forma_pago || '';
+  }
+
+  private showSplitEmissionResult(response: any): void {
+    const message = response?.message ?? response ?? {};
+    const data = message?.data ?? response?.data ?? {};
+    const emission = message?.emission ?? data?.emission ?? {};
+    const rawStatus = String(emission?.status ?? data?.provider_status ?? data?.status ?? '');
+    const normalizedStatus = this.normalizeStatus(rawStatus);
+    const status = normalizedStatus === 'autorizada' || normalizedStatus === 'authorized'
+      ? 'AUTHORIZED'
+      : normalizedStatus === 'emitida' || normalizedStatus.includes('proces') || normalizedStatus.includes('pendiente')
+        ? 'PROCESSING'
+        : normalizedStatus === 'rechazada' || normalizedStatus === 'not authorized'
+          ? 'NOT_AUTHORIZED'
+          : normalizedStatus.includes('error')
+            ? 'ERROR'
+            : rawStatus.toUpperCase();
+    const code = String(emission?.code ?? data?.sri_code ?? '').trim();
+    const messages = Array.isArray(emission?.messages) ? emission.messages : [];
+    const detail = messages.map((item: any) => typeof item === 'string'
+      ? item
+      : (item?.message || item?.description || item?.text || '')
+    ).filter(Boolean).join(' ') || emission?.message || data?.sri_message || data?.emission_error || '';
+    if (status === 'AUTHORIZED') {
+      toast.success(`Factura autorizada${data?.lite_invoice ? `: ${data.lite_invoice}` : ''}.`);
+    } else if (status === 'PROCESSING' || code === '70') {
+      toast.info('La cuenta fue recibida y continúa en procesamiento. Consulte nuevamente la autorización.');
+    } else if (status === 'NOT_AUTHORIZED') {
+      toast.error(detail || 'La factura de la cuenta no fue autorizada.');
+    } else if (status === 'ERROR') {
+      toast.error(detail || 'Ocurrió un error al emitir la cuenta.');
+    } else {
+      toast.success('Solicitud de facturación enviada.');
+    }
+  }
+
+  private getEmissionMessage(emission: any, data: any): string {
+    const messages = Array.isArray(emission?.messages) ? emission.messages : [];
+    return messages.map((item: any) => typeof item === 'string'
+      ? item
+      : (item?.message || item?.description || item?.text || '')
+    ).filter(Boolean).join(' ')
+      || emission?.message
+      || data?.sri_message
+      || data?.emission_error
+      || '';
+  }
+
+  private belongsToActiveBusiness(record: any): boolean {
+    const active = String(this.capabilities.activeBusinessId || '').trim();
+    const business = String(record?.business || '').trim();
+    return !!active && (!business || business === active);
   }
 
   get canCloseOrder(): boolean {
@@ -733,19 +1074,57 @@ export class OrderDetailPageComponent implements OnInit {
     return !!this.order?.name && !this.isLocked && (status.includes('ingres') || status.includes('prepar') || status.includes('lista'));
   }
 
-  get supportsSplits(): boolean { return false; }
+  get isCancelled(): boolean {
+    return this.normalizeStatus(this.order?.status).includes('cancel');
+  }
+
+  get supportsSplits(): boolean {
+    return this.capabilities.isEnabled('restaurant') && this.capabilities.isEnabled('orders') && !this.isKitchenRole;
+  }
+
+  get canCreateSplit(): boolean {
+    return this.supportsSplits && ['MESERO', 'CAJERO', 'GERENTE', 'ADMINISTRADOR'].includes(this.currentBusinessRole);
+  }
+
+  get canInvoiceSplit(): boolean {
+    return this.supportsSplits
+      && (['CAJERO', 'GERENTE', 'ADMINISTRADOR', 'FACTURACION'].includes(this.currentBusinessRole))
+      && (this.capabilities.isEnabled('billing') || this.capabilities.isEnabled('direct_invoice'))
+      && this.capabilities.hasPermission('billing.create');
+  }
+
+  get canDeleteSplit(): boolean {
+    return this.supportsSplits && ['CAJERO', 'GERENTE', 'ADMINISTRADOR'].includes(this.currentBusinessRole);
+  }
+
+  get isKitchenRole(): boolean {
+    return this.currentBusinessRole === 'COCINA';
+  }
+
+  get currentBusinessRole(): string {
+    return this.normalizeStatus(this.capabilities.businessRole || this.roleName).toUpperCase();
+  }
+
+  splitHasInvoice(row: OrderSplitRow | null | undefined): boolean {
+    return !!String(row?.lite_invoice || row?.invoice || row?.sri?.invoice || '').trim();
+  }
 
   setOrderStatus(status: 'Preparacion' | 'Lista' | 'Cancelada'): void {
     if (!this.order?.name || this.closingOrder) return;
+    if (!this.ordersSvc.canTransitionOrder(this.order.status, status)) {
+      toast.error('No se puede cambiar la orden a ese estado desde su estado actual.');
+      return;
+    }
     this.closingOrder = true;
-    this.ordersSvc.updateStatus(this.order.name, status)
+    this.ordersSvc.updateStatus(this.order.name, status, this.order.status)
       .pipe(finalize(() => this.closingOrder = false))
       .subscribe({
         next: () => {
           toast.success(status === 'Cancelada' ? 'Orden cancelada.' : `Orden marcada como ${status === 'Preparacion' ? 'en preparación' : 'lista'}.`);
+          window.dispatchEvent(new CustomEvent('facturada:restaurant-data-changed'));
           this.fetch(this.order.name);
         },
-        error: () => toast.error('No se pudo actualizar el estado de la orden.')
+        error: (error) => toast.error(this.extractBackendError(error))
       });
   }
 
@@ -754,7 +1133,8 @@ export class OrderDetailPageComponent implements OnInit {
     if (!normalized) return 'Sin estado';
     if (normalized.includes('ingres')) return 'Ingresada';
     if (normalized.includes('prepar')) return 'Preparación';
-    if (normalized.includes('cerr') || normalized.includes('lista') || normalized.includes('entreg')) return 'Cerrada';
+    if (normalized.includes('lista')) return 'Lista';
+    if (normalized.includes('cerr') || normalized.includes('entreg')) return 'Cerrada';
     return String(this.order?.status || 'Sin estado');
   }
 
@@ -762,7 +1142,9 @@ export class OrderDetailPageComponent implements OnInit {
     const status = this.orderStatusLabel;
     if (status === 'Ingresada') return 'border-red-200 bg-red-100 text-red-700';
     if (status === 'Preparación') return 'border-amber-200 bg-amber-100 text-amber-700';
+    if (status === 'Lista') return 'border-sky-200 bg-sky-100 text-sky-700';
     if (status === 'Cerrada') return 'border-emerald-200 bg-emerald-100 text-emerald-700';
+    if (status === 'Cancelada') return 'border-rose-200 bg-rose-100 text-rose-700';
     return 'border-slate-200 bg-slate-100 text-slate-700';
   }
 

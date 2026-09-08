@@ -72,7 +72,7 @@
         class="rounded-lg border px-3 py-2 text-[11px]"
         [ngClass]="!canEditOrder ? 'border-slate-200 bg-slate-50 text-slate-600' : 'border-primary/25 bg-primary/5 text-primary'">
         <ng-container *ngIf="canEditOrder; else blockedState">
-          Puedes editar productos, cantidades y precios antes de guardar los cambios.
+          Puedes editar cliente, productos, cantidades y precios antes de guardar los cambios.
         </ng-container>
         <ng-template #blockedState>
           <ng-container *ngIf="isReadOnlyView; else invoiceLockState">
@@ -97,6 +97,24 @@
               </span>
             </div>
 
+            <ng-select
+              *ngIf="canEditOrder"
+              class="ng-select-tailwind mb-2"
+              [items]="customers"
+              bindLabel="nombre"
+              bindValue="name"
+              placeholder="Cambiar cliente"
+              [searchable]="true"
+              [(ngModel)]="orderCustomerId"
+              [ngModelOptions]="{standalone: true}">
+              <ng-template ng-option-tmp let-item="item">
+                <div class="flex min-w-0 flex-col">
+                  <span class="truncate font-semibold text-slate-800">{{ item.nombre }}</span>
+                  <span class="text-[10px] text-slate-500">{{ item.num_identificacion || item.identification_number || 'Sin identificación' }}</span>
+                </div>
+              </ng-template>
+            </ng-select>
+
             <div class="grid grid-cols-1 gap-1.5 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[11px] text-slate-700 sm:grid-cols-2 lg:grid-cols-3">
               <p class="truncate"><span class="text-slate-500">Nombre:</span> {{ order?.customer?.customer_name || order?.customer?.nombre || order?.nombre_cliente || '-' }}</p>
               <p class="truncate"><span class="text-slate-500">Identificación:</span> {{ order?.customer?.identification_number || order?.customer?.num_identificacion || order?.identificacion_cliente || '-' }}</p>
@@ -104,6 +122,36 @@
               <p class="truncate"><span class="text-slate-500">Tel:</span> {{ order?.customer?.phone || order?.customer?.telefono || order?.telefono_cliente || '-' }}</p>
               <p class="truncate sm:col-span-2"><span class="text-slate-500">Email:</span> {{ order?.customer?.email || order?.customer?.correo || order?.correo_cliente || '-' }}</p>
               <p class="truncate sm:col-span-2 lg:col-span-3"><span class="text-slate-500">Dirección:</span> {{ order?.customer?.address || order?.customer?.direccion || order?.direccion_cliente || '-' }}</p>
+            </div>
+          </section>
+
+          <section *ngIf="canEditOrder" class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+            <div class="mb-2 flex items-center justify-between gap-2">
+              <div>
+                <h3 class="text-xs font-semibold text-primary">Formas de pago</h3>
+                <p class="text-[10px] text-slate-500">La suma debe coincidir con el total de la orden.</p>
+              </div>
+              <button type="button" class="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700" (click)="addOrderPayment()">
+                + Pago
+              </button>
+            </div>
+
+            <div class="space-y-1.5">
+              <div *ngFor="let payment of orderPayments; let i = index" class="grid grid-cols-[minmax(0,1fr)_92px_auto] items-end gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
+                <label class="min-w-0">
+                  <span class="mb-1 block text-[9px] font-semibold uppercase text-slate-400">Método</span>
+                  <select class="h-8 w-full rounded-md border border-slate-200 bg-white px-2 text-[11px]" [(ngModel)]="payment.payment_method" [ngModelOptions]="{standalone: true}" (ngModelChange)="onOrderPaymentMethodChange(payment)">
+                    <option value="">Seleccionar</option>
+                    <option *ngFor="let method of paymentMethods" [value]="method.name">{{ method.description || method.nombre || method.name }}</option>
+                  </select>
+                </label>
+                <label>
+                  <span class="mb-1 block text-[9px] font-semibold uppercase text-slate-400">Monto</span>
+                  <input type="number" min="0" step="0.01" class="h-8 w-full rounded-md border border-slate-200 bg-white px-2 text-right text-[11px]" [(ngModel)]="payment.amount" [ngModelOptions]="{standalone: true}" />
+                </label>
+                <button type="button" class="h-8 rounded-md border border-red-200 bg-white px-2 text-[11px] font-semibold text-red-600" (click)="removeOrderPayment(i)">Quitar</button>
+              </div>
+              <p *ngIf="!orderPayments.length" class="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">Agrega al menos una forma de pago.</p>
             </div>
           </section>
 
@@ -239,8 +287,11 @@
               [loading]="splitsLoading"
               [actionLoadingSplitName]="splitActionLoadingName"
               [deleteLoadingSplitName]="splitDeleteLoadingName"
+              [canInvoice]="canInvoiceSplit"
+              [canDelete]="canDeleteSplit"
               (invoiceSplit)="invoiceSplit($event)"
-              (deleteSplit)="deleteSplit($event)">
+              (deleteSplit)="deleteSplit($event)"
+              (viewInvoice)="goToInvoice($event)">
             </app-order-splits-table>
           </section>
         </main>
@@ -279,8 +330,22 @@
             </p>
           </section>
 
+          <section *ngIf="currentFiscalLocation || posTerminalBlockMessage" class="rounded-xl border px-3 py-2 text-[11px]" [ngClass]="posTerminalBlockMessage ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-white text-slate-600'">
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span class="font-bold uppercase tracking-wide text-primary">Ubicación de emisión</span>
+              <span *ngIf="currentFiscalLocation?.establishment"><b>Establecimiento:</b> {{ currentFiscalLocation.establishment.establishment_code || '—' }}</span>
+              <span *ngIf="currentFiscalLocation?.emissionPoint"><b>Punto:</b> {{ currentFiscalLocation.emissionPoint.emission_point_code || '—' }}</span>
+              <span *ngIf="currentFiscalLocation?.environment"><b>Ambiente:</b> {{ currentFiscalLocation.environment }}</span>
+            </div>
+            <p *ngIf="posTerminalBlockMessage" class="mt-1 font-semibold">{{ posTerminalBlockMessage }}</p>
+          </section>
+
           <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
             <h3 class="text-xs font-semibold text-primary">Acciones</h3>
+
+            <p *ngIf="canEditOrder && hasUnsavedInvoiceChanges" class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
+              Hay cambios pendientes. Guárdalos antes de facturar.
+            </p>
 
             <div class="mt-3 grid gap-2">
               <app-button
@@ -292,8 +357,8 @@
                 shape="rounded"
                 (buttonClick)="saveOrderChanges()"
                 full
-                [disabled]="!canEditOrder">
-                Guardar cambios
+                [disabled]="!canEditOrder || savingOrderChanges">
+                {{ savingOrderChanges ? 'Guardando...' : 'Guardar cambios' }}
               </app-button>
 
               <app-button
@@ -351,20 +416,20 @@
               <app-button
                 *ngIf="canShowCreateInvoice"
                 type="button"
-                tone="info"
+                tone="success"
                 impact="bold"
                 size="small"
                 shape="rounded"
                 shadow="small"
-                (buttonClick)="facturarDesdeOrden(order)"
+                (buttonClick)="emitirFacturaOrden()"
                 full
-                [disabled]="!canCreateInvoice">
+                [disabled]="!canCreateInvoice || orderInvoiceEmitting">
                 <fa-icon [icon]="['fas','file-invoice']" class="mr-1"></fa-icon>
-                Crear factura
+                {{ orderInvoiceEmitting ? 'Facturando...' : 'Facturar orden' }}
               </app-button>
 
               <app-button
-                *ngIf="supportsSplits && !isLocked"
+                *ngIf="supportsSplits && canCreateSplit && !isCancelled && !isLocked"
                 type="button"
                 tone="success"
                 impact="bold"
@@ -381,7 +446,7 @@
               {{ createInvoiceBlockedReason }}
             </p>
 
-            <p *ngIf="!isLocked && !canOpenSplit" class="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-[11px] text-emerald-700">
+            <p *ngIf="supportsSplits && !isLocked && !isCancelled && !canOpenSplit" class="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-[11px] text-emerald-700">
               La cuenta ya está totalmente dividida o pagada.
             </p>
           </section>
@@ -416,7 +481,7 @@
           </div>
           <div class="flex items-center gap-1.5">
             <app-button
-              *ngIf="supportsSplits && !isLocked"
+              *ngIf="supportsSplits && canCreateSplit && !isCancelled && !isLocked"
               type="button"
               tone="light"
               size="small"
@@ -427,7 +492,7 @@
             </app-button>
             <app-button type="button" tone="light" size="small" shape="rounded" (buttonClick)="getComandaPdf()">Comanda</app-button>
             <app-button *ngIf="canCloseOrder" type="button" tone="warning" impact="light" size="small" shape="rounded" (buttonClick)="closeOrder()" [disabled]="closingOrder">Cerrar</app-button>
-            <app-button *ngIf="!isReadOnlyView && canEditOrder" type="button" tone="primary" size="small" shape="rounded" (buttonClick)="saveOrderChanges()" [disabled]="!canEditOrder">Guardar</app-button>
+            <app-button *ngIf="!isReadOnlyView && canEditOrder" type="button" tone="primary" size="small" shape="rounded" (buttonClick)="saveOrderChanges()" [disabled]="!canEditOrder || savingOrderChanges">{{ savingOrderChanges ? 'Guardando...' : 'Guardar' }}</app-button>
           </div>
         </div>
       </div>
@@ -454,7 +519,7 @@
   *ngIf="supportsSplits"
   [open]="showSplitDialog"
   [orderName]="order?.name || ''"
-  [customerDefault]="order?.customer?.name || order?.customer?.fullName || ''"
+  [customerDefault]="order?.customer_data?.name || order?.customer?.name || order?.customer?.fullName || order?.customer || ''"
   [orderItemsSource]="splitItemsSource"
   [remainingOrderTotal]="pendingOrderToSplit"
   [nextPaymentIndex]="orderSplits.length + 1"

@@ -14,6 +14,11 @@ const routes: Routes = [
     component: LayoutComponent,
     loadChildren: () => import('../uikit/uikit.module').then((m) => m.UikitModule),
   },
+  {
+    path: 'settings',
+    component: LayoutComponent,
+    loadChildren: () => import('../lite-settings/lite-settings.module').then((m) => m.LiteSettingsModule),
+  },
 
 {
   path: 'caja',

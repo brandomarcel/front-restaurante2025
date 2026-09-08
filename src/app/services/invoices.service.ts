@@ -3,8 +3,6 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { catchError, map, Observable, throwError } from 'rxjs';
-import { FrappeErrorService } from '../core/services/frappe-error.service';
-import { toast } from 'ngx-sonner';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 import { API_ENDPOINT } from '../core/constants/api.constants';
 import { CompanyCapabilitiesService } from '../core/services/company-capabilities.service';
@@ -17,7 +15,6 @@ export class InvoicesService {
 
   constructor(
     private http: HttpClient,
-    private err: FrappeErrorService,
     private capabilities: CompanyCapabilitiesService
   ) {}
 
@@ -32,11 +29,7 @@ export class InvoicesService {
       // Keep `emission` and `data` together. Unwrapping with frappeData here
       // would discard the SRI result because body.data is the invoice itself.
       map((response: any) => normalizeLiteEmissionResponse(response)),
-      catchError((e) => {
-        const msg = this.err.handle(e) || 'Error al crear la factura.';
-        toast.error(msg);
-        return throwError(() => e);
-      })
+      catchError((e) => throwError(() => e))
     );
   }
 
@@ -52,11 +45,7 @@ export class InvoicesService {
       { context: new HttpContext().set(REQUIRE_AUTH, true) }
     ).pipe(
       map((response: any) => normalizeLiteEmissionResponse(response)),
-      catchError((e) => {
-        const msg = this.err.handle(e) || 'No se pudo refrescar el estado de la factura.';
-        toast.error(msg);
-        return throwError(() => e);
-      })
+      catchError((e) => throwError(() => e))
     );
   }
 
@@ -68,11 +57,7 @@ export class InvoicesService {
       { context: new HttpContext().set(REQUIRE_AUTH, true) }
     ).pipe(
       map((response: any) => normalizeLiteEmissionResponse(response)),
-      catchError((e) => {
-        const msg = this.err.handle(e) || 'No se pudo reintentar el envío.';
-        toast.error(msg);
-        return throwError(() => e);
-      })
+      catchError((e) => throwError(() => e))
     );
   }
 
@@ -84,11 +69,7 @@ export class InvoicesService {
       { context: new HttpContext().set(REQUIRE_AUTH, true) }
     ).pipe(
       map((response: any) => normalizeLiteEmissionResponse(response)),
-      catchError((e) => {
-        const msg = this.err.handle(e) || 'No se pudo reemitir la factura.';
-        toast.error(msg);
-        return throwError(() => e);
-      })
+      catchError((e) => throwError(() => e))
     );
   }
 
@@ -100,11 +81,7 @@ export class InvoicesService {
       { context: new HttpContext().set(REQUIRE_AUTH, true) }
     ).pipe(
       map((response: any) => response),
-      catchError((e) => {
-        const msg = this.err.handle(e) || 'No se pudo enviar la factura por correo.';
-        toast.error(msg);
-        return throwError(() => e);
-      })
+      catchError((e) => throwError(() => e))
     );
   }
 
@@ -130,10 +107,6 @@ export class InvoicesService {
         const message = res?.message ?? res ?? {};
         return { data: rows, total: Number(message?.total ?? res?.total ?? rows.length) };
       }));
-}
-
-getOrderDetail(name: string) {
-  return throwError(() => new Error('Consulta la orden mediante facturada_restaurante.api.frontend.get_order_with_details.'));
 }
 
   getInvoiceDetail(name: string) {
@@ -174,11 +147,23 @@ getOrderDetail(name: string) {
     const normalized = { ...(payload || {}) };
     const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || payload?.business || '';
     if (business) normalized.business = business;
+    const terminalName = String(payload?.pos_terminal || payload?.posTerminal || this.capabilities.activePosTerminal?.name || '').trim();
+    if (terminalName) {
+      normalized.pos_terminal = terminalName;
+      // La ubicación fiscal se resuelve exclusivamente desde el terminal.
+      delete normalized.establishment;
+      delete normalized.emission_point;
+      delete normalized.establishment_code;
+      delete normalized.emission_point_code;
+    }
     delete normalized.company;
     delete normalized.company_id;
 
-    normalized.posting_date = payload?.posting_date || payload?.fecha || new Date().toISOString().slice(0, 10);
+    // La fecha de emisión la asigna el servidor. Nunca reutilizar una fecha
+    // ingresada por pantalla ni una fecha local del navegador.
+    delete normalized.posting_date;
     delete normalized.fecha;
+    delete normalized.fechaEmision;
 
     const environmentValue = payload?.environment
       || this.capabilities.business?.environment
@@ -221,7 +206,10 @@ getOrderDetail(name: string) {
       .filter((field: any) => field.field_name || field.field_value);
     delete normalized.additionalFields;
 
+    // Facturación Lite directa no crea documentos asociados a una orden de
+    // restaurante. Para ello se usa emit_invoice_for_order.
     delete normalized.order_name;
+    delete normalized.order;
     delete normalized.auto_queue;
 
     return normalized;

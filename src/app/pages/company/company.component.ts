@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { catchError, finalize, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
@@ -23,9 +24,11 @@ interface CertificateInfo {
   keyUsage?: string;
 }
 
+type LiteSettingsTab = 'general' | 'tax-profile' | 'establishments' | 'emission-points' | 'sequences' | 'pos-terminals' | 'readiness' | 'api';
+
 @Component({
   selector: 'app-company',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, OnlyNumbersDirective, ButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, OnlyNumbersDirective, ButtonComponent],
   templateUrl: './company.component.html',
   styleUrl: './company.component.scss'
 })
@@ -37,6 +40,8 @@ export class CompanyComponent implements OnInit {
   isSaving = false;
   currentPlan: CompanyPlan | null = null;
   businesses: any[] = [];
+  liteEstablishments: any[] = [];
+  liteEmissionPoints: any[] = [];
   liteSequences: any[] = [];
   activeInvoiceSequence: any | null = null;
   liteSequenceError = '';
@@ -65,8 +70,9 @@ export class CompanyComponent implements OnInit {
     private alertService: AlertService,
     private utilsService: UtilsService,
     private spinner: NgxSpinnerService,
-    private capabilities: CompanyCapabilitiesService,
-    private menuService: MenuService
+    public capabilities: CompanyCapabilitiesService,
+    private menuService: MenuService,
+    private router: Router
   ) { }
 
   ngOnInit(): void {
@@ -80,6 +86,36 @@ export class CompanyComponent implements OnInit {
 
   get hasFirmaAvailable(): boolean {
     return !!(this.firmaFile || `${this.form.value?.urlfirma || ''}`.trim());
+  }
+
+  get activeSettingsTab(): LiteSettingsTab {
+    const path = this.router.url.split('?')[0];
+    if (path.endsWith('/tax-profile')) return 'tax-profile';
+    if (path.endsWith('/establishments')) return 'establishments';
+    if (path.endsWith('/emission-points')) return 'emission-points';
+    if (path.endsWith('/sequences')) return 'sequences';
+    if (path.endsWith('/pos-terminals')) return 'pos-terminals';
+    if (path.endsWith('/readiness')) return 'readiness';
+    if (path.endsWith('/api-clients') || path.endsWith('/api-logs')) return 'api';
+    return 'general';
+  }
+
+  get activeSettingsTitle(): string {
+    const titles: Record<LiteSettingsTab, string> = {
+      general: 'Vista general',
+      'tax-profile': 'Perfil tributario',
+      establishments: 'Establecimientos',
+      'emission-points': 'Puntos de emisión',
+      sequences: 'Secuencias oficiales',
+      'pos-terminals': 'Terminales POS',
+      readiness: 'Preparación para emitir',
+      api: 'Integración API'
+    };
+    return titles[this.activeSettingsTab];
+  }
+
+  showSettingsSection(...sections: LiteSettingsTab[]): boolean {
+    return sections.includes(this.activeSettingsTab);
   }
 
   get requiresCertificatePassword(): boolean {
@@ -124,7 +160,13 @@ export class CompanyComponent implements OnInit {
   }
 
   get isLiteMode(): boolean {
-    return this.capabilities.isLiteMode;
+    // La infraestructura tributaria nueva es compartida por FacturADA Lite,
+    // FacturADA Restaurante y negocios que únicamente habilitan API. No se
+    // decide por el nombre comercial del modo, sino por sus capacidades.
+    return this.capabilities.isLiteMode
+      || this.capabilities.isEnabled('restaurant')
+      || this.capabilities.isEnabled('billing')
+      || this.capabilities.isEnabled('api');
   }
 
   get activeBusiness(): any | null {
@@ -158,6 +200,8 @@ export class CompanyComponent implements OnInit {
       business_mode: [{ value: 'RESTAURANTE', disabled: true }, Validators.required],
       establishmentcode: ['', [Validators.required, Validators.pattern(/^\d{3}$/)]],
       emissionpoint: ['', [Validators.required, Validators.pattern(/^\d{3}$/)]],
+      selected_establishment: [''],
+      selected_emission_point: [''],
       establishment_name: ['Matriz'],
       emission_point_name: ['Caja 001'],
       current_number: [0, [Validators.min(0)]],
@@ -171,6 +215,12 @@ export class CompanyComponent implements OnInit {
       clave: [''],
       service_base_url: [''],
       obligado_a_llevar_contabilidad: ['NO', Validators.required],
+      obliged_accounting: [false],
+      rimpe: [false],
+      withholding_agent: [false],
+      emission_type: ['Normal'],
+      invoice_xml_version: ['2.1.0'],
+      software_provider_ruc: ['', Validators.pattern(/^\d{13}$/)],
       enable_provider_ruc: [false],
       // Se muestra únicamente el valor administrado por backend.
       provider_ruc: ['']
@@ -218,6 +268,12 @@ export class CompanyComponent implements OnInit {
           service_base_url: company.service_base_url || '',
           business_mode: this.normalizeBusinessMode(company.business_mode),
           obligado_a_llevar_contabilidad: this.normalizeContabilidad(company.obligado_a_llevar_contabilidad),
+          obliged_accounting: this.normalizeCheck(company.obliged_accounting ?? company.obligado_a_llevar_contabilidad),
+          rimpe: this.normalizeCheck(company.rimpe),
+          withholding_agent: this.normalizeCheck(company.withholding_agent),
+          emission_type: company.emission_type || 'Normal',
+          invoice_xml_version: company.invoice_xml_version || '2.1.0',
+          software_provider_ruc: company.software_provider_ruc || '',
           enable_provider_ruc: this.normalizeCheck(company.enable_provider_ruc),
           provider_ruc: company.provider_ruc || company.software_provider_ruc || ''
         });
@@ -230,7 +286,10 @@ export class CompanyComponent implements OnInit {
         this.applyCertificateInfo(company);
 
         this.ambiente = ambienteBool ? 'PRODUCCION' : 'PRUEBAS';
+        this.liteEstablishments = Array.isArray(setupData?.establishments) ? setupData.establishments : [];
+        this.liteEmissionPoints = Array.isArray(setupData?.emission_points) ? setupData.emission_points : [];
         this.liteSequences = Array.isArray(setupData?.sequences) ? setupData.sequences : [];
+        this.syncLiteDocumentSelection();
         this.updateLiteInvoiceSequence(this.ambiente);
         this.form.patchValue({ sequence_environment: this.ambiente }, { emitEvent: false });
         // Mantener sincronizados el indicador global, POS, facturación y el
@@ -278,6 +337,114 @@ export class CompanyComponent implements OnInit {
       invoice_sequence: 'Secuencia de factura'
     };
     return this.liteSetupMissing.map((item) => labels[item] || item).join(', ');
+  }
+
+  formatSequenceNumber(value: unknown): string {
+    const number = Number(value);
+    if (!Number.isFinite(number) || number < 0) return '—';
+    return Math.floor(number).toString().padStart(9, '0');
+  }
+
+  formatNextSequenceNumber(value: unknown): string {
+    const number = Number(value);
+    return Number.isFinite(number) && number >= 0 ? this.formatSequenceNumber(number + 1) : '—';
+  }
+
+  establishmentLabel(id: unknown): string {
+    const key = String(id || '').trim();
+    const establishment = this.liteEstablishments.find((item: any) => String(item?.name || '') === key);
+    if (!establishment) return key || '—';
+    const code = String(establishment.establishment_code || '').trim();
+    const name = establishment.establishment_name || establishment.name || key;
+    return code ? `${code} · ${name}` : name;
+  }
+
+  emissionPointLabel(id: unknown): string {
+    const key = String(id || '').trim();
+    const point = this.liteEmissionPoints.find((item: any) => String(item?.name || '') === key);
+    if (!point) return key || '—';
+    const code = String(point.emission_point_code || '').trim();
+    const name = point.emission_point_name || point.name || key;
+    return code ? `${code} · ${name}` : name;
+  }
+
+  get activeLiteEstablishments(): any[] {
+    return this.capabilities.activeEstablishments;
+  }
+
+  get activeLiteEmissionPoints(): any[] {
+    return this.capabilities.activeEmissionPointsFor(this.form?.get('selected_establishment')?.value || '');
+  }
+
+  get selectedLiteEstablishment(): any | null {
+    const id = String(this.form?.get('selected_establishment')?.value || '').trim();
+    return this.activeLiteEstablishments.find((item: any) => String(item?.name || '') === id) || null;
+  }
+
+  get selectedLiteEmissionPoint(): any | null {
+    const id = String(this.form?.get('selected_emission_point')?.value || '').trim();
+    return this.activeLiteEmissionPoints.find((item: any) => String(item?.name || '') === id) || null;
+  }
+
+  get liteSequenceNextNumber(): string {
+    const current = Number(this.activeInvoiceSequence?.current_number);
+    return Number.isFinite(current) && current >= 0 ? this.formatSequenceNumber(current + 1) : '—';
+  }
+
+  get liteSequenceDocumentNumber(): string {
+    const establishment = this.selectedLiteEstablishment?.establishment_code;
+    const point = this.selectedLiteEmissionPoint?.emission_point_code;
+    const next = this.liteSequenceNextNumber;
+    return establishment && point && next !== '—' ? `${establishment}-${point}-${next}` : '—';
+  }
+
+  get isPrimaryLiteConfigurationSelected(): boolean {
+    const establishment = this.selectedLiteEstablishment;
+    const point = this.selectedLiteEmissionPoint;
+    return !!establishment && !!point
+      && this.normalizeCheck(establishment.is_main)
+      && this.normalizeCheck(point.is_default);
+  }
+
+  onLiteEstablishmentSelected(value: unknown): void {
+    const establishment = this.activeLiteEstablishments.find((item: any) => String(item?.name || '') === String(value || '').trim());
+    if (!establishment) {
+      this.form.patchValue({ selected_establishment: '', selected_emission_point: '', establishmentcode: '', emissionpoint: '' }, { emitEvent: false });
+      this.capabilities.clearLiteDocumentSelection();
+      this.updateLiteInvoiceSequence(this.ambiente);
+      return;
+    }
+    const points = this.capabilities.activeEmissionPointsFor(establishment);
+    const preferred = points.find((item: any) => this.normalizeCheck(item?.is_default)) || (points.length === 1 ? points[0] : null);
+    this.form.patchValue({
+      selected_establishment: establishment.name,
+      selected_emission_point: preferred?.name || '',
+      establishmentcode: establishment.establishment_code || '',
+      establishment_name: establishment.establishment_name || '',
+      emissionpoint: preferred?.emission_point_code || '',
+      emission_point_name: preferred?.emission_point_name || ''
+    }, { emitEvent: false });
+    if (preferred) this.capabilities.setLiteDocumentSelection(establishment.name, preferred.name);
+    else this.capabilities.clearLiteDocumentSelection();
+    this.updateLiteInvoiceSequence(this.ambiente);
+  }
+
+  onLiteEmissionPointSelected(value: unknown): void {
+    const establishment = this.selectedLiteEstablishment;
+    const point = this.activeLiteEmissionPoints.find((item: any) => String(item?.name || '') === String(value || '').trim());
+    if (!establishment || !point) {
+      this.form.patchValue({ selected_emission_point: '', emissionpoint: '' }, { emitEvent: false });
+      this.capabilities.clearLiteDocumentSelection();
+      this.updateLiteInvoiceSequence(this.ambiente);
+      return;
+    }
+    this.form.patchValue({
+      selected_emission_point: point.name,
+      emissionpoint: point.emission_point_code || '',
+      emission_point_name: point.emission_point_name || ''
+    }, { emitEvent: false });
+    this.capabilities.setLiteDocumentSelection(establishment.name, point.name);
+    this.updateLiteInvoiceSequence(this.ambiente);
   }
 
   get planIsInactive(): boolean {
@@ -354,6 +521,12 @@ export class CompanyComponent implements OnInit {
       return;
     }
 
+    if (!this.isPrimaryLiteConfigurationSelected) {
+      this.form.patchValue({ sequence_environment: previous, ambiente: previous === 'PRODUCCION' }, { emitEvent: false });
+      this.alertService.error('El cambio de ambiente se guarda sobre el establecimiento principal y el punto predeterminado. Selecciónalos antes de continuar.');
+      return;
+    }
+
     const sequence = this.findLiteInvoiceSequence(target);
     if (!sequence) {
       this.form.patchValue({
@@ -420,7 +593,7 @@ export class CompanyComponent implements OnInit {
   save(): void {
     if (this.isLiteMode) {
       if (!this.canEditLiteSetup) {
-        this.alertService.error('Solo el administrador del negocio puede modificar esta configuración.');
+        this.alertService.error('Solo Administrador o Gerente pueden modificar esta configuración.');
         return;
       }
       this.saveLiteSetup();
@@ -731,13 +904,20 @@ export class CompanyComponent implements OnInit {
   }
 
   private findLiteInvoiceSequence(environment: 'PRUEBAS' | 'PRODUCCION'): any | null {
-    const target = this.normalizeEnvironment(environment);
-    return this.liteSequences.find((sequence: any) => {
-      const documentType = this.normalizeStatus(sequence?.document_type ?? sequence?.documentType);
-      const sequenceEnvironment = this.normalizeEnvironment(sequence?.environment);
-      const status = this.normalizeStatus(sequence?.status);
-      return documentType === 'FACTURA' && sequenceEnvironment === target && status === 'ACTIVO';
-    }) || null;
+    return this.capabilities.getLiteDocumentConfiguration('Factura', environment)?.sequence || null;
+  }
+
+  private syncLiteDocumentSelection(): void {
+    const establishment = this.capabilities.selectedLiteEstablishment;
+    const point = this.capabilities.selectedLiteEmissionPoint;
+    this.form.patchValue({
+      selected_establishment: establishment?.name || '',
+      selected_emission_point: point?.name || '',
+      establishmentcode: establishment?.establishment_code || '',
+      establishment_name: establishment?.establishment_name || '',
+      emissionpoint: point?.emission_point_code || '',
+      emission_point_name: point?.emission_point_name || ''
+    }, { emitEvent: false });
   }
 
   private updateLiteInvoiceSequence(environment: 'PRUEBAS' | 'PRODUCCION'): void {
@@ -751,6 +931,8 @@ export class CompanyComponent implements OnInit {
         current_number: this.activeInvoiceSequence.current_number ?? 0,
         sequence_environment: environment
       }, { emitEvent: false });
+    } else {
+      this.form.patchValue({ current_number: null, sequence_environment: environment }, { emitEvent: false });
     }
   }
 
@@ -818,7 +1000,10 @@ export class CompanyComponent implements OnInit {
     const data = response?.data ?? response?.message?.data ?? response ?? {};
     this.capabilities.setLiteSetupState(data);
     this.currentPlan = this.capabilities.plan;
+    this.liteEstablishments = Array.isArray(data?.establishments) ? data.establishments : this.liteEstablishments;
+    this.liteEmissionPoints = Array.isArray(data?.emission_points) ? data.emission_points : this.liteEmissionPoints;
     this.liteSequences = Array.isArray(data?.sequences) ? data.sequences : this.liteSequences;
+    this.syncLiteDocumentSelection();
     const setupEnvironment = data?.tax_profile?.environment ?? data?.tax_profile?.ambiente;
     if (setupEnvironment) {
       this.ambiente = this.normalizeEnvironment(setupEnvironment);
@@ -928,6 +1113,13 @@ export class CompanyComponent implements OnInit {
       legal_name: legalName,
       trade_name: `${raw.trade_name || businessName}`.trim(),
       main_address: address,
+      obliged_accounting: raw.obliged_accounting ? 1 : 0,
+      rimpe: raw.rimpe ? 1 : 0,
+      withholding_agent: raw.withholding_agent ? 1 : 0,
+      emission_type: `${raw.emission_type || 'Normal'}`.trim(),
+      invoice_xml_version: `${raw.invoice_xml_version || '2.1.0'}`.trim(),
+      software_provider_ruc: `${raw.software_provider_ruc || ''}`.trim(),
+      service_base_url: `${raw.service_base_url || ''}`.trim(),
       establishment_code: `${raw.establishmentcode || ''}`.trim(),
       establishment_name: `${raw.establishment_name || 'Matriz'}`.trim(),
       emission_point_code: `${raw.emissionpoint || ''}`.trim(),
@@ -949,6 +1141,11 @@ export class CompanyComponent implements OnInit {
     this.updateClaveValidation();
     this.updateProviderRucValidation();
 
+    if (!this.isPrimaryLiteConfigurationSelected) {
+      this.alertService.error('La gestión de establecimientos o puntos secundarios requiere un endpoint administrativo del backend. Esta pantalla solo guarda la configuración principal.');
+      return;
+    }
+
     const requiredControls = [
       'businessname',
       'ruc',
@@ -960,7 +1157,9 @@ export class CompanyComponent implements OnInit {
       ...(this.requiresCertificatePassword ? ['clave'] : []),
     ];
     const hasInvalidRequired = requiredControls.some((key) => this.form.get(key)?.invalid);
-    if (hasInvalidRequired || this.isSaving) {
+    const softwareProviderRuc = `${this.form.get('software_provider_ruc')?.value || ''}`.trim();
+    const hasInvalidProviderRuc = !!softwareProviderRuc && !!this.form.get('software_provider_ruc')?.invalid;
+    if (hasInvalidRequired || hasInvalidProviderRuc || this.isSaving) {
       this.form.markAllAsTouched();
       return;
     }

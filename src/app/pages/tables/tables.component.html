@@ -1,0 +1,102 @@
+<div class="app-container space-y-3 pb-5">
+  <section class="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <h1 class="text-sm font-bold text-slate-900">Mesas</h1>
+          <span class="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">{{ visibleTables.length }} visibles</span>
+        </div>
+        <p class="mt-0.5 text-[11px] text-slate-500">Selecciona una mesa para abrir una orden o revisar su atención actual.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <label class="inline-flex cursor-pointer items-center gap-1.5 text-[11px] text-slate-600">
+          <input type="checkbox" [checked]="showInactive" (change)="showInactive = !showInactive; refresh()" class="rounded border-slate-300">
+          Ver inactivas
+        </label>
+        <button *ngIf="canManageTables" type="button" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="openCreate()">Nueva mesa</button>
+        <button type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="refresh()" [disabled]="loading">Actualizar</button>
+      </div>
+    </div>
+  </section>
+
+  <section *ngIf="error" class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{{ error }}</section>
+
+  <ng-container *ngIf="hasTablesModule; else unavailable">
+    <div *ngIf="loading" class="rounded-xl border border-slate-200 bg-white p-6 text-center text-xs text-slate-500">Cargando mesas…</div>
+
+    <div *ngIf="!loading && visibleTables.length" class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      <button
+        *ngFor="let table of visibleTables"
+        type="button"
+        (click)="selectTable(table)"
+        class="min-h-[126px] rounded-xl border p-3 text-left transition hover:-translate-y-0.5 hover:shadow-md"
+        [ngClass]="[statusClass(table), selectedTable?.name === table.name ? 'ring-2 ring-primary ring-offset-1' : '', isInactive(table) ? 'opacity-65' : '']">
+        <div class="flex items-start justify-between gap-2">
+          <span class="truncate text-xs font-bold">{{ tableLabel(table) }}</span>
+          <span class="h-2.5 w-2.5 shrink-0 rounded-full" [ngClass]="isFree(table) ? 'bg-emerald-500' : isOccupied(table) ? 'bg-orange-500' : isReserved(table) ? 'bg-violet-500' : 'bg-slate-400'"></span>
+        </div>
+        <span class="mt-2 inline-flex rounded-full border border-current/20 px-2 py-0.5 text-[10px] font-semibold">{{ tableStatus(table) }}</span>
+        <div class="mt-3 space-y-0.5 text-[10px] opacity-80">
+          <p>Capacidad: {{ table.capacity || '—' }}</p>
+          <p *ngIf="table.assigned_waiter" class="truncate">Mesero: {{ table.assigned_waiter }}</p>
+        </div>
+      </button>
+    </div>
+
+    <section *ngIf="!loading && !visibleTables.length" class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-7 text-center">
+      <p class="text-xs font-semibold text-slate-700">No hay mesas activas.</p>
+      <p class="mt-1 text-[11px] text-slate-500">Crea la primera mesa para comenzar a atender órdenes en salón.</p>
+      <button *ngIf="canManageTables" type="button" class="btn btn-primary mt-3 !px-3 !py-1.5 !text-[11px]" (click)="openCreate()">Crear mesa</button>
+    </section>
+
+    <section *ngIf="selectedTable" class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class="text-sm font-bold text-slate-900">{{ tableLabel(selectedTable) }}</h2>
+            <span class="rounded-full border px-2 py-0.5 text-[10px] font-semibold" [ngClass]="statusClass(selectedTable)">{{ tableStatus(selectedTable) }}</span>
+          </div>
+          <p *ngIf="selectedTable.notes" class="mt-1 text-[11px] text-slate-500">{{ selectedTable.notes }}</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button *ngIf="isFree(selectedTable)" type="button" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="openNewOrder()" [disabled]="!canCreateOrders">Nueva orden</button>
+          <button *ngIf="isReserved(selectedTable) && canManageTables" type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="releaseReservation()" [disabled]="saving">Liberar reserva</button>
+          <button *ngIf="canManageTables" type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="openEdit(selectedTable)">Editar mesa</button>
+        </div>
+      </div>
+
+      <div *ngIf="isOccupied(selectedTable)" class="mt-3 border-t border-slate-100 pt-3">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h3 class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Órdenes activas</h3>
+          <span *ngIf="loadingOrders" class="text-[10px] text-slate-400">Actualizando…</span>
+        </div>
+        <div *ngIf="selectedOrders.length; else noActiveOrders" class="grid gap-2 md:grid-cols-2">
+          <button *ngFor="let order of selectedOrders" type="button" (click)="openOrder(order)" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left hover:border-primary/40 hover:bg-primary/5">
+            <div class="flex items-center justify-between gap-2"><span class="text-xs font-bold text-slate-900">{{ order.name }}</span><span class="text-[10px] font-semibold text-primary">{{ order.status }}</span></div>
+            <p class="mt-0.5 truncate text-[11px] text-slate-600">{{ order.customer?.fullName || order.customer_name || order.alias || 'Sin cliente' }}</p>
+          </button>
+        </div>
+        <ng-template #noActiveOrders><p class="rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-slate-500">No se encontraron órdenes activas. Actualiza para sincronizar el estado de la mesa.</p></ng-template>
+      </div>
+
+      <p *ngIf="isInactive(selectedTable)" class="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-slate-500">Esta mesa está inactiva y no admite órdenes nuevas.</p>
+    </section>
+  </ng-container>
+
+  <ng-template #unavailable><section class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">Las mesas no están habilitadas para el negocio seleccionado.</section></ng-template>
+</div>
+
+<div *ngIf="showForm" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 p-3">
+  <form [formGroup]="tableForm" (ngSubmit)="saveTable()" class="w-full max-w-md rounded-xl bg-white p-4 shadow-xl">
+    <div class="flex items-center justify-between gap-3"><h2 class="text-sm font-bold text-slate-900">{{ editingTable ? 'Editar mesa' : 'Nueva mesa' }}</h2><button type="button" class="text-lg text-slate-400 hover:text-slate-700" (click)="closeForm()">×</button></div>
+    <div class="mt-3 grid gap-3 sm:grid-cols-2">
+      <label class="block text-[11px] font-semibold text-slate-600 sm:col-span-2">Nombre de mesa<input formControlName="table_name" class="input mt-1 !h-9 !text-xs" placeholder="Ej. Mesa 01"></label>
+      <label class="block text-[11px] font-semibold text-slate-600">Capacidad<input formControlName="capacity" type="number" min="1" class="input mt-1 !h-9 !text-xs"></label>
+      <label class="block text-[11px] font-semibold text-slate-600">Estado<select formControlName="status" class="select mt-1 !h-9 !text-xs"><option *ngFor="let status of statuses" [value]="status">{{ status }}</option></select></label>
+      <label class="block text-[11px] font-semibold text-slate-600 sm:col-span-2">Mesero asignado (opcional)<input formControlName="assigned_waiter" class="input mt-1 !h-9 !text-xs" placeholder="usuario@empresa.com"></label>
+      <label class="block text-[11px] font-semibold text-slate-600 sm:col-span-2">Notas<textarea formControlName="notes" rows="2" class="input mt-1 !h-auto !py-2 !text-xs" placeholder="Reserva, ubicación u observación"></textarea></label>
+      <label class="inline-flex items-center gap-2 text-[11px] font-semibold text-slate-600 sm:col-span-2"><input type="checkbox" [checked]="tableForm.get('active')?.value === 1" (change)="tableForm.get('active')?.setValue($any($event.target).checked ? 1 : 0)" class="rounded border-slate-300"> Mesa activa</label>
+    </div>
+    <div class="mt-4 flex justify-end gap-2"><button type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="closeForm()">Cancelar</button><button type="submit" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" [disabled]="saving">{{ saving ? 'Guardando…' : 'Guardar' }}</button></div>
+  </form>
+</div>

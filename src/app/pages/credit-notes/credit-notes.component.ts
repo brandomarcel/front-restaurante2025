@@ -186,7 +186,7 @@ export class CreditNotesComponent implements OnInit {
 
   getSriStatusLabel(status: string | undefined | null): string {
     const value = String(status || '').trim().toUpperCase();
-    if (value === 'AUTORIZADO' || value === 'AUTORIZADA' || value === 'AUTHORIZED') return 'AUTORIZADA';
+    if (value === 'AUTORIZADO' || value === 'AUTORIZADA' || value === 'AUTHORIZED') return 'Autorizada';
     if (value === 'REJECTED' || value === 'RECHAZADO' || value === 'RECHAZADA' || value === 'NOT_AUTHORIZED') return 'Rechazada';
     if (value === 'ERROR') return 'Error';
     if (value === 'QUEUED' || value === 'EN COLA') return 'En cola';

@@ -10,6 +10,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { CreditNoteService } from 'src/app/services/credit-note.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { finalize } from 'rxjs';
+import { canConsultLiteInvoice, canRetryLiteInvoice } from 'src/app/core/utils/lite-invoice-actions';
 @Component({
   selector: 'app-credit-note-detail-page',
   standalone: true,
@@ -188,24 +189,17 @@ export class CreditNoteDetailPageComponent implements OnInit {
   }
 
   get canConsultAuthorization(): boolean {
-    const status = String(this.invoice?.status || this.invoice?.sri?.status || '').trim().toUpperCase();
-    return this.capabilities.isLiteMode && !this.isAuthorized && !this.documentLoading && !this.actionLoading &&
-      (this.providerCode === '70' || this.providerCode === '43' || this.hasAccessKeyRegistered ||
-        ['PROCESSING', 'RECEIVED', 'PENDING'].includes(this.providerStatus) || status === 'EMITIDA');
+    return this.capabilities.isLiteMode && !this.documentLoading && !this.actionLoading &&
+      canConsultLiteInvoice(this.invoice);
   }
 
   get isAuthorizationPending(): boolean {
-    const status = String(this.invoice?.status || this.invoice?.sri?.status || '').trim().toUpperCase();
-    return this.providerCode === '70' || this.providerCode === '43' || this.hasAccessKeyRegistered ||
-      ['PROCESSING', 'RECEIVED', 'PENDING'].includes(this.providerStatus) || status === 'EMITIDA';
+    return canConsultLiteInvoice(this.invoice);
   }
 
   get canRetry(): boolean {
-    if (!this.capabilities.isLiteMode || this.isAuthorized || this.actionLoading || this.documentLoading || this.hasAccessKeyRegistered || this.isAuthorizationPending) return false;
-    const status = String(this.invoice?.status || this.invoice?.sri?.status || '').trim().toUpperCase();
-    const code = this.providerCode;
-    return ['ERROR', 'ERROR DE ENVIO', 'ERROR DE ENVÍO'].includes(status)
-      || ['ERROR', 'FAILED', 'SRI_CONNECTION_RESET', 'SRI_TIMEOUT', 'SRI_PIPE', 'SRI_CONNECTION_REFUSED', 'PROVIDER_HTTP_ERROR'].includes(code);
+    return this.capabilities.isLiteMode && !this.actionLoading && !this.documentLoading &&
+      canRetryLiteInvoice(this.invoice);
   }
 
   get canReissue(): boolean {
@@ -225,6 +219,12 @@ export class CreditNoteDetailPageComponent implements OnInit {
         const message = response?.messages?.[0] || 'Reintento de emisión enviado.';
         if (['ERROR', 'PROVIDER_ERROR', 'REJECTED'].includes(state)) toast.error(message);
         else toast.success(message);
+        const replacementName = String(response?.invoiceName ?? response?.data?.name ?? '').trim();
+        if (replacementName && replacementName !== name) {
+          toast.info('La nota original fue reemplazada por una nueva emisión.');
+          this.router.navigate(['/dashboard/credit-note', replacementName]);
+          return;
+        }
         this.fetch(name);
       },
       error: (error) => toast.error(this.backendError(error, 'No se pudo reintentar la emisión.'))
@@ -297,7 +297,8 @@ export class CreditNoteDetailPageComponent implements OnInit {
       electronic: electronic ? { ...(this.invoice?.electronic || {}), ...electronic } : this.invoice?.electronic,
       sri: data.sri || electronic
         ? { ...(this.invoice?.sri || {}), ...(data.sri || {}), ...(electronic || {}) }
-        : this.invoice?.sri
+        : this.invoice?.sri,
+      emission: response?.emission ?? data?.emission ?? this.invoice?.emission
     };
   }
 

@@ -1,6 +1,16 @@
 <!-- CONTENEDOR PRINCIPAL -->
 <div class="bg-background flex flex-col ">
     <div class="container mx-auto px-3 sm:px-4 py-3 sm:py-4 flex-grow flex flex-col">
+        <div *ngIf="currentFiscalLocation || posTerminalBlockMessage"
+            class="mb-3 rounded-lg border px-3 py-2 text-[11px]"
+            [ngClass]="posTerminalBlockMessage ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-white text-slate-600'">
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span class="font-semibold text-primary">Ubicación de emisión</span>
+                <span *ngIf="currentFiscalLocation">{{ fiscalLocationLabel(currentFiscalLocation) }} <em *ngIf="terminalAssignmentLabel" class="not-italic text-primary">({{ terminalAssignmentLabel }})</em></span>
+                <span *ngIf="currentFiscalLocation?.environment"><b>Ambiente:</b> {{ currentFiscalLocation.environment }}</span>
+            </div>
+            <p *ngIf="posTerminalBlockMessage" class="mt-1 font-semibold">{{ posTerminalBlockMessage }}</p>
+        </div>
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 flex-grow">
 
             <!-- PRODUCTOS -->

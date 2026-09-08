@@ -48,9 +48,6 @@
         <button *ngIf="canRetryLite" class="btn btn-warn !px-3 !py-1.5 !text-[11px]" (click)="retryLiteInvoice()" [disabled]="liteActionRunning">
           Reintentar emisión
         </button>
-        <button *ngIf="canReissueLite" class="btn btn-warn !px-3 !py-1.5 !text-[11px]" (click)="openReissue()" [disabled]="liteActionRunning">
-          Nueva fecha y clave
-        </button>
 
         <button *ngIf="invoice?.type !== 'Nota Venta' && (!capabilities.isLiteMode || isLiteAuthorized)" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="getFacturaPdf()" [disabled]="documentActionRunning">
           <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>
@@ -302,9 +299,6 @@
           <button *ngIf="canRetryLite" class="btn btn-warn w-full !py-1.5 !text-[11px]" (click)="retryLiteInvoice()" [disabled]="liteActionRunning">
             Reintentar emisión
           </button>
-          <button *ngIf="canReissueLite" class="btn btn-warn w-full !py-1.5 !text-[11px]" (click)="openReissue()" [disabled]="liteActionRunning">
-            Nueva fecha y clave
-          </button>
 
           <button *ngIf="invoice?.type !== 'Nota Venta' && (!capabilities.isLiteMode || isLiteAuthorized)" class="btn btn-primary w-full !py-1.5 !text-[11px]" (click)="getFacturaPdf()" [disabled]="documentActionRunning">
             <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>
@@ -331,7 +325,6 @@
   </button>
   <button *ngIf="canConsultAuthorization" class="btn btn-warn flex-1 !py-1.5 !text-[11px]" (click)="consultarEstadoSri()" [disabled]="liteActionRunning">Consultar autorización</button>
   <button *ngIf="canRetryLite" class="btn btn-warn flex-1 !py-1.5 !text-[11px]" (click)="retryLiteInvoice()" [disabled]="liteActionRunning">Reintentar emisión</button>
-  <button *ngIf="canReissueLite" class="btn btn-warn flex-1 !py-1.5 !text-[11px]" (click)="openReissue()" [disabled]="liteActionRunning">Nueva fecha</button>
   <button *ngIf="invoice?.type !== 'Nota Venta' && (!capabilities.isLiteMode || isLiteAuthorized)" class="btn btn-primary flex-1 !py-1.5 !text-[11px]" (click)="getFacturaPdf()" [disabled]="documentActionRunning">
     <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>
     RIDE
@@ -342,19 +335,6 @@
   <button class="btn btn-outline flex-1 !py-1.5 !text-[11px]" (click)="goBack()">
     Volver
   </button>
-</div>
-
-<div *ngIf="showReissueModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-3">
-  <div class="w-full max-w-sm rounded-xl bg-white p-4 shadow-xl">
-    <h3 class="text-sm font-bold text-slate-900">Nueva fecha y clave</h3>
-    <p class="mt-1 text-xs text-slate-500">Se creará una nueva factura y la anterior quedará reemplazada.</p>
-    <label class="mt-3 block text-[11px] font-semibold uppercase text-slate-500">Fecha de emisión</label>
-    <input type="date" [(ngModel)]="reissueDate" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-xs" />
-    <div class="mt-3 flex justify-end gap-2">
-      <button type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="closeReissue()">Cancelar</button>
-      <button type="button" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" [disabled]="!reissueDate || liteActionRunning" (click)="reissueLiteInvoice()">Reemitir</button>
-    </div>
-  </div>
 </div>
 
 <div *ngIf="showMotivoModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-3">

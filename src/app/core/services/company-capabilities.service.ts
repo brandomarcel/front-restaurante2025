@@ -17,7 +17,8 @@ export type CompanyFeatureKey =
   | 'restaurant'
   | 'pos'
   | 'restaurant_pos'
-  | 'billing';
+  | 'billing'
+  | 'api';
 
 export type CompanyFeatures = Record<CompanyFeatureKey, boolean>;
 
@@ -57,7 +58,14 @@ export interface CompanyCapabilitiesConfig {
   certificateLastError?: string | null;
   liteSetupReady?: boolean | null;
   liteSetupMissing: string[];
+  establishments?: any[];
+  emissionPoints?: any[];
   sequences?: any[];
+  posTerminals?: any[];
+  terminalAccessRequired?: boolean;
+  requiresTerminalSelection?: boolean;
+  hasTerminalAccess?: boolean;
+  terminal?: any | null;
   loaded: boolean;
 }
 
@@ -75,7 +83,8 @@ const RESTAURANT_FALLBACK: CompanyFeatures = {
   restaurant: false,
   pos: false,
   restaurant_pos: false,
-  billing: false
+  billing: false,
+  api: false
 };
 
 @Injectable({ providedIn: 'root' })
@@ -90,9 +99,30 @@ export class CompanyCapabilitiesService {
   get features(): CompanyFeatures { return this.state().features; }
   get plan(): CompanyPlan | null { return this.state().plan; }
   get business(): any | null { return this.state().business; }
-  /** Negocio seleccionado actualmente (alias explícito para el contexto Lite). */
-  get activeBusiness(): any | null { return this.state().activeBusiness ?? this.state().business; }
-  get activeBusinessId(): string | null { return this.activeBusiness?.name || this.activeBusiness?.business || this.businessId; }
+  /**
+   * El selector del menú, el contexto y todas las solicitudes usan el mismo
+   * identificador persistido. Solo se toma del storage si aún pertenece al
+   * catálogo cargado; así una selección antigua no puede desalinear la UI.
+   */
+  get activeBusinessId(): string | null {
+    const current = this.state();
+    const persisted = String(localStorage.getItem('active_business') || localStorage.getItem('businessId') || '').trim();
+    const currentId = String(current.activeBusiness?.name || current.activeBusiness?.business || current.business?.name || current.business?.business || '').trim();
+    const belongsToList = persisted && current.businesses.some((item: any) =>
+      String(item?.name || item?.business || '').trim() === persisted
+    );
+    if (persisted && (belongsToList || persisted === currentId)) return persisted;
+    return currentId || null;
+  }
+
+  /** Negocio seleccionado actualmente, enriquecido con el contexto recibido. */
+  get activeBusiness(): any | null {
+    const current = this.state();
+    const id = this.activeBusinessId;
+    const listed = id ? current.businesses.find((item: any) => String(item?.name || item?.business || '').trim() === id) : null;
+    const contextual = current.activeBusiness ?? current.business;
+    return listed ? { ...listed, ...(contextual || {}) } : contextual;
+  }
   get businesses(): any[] { return this.state().businesses; }
   get roles(): string[] { return this.state().roles; }
   get businessRole(): string | null { return this.state().businessRole || null; }
@@ -101,41 +131,217 @@ export class CompanyCapabilitiesService {
   get certificateLastError(): string | null { return this.state().certificateLastError || null; }
   get liteSetupReady(): boolean | null { return this.state().liteSetupReady ?? null; }
   get liteSetupMissing(): string[] { return this.state().liteSetupMissing || []; }
+  get establishments(): any[] { return this.state().establishments || []; }
+  get emissionPoints(): any[] { return this.state().emissionPoints || []; }
   get sequences(): any[] { return this.state().sequences || []; }
-  hasActiveInvoiceSequence(environment?: unknown): boolean {
-    const target = this.normalize(String(environment
-      || this.business?.environment
+  get posTerminals(): any[] { return this.state().posTerminals || []; }
+  get terminalAccessRequired(): boolean { return this.state().terminalAccessRequired === true; }
+  get requiresTerminalSelection(): boolean { return this.state().requiresTerminalSelection === true; }
+  get hasTerminalAccess(): boolean { return this.state().hasTerminalAccess !== false; }
+  get activePosTerminal(): any | null {
+    const business = this.activeBusinessId;
+    if (!business) return null;
+    const persisted = String(localStorage.getItem(this.posTerminalStorageKey(business)) || '').trim();
+    const active = this.posTerminals.filter((item: any) => this.isActiveRecord(item));
+    const contextual = this.state().terminal && this.isActiveRecord(this.state().terminal)
+      && (!this.state().terminal.business || String(this.state().terminal.business) === business)
+      ? this.state().terminal
+      : null;
+    return active.find((item: any) => String(item?.name || '').trim() === persisted)
+      || active.find((item: any) => String(item?.name || '').trim() === String(this.state().terminal?.name || '').trim())
+      || (contextual && (!persisted || String(contextual.name || '').trim() === persisted) ? contextual : null)
+      || (this.requiresTerminalSelection ? null : active.length === 1 ? active[0] : null);
+  }
+
+  /**
+   * Ubicación fiscal efectiva que se utilizará al emitir. Cuando existe un
+   * terminal POS, sus datos tienen prioridad; de lo contrario se muestran el
+   * establecimiento y punto seleccionados en la configuración Lite.
+   */
+  get activeFiscalLocation(): any | null {
+    const terminal = this.activePosTerminal;
+    const terminalEstablishment = terminal?.establishment
+      ? this.activeEstablishments.find((item: any) => this.recordId(item) === String(terminal.establishment).trim())
+      : null;
+    const terminalPoint = terminal?.emission_point
+      ? this.activeEmissionPointsFor(terminalEstablishment || String(terminal.emission_point).trim())
+        .find((item: any) => this.recordId(item) === String(terminal.emission_point).trim())
+      : null;
+    const establishment = terminalEstablishment
+      ? {
+          ...terminalEstablishment,
+          establishment_code: terminal?.establishment_code || terminalEstablishment.establishment_code,
+          establishment_name: terminal?.establishment_name || terminalEstablishment.establishment_name
+        }
+      : this.selectedLiteEstablishment || (terminal?.establishment ? {
+      name: terminal.establishment,
+      establishment_code: terminal.establishment_code,
+      establishment_name: terminal.establishment_name
+    } : null);
+    const emissionPoint = terminalPoint
+      ? {
+          ...terminalPoint,
+          emission_point_code: terminal?.emission_point_code || terminalPoint.emission_point_code,
+          emission_point_name: terminal?.emission_point_name || terminalPoint.emission_point_name
+        }
+      : this.selectedLiteEmissionPoint || (terminal?.emission_point ? {
+      name: terminal.emission_point,
+      emission_point_code: terminal.emission_point_code,
+      emission_point_name: terminal.emission_point_name
+    } : null);
+    const environment = this.business?.environment
       || this.business?.ambiente
       || this.business?.tax_profile?.environment
-      || ''));
-    if (!target) return false;
-    return this.sequences.some((sequence: any) =>
-      this.normalize(String(sequence?.document_type ?? sequence?.documentType ?? '')) === 'FACTURA'
-      && this.normalize(String(sequence?.environment ?? '')) === target
-      && this.normalize(String(sequence?.status ?? '')) === 'ACTIVO'
+      || this.business?.tax_profile?.ambiente
+      || null;
+    if (!terminal && !establishment && !emissionPoint) return null;
+    return { terminal, establishment, emissionPoint, environment };
+  }
+
+  setActivePosTerminal(terminal: any | null): boolean {
+    const business = this.activeBusinessId;
+    const name = String(
+      terminal?.name
+      ?? terminal?.terminal
+      ?? terminal?.id
+      ?? (typeof terminal === 'string' ? terminal : '')
+    ).trim();
+    const candidates = this.state().terminal && !this.posTerminals.some((item: any) => String(item?.name || '') === String(this.state().terminal?.name || ''))
+      ? [...this.posTerminals, this.state().terminal]
+      : this.posTerminals;
+    const match = business && candidates.find((item: any) =>
+      String(item?.name || '').trim() === name && (!item.business || String(item.business) === business) && this.isActiveRecord(item)
     );
+    if (!business || !match) return false;
+    localStorage.setItem(this.posTerminalStorageKey(business), name);
+    const next = { ...this.state(), terminal: match };
+    this.state.set(next);
+    localStorage.setItem(this.storageKey, JSON.stringify(next));
+    return true;
+  }
+
+  clearActivePosTerminal(): void {
+    const business = this.activeBusinessId;
+    if (business) localStorage.removeItem(this.posTerminalStorageKey(business));
+    this.state.set({ ...this.state(), terminal: null });
+  }
+
+  getPosTerminalBlockMessage(): string | null {
+    if (!this.terminalAccessRequired) return null;
+    if (!this.hasTerminalAccess) return 'No tiene un terminal POS activo asignado. Contacte al administrador.';
+    if (this.requiresTerminalSelection && !this.activePosTerminal) return 'Seleccione un terminal POS para facturar.';
+    return null;
+  }
+  /**
+   * La selección tributaria se conserva por negocio; nunca es una variable
+   * global reutilizable entre empresas. Los identificadores se validan de
+   * nuevo contra el setup que el backend devuelve para el negocio activo.
+   */
+  get selectedLiteEstablishment(): any | null {
+    const selection = this.getLiteDocumentSelection();
+    return this.activeEstablishments.find((item: any) => this.recordId(item) === selection.establishment) || null;
+  }
+
+  get selectedLiteEmissionPoint(): any | null {
+    const selection = this.getLiteDocumentSelection();
+    const establishment = this.selectedLiteEstablishment;
+    if (!establishment) return null;
+    return this.activeEmissionPointsFor(establishment).find((item: any) => this.recordId(item) === selection.emissionPoint) || null;
+  }
+
+  get activeEstablishments(): any[] {
+    return this.establishments.filter((item: any) => this.belongsToActiveBusiness(item) && this.isActiveRecord(item));
+  }
+
+  activeEmissionPointsFor(establishment: any | string | null): any[] {
+    const establishmentId = typeof establishment === 'string' ? establishment : this.recordId(establishment);
+    if (!establishmentId) return [];
+    return this.emissionPoints.filter((item: any) =>
+      this.belongsToActiveBusiness(item)
+      && this.isActiveRecord(item)
+      && String(item?.establishment || '').trim() === establishmentId
+    );
+  }
+
+  /** Guarda una selección ya validada, exclusivamente bajo el negocio actual. */
+  setLiteDocumentSelection(establishmentId?: unknown, emissionPointId?: unknown): boolean {
+    const business = this.activeBusinessId;
+    if (!business) return false;
+    const establishment = this.activeEstablishments.find((item: any) => this.recordId(item) === String(establishmentId || '').trim());
+    if (!establishment) return false;
+    const points = this.activeEmissionPointsFor(establishment);
+    const point = points.find((item: any) => this.recordId(item) === String(emissionPointId || '').trim());
+    if (!point) return false;
+    localStorage.setItem(this.liteDocumentSelectionKey(business), JSON.stringify({
+      establishment: this.recordId(establishment),
+      emissionPoint: this.recordId(point)
+    }));
+    return true;
+  }
+
+  clearLiteDocumentSelection(): void {
+    const business = this.activeBusinessId;
+    if (business) localStorage.removeItem(this.liteDocumentSelectionKey(business));
+  }
+
+  /** Devuelve una combinación segura para emitir; no genera secuenciales. */
+  getLiteDocumentConfiguration(documentType: 'Factura' | 'Nota de Credito', environment?: unknown): {
+    business: string;
+    establishment: any;
+    emissionPoint: any;
+    sequence: any;
+    environment: 'Pruebas' | 'Produccion';
+  } | null {
+    const business = this.activeBusinessId;
+    const terminal = this.activePosTerminal;
+    const terminalEstablishmentId = String(terminal?.establishment || '').trim();
+    const terminalPointId = String(terminal?.emission_point || '').trim();
+    const establishment = this.selectedLiteEstablishment
+      || this.activeEstablishments.find((item: any) => this.recordId(item) === terminalEstablishmentId)
+      || null;
+    const emissionPoint = this.selectedLiteEmissionPoint
+      || (establishment ? this.activeEmissionPointsFor(establishment).find((item: any) => this.recordId(item) === terminalPointId) : null)
+      || null;
+    const target = this.normalizeEnvironment(environment
+      || this.business?.environment
+      || this.business?.ambiente
+      || this.business?.tax_profile?.environment);
+    if (!business || !establishment || !emissionPoint || !target) return null;
+    const sequence = this.sequences.find((item: any) =>
+      this.belongsToActiveBusiness(item)
+      && this.isActiveRecord(item)
+      && this.normalize(String(item?.document_type ?? item?.documentType ?? '')) === this.normalize(documentType)
+      && this.normalizeEnvironment(item?.environment) === target
+      && String(item?.establishment || '').trim() === this.recordId(establishment)
+      && String(item?.emission_point ?? item?.emissionPoint ?? '').trim() === this.recordId(emissionPoint)
+    );
+    return sequence ? { business, establishment, emissionPoint, sequence, environment: target } : null;
+  }
+
+  hasActiveInvoiceSequence(environment?: unknown): boolean {
+    return !!this.getLiteDocumentConfiguration('Factura', environment);
   }
   get businessId(): string | null { return this.business?.name || this.business?.business || null; }
   get isLoaded(): boolean { return this.state().loaded; }
   get isLiteMode(): boolean { return this.businessMode === 'FACTURADA_LITE'; }
 
+  /** La configuración tributaria es administrativa, incluso si el backend
+   * entrega permisos operativos a otros roles. */
+  get canManageBusinessInfrastructure(): boolean {
+    const role = this.normalize(String(this.businessRole || ''));
+    return this.hasAdminRole(this.roles)
+      || role === 'ADMINISTRADOR'
+      || role === 'ADMINISTRADOR DEL NEGOCIO'
+      || role === 'GERENTE';
+  }
+
   /** Rol autorizado para modificar la configuración tributaria del negocio. */
   get canManageBusinessSetup(): boolean {
-    const roles = this.roles || [];
-    const hasAdminRole = roles.some((role) => [
-      'ADMINISTRADOR DEL NEGOCIO',
-      'ADMINISTRADOR',
-      'ADMINISTRATOR',
-      'SYSTEM MANAGER'
-    ].includes(this.normalize(String(role))));
-    if (hasAdminRole) return true;
-
-    // En Lite el backend puede conceder la configuración al rol de negocio
-    // mediante este permiso, aunque no tenga un rol Frappe de administrador.
-    return !!this.permissions && this.hasPermission('business.settings.manage');
+    return this.canManageBusinessInfrastructure;
   }
 
   setFromResponse(response: any): void {
+    const selectedBusinessId = this.activeBusinessId;
     const message = frappeData<any>(response) || {};
     const rawBusiness = message?.business;
     const rawCompany = rawBusiness && typeof rawBusiness === 'object'
@@ -151,6 +357,8 @@ export class CompanyCapabilitiesService {
     const normalizedCompany = nestedCompany && typeof nestedCompany === 'object'
       ? { ...company, ...nestedCompany, tax_profile: company?.tax_profile ?? nestedCompany?.tax_profile }
       : company;
+    const responseBusinessId = String(normalizedCompany?.name || normalizedCompany?.business || selectedBusinessId || '').trim();
+    const matchesSelectedBusiness = !selectedBusinessId || !responseBusinessId || selectedBusinessId === responseBusinessId;
     // get_user_context puede omitir el perfil tributario. Conservamos el
     // ambiente que ya fue cargado desde get_lite_setup para no perderlo al
     // refrescar el contexto de usuario.
@@ -192,7 +400,15 @@ export class CompanyCapabilitiesService {
       : this.defaultFeaturesForMode(businessMode);
 
     const plan = this.normalizePlan(message?.plan ?? normalizedCompany?.plan ?? nestedCompany?.plan ?? response?.plan);
-    const businesses = Array.isArray(message?.businesses) ? message.businesses : [];
+    // Algunos contextos resumidos no devuelven `businesses`. Conservamos el
+    // catálogo consultado al iniciar sesión para que el combo no se vacíe ni
+    // cambie de empresa visualmente.
+    // `get_businesses` es la fuente canónica del selector. El contexto puede
+    // devolver una lista resumida o atrasada; no debe reemplazar el catálogo
+    // ni cambiar visualmente la empresa que el usuario ya seleccionó.
+    const businesses = this.state().businesses.length
+      ? this.state().businesses
+      : (Array.isArray(message?.businesses) ? message.businesses : []);
     const businessRole = message?.business_role ?? normalizedCompany?.business_role ?? null;
     const roles = this.normalizeRoles(message?.roles ?? message?.user_roles ?? normalizedCompany?.roles ?? response?.roles);
     if (businessRole) {
@@ -209,13 +425,38 @@ export class CompanyCapabilitiesService {
       ?? (businessMode === 'FACTURADA_LITE' && hasCertificatePassword !== undefined && this.coerceOptionalBoolean(hasCertificatePassword) !== true
         ? 'NO CONFIGURADO'
         : null);
+    const terminalContext = message?.terminal && typeof message.terminal === 'object' ? message.terminal : null;
+    const posTerminals = Array.isArray(message?.pos_terminals)
+      ? message.pos_terminals
+      : (Array.isArray(terminalContext?.pos_terminals)
+        ? terminalContext.pos_terminals
+        : (Array.isArray(terminalContext?.terminals) ? terminalContext.terminals : (this.state().posTerminals || [])));
+    const terminalCandidates = posTerminals.filter((item: any) =>
+      !item?.business || !responseBusinessId || String(item.business) === responseBusinessId
+    );
+    const persistedTerminalName = responseBusinessId
+      ? String(localStorage.getItem(this.posTerminalStorageKey(responseBusinessId)) || '').trim()
+      : '';
+    const contextTerminal = terminalContext?.terminal && typeof terminalContext.terminal === 'object'
+      ? terminalContext.terminal
+      : (terminalContext?.selected_terminal && typeof terminalContext.selected_terminal === 'object'
+        ? terminalContext.selected_terminal
+        : (terminalContext?.selected && typeof terminalContext.selected === 'object'
+          ? terminalContext.selected
+          : (terminalContext?.name ? terminalContext : null)));
+    const contextTerminalName = typeof message?.terminal === 'string'
+      ? String(message.terminal).trim()
+      : String(contextTerminal?.name || message?.terminal_name || '').trim();
+    const selectedTerminal = terminalCandidates.find((item: any) => String(item?.name || '') === persistedTerminalName)
+      || terminalCandidates.find((item: any) => String(item?.name || '') === contextTerminalName)
+      || (contextTerminal && (!contextTerminal.business || !responseBusinessId || String(contextTerminal.business) === responseBusinessId) ? contextTerminal : null);
 
     const config: CompanyCapabilitiesConfig = {
       businessMode,
       features,
       plan,
-      business: normalizedCompany || null,
-      activeBusiness: normalizedCompany || null,
+      business: matchesSelectedBusiness ? (normalizedCompany || null) : this.state().business,
+      activeBusiness: matchesSelectedBusiness ? (normalizedCompany || null) : this.state().activeBusiness,
       businesses,
       roles,
       businessRole: businessRole ? String(businessRole) : null,
@@ -228,14 +469,22 @@ export class CompanyCapabilitiesService {
       liteSetupMissing: message?.missing !== undefined || normalizedCompany?.missing !== undefined
         ? this.normalizeMissing(message?.missing ?? normalizedCompany?.missing)
         : this.state().liteSetupMissing,
+      establishments: Array.isArray(message?.establishments) ? message.establishments : (this.state().establishments || []),
+      emissionPoints: Array.isArray(message?.emission_points) ? message.emission_points : (this.state().emissionPoints || []),
       sequences: Array.isArray(message?.sequences) ? message.sequences : (this.state().sequences || []),
+      posTerminals: terminalCandidates,
+      terminalAccessRequired: this.toBoolean(message?.terminal_access_required),
+      requiresTerminalSelection: this.toBoolean(message?.requires_terminal_selection),
+      hasTerminalAccess: message?.has_terminal_access === undefined ? this.state().hasTerminalAccess : this.toBoolean(message.has_terminal_access),
+      terminal: selectedTerminal,
       loaded: true
     };
     this.state.set(config);
     localStorage.setItem(this.storageKey, JSON.stringify(config));
+    this.ensureLiteDocumentSelection();
     if (setupEnvironment) this.utilsService.cambiarAmbiente(setupEnvironment);
     const businessId = config.business?.name || (typeof config.business?.business === 'string' ? config.business.business : null) || null;
-    if (businessId) {
+    if (businessId && matchesSelectedBusiness) {
       localStorage.setItem('active_business', businessId);
       localStorage.setItem('businessId', businessId);
     }
@@ -248,8 +497,11 @@ export class CompanyCapabilitiesService {
     const taxProfile = data?.tax_profile && typeof data.tax_profile === 'object' ? data.tax_profile : {};
     const hasCertificatePassword = taxProfile.has_certificate_password;
     const setupBusiness = data?.business && typeof data.business === 'object' ? data.business : {};
+    const selectedBusinessId = this.activeBusinessId;
+    const setupBusinessId = String(setupBusiness?.name || setupBusiness?.business || '').trim();
+    const matchesSelectedBusiness = !selectedBusinessId || !setupBusinessId || selectedBusinessId === setupBusinessId;
     const setupEnvironment = taxProfile.environment ?? taxProfile.ambiente;
-    const business = Object.keys(setupBusiness).length || setupEnvironment
+    const business = matchesSelectedBusiness && (Object.keys(setupBusiness).length || setupEnvironment)
       ? {
           ...(current.business || {}),
           ...setupBusiness,
@@ -262,7 +514,10 @@ export class CompanyCapabilitiesService {
     const next = {
       ...current,
       business,
-      activeBusiness: business || current.activeBusiness,
+      // No reemplazar visualmente el negocio del selector con una respuesta
+      // ajena o retrasada: la configuración siempre debe corresponder al
+      // `business` elegido antes de aplicarse al estado.
+      activeBusiness: matchesSelectedBusiness ? (business || current.activeBusiness) : current.activeBusiness,
       plan: data?.plan && typeof data.plan === 'object' ? this.normalizePlan(data.plan) : current.plan,
       features: data?.features && typeof data.features === 'object'
         ? this.mergeFeatures(current.features, data.features)
@@ -282,11 +537,14 @@ export class CompanyCapabilitiesService {
       certificateLastError: taxProfile.certificate_last_error ?? current.certificateLastError,
       liteSetupReady: data?.ready === undefined || data?.ready === null ? current.liteSetupReady : this.toBoolean(data.ready),
       liteSetupMissing: data?.missing === undefined ? current.liteSetupMissing : this.normalizeMissing(data.missing),
+      establishments: Array.isArray(data?.establishments) ? data.establishments : (current.establishments || []),
+      emissionPoints: Array.isArray(data?.emission_points) ? data.emission_points : (current.emissionPoints || []),
       sequences: Array.isArray(data?.sequences) ? data.sequences : (current.sequences || []),
       loaded: true
     };
     this.state.set(next);
     localStorage.setItem(this.storageKey, JSON.stringify(next));
+    if (matchesSelectedBusiness) this.ensureLiteDocumentSelection();
     if (setupEnvironment) this.utilsService.cambiarAmbiente(setupEnvironment);
   }
 
@@ -312,7 +570,14 @@ export class CompanyCapabilitiesService {
       certificateLastError: null,
       liteSetupReady: null,
       liteSetupMissing: [],
-      sequences: []
+      establishments: [],
+      emissionPoints: [],
+      sequences: [],
+      posTerminals: [],
+      terminalAccessRequired: false,
+      requiresTerminalSelection: false,
+      hasTerminalAccess: true,
+      terminal: null
     };
     this.state.set(next);
     localStorage.setItem('active_business', String(selectedId));
@@ -328,7 +593,7 @@ export class CompanyCapabilitiesService {
 
   useSafeFallback(): void {
     if (this.state().loaded) return;
-    this.state.set({ businessMode: 'RESTAURANTE', features: { ...RESTAURANT_FALLBACK }, plan: null, business: null, activeBusiness: null, businesses: [], roles: [], businessRole: null, permissions: null, certificateStatus: null, certificateLastError: null, liteSetupReady: null, liteSetupMissing: [], loaded: true });
+    this.state.set({ businessMode: 'RESTAURANTE', features: { ...RESTAURANT_FALLBACK }, plan: null, business: null, activeBusiness: null, businesses: [], roles: [], businessRole: null, permissions: null, certificateStatus: null, certificateLastError: null, liteSetupReady: null, liteSetupMissing: [], establishments: [], emissionPoints: [], loaded: true });
   }
 
   setCertificateStatus(status?: unknown, lastError?: unknown): void {
@@ -343,7 +608,9 @@ export class CompanyCapabilitiesService {
   }
 
   isCertificateEmissionBlocked(): boolean {
-    if (!this.isLiteMode) return false;
+    // FacturADA Restaurante también emite mediante la infraestructura Lite;
+    // la condición es la capacidad de facturación, no el nombre del modo.
+    if (!this.isLiteMode && this.features.billing !== true) return false;
     const status = this.normalize(this.certificateStatus || '');
     return ['NO CONFIGURADO', 'VENCIDO', 'NO VIGENTE', 'ERROR DE LECTURA'].includes(status) || !!this.certificateLastError;
   }
@@ -365,6 +632,13 @@ export class CompanyCapabilitiesService {
     // compatibilidad granular cuando billing aún no llegue del backend.
     if (feature === 'direct_invoice') return features.billing === true || features.direct_invoice === true;
     if (feature === 'credit_note') return features.billing === true || features.credit_note === true;
+
+    // Las mesas pueden estar habilitadas en un negocio restaurante incluso
+    // mientras el backend termina de publicar la bandera granular `tables`.
+    if (feature === 'tables') {
+      const mode = this.normalize(this.business?.business_mode ?? this.business?.businessMode ?? '');
+      return features.tables === true || mode === 'RESTAURANT' || mode === 'RESTAURANTE';
+    }
 
     if (this.restaurantOnlyFeatures.includes(feature)) {
       return isRestaurant && features[feature] === true;
@@ -506,7 +780,7 @@ export class CompanyCapabilitiesService {
   }
 
   getLiteSetupBlockMessage(): string | null {
-    if (!this.isLiteMode || this.liteSetupReady === true) return null;
+    if ((!this.isLiteMode && this.features.billing !== true) || this.liteSetupReady === true) return null;
     if (this.liteSetupMissing.length) {
       const labels: Record<string, string> = {
         tax_profile: 'perfil tributario',
@@ -549,7 +823,7 @@ export class CompanyCapabilitiesService {
   }
 
   private get featureKeys(): CompanyFeatureKey[] {
-    return ['restaurant', 'restaurant_pos', 'pos', 'billing', 'orders', 'tables', 'kitchen', 'cash_register', 'direct_invoice', 'credit_note', 'customers', 'products', 'additional_fields', 'inventory'];
+    return ['restaurant', 'restaurant_pos', 'pos', 'billing', 'api', 'orders', 'tables', 'kitchen', 'cash_register', 'direct_invoice', 'credit_note', 'customers', 'products', 'additional_fields', 'inventory'];
   }
 
   private get restaurantOnlyFeatures(): CompanyFeatureKey[] {
@@ -575,7 +849,14 @@ export class CompanyCapabilitiesService {
           certificateLastError: stored.certificateLastError ?? null,
           liteSetupReady: stored.liteSetupReady ?? null,
           liteSetupMissing: Array.isArray(stored.liteSetupMissing) ? stored.liteSetupMissing : [],
+          establishments: Array.isArray(stored.establishments) ? stored.establishments : [],
+          emissionPoints: Array.isArray(stored.emissionPoints) ? stored.emissionPoints : [],
           sequences: Array.isArray(stored.sequences) ? stored.sequences : [],
+          posTerminals: Array.isArray(stored.posTerminals) ? stored.posTerminals : [],
+          terminalAccessRequired: stored.terminalAccessRequired === true,
+          requiresTerminalSelection: stored.requiresTerminalSelection === true,
+          hasTerminalAccess: stored.hasTerminalAccess !== false,
+          terminal: stored.terminal ?? null,
           loaded: stored.loaded === true
         };
       }
@@ -584,7 +865,7 @@ export class CompanyCapabilitiesService {
   }
 
   private defaultState(): CompanyCapabilitiesConfig {
-    return { businessMode: 'RESTAURANTE', features: { ...RESTAURANT_FALLBACK }, plan: null, business: null, activeBusiness: null, businesses: [], roles: [], permissions: null, certificateStatus: null, certificateLastError: null, liteSetupReady: null, liteSetupMissing: [], sequences: [], loaded: false };
+    return { businessMode: 'RESTAURANTE', features: { ...RESTAURANT_FALLBACK }, plan: null, business: null, activeBusiness: null, businesses: [], roles: [], permissions: null, certificateStatus: null, certificateLastError: null, liteSetupReady: null, liteSetupMissing: [], establishments: [], emissionPoints: [], sequences: [], posTerminals: [], terminalAccessRequired: false, requiresTerminalSelection: false, hasTerminalAccess: true, terminal: null, loaded: false };
   }
 
   private normalizePlan(value: unknown): CompanyPlan | null {
@@ -639,6 +920,81 @@ export class CompanyCapabilitiesService {
         .map(([key]) => key);
     }
     return value ? [String(value).trim()].filter(Boolean) : [];
+  }
+
+  private liteDocumentSelectionKey(business: string): string {
+    return `lite_document_selection:${business}`;
+  }
+
+  private posTerminalStorageKey(business: string): string {
+    return `pos_terminal:${business}`;
+  }
+
+  private getLiteDocumentSelection(): { establishment: string; emissionPoint: string } {
+    const business = this.activeBusinessId;
+    if (!business) return { establishment: '', emissionPoint: '' };
+    try {
+      const saved = JSON.parse(localStorage.getItem(this.liteDocumentSelectionKey(business)) || '{}');
+      return {
+        establishment: String(saved?.establishment || '').trim(),
+        emissionPoint: String(saved?.emissionPoint || '').trim()
+      };
+    } catch {
+      return { establishment: '', emissionPoint: '' };
+    }
+  }
+
+  /**
+   * Solo propone los valores explícitamente marcados por backend (principal /
+   * predeterminado), o el único registro activo. Nunca toma arbitrariamente
+   * el primer elemento de una lista con varias alternativas.
+   */
+  private ensureLiteDocumentSelection(): void {
+    const business = this.activeBusinessId;
+    if (!business) return;
+    const stored = this.getLiteDocumentSelection();
+    const establishments = this.activeEstablishments;
+    const establishment = establishments.find((item: any) => this.recordId(item) === stored.establishment)
+      || establishments.find((item: any) => this.toBoolean(item?.is_main))
+      || (establishments.length === 1 ? establishments[0] : null);
+    if (!establishment) {
+      localStorage.removeItem(this.liteDocumentSelectionKey(business));
+      return;
+    }
+    const points = this.activeEmissionPointsFor(establishment);
+    const point = points.find((item: any) => this.recordId(item) === stored.emissionPoint)
+      || points.find((item: any) => this.toBoolean(item?.is_default))
+      || (points.length === 1 ? points[0] : null);
+    if (!point) {
+      localStorage.setItem(this.liteDocumentSelectionKey(business), JSON.stringify({
+        establishment: this.recordId(establishment), emissionPoint: ''
+      }));
+      return;
+    }
+    localStorage.setItem(this.liteDocumentSelectionKey(business), JSON.stringify({
+      establishment: this.recordId(establishment), emissionPoint: this.recordId(point)
+    }));
+  }
+
+  private belongsToActiveBusiness(record: any): boolean {
+    const business = this.activeBusinessId;
+    const recordBusiness = String(record?.business || record?.business_name || '').trim();
+    return !recordBusiness || !business || recordBusiness === business;
+  }
+
+  private isActiveRecord(record: any): boolean {
+    return this.normalize(String(record?.status ?? 'Activo')) === 'ACTIVO';
+  }
+
+  private recordId(record: any): string {
+    return String(record?.name || record?.id || '').trim();
+  }
+
+  private normalizeEnvironment(value: unknown): 'Pruebas' | 'Produccion' | '' {
+    const normalized = this.normalize(String(value || ''));
+    if (normalized.includes('PROD')) return 'Produccion';
+    if (normalized.includes('PRUEB') || normalized === 'TEST') return 'Pruebas';
+    return '';
   }
 
   private mergeFeatures(current: CompanyFeatures, received: Record<string, unknown>): CompanyFeatures {
@@ -715,7 +1071,8 @@ export class CompanyCapabilitiesService {
         restaurant: false,
         pos: false,
         restaurant_pos: false,
-        billing: false
+        billing: false,
+        api: false
       };
     }
 
