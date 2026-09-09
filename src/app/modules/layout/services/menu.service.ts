@@ -104,14 +104,17 @@ export class MenuService implements OnDestroy {
       const featureKey = item.featureKey ?? inheritedFeature;
       const allowedByRole = !rolesForThisItem || rolesForThisItem.some(role => currentRoles.includes(role));
       const allowedByPermission = !item.permissionKey || this.capabilities.hasPermission(item.permissionKey);
-      const allowed = allowedByRole && allowedByPermission && this.capabilities.isEnabled(featureKey);
+      const allowedByFeature = item.featureKeys?.length
+        ? item.featureKeys.some(key => this.capabilities.isEnabled(key))
+        : this.capabilities.isEnabled(featureKey);
+      const allowed = allowedByRole && allowedByPermission && allowedByFeature;
 
       const children = item.children
         ?.map((child) => filterItem(child, rolesForThisItem, featureKey))
         .filter((child): child is SubMenuItem => !!child);
 
       if (!allowed && (!children || children.length === 0)) return null;
-      return { ...item, featureKey, children };
+      return { ...item, featureKey, featureKeys: item.featureKeys, children };
     };
 
     return groups

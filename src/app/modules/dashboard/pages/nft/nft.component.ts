@@ -631,7 +631,8 @@ export class NftComponent implements OnInit, OnDestroy {
     if (this.isApiOnlyMode) {
       return [
         { label: 'Ver API', detail: 'Clientes y documentación', route: '/settings/lite/api-clients', tone: 'bg-slate-900 text-white', feature: 'api' },
-        { label: 'Facturas', detail: 'Documentos emitidos', route: '/dashboard/invoices', tone: 'bg-violet-600 text-white', feature: 'direct_invoice' },
+        { label: 'Facturas', detail: 'Documentos emitidos', route: '/dashboard/invoices', tone: 'bg-violet-600 text-white', feature: 'api' },
+        { label: 'Notas de crédito', detail: 'Ajustes tributarios', route: '/dashboard/credit-notes', tone: 'bg-amber-600 text-white', feature: 'api' },
         { label: 'Configuración', detail: 'Perfil y secuencias', route: '/settings/lite', tone: 'bg-primary text-white' }
       ];
     }

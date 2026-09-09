@@ -47,11 +47,11 @@ const routes: Routes = [
       
       { path: 'invoicing', component: InvoicingComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', permissionKey: 'billing.create', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'] } },
 
-      { path: 'invoices', component: InvoicesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', permissionKey: 'billing.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
-      { path: 'invoices/:id', component: InvoiceDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', permissionKey: 'billing.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
+      { path: 'invoices', component: InvoicesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', featureKeys: ['direct_invoice', 'api'], readOnlyFeature: true, permissionKey: 'billing.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
+      { path: 'invoices/:id', component: InvoiceDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', featureKeys: ['direct_invoice', 'api'], readOnlyFeature: true, permissionKey: 'billing.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
 
-      { path: 'credit-notes', component: CreditNotesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'credit_note', permissionKey: 'billing.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'] } },
-      { path: 'credit-note/:id', component: CreditNoteDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'credit_note', permissionKey: 'billing.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'] } },
+      { path: 'credit-notes', component: CreditNotesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'credit_note', featureKeys: ['credit_note', 'api'], readOnlyFeature: true, permissionKey: 'billing.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
+      { path: 'credit-note/:id', component: CreditNoteDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'credit_note', featureKeys: ['credit_note', 'api'], readOnlyFeature: true, permissionKey: 'billing.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
       { path: 'no-access', component: NoAccessComponent },
 
       {

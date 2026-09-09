@@ -48,6 +48,7 @@ export class Menu {
           label: 'Lista Facturas',
           route: '/dashboard/invoices',
           featureKey: 'direct_invoice',
+          featureKeys: ['direct_invoice', 'api'],
           permissionKey: 'billing.read',
         },
         {
@@ -55,6 +56,7 @@ export class Menu {
           label: 'Lista Notas Crédito',
           route: '/dashboard/credit-notes',
           featureKey: 'credit_note',
+          featureKeys: ['credit_note', 'api'],
           permissionKey: 'billing.read',
         },
       ],

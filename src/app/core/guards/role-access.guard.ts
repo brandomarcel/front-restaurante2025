@@ -44,6 +44,10 @@ export class RoleAccessGuard implements CanActivate {
     const allowedRoles = this.normalizeRoles(route.data?.['allowedRoles']);
     const currentRoles = this.readCurrentRoles();
     const featureKey = route.data?.['featureKey'] as CompanyFeatureKey | undefined;
+    const featureKeys = Array.isArray(route.data?.['featureKeys'])
+      ? route.data['featureKeys'] as CompanyFeatureKey[]
+      : [];
+    const readOnlyFeature = route.data?.['readOnlyFeature'] === true;
     const permissionKey = route.data?.['permissionKey'] as string | undefined;
     const liteBlocked = route.data?.['liteBlocked'] === true;
     const apiOnlyBlocked = route.data?.['apiOnlyBlocked'] === true;
@@ -61,7 +65,17 @@ export class RoleAccessGuard implements CanActivate {
       return this.redirectToAvailable(state.url, currentRoles, 'lite');
     }
 
-    const featureAccess = this.capabilities.validateFeatureUse(featureKey);
+    // Las pantallas marcadas como solo lectura (historiales y detalles) solo
+    // necesitan que exista una capacidad compatible. No deben bloquearse por
+    // certificado, secuencia o cupo, que son requisitos exclusivos de emisión.
+    const hasReadFeature = featureKeys.length
+      ? featureKeys.some((key) => this.capabilities.isEnabled(key))
+      : !!featureKey && this.capabilities.isEnabled(featureKey);
+    const featureAccess = readOnlyFeature
+      ? (hasReadFeature
+        ? { allowed: true }
+        : { allowed: false, message: 'Este módulo no está incluido en el plan de la empresa.' })
+      : this.capabilities.validateFeatureUse(featureKey);
     if (!featureAccess.allowed) {
       toast.error(featureAccess.message || 'Este módulo no está disponible para la empresa.');
       return this.redirectToAvailable(state.url, currentRoles, 'feature');
