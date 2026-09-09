@@ -1,0 +1,33 @@
+.invoice-detail-tab {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  white-space: nowrap;
+  border-radius: 9px;
+  padding: 0 11px;
+  color: #667085;
+  font-size: 11px;
+  font-weight: 700;
+  transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+
+.invoice-detail-tab:hover {
+  background: #f8fafc;
+  color: #4338ca;
+}
+
+.invoice-detail-tab.is-active {
+  background: #eef2ff;
+  color: #4338ca;
+  box-shadow: 0 1px 4px rgba(67, 56, 202, .12);
+}
+
+.invoice-billing-grid--general {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1024px) {
+  .invoice-billing-grid--electronic {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  }
+}

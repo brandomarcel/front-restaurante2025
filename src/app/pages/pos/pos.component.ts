@@ -554,6 +554,7 @@ export class PosComponent implements OnInit {
           this.ordersService.create_order_v2(order).pipe(finalize(() => this.spinner.hide()))
             .subscribe({
               next: (res: any) => {
+                console.log('Factura creada', res);
                 const orderId = res.message?.name;
                 this.pendingOrderId = orderId;
                 this.refreshProductsSilently();
@@ -734,6 +735,7 @@ export class PosComponent implements OnInit {
   handlePrintSelection(option: 'comanda' | 'recibo' | 'ambas') {
     if (!this.pendingOrderId) return;
 
+    
     // Mesero no puede imprimir recibo
     if (this.roleName === 'Mesero' && option === 'recibo') {
       toast.warning('El rol Mesero no puede imprimir recibo.');

@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { toast } from 'ngx-sonner';
 import { finalize } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 
 import { EcuadorTimePipe } from 'src/app/core/pipes/ecuador-time-pipe.pipe';
 import { PrintService } from 'src/app/services/print.service';
@@ -23,6 +24,7 @@ import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduc
 import { AlertService } from 'src/app/core/services/alert.service';
 import { InvoicePaymentPayload, roundMoney, validatePaymentsTotal } from 'src/app/shared/utils/payment.utils';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { RestaurantRealtimeEvent, RestaurantRealtimeService } from 'src/app/services/restaurant-realtime.service';
 
 type Product = any; // usa tu modelo si lo tienes
 type OrderItem = {
@@ -54,7 +56,7 @@ type OrderItem = {
   ],
   templateUrl: './order-detail-page.component.html'
 })
-export class OrderDetailPageComponent implements OnInit {
+export class OrderDetailPageComponent implements OnInit, OnDestroy {
   loading = true;
   error = '';
   order: any | null = null;
@@ -81,6 +83,7 @@ export class OrderDetailPageComponent implements OnInit {
   orderPayments: any[] = [];
 
   private baseUrl = environment.URL;
+  private readonly realtimeSub = new Subscription();
   roleName: 'Gerente' | 'Cajero' | 'Mesero' | 'Desconocido' = 'Desconocido';
 
   constructor(
@@ -95,6 +98,7 @@ export class OrderDetailPageComponent implements OnInit {
     private customersSvc: CustomersService,
     private alertService: AlertService,
     private capabilities: CompanyCapabilitiesService,
+    private restaurantRealtime: RestaurantRealtimeService,
   ) { }
 
   ngOnInit(): void {
@@ -110,10 +114,36 @@ export class OrderDetailPageComponent implements OnInit {
     });
 
     const id = this.route.snapshot.paramMap.get('id')!;
+    this.restaurantRealtime.activate();
+    this.realtimeSub.add(this.restaurantRealtime.events$.subscribe((event) => this.applyRealtimeEvent(event, id)));
     this.fetch(id);
     this.loadProducts();
     this.loadCustomers();
     this.loadPaymentMethods();
+  }
+
+  ngOnDestroy(): void {
+    this.realtimeSub.unsubscribe();
+  }
+
+  private applyRealtimeEvent(event: RestaurantRealtimeEvent, orderName: string): void {
+    if (event.event_type.startsWith('order_split.')) {
+      const data = event.data || {};
+      const relatedOrder = data.order_name
+        || data.order?.name
+        || data.split?.order_name
+        || data.split?.order?.name
+        || (typeof data.order === 'string' ? data.order : '')
+        || data.order_id;
+      if (String(relatedOrder || '').trim() === String(orderName).trim()) this.loadOrderSplits();
+      return;
+    }
+    if (event.event_type !== 'order.created' && event.event_type !== 'order.updated') return;
+    if (String(event.data?.name || '').trim() !== String(orderName).trim()) return;
+    const incoming = event.data || {};
+    this.order = { ...(this.order || {}), ...incoming };
+    this.orderPayments = this.normalizeOrderPayments(this.order?.payments || []);
+    this.hydrateOrderItems(this.order);
   }
 
   // =============== Cargar Orden y Productos ===============

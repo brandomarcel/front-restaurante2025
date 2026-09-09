@@ -23,10 +23,12 @@ const establishmentManagement = {
 const routes: Routes = [
   { path: 'lite', component: CompanyComponent, ...management },
   { path: 'lite/tax-profile', component: CompanyComponent, ...management },
+  { path: 'lite/certificate', component: CompanyComponent, ...management },
+  { path: 'lite/plan', component: CompanyComponent, ...management },
   { path: 'lite/establishments', component: LiteEstablishmentsComponent, ...establishmentManagement },
   { path: 'lite/emission-points', component: LiteEmissionPointsComponent, ...establishmentManagement },
   { path: 'lite/sequences', component: LiteDocumentSequencesComponent, ...establishmentManagement },
-  { path: 'lite/pos-terminals', component: LitePosTerminalsComponent, ...management },
+  { path: 'lite/pos-terminals', component: LitePosTerminalsComponent, ...management, data: { ...management.data, apiOnlyBlocked: true, featureKey: 'pos' } },
   { path: 'lite/readiness', component: CompanyComponent, ...management },
   {
     path: 'lite/api-clients',

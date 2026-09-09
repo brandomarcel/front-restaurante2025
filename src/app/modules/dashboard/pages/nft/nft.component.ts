@@ -94,7 +94,7 @@ export class NftComponent implements OnInit, OnDestroy {
     private ordersService: OrdersService,
     private cajasService: CajasService,
     private companyService: CompanyService,
-    private capabilities: CompanyCapabilitiesService,
+    public capabilities: CompanyCapabilitiesService,
     private liteDashboardService: FacturadaLiteDashboardService
   ) { }
 
@@ -529,20 +529,93 @@ export class NftComponent implements OnInit, OnDestroy {
     return this.businessMode === 'FACTURADA_LITE' && !this.isRestaurantMode;
   }
 
+  get isApiOnlyMode(): boolean {
+    return this.capabilities.isApiOnlyMode;
+  }
+
+  get apiEnvironmentLabel(): string {
+    return String(
+      this.companyData?.environment
+      || this.capabilities.business?.tax_profile?.environment
+      || this.capabilities.business?.environment
+      || this.capabilities.business?.ambiente
+      || 'No configurado'
+    );
+  }
+
+  get apiRucLabel(): string {
+    return String(this.capabilities.business?.ruc || this.capabilities.business?.tax_id || 'No configurado');
+  }
+
+  get apiSetupStatusLabel(): string {
+    if (this.effectiveLiteSetupReady === true) return 'Lista para emitir';
+    if (this.effectiveLiteSetupReady === false) return 'Configuración pendiente';
+    return 'Pendiente de validar';
+  }
+
+  get apiSetupStatusClasses(): string {
+    if (this.effectiveLiteSetupReady === true) return 'bg-emerald-100 text-emerald-700';
+    if (this.effectiveLiteSetupReady === false) return 'bg-amber-100 text-amber-700';
+    return 'bg-slate-100 text-slate-600';
+  }
+
+  get effectiveLiteSetupReady(): boolean | null {
+    const ready = this.capabilities.liteSetupReady;
+    if (ready === null || ready === undefined) return ready;
+    if (ready !== true) return false;
+
+    const missingCertificate = this.capabilities.liteSetupMissing.some((item) => {
+      const normalized = String(item || '').trim().toLowerCase().replace(/[_-]/g, ' ');
+      return ['certificate', 'electronic certificate', 'signature', 'electronic signature'].includes(normalized);
+    });
+
+    // No mostrar “Lista para emitir” mientras aún no se ha cargado la firma
+    // en el perfil tributario de la empresa activa.
+    if (!this.companyData || this.companyData.firma === true || missingCertificate) return false;
+    return true;
+  }
+
+  get apiSetupMissing(): string[] {
+    return this.capabilities.liteSetupMissing;
+  }
+
+  get apiSequenceLabel(): string {
+    const sequence = this.capabilities.sequences.find((item: any) =>
+      String(item?.document_type || '').trim().toUpperCase() === 'FACTURA'
+      && String(item?.status || 'Activo').trim().toUpperCase() === 'ACTIVO'
+      && String(item?.environment || '').trim().toUpperCase() === this.apiEnvironmentLabel.trim().toUpperCase()
+    );
+    if (!sequence) return 'Sin secuencia activa';
+    const current = Number(sequence?.current_number ?? 0) || 0;
+    const next = sequence?.next_number !== undefined ? Number(sequence.next_number) : current + 1;
+    return `Próximo ${String(Math.max(next, 1)).padStart(9, '0')}`;
+  }
+
+  get apiPlanUsagePercent(): number {
+    if (this.planUnlimitedVouchers) return 12;
+    const purchased = Math.max(this.planPurchasedVouchers, 1);
+    return Math.min(100, Math.max(0, (this.planUsedVouchers / purchased) * 100));
+  }
+
   get isRestaurantMode(): boolean {
     return this.capabilities.isEnabled('restaurant');
   }
 
   get modeLabel(): string {
+    if (this.isApiOnlyMode) return 'FacturADA API';
     if (this.isLiteMode) return 'FacturADA Lite';
     return this.isFacturadorMode ? 'Facturador' : 'Restaurante';
   }
 
   get dashboardTitle(): string {
+    if (this.isApiOnlyMode) return 'Panel API';
     return this.isFacturadorMode ? 'Panel de facturación' : 'Panel operativo';
   }
 
   get dashboardSubtitle(): string {
+    if (this.isApiOnlyMode) {
+      return `Consumo de API, comprobantes y configuración tributaria: ${this.today.toLocaleDateString('es-EC')}`;
+    }
     return this.isFacturadorMode
       ? `Facturación electrónica, clientes y documentos: ${this.today.toLocaleDateString('es-EC')}`
       : `Operación del restaurante, caja y órdenes: ${this.today.toLocaleDateString('es-EC')}`;
@@ -555,6 +628,13 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   get primaryActions(): DashboardAction[] {
+    if (this.isApiOnlyMode) {
+      return [
+        { label: 'Ver API', detail: 'Clientes y documentación', route: '/settings/lite/api-clients', tone: 'bg-slate-900 text-white', feature: 'api' },
+        { label: 'Facturas', detail: 'Documentos emitidos', route: '/dashboard/invoices', tone: 'bg-violet-600 text-white', feature: 'direct_invoice' },
+        { label: 'Configuración', detail: 'Perfil y secuencias', route: '/settings/lite', tone: 'bg-primary text-white' }
+      ];
+    }
     if (this.isFacturadorMode) {
       return this.filterAllowedActions([
         { label: 'Emitir factura', detail: 'Factura directa al SRI', route: '/dashboard/invoicing', tone: 'bg-primary text-white', feature: 'direct_invoice', requiresEmission: true },

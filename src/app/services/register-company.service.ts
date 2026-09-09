@@ -1,45 +1,37 @@
 // register-company.service.ts
-import { HttpClient, HttpContext } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from 'src/environments/environment';
-import { API_ENDPOINT } from '../core/constants/api.constants';
-import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 
 @Injectable({ providedIn: 'root' })
 export class RegisterCompanyService {
-    private readonly apiUrl = environment.apiUrl; // Cambia si usás otro backend
+  private readonly apiUrl = environment.apiUrl;
 
-  private urlBase: string = '';
-  constructor(private http: HttpClient) {
-    this.urlBase = this.apiUrl + API_ENDPOINT.Register;
-  }
+  constructor(private http: HttpClient) {}
 
-  registerTenantOpen(payload: {
-    user: any;
-    company: any;
-    logo?: never;
-    add_permission?: boolean;
-  }) {
-    const body: any = {
-      user_json: JSON.stringify(payload.user),
-      company_json: JSON.stringify(payload.company),
-      add_permission: payload.add_permission ? 1 : 0,
+  /** Registro público inicial de FacturADA Business. No requiere sesión y no
+   * acepta configuración de módulos, certificados ni infraestructura fiscal. */
+  registerBusinessOpen(payload: {
+    user: {
+      email: string;
+      password: string;
+      first_name: string;
+      last_name?: string;
+      phone?: string;
     };
-    // SIN headers especiales
+    business: {
+      business_name: string;
+      ruc: string;
+      legal_name?: string;
+      trade_name?: string;
+      address?: string;
+      phone?: string;
+    };
+  }) {
     return this.http.post(
-      `${this.urlBase}.register_tenant_open`,
-      body
+      `${this.apiUrl}/method/facturada_core.api.onboarding.register_business_open`,
+      payload
     );
   }
 
-  uploadLiteLogo(business: string, file: File) {
-    const formData = new FormData();
-    formData.append('business', business);
-    formData.append('file', file, file.name);
-    return this.http.post(
-      `${this.apiUrl}${API_ENDPOINT.FacturadaLiteSetup}.upload_lite_logo`,
-      formData,
-      { withCredentials: true, context: new HttpContext().set(REQUIRE_AUTH, true) }
-    );
-  }
 }

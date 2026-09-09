@@ -5,9 +5,9 @@ import { catchError, map, Observable, of, switchMap, tap, throwError } from 'rxj
 import { environment } from 'src/environments/environment';
 import { UserService } from './user.service';
 import { Router } from '@angular/router';
-import { FrappeSocketService } from './frappe-socket.service';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 import { CompanyCapabilitiesService } from '../core/services/company-capabilities.service';
+import { RestaurantRealtimeService } from './restaurant-realtime.service';
 
 interface LoginResponse {
   access_token: string;
@@ -29,8 +29,8 @@ export class AuthService {
   constructor(private http: HttpClient,
     private userService: UserService,
     private router: Router, // Agrega el Router aquí
-    private socket: FrappeSocketService,
-    private capabilities: CompanyCapabilitiesService
+    private capabilities: CompanyCapabilitiesService,
+    private restaurantRealtime: RestaurantRealtimeService
   ) { }
 
 
@@ -73,12 +73,7 @@ login(username: string, password: string) {
       // Si el dominio es cruzado, revisa SameSite/Secure más abajo
     }),
     tap(() => localStorage.setItem('access_token', 'frappe-session')),
-    switchMap(() => this.loadAuthenticatedContext()),
-    tap(() => {
-      if (!this.capabilities.isLiteMode) {
-        this.socket.connect();
-      }
-    })
+    switchMap(() => this.loadAuthenticatedContext())
   );
 }
 
@@ -141,6 +136,9 @@ login(username: string, password: string) {
   selectLiteBusiness(business: string): Observable<any> {
     const businessId = String(business || '').trim();
     if (!businessId) return throwError(() => new Error('__LITE_BUSINESS_SELECTION_REQUIRED__'));
+    // Evita que eventos del negocio anterior lleguen durante la validación del
+    // nuevo contexto. La suscripción nueva se crea después de aplicar features.
+    this.restaurantRealtime.deactivate();
     // Refrescar el catálogo antes de cambiar evita que una lista resumida del
     // contexto deje el <select> mostrando otra empresa. Solo se persiste una
     // empresa que el endpoint autorizado confirmó para este usuario.
@@ -179,6 +177,10 @@ login(username: string, password: string) {
         }
 
         this.capabilities.setFromResponse(res);
+        // El contexto es la fuente de verdad para activar el canal privado.
+        // Si el negocio no tiene restaurante, el servicio limpia cualquier
+        // suscripción anterior sin abrir conexiones innecesarias.
+        this.restaurantRealtime.changeBusiness(selectedBusiness);
         // get_user_context devuelve sus datos directamente en response.message
         // (a diferencia de los listados, que usan response.message.data).
         const message = res?.message && typeof res.message === 'object' ? res.message : {};
@@ -311,6 +313,9 @@ login(username: string, password: string) {
 
 
   logout() {
+    // Corta inmediatamente el canal privado, incluso si la petición de Frappe
+    // tarda o responde con error.
+    this.restaurantRealtime.disconnect();
     return this.http.get(`${this.apiUrl}/method/logout`, {
       context: new HttpContext().set(REQUIRE_AUTH, true)
     }).pipe(
@@ -328,6 +333,7 @@ login(username: string, password: string) {
   }
 
   goLogin() {
+    this.restaurantRealtime.disconnect();
     this.userService.clearUser();
         this.capabilities.clear();
         localStorage.removeItem('user');

@@ -24,7 +24,7 @@ interface CertificateInfo {
   keyUsage?: string;
 }
 
-type LiteSettingsTab = 'general' | 'tax-profile' | 'establishments' | 'emission-points' | 'sequences' | 'pos-terminals' | 'readiness' | 'api';
+type LiteSettingsTab = 'general' | 'tax-profile' | 'certificate' | 'plan' | 'establishments' | 'emission-points' | 'sequences' | 'pos-terminals' | 'readiness' | 'api';
 
 @Component({
   selector: 'app-company',
@@ -91,6 +91,8 @@ export class CompanyComponent implements OnInit {
   get activeSettingsTab(): LiteSettingsTab {
     const path = this.router.url.split('?')[0];
     if (path.endsWith('/tax-profile')) return 'tax-profile';
+    if (path.endsWith('/certificate')) return 'certificate';
+    if (path.endsWith('/plan')) return 'plan';
     if (path.endsWith('/establishments')) return 'establishments';
     if (path.endsWith('/emission-points')) return 'emission-points';
     if (path.endsWith('/sequences')) return 'sequences';
@@ -104,6 +106,8 @@ export class CompanyComponent implements OnInit {
     const titles: Record<LiteSettingsTab, string> = {
       general: 'Vista general',
       'tax-profile': 'Perfil tributario',
+      certificate: 'Firma electrónica',
+      plan: 'Plan actual',
       establishments: 'Establecimientos',
       'emission-points': 'Puntos de emisión',
       sequences: 'Secuencias oficiales',
@@ -325,6 +329,18 @@ export class CompanyComponent implements OnInit {
     return this.capabilities.liteSetupReady;
   }
 
+  /**
+   * El backend puede marcar el setup como listo antes de que el perfil de
+   * firma se haya cargado en el contexto de la pantalla. Para la interfaz,
+   * una empresa no está lista para emitir hasta que ambas condiciones se
+   * cumplan.
+   */
+  get effectiveLiteSetupReady(): boolean | null {
+    if (this.liteSetupReady === null || this.liteSetupReady === undefined) return this.liteSetupReady;
+    if (!this.certificateConfigured || this.certificateIsBlocking) return false;
+    return this.liteSetupReady;
+  }
+
   get liteSetupMissing(): string[] {
     return this.capabilities.liteSetupMissing;
   }
@@ -334,9 +350,27 @@ export class CompanyComponent implements OnInit {
       tax_profile: 'Perfil tributario',
       establishment: 'Establecimiento',
       emission_point: 'Punto de emisión',
-      invoice_sequence: 'Secuencia de factura'
+      invoice_sequence: 'Secuencia de factura',
+      sequence: 'Secuencia de factura',
+      certificate: 'Firma electrónica',
+      electronic_certificate: 'Firma electrónica',
+      signature: 'Firma electrónica',
+      logo: 'Logo de la empresa'
     };
-    return this.liteSetupMissing.map((item) => labels[item] || item).join(', ');
+    return this.liteSetupMissing.map((item) => {
+      const key = this.normalizeStatus(item).toLowerCase();
+      return labels[key] || item;
+    }).join(', ');
+  }
+
+  get liteSetupNeedsCertificate(): boolean {
+    return !this.certificateConfigured
+      || this.hasLiteSetupMissing('certificate', 'electronic_certificate', 'signature', 'certificate_reference');
+  }
+
+  hasLiteSetupMissing(...keys: string[]): boolean {
+    const expected = keys.map((key) => this.normalizeStatus(key));
+    return this.liteSetupMissing.some((item) => expected.includes(this.normalizeStatus(item)));
   }
 
   formatSequenceNumber(value: unknown): string {

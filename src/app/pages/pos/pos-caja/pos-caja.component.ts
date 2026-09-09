@@ -595,6 +595,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       this.spinner.hide();
     })).subscribe({
       next: (res: any) => {
+        console.log('res', res);
         toast.success('Orden creada.');
         this.pendingOrderId = res?.message?.name || null;
         this.clearPage();

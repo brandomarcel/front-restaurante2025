@@ -43,7 +43,7 @@ const routes: Routes = [
       { path: 'tables', component: TablesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'tables', allowedRoles: ['GERENTE', 'CAJERO', 'MESERO'] } },
 
       { path: 'categories', component: CategorysComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'products', permissionKey: 'products.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'] } },
-      { path: 'users', component: UsersComponent, canActivate: [RoleAccessGuard], data: { allowedRoles: ['ADMINISTRADOR', 'GERENTE'] } },
+      { path: 'users', component: UsersComponent, canActivate: [RoleAccessGuard], data: { allowedRoles: ['ADMINISTRADOR', 'GERENTE'], apiOnlyBlocked: true } },
       
       { path: 'invoicing', component: InvoicingComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', permissionKey: 'billing.create', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'] } },
 

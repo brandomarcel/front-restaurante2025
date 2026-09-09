@@ -21,9 +21,11 @@ import { canConsultLiteInvoice, canRetryLiteInvoice } from 'src/app/core/utils/l
   selector: 'app-invoice-detail-page',
   standalone: true,
   imports: [CommonModule, RouterModule, EcuadorTimePipe, FontAwesomeModule, ReactiveFormsModule, NgxSpinnerComponent],
-  templateUrl: './invoice-detail-page.component.html'
+  templateUrl: './invoice-detail-page.component.html',
+  styleUrl: './invoice-detail-page.component.css'
 })
 export class InvoiceDetailPageComponent implements OnInit {
+  activeDetailTab: 'general' | 'electronic' = 'general';
   invoice: any = null;
   additionalFields: AdditionalFieldPayload[] = [];
   motivosAnulacion: string[] = [
@@ -402,6 +404,10 @@ this.spinner.hide();
 
   get invoiceItems(): any[] {
     return Array.isArray(this.invoice?.items) ? this.invoice.items : [];
+  }
+
+  selectDetailTab(tab: 'general' | 'electronic'): void {
+    this.activeDetailTab = tab;
   }
 
   get invoiceNumber(): string {

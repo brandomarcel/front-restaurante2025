@@ -27,6 +27,8 @@ export class LiteEmissionPointsComponent implements OnInit, DoCheck {
   private loadedBusiness = '';
   private loadedEstablishment = '';
   private requestId = 0;
+  private setupLoadedBusiness = '';
+  private setupLoadingBusiness = '';
 
   constructor(
     private readonly fb: FormBuilder,
@@ -188,17 +190,22 @@ export class LiteEmissionPointsComponent implements OnInit, DoCheck {
     const business = this.activeBusinessId;
     if (business !== this.loadedBusiness) {
       this.loadedBusiness = business;
+      this.setupLoadedBusiness = '';
       this.loadedEstablishment = '';
       this.selectedEstablishmentId = '';
       this.points = [];
       this.error = '';
       this.modalOpen = false;
       this.editing = null;
-      const selected = this.capabilities.selectedLiteEstablishment;
-      if (selected && this.activeEstablishments.some((item: any) => String(item?.name || '') === String(selected.name || ''))) {
-        this.selectedEstablishmentId = String(selected.name);
-      }
-      this.loadPoints();
+      // El contexto puede no traer todavía las listas del setup. Consultar
+      // get_lite_setup evita que el selector aparezca vacío hasta volver a
+      // iniciar sesión después de crear un establecimiento.
+      this.refreshSetup(business);
+      return;
+    }
+
+    if (business && this.setupLoadedBusiness !== business) {
+      this.refreshSetup(business);
       return;
     }
 
@@ -261,14 +268,36 @@ export class LiteEmissionPointsComponent implements OnInit, DoCheck {
 
   private refreshSetupAndPoints(): void {
     const business = this.activeBusinessId;
-    this.loadPoints();
     if (!business) return;
-    this.companyService.getLiteSetup(business).subscribe({
+    this.setupLoadedBusiness = '';
+    this.refreshSetup(business);
+  }
+
+  private refreshSetup(business: string): void {
+    if (!business || this.setupLoadingBusiness === business) return;
+    this.setupLoadingBusiness = business;
+    this.companyService.getLiteSetup(business).pipe(
+      finalize(() => {
+        if (this.setupLoadingBusiness === business) this.setupLoadingBusiness = '';
+      })
+    ).subscribe({
       next: (setup) => {
+        if (business !== this.activeBusinessId) return;
         this.capabilities.setLiteSetupState(setup);
+        this.setupLoadedBusiness = business;
+
+        const selected = this.capabilities.selectedLiteEstablishment;
+        if (selected && this.activeEstablishments.some((item: any) => String(item?.name || '') === String(selected.name || ''))) {
+          this.selectedEstablishmentId = String(selected.name);
+        }
         this.loadPoints();
       },
-      error: () => undefined
+      error: (error) => {
+        if (business !== this.activeBusinessId) return;
+        this.setupLoadedBusiness = business;
+        this.error = this.readError(error);
+        this.loadPoints();
+      }
     });
   }
 

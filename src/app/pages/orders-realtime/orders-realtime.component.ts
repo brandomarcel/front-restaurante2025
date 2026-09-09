@@ -6,6 +6,7 @@ import { toast } from 'ngx-sonner';
 
 import { RealtimeOrdersService, OrderVM } from 'src/app/services/realtime-orders.service';
 import { OrdersService } from 'src/app/services/orders.service';
+import { RestaurantRealtimeService } from 'src/app/services/restaurant-realtime.service';
 import { UtilsService } from 'src/app/core/services/utils.service';
 import { PrintService } from 'src/app/services/print.service';
 
@@ -57,13 +58,23 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     private ordersApi: OrdersService,
     private utils: UtilsService,
     private router: Router,
-    private printService: PrintService
+    private printService: PrintService,
+    private restaurantRealtime: RestaurantRealtimeService
   ) {}
 
   ngOnInit(): void {
     this.roleName = this.detectRole();
     this.viewMode = this.roleName === 'Cocina' ? 'cocina' : 'normal';
     this.statusFilter = this.viewMode === 'cocina' ? 'ACTIVAS' : 'ALL';
+
+    this.restaurantRealtime.activate();
+    this.sub.add(this.restaurantRealtime.reconnected$.subscribe(() => {
+      if (this.viewMode === 'cocina') this.loadKitchenOrders();
+      else {
+        const today = this.utils.getSoloFechaEcuador();
+        this.rt.loadInitial(80, 0, today, today, undefined, true);
+      }
+    }));
 
     const today = this.utils.getSoloFechaEcuador();
     if (this.viewMode === 'cocina') this.loadKitchenOrders();

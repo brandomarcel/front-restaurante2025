@@ -19,6 +19,13 @@ export class FrappeSocketService {
 
   connect(): void {
     if (this.socket?.connected) return;
+    // Reutiliza la instancia después de una desconexión para conservar los
+    // listeners de los canales privados. Socket.IO ya gestiona aquí la
+    // reconexión automática y la re-suscripción de rooms.
+    if (this.socket) {
+      this.socket.connect();
+      return;
+    }
 
     // dentro de connect()
     const base = environment.production ? environment.URL : ''; // '' en dev para usar el proxy

@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { finalize } from 'rxjs';
+import { finalize, Subscription } from 'rxjs';
 import { toast } from 'ngx-sonner';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { OrdersService } from 'src/app/services/orders.service';
+import { RestaurantRealtimeEvent, RestaurantRealtimeService } from 'src/app/services/restaurant-realtime.service';
 
 type TableStatus = 'Libre' | 'Ocupada' | 'Reservada' | 'Inactiva';
 
@@ -15,7 +16,7 @@ type TableStatus = 'Libre' | 'Ocupada' | 'Reservada' | 'Inactiva';
   imports: [CommonModule, ReactiveFormsModule, RouterModule],
   templateUrl: './tables.component.html'
 })
-export class TablesComponent implements OnInit {
+export class TablesComponent implements OnInit, OnDestroy {
   tables: any[] = [];
   activeOrders: any[] = [];
   selectedTable: any | null = null;
@@ -30,12 +31,14 @@ export class TablesComponent implements OnInit {
   readonly statuses: TableStatus[] = ['Libre', 'Ocupada', 'Reservada', 'Inactiva'];
   readonly activeOrderStatuses = new Set(['INGRESADA', 'PREPARACION', 'LISTA']);
   tableForm: FormGroup;
+  private readonly realtimeSub = new Subscription();
 
   constructor(
     private fb: FormBuilder,
     private orders: OrdersService,
     private router: Router,
-    public capabilities: CompanyCapabilitiesService
+    public capabilities: CompanyCapabilitiesService,
+    private restaurantRealtime: RestaurantRealtimeService
   ) {
     this.tableForm = this.fb.group({
       name: [''],
@@ -53,7 +56,60 @@ export class TablesComponent implements OnInit {
       this.error = 'El módulo de mesas no está habilitado para este negocio.';
       return;
     }
+    this.restaurantRealtime.activate();
+    this.realtimeSub.add(this.restaurantRealtime.events$.subscribe((event) => this.applyRealtimeEvent(event)));
+    this.realtimeSub.add(this.restaurantRealtime.reconnected$.subscribe(() => this.refresh()));
     this.refresh();
+  }
+
+  ngOnDestroy(): void {
+    this.realtimeSub.unsubscribe();
+  }
+
+  private applyRealtimeEvent(event: RestaurantRealtimeEvent): void {
+    if (event.event_type === 'table.created' || event.event_type === 'table.updated') {
+      const incoming = this.normalizeTable(event.data);
+      const name = String(incoming?.name || '').trim();
+      if (!name) return;
+      const index = this.tables.findIndex((table) => String(table?.name || '') === name);
+      if (index >= 0) {
+        this.tables = this.tables.map((table, i) => i === index ? { ...table, ...incoming } : table);
+      } else if (this.showInactive || !this.isInactive(incoming)) {
+        this.tables = [...this.tables, incoming];
+      }
+      if (this.selectedTable?.name === name) {
+        this.selectedTable = this.tables.find((table) => table.name === name) || incoming;
+        this.updateSelectedOrders();
+      }
+      return;
+    }
+
+    if (event.event_type !== 'order.created' && event.event_type !== 'order.updated') return;
+    const incoming = event.data || {};
+    const name = String(incoming?.name || '').trim();
+    if (!name) return;
+    const index = this.activeOrders.findIndex((order) => String(order?.name || '') === name);
+    const active = this.isActiveOrder(incoming);
+    if (active) {
+      const row = index >= 0 ? { ...this.activeOrders[index], ...incoming } : { ...incoming };
+      this.activeOrders = index >= 0
+        ? this.activeOrders.map((order, i) => i === index ? { ...order, ...row } : order)
+        : [...this.activeOrders, row];
+    } else if (index >= 0) {
+      this.activeOrders = this.activeOrders.filter((_, i) => i !== index);
+    }
+    // El backend normalmente publica también table.updated. Este ajuste
+    // inmediato evita que la tarjeta quede atrasada mientras llega ese evento.
+    const rawTable = incoming?.table ?? incoming?.mesa ?? incoming?.table_name;
+    const tableName = String(typeof rawTable === 'object' ? rawTable?.name : rawTable || '').trim();
+    const tableIndex = this.tables.findIndex((table) => String(table?.name || '') === tableName);
+    if (tableIndex >= 0) {
+      const nextStatus = active ? 'Ocupada' : (this.normalized(incoming?.status).includes('CANCEL') || this.normalized(incoming?.status).includes('CERR') ? 'Libre' : undefined);
+      if (nextStatus) {
+        this.tables = this.tables.map((table, i) => i === tableIndex ? { ...table, status: nextStatus, active: 1 } : table);
+      }
+    }
+    this.updateSelectedOrders();
   }
 
   get hasTablesModule(): boolean {

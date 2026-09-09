@@ -325,6 +325,18 @@ export class CompanyCapabilitiesService {
   get isLoaded(): boolean { return this.state().loaded; }
   get isLiteMode(): boolean { return this.businessMode === 'FACTURADA_LITE'; }
 
+  /**
+   * Un negocio API-only factura desde el sistema externo del cliente. No
+   * necesita usuarios operativos ni terminales POS administrados en FacturADA.
+   */
+  get isApiOnlyMode(): boolean {
+    const features = this.features;
+    return features.api === true
+      && features.restaurant !== true
+      && features.restaurant_pos !== true
+      && features.pos !== true;
+  }
+
   /** La configuración tributaria es administrativa, incluso si el backend
    * entrega permisos operativos a otros roles. */
   get canManageBusinessInfrastructure(): boolean {
@@ -622,7 +634,7 @@ export class CompanyCapabilitiesService {
 
     if (feature === 'restaurant') return isRestaurant;
     if (feature === 'restaurant_pos') return isRestaurant && features.restaurant_pos === true;
-    if (feature === 'pos') return isRestaurant && features.pos === true;
+    if (feature === 'pos') return isRestaurant && (features.pos === true || features.restaurant_pos === true);
     // `cash_register` es el alias histórico de `pos` para apertura, cierre
     // y retiros. Se conserva para no romper rutas existentes.
     if (feature === 'cash_register') return isRestaurant && (features.pos === true || features.cash_register === true);
@@ -750,8 +762,13 @@ export class CompanyCapabilitiesService {
     }
 
     const planStatus = this.normalize(String(plan.status || ''));
-    if (plan.active === false || ['VENCIDO', 'SUSPENDIDO', 'CANCELADO', 'INACTIVO'].includes(planStatus)) {
-      return { allowed: false, message: 'El plan de la empresa no está activo.' };
+    if (plan.active === false || ['VENCIDO', 'SUSPENDIDO', 'CANCELADO', 'INACTIVO', 'PENDIENTE', 'PENDING'].includes(planStatus)) {
+      return {
+        allowed: false,
+        message: planStatus === 'PENDIENTE' || planStatus === 'PENDING'
+          ? 'La suscripción de la empresa está pendiente de activación.'
+          : 'El plan de la empresa no está activo.'
+      };
     }
 
     if (this.businessMode === 'RESTAURANTE' && plan.allow_restaurant_mode === false) {

@@ -21,6 +21,37 @@
   padding: 18px;
 }
 
+.settings-form-grid {
+  align-items: start;
+}
+
+.settings-column {
+  min-width: 0;
+  align-self: start;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+/* Cada pestaña debe aprovechar todo el ancho del panel. Las tarjetas no
+   quedan encajonadas en una sola mitad de la pantalla. */
+.settings-column > * {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .settings-column {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+}
+
+.settings-anchor-target {
+  scroll-margin-top: 86px;
+}
+
 .settings-hero {
   display: flex;
   align-items: center;
@@ -105,6 +136,92 @@
   color: #a15c08;
 }
 
+.settings-guidance {
+  scroll-margin-top: 86px;
+}
+
+.settings-check-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid rgba(217, 119, 6, .18);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .72);
+  color: #78350f;
+  text-decoration: none;
+  transition: border-color .16s ease, background .16s ease, transform .16s ease;
+}
+
+.settings-check-item:hover {
+  border-color: rgba(217, 119, 6, .42);
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.settings-check-item strong,
+.settings-check-item small {
+  display: block;
+}
+
+.settings-check-item small {
+  margin-top: 1px;
+  color: #92400e;
+  font-size: 10px;
+}
+
+.settings-check-icon {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  place-items: center;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.settings-certificate-help {
+  line-height: 1.45;
+}
+
+.settings-help-step {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 7px;
+  border: 1px solid rgba(99, 102, 241, .14);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .78);
+  padding: 8px 9px;
+  color: #312e81;
+  font-size: 11px;
+  text-decoration: none;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+
+.settings-help-step:hover {
+  border-color: rgba(99, 102, 241, .35);
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.settings-help-step span {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  place-items: center;
+  border-radius: 999px;
+  background: #6366f1;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+}
+
 .settings-tabs {
   display: flex;
   gap: 4px;
@@ -139,6 +256,20 @@
   background: #fff;
   box-shadow: 0 2px 7px rgba(30, 41, 59, .10);
   color: #4338ca;
+}
+
+.settings-tab--context {
+  margin-left: auto;
+  color: #98a2b3;
+  cursor: default;
+  font-size: 10px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.settings-tab--context:hover {
+  background: transparent;
+  color: #98a2b3;
 }
 
 .settings-tab--api.is-active {

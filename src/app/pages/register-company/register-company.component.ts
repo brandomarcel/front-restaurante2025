@@ -6,7 +6,9 @@ import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
 import { RegisterCompanyService } from 'src/app/services/register-company.service';
 import { toast } from 'ngx-sonner';
 import { OnlyNumbersDirective } from 'src/app/core/directives/only-numbers.directive';
-import { catchError, map, of, switchMap } from 'rxjs';
+import { of, switchMap } from 'rxjs';
+import { AuthService } from 'src/app/services/auth.service';
+import { CompanyService } from 'src/app/services/company.service';
 @Component({
   selector: 'app-register-company',
   standalone: true,
@@ -21,17 +23,12 @@ export class RegisterCompanyComponent {
   showPass = false;
   isSubmitting = false;
 
-  // Logo
-  logoFile: File | null = null;
-  logoFileName: string | null = null;
-  logoPreview: string | null = null;
-
-  ambiente: 'PRUEBAS' | 'PRODUCCION' = 'PRUEBAS';
-
   constructor(private fb: FormBuilder,
     private registerSvc: RegisterCompanyService,
   private spinner: NgxSpinnerService,
   private router: Router,
+  private authService: AuthService,
+  private companyService: CompanyService,
   ) {
     this.form = this.fb.group(
       {
@@ -46,19 +43,9 @@ export class RegisterCompanyComponent {
         // Paso 2: compañía
         businessname: ['', Validators.required],
         ruc: ['', [Validators.required, Validators.pattern(/^\d{13}$/)]],
-        address: ['', Validators.required],
-        company_phone: ['', Validators.required],
-        company_email: ['', [Validators.required, Validators.email]],
-        logo: [''],
-
-        // Paso 3: SRI y secuencias
-        ambiente_bool: [false], // false PRUEBAS, true PRODUCCION
-        establishmentcode: ['001', [Validators.required, Validators.pattern(/^\d{3}$/)]],
-        emissionpoint: ['001', [Validators.required, Validators.pattern(/^\d{3}$/)]],
-        invoiceseq_prod: [1, Validators.required],
-        invoiceseq_pruebas: [1, Validators.required],
-        ncseq_pruebas: [1, Validators.required],
-        ncseq_prod: [1, Validators.required],
+        address: [''],
+        company_phone: [''],
+        company_email: ['', Validators.email],
       },
       { validators: this.passwordMatchValidator }
     );
@@ -77,8 +64,7 @@ export class RegisterCompanyComponent {
     this.submitted = true;
     if (!this.isCurrentStepValid()) return;
     this.submitted = false;
-    this.step = Math.min(4, this.step + 1);
-    if (this.step === 3) this.syncAmbiente();
+    this.step = Math.min(3, this.step + 1);
   }
 
   prevStep() {
@@ -89,145 +75,72 @@ export class RegisterCompanyComponent {
   isCurrentStepValid(): boolean {
     const controlsByStep: Record<number, string[]> = {
       1: ['full_name', 'email', 'password', 'confirm_password', 'accept_terms'],
-      2: ['businessname', 'ruc', 'address', 'company_phone', 'company_email'],
-      3: ['establishmentcode', 'emissionpoint', 'invoiceseq_prod', 'invoiceseq_pruebas', 'ncseq_pruebas', 'ncseq_prod'],
-      4: [] // revisión
+      2: ['businessname', 'ruc'],
+      3: [] // revisión
     };
     const keys = controlsByStep[this.step] || [];
     keys.forEach(k => this.f[k].markAsTouched());
     return keys.every(k => this.f[k].valid) && !this.form.errors;
   }
 
-  syncAmbiente() {
-    this.ambiente = this.form.value.ambiente_bool ? 'PRODUCCION' : 'PRUEBAS';
-  }
-
-  // Logo handlers
-  onLogoSelected(e: Event) {
-    const input = e.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-    this.setLogoFile(file);
-    input.value = '';
-  }
-
-  private setLogoFile(file: File): void {
-    const validExtension = /\.(png|jpe?g|webp)$/i.test(file.name || '');
-    const validMime = ['image/png', 'image/jpeg', 'image/webp'].includes((file.type || '').toLowerCase());
-    if (!file.size || !validExtension || (file.type && !validMime)) {
-      toast.error('El logo debe ser una imagen PNG, JPG/JPEG o WEBP válida.');
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('El logo no puede superar 2MB.');
-      return;
-    }
-
-    this.logoFile = file;
-    this.logoFileName = file.name;
-
-    const reader = new FileReader();
-    reader.onload = () => this.logoPreview = reader.result as string;
-    reader.readAsDataURL(file);
-  }
-
-  removeLogo() {
-    this.logoFile = null;
-    this.logoFileName = null;
-    this.logoPreview = null;
-    this.form.patchValue({ logo: '' });
-  }
-
-
-
 submit() {
   if (this.isSubmitting) return;
   this.submitted = true;
-
-  // Si intentan enviar antes del último paso, valida y detente.
   if (!this.isCurrentStepValid()) return;
 
-  // Desarma full_name -> first_name / last_name
-  const fullName: string = (this.form.value.full_name || '').trim();
+  const fullName = String(this.form.value.full_name || '').trim();
   const [first_name, ...restParts] = fullName.split(/\s+/);
   const last_name = restParts.join(' ');
-
-  // User payload (los roles solo se aplican si están permitidos en site_config["registration_allowed_roles"])
+  const email = String(this.form.value.email || '').trim();
+  const password = String(this.form.value.password || '');
+  const businessPayload = {
+    business_name: String(this.form.value.businessname || '').trim(),
+    ruc: String(this.form.value.ruc || '').trim(),
+    legal_name: String(this.form.value.businessname || '').trim(),
+    trade_name: String(this.form.value.businessname || '').trim(),
+    address: String(this.form.value.address || '').trim(),
+    phone: String(this.form.value.company_phone || '').trim()
+  };
   const userPayload = {
-    email: this.form.value.email,
+    email,
+    password,
     first_name,
     last_name,
-    phone: this.form.value.phone,
-    password: this.form.value.password,
-    roles: ['System Manager'], // opcional; se filtrará en el server
-    role_profile: 'ADMIN COMPANY'
-  };
-
-  // Asegura el tipo literal del ambiente para TypeScript
-  const ambiente = (this.ambiente === 'PRODUCCION' ? 'PRODUCCION' : 'PRUEBAS') as 'PRODUCCION' | 'PRUEBAS';
-
-  // Company payload
-  const companyPayload = {
-    businessname: this.form.value.businessname,
-    ruc: this.form.value.ruc,
-    address: this.form.value.address,
-    phone: this.form.value.company_phone,
-    email: this.form.value.company_email,
-    ambiente,
-    establishmentcode: this.form.value.establishmentcode,
-    emissionpoint: this.form.value.emissionpoint,
-    invoiceseq_prod: this.form.value.invoiceseq_prod,
-    invoiceseq_pruebas: this.form.value.invoiceseq_pruebas,
-    ncseq_pruebas: this.form.value.ncseq_pruebas,
-    ncseq_prod: this.form.value.ncseq_prod,
-    business_mode: 'lite',
-    business_model: 'Facturacion Simple',
+    phone: String(this.form.value.phone || '').trim()
   };
 
   this.isSubmitting = true;
   this.spinner.show();
-
-  this.registerSvc.registerTenantOpen({
-    user: userPayload,
-    company: companyPayload,
-    add_permission: true
-  }).pipe(
+  this.registerSvc.registerBusinessOpen({ user: userPayload, business: businessPayload }).pipe(
     switchMap((response: any) => {
-      const body = response?.message ?? response ?? {};
-      const business = body?.business?.name || body?.business?.business || body?.company?.name || body?.company || body?.data?.business?.name || body?.business_name;
-      if (!this.logoFile || !business) return of({ response, logoUploaded: false });
-      return this.registerSvc.uploadLiteLogo(String(business), this.logoFile).pipe(
-        map(() => ({ response, logoUploaded: true })),
-        catchError(() => of({ response, logoUploaded: false }))
+      const data = response?.message?.data ?? response?.data ?? {};
+      const businessName = String(data?.business?.name || '').trim();
+      if (!businessName) {
+        throw new Error('El registro no devolvió el negocio creado.');
+      }
+      localStorage.setItem('active_business', businessName);
+      localStorage.setItem('businessId', businessName);
+      return this.authService.login(email, password).pipe(
+        switchMap(() => this.companyService.getLiteSetup(businessName)),
+        switchMap((setup: any) => of({ data, setup, businessName }))
       );
     })
   ).subscribe({
-    next: ({ response, logoUploaded }: any) => {
+    next: ({ data, businessName }: any) => {
       this.isSubmitting = false;
       this.spinner.hide();
-      const res = response?.message ?? response ?? {};
-      const companyName = res?.company || companyPayload.businessname;
-      const userName = res?.user || userPayload.email;
-
-      toast.success(`¡Listo! Usuario ${userName} y empresa ${companyName} creados.${logoUploaded ? ' Logo cargado.' : ''}`);
-
-      // Limpia estado/UI
+      toast.success(`¡Listo! La empresa ${data?.business?.business_name || businessPayload.business_name} fue creada.`);
       this.form.reset();
       this.submitted = false;
       this.step = 1;
-      this.ambiente = 'PRUEBAS';
-      this.logoFile = null;
-      this.logoFileName = null;
-      this.logoPreview = null;
-
-      // Redirige (ajusta ruta según tu app)
-      this.router.navigate(['/auth/sign-in']);
+      this.router.navigate(['/settings/lite/readiness'], {
+        queryParams: businessName ? { business: businessName } : undefined
+      });
     },
     error: (err) => {
       this.isSubmitting = false;
       this.spinner.hide();
-      const msg = this.parseFrappeError(err);
-      toast.error(msg);
+      toast.error(this.parseFrappeError(err));
     }
   });
 }

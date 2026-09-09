@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Subject, debounceTime } from 'rxjs';
 import { OrdersService, OrdersListResponse } from './orders.service';
-import { FrappeSocketService } from './frappe-socket.service';
+import { RestaurantRealtimeEvent, RestaurantRealtimeService } from './restaurant-realtime.service';
 
 /* ================================
    MODELOS EXACTOS SEGÚN TU RAW
@@ -85,39 +85,12 @@ export class RealtimeOrdersService {
 
   constructor(
     private api: OrdersService,
-    private sock: FrappeSocketService
+    private restaurantRealtime: RestaurantRealtimeService
   ) {
-    const companyId = localStorage.getItem('companyId') ?? 'DEFAULT';
-
-    this.sock.connect();
-
-    /* ================= SOCKET ================= */
-
-    this.sock.on<any>(`brando_conect:company:${companyId}`, (evt) => {
-      if (!evt?.name) return;
-      if ((evt.company || 'DEFAULT') !== companyId) return;
-
-      const action = (evt._action || '').toLowerCase() as 'insert' | 'update' | 'delete';
-      if (this.isDuplicatedRealtimeEvent(evt, action)) return;
-
-      // DELETE
-      if (action === 'delete') {
-        this.remove(evt.name);
-        return;
-      }
-
-      // 🔥 IMPORTANTE: si viene data completa, úsala directo
-      if (evt.data) {
-        const vm = this.mapOne(evt.data);
-        const exists = this.orders$.value.some(o => o.name === vm.name);
-
-        this.upsert(vm, true, !exists);
-        return;
-      }
-
-      // fallback (por seguridad)
-      this.refreshOne(evt.name, action);
-    });
+    // La suscripción se limita al canal privado del negocio activo. El servicio
+    // central se encarga de limpiar el canal anterior al cambiar de empresa.
+    this.restaurantRealtime.activate();
+    this.restaurantRealtime.events$.subscribe((event) => this.handleRestaurantEvent(event));
 
     /* ============ Reconciliación suave ============ */
 
@@ -128,6 +101,43 @@ export class RealtimeOrdersService {
         this.total$.next((res as any)?.message?.total ?? list.length);
       });
     });
+  }
+
+  private handleRestaurantEvent(event: RestaurantRealtimeEvent): void {
+    if (event.event_type !== 'order.created' && event.event_type !== 'order.updated') {
+      if (event.event_type.startsWith('order_split.')) {
+        window.dispatchEvent(new CustomEvent('facturada:restaurant-split-changed', { detail: event }));
+      }
+      return;
+    }
+
+    const data = event.data || {};
+    const name = String(data.name || '').trim();
+    if (!name) return;
+    const action = String(event.action || '').toLowerCase();
+    const previous = this.orders$.value.find((order) => order.name === name);
+    const merged = previous ? {
+      ...previous,
+      ...data,
+      customer: data.customer ?? previous.customer,
+      items: data.items ?? previous.items,
+      payments: data.payments ?? previous.payments,
+      electronic: data.electronic ?? data.sri ?? previous.sri
+    } : data;
+    const normalizedStatus = String(this.normalizeStatus(data.status))
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    if (action === 'delete' || normalizedStatus.includes('CANCEL')) {
+      // Las órdenes canceladas siguen siendo parte del historial; no se eliminan
+      // del store salvo que el backend publique explícitamente un delete.
+      if (action === 'delete') this.remove(name);
+      else this.upsert(this.mapOne(merged), true, false);
+      return;
+    }
+
+    const vm = this.mapOne(merged);
+    const exists = !!previous;
+    if (this.isDuplicatedRealtimeEvent({ ...data, name, data }, action === 'insert' ? 'insert' : 'update')) return;
+    this.upsert(vm, true, !exists);
   }
 
   /* ================= API PÚBLICA ================= */

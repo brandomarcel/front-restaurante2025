@@ -46,7 +46,13 @@ export class RoleAccessGuard implements CanActivate {
     const featureKey = route.data?.['featureKey'] as CompanyFeatureKey | undefined;
     const permissionKey = route.data?.['permissionKey'] as string | undefined;
     const liteBlocked = route.data?.['liteBlocked'] === true;
+    const apiOnlyBlocked = route.data?.['apiOnlyBlocked'] === true;
     const isAdmin = this.hasAdminRole(currentRoles);
+
+    if (apiOnlyBlocked && this.capabilities.isApiOnlyMode) {
+      toast.info('Este negocio utiliza únicamente la API externa; no requiere usuarios operativos ni terminales POS.');
+      return this.redirectToAvailable(state.url, currentRoles, 'api-only');
+    }
 
     // Un negocio Lite puede incluir restaurante. `restaurant` es la bandera
     // explícita que manda; no se bloquea la ruta por el nombre del modo.

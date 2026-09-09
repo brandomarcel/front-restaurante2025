@@ -211,10 +211,20 @@ export class LiteEstablishmentsComponent implements OnInit, DoCheck {
 
   private refreshListAndContext(): void {
     const business = this.activeBusinessId;
-    this.loadForBusiness();
-    this.companyService.get_empresa(business).subscribe({
-      next: (context) => this.capabilities.setFromResponse(context),
-      error: () => undefined
+    if (!business) {
+      this.loadForBusiness();
+      return;
+    }
+
+    // El contexto de usuario no siempre incluye las listas de infraestructura.
+    // Refrescamos el setup agregado para que Establecimientos, Puntos de
+    // emisión y Secuencias queden disponibles inmediatamente, sin cerrar sesión.
+    this.companyService.getLiteSetup(business).subscribe({
+      next: (setup) => {
+        this.capabilities.setLiteSetupState(setup);
+        this.loadForBusiness();
+      },
+      error: () => this.loadForBusiness()
     });
   }
 

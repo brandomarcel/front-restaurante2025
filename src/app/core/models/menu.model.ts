@@ -6,6 +6,7 @@ export interface MenuItem {
   items: Array<SubMenuItem>;
   allowedRoles?: Role[]; // opcional: regla a nivel grupo
   hideInLite?: boolean;
+  hideInApiOnly?: boolean;
 }
 
 export interface SubMenuItem {
@@ -19,5 +20,6 @@ export interface SubMenuItem {
   featureKey?: import('../services/company-capabilities.service').CompanyFeatureKey;
   permissionKey?: string;
   hideInLite?: boolean;
+  hideInApiOnly?: boolean;
 }
 export type Role = 'SYSTEM MANAGER' | 'ADMINISTRADOR' | 'GERENTE' | 'CAJERO' | 'FACTURACION' | 'MESERO' | 'COCINA' | 'USUARIO';

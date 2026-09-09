@@ -98,6 +98,7 @@ export class MenuService implements OnDestroy {
 
     const filterItem = (item: SubMenuItem, inheritedRoles?: Role[], inheritedFeature?: SubMenuItem['featureKey']): SubMenuItem | null => {
       if (this.capabilities.isLiteMode && !this.capabilities.isEnabled('restaurant') && item.hideInLite) return null;
+      if (this.capabilities.isApiOnlyMode && item.hideInApiOnly) return null;
 
       const rolesForThisItem = normRoles(item.allowedRoles) ?? normRoles(inheritedRoles);
       const featureKey = item.featureKey ?? inheritedFeature;
@@ -116,6 +117,7 @@ export class MenuService implements OnDestroy {
     return groups
       .map((group) => {
         if (this.capabilities.isLiteMode && !this.capabilities.isEnabled('restaurant') && group.hideInLite) return null;
+        if (this.capabilities.isApiOnlyMode && group.hideInApiOnly) return null;
 
         const groupRoles = normRoles(group.allowedRoles);
         const groupAllowed = !groupRoles || groupRoles.some(role => currentRoles.includes(role));

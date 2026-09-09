@@ -154,12 +154,6 @@ export class Menu {
           featureKey: 'tables',
         },
         {
-          icon: 'assets/icons/heroicons/outline/building-office.svg',
-          label: 'Establecimientos',
-          route: '/settings/lite/establishments',
-          allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'MESERO', 'COCINA', 'FACTURACION', 'USUARIO'],
-        },
-        {
           icon: 'assets/icons/tablericons/category.svg',
           label: 'Categorias',
           route: '/dashboard/categories',
@@ -171,6 +165,41 @@ export class Menu {
           label: 'Usuarios',
           route: '/dashboard/users',
           allowedRoles: ['ADMINISTRADOR', 'GERENTE'],
+          hideInApiOnly: true,
+        },
+      ],
+    },
+
+    {
+      group: 'Infraestructura fiscal',
+      separator: true,
+      allowedRoles: ['ADMINISTRADOR', 'GERENTE'],
+      items: [
+        {
+          icon: 'assets/icons/heroicons/outline/building-storefront.svg',
+          label: 'Establecimientos',
+          route: '/settings/lite/establishments',
+          permissionKey: 'business.settings.manage',
+        },
+        {
+          icon: 'assets/icons/heroicons/outline/building-storefront.svg',
+          label: 'Puntos de emisión',
+          route: '/settings/lite/emission-points',
+          permissionKey: 'business.settings.manage',
+        },
+        {
+          icon: 'assets/icons/heroicons/outline/clipboard-document-list.svg',
+          label: 'Secuencias de documentos',
+          route: '/settings/lite/sequences',
+          permissionKey: 'business.settings.manage',
+        },
+        {
+          icon: 'assets/icons/tablericons/cash-register.svg',
+          label: 'Terminales POS',
+          route: '/settings/lite/pos-terminals',
+          featureKey: 'pos',
+          permissionKey: 'business.settings.manage',
+          hideInApiOnly: true,
         },
       ],
     },

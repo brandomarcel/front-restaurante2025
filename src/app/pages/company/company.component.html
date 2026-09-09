@@ -19,7 +19,7 @@
         </app-button>
       </div>
 
-      <form [formGroup]="form" (ngSubmit)="save()" class="grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs"
+      <form [formGroup]="form" (ngSubmit)="save()" class="settings-form-grid grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs"
         [class.form-busy]="isSaving || isLoadingCompany">
         <div *ngIf="isLiteMode && activeBusiness" class="settings-business-bar lg:col-span-2">
           <div class="settings-business-avatar">
@@ -30,23 +30,40 @@
             <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Empresa activa</p>
             <p class="truncate text-sm font-bold text-slate-900">{{ activeBusiness.business_name || activeBusiness.businessname || activeBusiness.name }}</p>
           </div>
-          <span class="settings-ready-chip" [ngClass]="liteSetupReady ? 'is-ready' : 'is-pending'">{{ liteSetupReady ? 'Lista para emitir' : 'Configuración pendiente' }}</span>
+          <span class="settings-ready-chip" [ngClass]="effectiveLiteSetupReady ? 'is-ready' : 'is-pending'">{{ effectiveLiteSetupReady ? 'Lista para emitir' : 'Configuración pendiente' }}</span>
         </div>
         <nav *ngIf="isLiteMode" aria-label="Secciones de configuración Lite" class="settings-tabs lg:col-span-2">
           <a routerLink="/settings/lite" class="settings-tab" [class.is-active]="activeSettingsTab === 'general'">General</a>
           <a routerLink="/settings/lite/tax-profile" class="settings-tab" [class.is-active]="activeSettingsTab === 'tax-profile'">Perfil tributario</a>
+          <a routerLink="/settings/lite/certificate" class="settings-tab" [class.is-active]="activeSettingsTab === 'certificate'">Firma electrónica</a>
+          <a routerLink="/settings/lite/plan" class="settings-tab" [class.is-active]="activeSettingsTab === 'plan'">Plan actual</a>
           <a routerLink="/settings/lite/establishments" class="settings-tab" [class.is-active]="activeSettingsTab === 'establishments'">Establecimientos</a>
           <a routerLink="/settings/lite/emission-points" class="settings-tab" [class.is-active]="activeSettingsTab === 'emission-points'">Puntos de emisión</a>
           <a routerLink="/settings/lite/sequences" class="settings-tab" [class.is-active]="activeSettingsTab === 'sequences'">Secuencias</a>
-          <a routerLink="/settings/lite/pos-terminals" class="settings-tab" [class.is-active]="activeSettingsTab === 'pos-terminals'">Terminales POS</a>
+          <a *ngIf="capabilities.isEnabled('pos')" routerLink="/settings/lite/pos-terminals" class="settings-tab" [class.is-active]="activeSettingsTab === 'pos-terminals'">Terminales POS</a>
           <a routerLink="/settings/lite/readiness" class="settings-tab" [class.is-active]="activeSettingsTab === 'readiness'">Preparación</a>
-          <a *ngIf="capabilities.isEnabled('api')" routerLink="/settings/lite/api-clients" class="settings-tab settings-tab--api" [class.is-active]="activeSettingsTab === 'api'">API</a>
         </nav>
         <div *ngIf="isLiteMode && !canEditLiteSetup" class="lg:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           Solo Administrador o Gerente pueden modificar la configuración tributaria.
         </div>
-        <div *ngIf="isLiteMode && liteSetupReady === false && showSettingsSection('general', 'readiness')"
-          class="lg:col-span-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+        <div *ngIf="isLiteMode && effectiveLiteSetupReady !== true && showSettingsSection('general')" class="settings-help-strip lg:col-span-2 rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 text-xs text-indigo-950">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p class="font-bold">Ruta recomendada de configuración</p>
+              <p class="mt-1 text-[11px] text-indigo-800">Completa estos pasos en orden para poder emitir sin contratiempos.</p>
+            </div>
+            <a routerLink="/settings/lite/readiness" class="rounded-lg bg-white px-3 py-1.5 text-[11px] font-bold text-indigo-700 shadow-sm ring-1 ring-indigo-100 hover:bg-indigo-50">Ver guía completa</a>
+          </div>
+          <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-5">
+            <a routerLink="/settings/lite/tax-profile" class="settings-help-step"><span>1</span><strong>Perfil tributario</strong></a>
+            <a routerLink="/settings/lite/certificate" class="settings-help-step"><span>2</span><strong>Firma electrónica</strong></a>
+            <a routerLink="/settings/lite/establishments" class="settings-help-step"><span>3</span><strong>Establecimiento</strong></a>
+            <a routerLink="/settings/lite/emission-points" class="settings-help-step"><span>4</span><strong>Punto de emisión</strong></a>
+            <a routerLink="/settings/lite/sequences" class="settings-help-step"><span>5</span><strong>Secuencia</strong></a>
+          </div>
+        </div>
+        <div *ngIf="isLiteMode && effectiveLiteSetupReady === false && showSettingsSection('general', 'readiness')"
+          class="settings-guidance lg:col-span-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
           <div class="flex flex-wrap items-start justify-between gap-2">
             <div>
               <p class="font-bold">Configuración Lite pendiente</p>
@@ -59,11 +76,33 @@
           <p *ngIf="liteSetupMissingLabel" class="mt-2 font-semibold text-amber-800">
             Pendiente: {{ liteSetupMissingLabel }}.
           </p>
+          <div class="settings-checklist mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <a *ngIf="hasLiteSetupMissing('tax_profile')" href="#perfil-tributario" class="settings-check-item">
+              <span class="settings-check-icon">1</span>
+              <span><strong>Perfil tributario</strong><small>Completa los datos fiscales.</small></span>
+            </a>
+            <a *ngIf="liteSetupNeedsCertificate" routerLink="/settings/lite/certificate" class="settings-check-item">
+              <span class="settings-check-icon">2</span>
+              <span><strong>Firma electrónica</strong><small>Carga tu archivo .p12 o .pfx.</small></span>
+            </a>
+            <a *ngIf="hasLiteSetupMissing('establishment')" routerLink="/settings/lite/establishments" class="settings-check-item">
+              <span class="settings-check-icon">3</span>
+              <span><strong>Establecimiento</strong><small>Crea una sede activa.</small></span>
+            </a>
+            <a *ngIf="hasLiteSetupMissing('emission_point')" routerLink="/settings/lite/emission-points" class="settings-check-item">
+              <span class="settings-check-icon">4</span>
+              <span><strong>Punto de emisión</strong><small>Configura una caja activa.</small></span>
+            </a>
+            <a *ngIf="hasLiteSetupMissing('invoice_sequence', 'sequence')" routerLink="/settings/lite/sequences" class="settings-check-item">
+              <span class="settings-check-icon">5</span>
+              <span><strong>Secuencia</strong><small>Define el consecutivo oficial.</small></span>
+            </a>
+          </div>
         </div>
-        <div *ngIf="!isLiteMode || showSettingsSection('general', 'tax-profile')" class="settings-column space-y-5">
+        <div *ngIf="!isLiteMode || showSettingsSection('general', 'tax-profile')" class="settings-column settings-column--primary">
        
 
-          <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div *ngIf="!isLiteMode || showSettingsSection('general')" class="rounded-lg border border-gray-200 bg-white shadow-sm">
             <div class="px-4 py-3 border-b">
               <h3 class="text-sm font-semibold">Logo de la Empresa</h3>
             </div>
@@ -97,7 +136,7 @@
             </div>
           </div>
 
-          <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div *ngIf="!isLiteMode || showSettingsSection('tax-profile')" class="rounded-lg border border-gray-200 bg-white shadow-sm">
             <div class="px-4 py-3 border-b">
               <h3 class="text-sm font-semibold">SRI</h3>
             </div>
@@ -252,7 +291,7 @@
           </div>
 
 
-             <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
+             <div *ngIf="!isLiteMode || showSettingsSection('tax-profile')" class="rounded-lg border border-gray-200 bg-white shadow-sm">
             <div class="px-4 py-3 border-b">
               <h3 class="text-sm font-semibold">Campos adicionales de facturación</h3>
               <p class="text-[11px] text-gray-500 mt-1">Configuración de solo lectura administrada por el sistema.</p>
@@ -273,11 +312,127 @@
             </div>
           </div>
 
-          
+          <div *ngIf="false" id="firma-electronica" class="settings-signature-card rounded-lg border border-gray-200 bg-white shadow-sm settings-anchor-target">
+            <div class="px-4 py-3 border-b flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-semibold">Firma electrónica SRI</h3>
+                <p class="mt-0.5 text-[11px] text-slate-500">Necesaria para enviar comprobantes al SRI.</p>
+              </div>
+              <span class="rounded-full border px-2 py-0.5 text-[10px] font-bold" [ngClass]="certificateConfigured ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'">
+                {{ certificateConfigured ? certificateStatusLabel : 'Pendiente' }}
+              </span>
+            </div>
+
+            <div class="p-4 space-y-4">
+              <div *ngIf="!certificateConfigured" class="settings-certificate-help rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-[11px] text-amber-900">
+                <p class="font-bold">Aún falta cargar la firma electrónica</p>
+                <ol class="mt-2 list-decimal space-y-1 pl-4">
+                  <li>Selecciona el archivo privado con extensión <strong>.p12</strong> o <strong>.pfx</strong>.</li>
+                  <li>Escribe la contraseña del certificado.</li>
+                  <li>Pulsa <strong>Guardar configuración Lite</strong> para validarlo.</li>
+                </ol>
+                <p class="mt-2 text-amber-800">El backend validará la contraseña y la vigencia. Nunca guardamos la contraseña en el navegador.</p>
+              </div>
+              <div *ngIf="certificateConfigured && certificateIsBlocking" class="settings-certificate-help rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-[11px] text-red-800">
+                <p class="font-bold">La firma requiere atención</p>
+                <p class="mt-1">{{ certInfo?.lastError || 'Revisa el estado del certificado y carga uno vigente si es necesario.' }}</p>
+              </div>
+              <input #firmaInput type="file" accept=".p12,.pfx" class="sr-only" (change)="onFirmaSelected($event)" />
+
+              <div class="dropzone" [class.dropzone--active]="isDraggingFirma" role="button" tabindex="0"
+                aria-label="Zona para soltar o seleccionar archivo .p12 o .pfx" (click)="firmaInput.click()"
+                (keydown.enter)="firmaInput.click()" (keydown.space)="firmaInput.click()"
+                (dragover)="onFirmaDragOver($event)" (dragleave)="onFirmaDragLeave($event)"
+                (drop)="onFirmaDrop($event)">
+                <div class="text-center pointer-events-none">
+                  <div class="text-[12px] font-medium">Arrastra tu certificado .p12 o .pfx aqui</div>
+                  <div class="text-[11px] text-gray-500">o haz clic para seleccionar (max 5MB)</div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <div class="flex-1">
+                  <input class="input h-8 text-[11px]"
+                    [value]="firmaFileName || (form.value.urlfirma ? (form.value.urlfirma | slice: form.value.urlfirma.lastIndexOf('/')+1) : 'Ningun archivo seleccionado')"
+                    readonly />
+                </div>
+                <button type="button" class="btn btn-ghost btn-sm" (click)="removeFirma()"
+                  [disabled]="!firmaFileName && !form.value.urlfirma">Quitar</button>
+              </div>
+
+              <div class="relative">
+                <label class="block font-medium mb-1">
+                  Clave de la firma
+                  <span *ngIf="requiresCertificatePassword" class="text-red-600">*</span>
+                </label>
+                <input [type]="showClave ? 'text' : 'password'" id="clave" class="input pr-16" formControlName="clave"
+                  [class.border-red-500]="f['clave'].invalid && submitted" placeholder="••••••••"
+                  autocomplete="new-password" />
+
+                <button type="button"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 mt-3 text-[12px] text-indigo-600"
+                  (click)="showClave = !showClave">
+                  {{ showClave ? 'Ocultar' : 'Mostrar' }}
+                </button>
+
+                <small *ngIf="f['clave'].invalid && submitted" class="text-red-600">
+                  Campo requerido al cargar un certificado nuevo
+                </small>
+              </div>
+
+              <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px]">
+                <span class="font-semibold text-slate-700">Certificado configurado:</span>
+                <span class="ml-1 font-bold" [ngClass]="certificateConfigured ? 'text-emerald-700' : 'text-slate-500'">
+                  {{ certificateConfigured ? 'Sí' : 'No' }}
+                </span>
+              </div>
+
+              <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="text-[11px] font-semibold text-slate-700">Estado del certificado</span>
+                  <span class="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                    [ngClass]="certificateStatusClasses">
+                    {{ certificateStatusLabel }}
+                  </span>
+                </div>
+                <p *ngIf="certificateIsBlocking" class="mt-1 text-[11px] font-semibold text-red-700">
+                  {{ certInfo?.lastError || 'La emisión de facturas está bloqueada hasta corregir el certificado.' }}
+                </p>
+              </div>
+
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label class="block font-medium mb-1">Válida desde</label>
+                  <input class="input" [value]="formatCertificateDate(certInfo?.validFrom)" readonly placeholder="Pendiente de validar">
+                </div>
+                <div>
+                  <label class="block font-medium mb-1">Válida hasta</label>
+                  <input class="input" [value]="formatCertificateDate(certInfo?.validTo)" readonly placeholder="Pendiente de validar">
+                </div>
+                <div>
+                  <label class="block font-medium mb-1">Días restantes</label>
+                  <input class="input" [value]="certificateDaysRemaining === null ? 'Pendiente de validar' : certificateDaysRemaining" readonly>
+                </div>
+                <div>
+                  <label class="block font-medium mb-1">Titular</label>
+                  <input class="input" [value]="certInfo?.subject || ''" readonly placeholder="Pendiente de validar">
+                </div>
+                <div>
+                  <label class="block font-medium mb-1">Emisor</label>
+                  <input class="input" [value]="certInfo?.issuer || ''" readonly placeholder="Pendiente de validar">
+                </div>
+                <div>
+                  <label class="block font-medium mb-1">Número de serie</label>
+                  <input class="input" [value]="certInfo?.serialNumber || ''" readonly placeholder="Pendiente de validar">
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
-        <div *ngIf="!isLiteMode || showSettingsSection('general', 'tax-profile')" class="settings-column space-y-5">
-          <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div *ngIf="!isLiteMode || showSettingsSection('general', 'tax-profile', 'certificate', 'plan')" class="settings-column settings-column--secondary">
+          <div *ngIf="!isLiteMode || showSettingsSection('plan')" class="rounded-xl border border-slate-200 bg-white shadow-sm">
             <div class="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
               <div>
                 <h3 class="text-sm font-bold text-slate-900">Plan actual</h3>
@@ -340,12 +495,12 @@
             </div>
           </div>
 
-          <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div *ngIf="!isLiteMode || showSettingsSection('general', 'tax-profile')" class="rounded-lg border border-gray-200 bg-white shadow-sm">
             <div class="flex items-center justify-between px-4 py-3 border-b">
               <h3 class="text-sm font-semibold">Datos de la Empresa</h3>
             </div>
 
-            <div class="p-4 space-y-4">
+            <div class="settings-company-fields p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div>
                 <label class="block font-medium mb-1">Razon Social</label>
                 <input type="text" class="input" formControlName="businessname"
@@ -407,10 +562,6 @@
               </div>
 
               <ng-container *ngIf="isLiteMode">
-                <div class="border-t border-slate-100 pt-3">
-                  <p class="text-sm font-semibold text-slate-800">Perfil tributario</p>
-                  <p class="mt-0.5 text-[11px] text-slate-500">Estos datos se guardan en el perfil tributario del negocio activo.</p>
-                </div>
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label class="inline-flex items-center gap-2 text-[11px] font-medium text-slate-700">
                     <input type="checkbox" formControlName="obliged_accounting" />
@@ -430,29 +581,43 @@
                   </div>
                   <div>
                     <label class="mb-1 block font-medium">Versión XML</label>
-                    <input type="text" class="input" formControlName="invoice_xml_version" placeholder="2.1.0" />
+                    <input type="text" class="input" formControlName="invoice_xml_version" readonly aria-readonly="true" placeholder="2.1.0" />
                   </div>
                   <div>
                     <label class="mb-1 block font-medium">RUC proveedor de software</label>
-                    <input appOnlyNumbers type="text" maxlength="13" class="input" formControlName="software_provider_ruc" />
+                    <input appOnlyNumbers type="text" maxlength="13" class="input" formControlName="software_provider_ruc" readonly aria-readonly="true" />
                     <small *ngIf="f['software_provider_ruc'].invalid && submitted" class="text-red-600">Debe tener 13 dígitos.</small>
-                  </div>
-                  <div class="sm:col-span-2">
-                    <label class="mb-1 block font-medium">URL base del servicio</label>
-                    <input type="url" class="input" formControlName="service_base_url" placeholder="https://servicio.example.com" />
-                    <p class="mt-1 text-[10px] text-slate-500">La URL es configuración del perfil; no se envía dentro de una factura.</p>
                   </div>
                 </div>
               </ng-container>
             </div>
           </div>
 
-          <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div *ngIf="!isLiteMode || showSettingsSection('certificate')" id="firma-electronica" class="settings-signature-card rounded-lg border border-gray-200 bg-white shadow-sm settings-anchor-target">
             <div class="px-4 py-3 border-b flex items-center justify-between">
-              <h3 class="text-sm font-semibold">Firma electronica SRI</h3>
+              <div>
+                <h3 class="text-sm font-semibold">Firma electrónica SRI</h3>
+                <p class="mt-0.5 text-[11px] text-slate-500">Necesaria para enviar comprobantes al SRI.</p>
+              </div>
+              <span class="rounded-full border px-2 py-0.5 text-[10px] font-bold" [ngClass]="certificateConfigured ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'">
+                {{ certificateConfigured ? certificateStatusLabel : 'Pendiente' }}
+              </span>
             </div>
 
             <div class="p-4 space-y-4">
+              <div *ngIf="!certificateConfigured" class="settings-certificate-help rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-[11px] text-amber-900">
+                <p class="font-bold">Aún falta cargar la firma electrónica</p>
+                <ol class="mt-2 list-decimal space-y-1 pl-4">
+                  <li>Selecciona el archivo privado con extensión <strong>.p12</strong> o <strong>.pfx</strong>.</li>
+                  <li>Escribe la contraseña del certificado.</li>
+                  <li>Pulsa <strong>Guardar configuración Lite</strong> para validarlo.</li>
+                </ol>
+                <p class="mt-2 text-amber-800">El backend validará la contraseña y la vigencia. Nunca guardamos la contraseña en el navegador.</p>
+              </div>
+              <div *ngIf="certificateConfigured && certificateIsBlocking" class="settings-certificate-help rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-[11px] text-red-800">
+                <p class="font-bold">La firma requiere atención</p>
+                <p class="mt-1">{{ certInfo?.lastError || 'Revisa el estado del certificado y carga uno vigente si es necesario.' }}</p>
+              </div>
               <input #firmaInput type="file" accept=".p12,.pfx" class="sr-only" (change)="onFirmaSelected($event)" />
 
               <div class="dropzone" [class.dropzone--active]="isDraggingFirma" role="button" tabindex="0"
@@ -548,7 +713,7 @@
           
         </div>
 
-        <section *ngIf="isLiteMode && showSettingsSection('general', 'establishments', 'emission-points', 'sequences', 'readiness', 'api')" class="lg:col-span-2 grid grid-cols-1 gap-5 xl:grid-cols-3">
+        <section *ngIf="isLiteMode && showSettingsSection('readiness')" class="lg:col-span-2 grid grid-cols-1 gap-5 xl:grid-cols-3">
           <article *ngIf="showSettingsSection('general', 'establishments')" class="settings-summary-card rounded-lg border border-slate-200 bg-white shadow-sm">
             <header class="border-b border-slate-100 px-4 py-3">
               <h3 class="text-sm font-semibold text-slate-900">Establecimientos</h3>
@@ -568,7 +733,10 @@
                 </div>
               </div>
               <ng-template #noEstablishments><p class="py-3 text-center text-[11px] text-slate-500">No hay establecimientos configurados.</p></ng-template>
-              <p class="mt-3 rounded-md bg-slate-50 px-2 py-1.5 text-[10px] text-slate-500">La gestión avanzada de establecimientos estará disponible cuando el backend publique sus endpoints.</p>
+              <div class="mt-3 flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1.5 text-[10px] text-slate-500">
+                <span>Resumen de la empresa activa.</span>
+                <a routerLink="/settings/lite/establishments" class="font-bold text-primary hover:underline">Administrar</a>
+              </div>
             </div>
           </article>
 
@@ -588,7 +756,10 @@
                 </div>
               </div>
               <ng-template #noEmissionPoints><p class="py-3 text-center text-[11px] text-slate-500">No hay puntos de emisión configurados.</p></ng-template>
-              <p class="mt-3 rounded-md bg-slate-50 px-2 py-1.5 text-[10px] text-slate-500">No se crean puntos secundarios desde el frontend sin un endpoint administrativo específico.</p>
+              <div class="mt-3 flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1.5 text-[10px] text-slate-500">
+                <span>Filtrados por negocio y establecimiento.</span>
+                <a routerLink="/settings/lite/emission-points" class="font-bold text-primary hover:underline">Administrar</a>
+              </div>
             </div>
           </article>
 
@@ -610,17 +781,48 @@
                 </div>
               </div>
               <ng-template #noSequences><p class="py-3 text-center text-[11px] text-slate-500">No hay secuencias configuradas.</p></ng-template>
-              <p class="mt-3 rounded-md bg-slate-50 px-2 py-1.5 text-[10px] text-slate-500">El secuencial es informativo; FacturADA lo asigna e incrementa de forma segura.</p>
+              <div class="mt-3 flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1.5 text-[10px] text-slate-500">
+                <span>El consecutivo oficial lo asigna FacturADA.</span>
+                <a routerLink="/settings/lite/sequences" class="font-bold text-primary hover:underline">Administrar</a>
+              </div>
+            </div>
+          </article>
+
+          <article *ngIf="capabilities.isEnabled('pos') && showSettingsSection('general')" class="settings-summary-card rounded-lg border border-slate-200 bg-white shadow-sm">
+            <header class="border-b border-slate-100 px-4 py-3">
+              <h3 class="text-sm font-semibold text-slate-900">Terminales POS</h3>
+              <p class="mt-0.5 text-[11px] text-slate-500">Cajas asignadas para emitir en este negocio.</p>
+            </header>
+            <div class="p-3">
+              <div *ngIf="capabilities.posTerminals.length; else noPosTerminals" class="space-y-2">
+                <div *ngFor="let terminal of capabilities.posTerminals" class="rounded-lg border border-slate-100 bg-slate-50 p-2.5 text-[11px]">
+                  <div class="flex items-start justify-between gap-2">
+                    <p class="font-bold text-slate-800">{{ terminal.terminal_name || terminal.name }}</p>
+                    <span class="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                      [ngClass]="terminal.status === 'Activo' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'">
+                      {{ terminal.status || 'Sin estado' }}
+                    </span>
+                  </div>
+                  <p class="mt-1 text-slate-600">
+                    {{ terminal.establishment_code || '—' }}-{{ terminal.emission_point_code || '—' }}
+                    <span *ngIf="terminal.establishment_name"> · {{ terminal.establishment_name }}</span>
+                  </p>
+                </div>
+              </div>
+              <ng-template #noPosTerminals><p class="py-3 text-center text-[11px] text-slate-500">No hay terminales POS configurados.</p></ng-template>
+              <div class="mt-3 flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1.5 text-[10px] text-slate-500">
+                <span>La caja seleccionada se usa al facturar.</span>
+                <a routerLink="/settings/lite/pos-terminals" class="font-bold text-primary hover:underline">Administrar</a>
+              </div>
             </div>
           </article>
 
           <article *ngIf="showSettingsSection('readiness')" class="settings-summary-card xl:col-span-3 rounded-lg border border-slate-200 bg-white shadow-sm">
             <header class="border-b border-slate-100 px-4 py-3">
               <h3 class="text-sm font-semibold text-slate-900">Estado de preparación para emisión</h3>
-              <p class="mt-0.5 text-[11px] text-slate-500">Se calcula únicamente con la respuesta de <code>get_lite_setup</code>.</p>
             </header>
             <div class="p-4">
-              <div *ngIf="liteSetupReady; else setupPending" class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-800">
+              <div *ngIf="effectiveLiteSetupReady; else setupPending" class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-800">
                 La empresa tiene la configuración mínima lista para emitir comprobantes.
               </div>
               <ng-template #setupPending>
