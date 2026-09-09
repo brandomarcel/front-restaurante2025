@@ -1,4 +1,4 @@
-name: Build & Deploy flat to /pos
+name: Build & Deploy flat to /portal
 on:
   push:
     branches: [ "main" ]
@@ -26,8 +26,8 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Build (production, con /pos)
-        run: npx ng build
+      - name: Build production for /portal
+        run: npm run build
         env:
           NG_PERSISTENT_BUILD_CACHE: '1'
 
@@ -52,10 +52,10 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 2222
           source: "dist.tgz"
-          target: "/home/frappe/frappe-bench/pos/"
+          target: "/home/frappe/frappe-bench/portal/"
 
-      # <<< DESCOMPRIME DIRECTO EN pos/ Y LIMPIA LO ANTERIOR >>>
-      - name: Deploy flat into /home/frappe/frappe-bench/pos
+      # <<< DESCOMPRIME DIRECTO EN portal/ Y LIMPIA LO ANTERIOR >>>
+      - name: Deploy flat into /home/frappe/frappe-bench/portal
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.HOST }}
@@ -64,7 +64,7 @@ jobs:
           port: 2222
           script: |
             set -e
-            BASE=/home/frappe/frappe-bench/pos
+            BASE=/home/frappe/frappe-bench/portal
             TMP=$BASE/__new
             mkdir -p "$BASE" "$TMP"
             # descomprimir en tmp

@@ -68,8 +68,8 @@
                 }
               ],
               "outputHashing": "all",
-              "baseHref": "/pos/",
-              "deployUrl": "/pos/"
+              "baseHref": "/portal/",
+              "deployUrl": "/portal/"
             },
             "development": {
               "optimization": false,

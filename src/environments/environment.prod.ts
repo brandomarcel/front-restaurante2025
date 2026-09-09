@@ -1,6 +1,6 @@
 export const environment = {
-  apiUrl: 'https://ada.bmarc-corp.com/api',
-  URL: 'https://ada.bmarc-corp.com',
+  apiUrl: 'https://facturada.bmarc-corp.com/api',
+  URL: 'https://facturada.bmarc-corp.com',
   frappeSocketNamespace: 'facturada',
   production: true,
 };
