@@ -174,7 +174,7 @@
                     (change)="onLiteEstablishmentSelected($any($event.target).value)"
                     [disabled]="isSaving || isLoadingCompany || !canEditLiteSetup">
                     <option value="">Selecciona un establecimiento</option>
-                    <option *ngFor="let establishment of activeLiteEstablishments" [value]="establishment.name">
+                    <option *ngFor="let establishment of activeLiteEstablishments" [value]="liteEstablishmentId(establishment)">
                       {{ establishment.establishment_code }} - {{ establishment.establishment_name }}
                     </option>
                   </select>
@@ -196,7 +196,7 @@
                     (change)="onLiteEmissionPointSelected($any($event.target).value)"
                     [disabled]="isSaving || isLoadingCompany || !selectedLiteEstablishment || !canEditLiteSetup">
                     <option value="">Selecciona un punto de emisión</option>
-                    <option *ngFor="let point of activeLiteEmissionPoints" [value]="point.name">
+                    <option *ngFor="let point of activeLiteEmissionPoints" [value]="liteEmissionPointId(point)">
                       {{ point.emission_point_code }} - {{ point.emission_point_name }}
                     </option>
                   </select>

@@ -518,14 +518,22 @@ export class CompanyComponent implements OnInit, DoCheck {
     return this.capabilities.activeEmissionPointsFor(this.form?.get('selected_establishment')?.value || '');
   }
 
+  liteEstablishmentId(establishment: any): string {
+    return String(establishment?.name ?? establishment?.id ?? establishment?.establishment ?? '').trim();
+  }
+
+  liteEmissionPointId(point: any): string {
+    return String(point?.name ?? point?.id ?? point?.emission_point ?? '').trim();
+  }
+
   get selectedLiteEstablishment(): any | null {
     const id = String(this.form?.get('selected_establishment')?.value || '').trim();
-    return this.activeLiteEstablishments.find((item: any) => String(item?.name || '') === id) || null;
+    return this.activeLiteEstablishments.find((item: any) => this.liteEstablishmentId(item) === id) || null;
   }
 
   get selectedLiteEmissionPoint(): any | null {
     const id = String(this.form?.get('selected_emission_point')?.value || '').trim();
-    return this.activeLiteEmissionPoints.find((item: any) => String(item?.name || '') === id) || null;
+    return this.activeLiteEmissionPoints.find((item: any) => this.liteEmissionPointId(item) === id) || null;
   }
 
   get liteSequenceNextNumber(): string {
@@ -549,7 +557,7 @@ export class CompanyComponent implements OnInit, DoCheck {
   }
 
   onLiteEstablishmentSelected(value: unknown): void {
-    const establishment = this.activeLiteEstablishments.find((item: any) => String(item?.name || '') === String(value || '').trim());
+    const establishment = this.activeLiteEstablishments.find((item: any) => this.liteEstablishmentId(item) === String(value || '').trim());
     if (!establishment) {
       this.form.patchValue({ selected_establishment: '', selected_emission_point: '', establishmentcode: '', emissionpoint: '' }, { emitEvent: false });
       this.capabilities.clearLiteDocumentSelection();
@@ -560,36 +568,38 @@ export class CompanyComponent implements OnInit, DoCheck {
     }
     const points = this.capabilities.activeEmissionPointsFor(establishment);
     const preferred = points.find((item: any) => this.normalizeCheck(item?.is_default)) || (points.length === 1 ? points[0] : null);
+    const establishmentId = this.liteEstablishmentId(establishment);
+    const pointId = preferred ? this.liteEmissionPointId(preferred) : '';
     this.form.patchValue({
-      selected_establishment: establishment.name,
-      selected_emission_point: preferred?.name || '',
+      selected_establishment: establishmentId,
+      selected_emission_point: pointId,
       establishmentcode: establishment.establishment_code || '',
       establishment_name: establishment.establishment_name || '',
       emissionpoint: preferred?.emission_point_code || '',
       emission_point_name: preferred?.emission_point_name || ''
     }, { emitEvent: false });
     const business = String(this.capabilities.activeBusinessId || this.companyId || '').trim();
-    if (business) localStorage.setItem(`lite_active_establishment:${business}`, String(establishment.name));
-    if (preferred) this.capabilities.setLiteDocumentSelection(establishment.name, preferred.name);
-    else this.capabilities.setLiteDocumentSelection(establishment.name, '');
+    if (business) localStorage.setItem(`lite_active_establishment:${business}`, establishmentId);
+    this.capabilities.setLiteDocumentSelection(establishmentId, pointId);
     this.updateLiteInvoiceSequence(this.ambiente);
   }
 
   onLiteEmissionPointSelected(value: unknown): void {
     const establishment = this.selectedLiteEstablishment;
-    const point = this.activeLiteEmissionPoints.find((item: any) => String(item?.name || '') === String(value || '').trim());
+    const point = this.activeLiteEmissionPoints.find((item: any) => this.liteEmissionPointId(item) === String(value || '').trim());
     if (!establishment || !point) {
       this.form.patchValue({ selected_emission_point: '', emissionpoint: '' }, { emitEvent: false });
       this.capabilities.clearLiteDocumentSelection();
       this.updateLiteInvoiceSequence(this.ambiente);
       return;
     }
+    const pointId = this.liteEmissionPointId(point);
     this.form.patchValue({
-      selected_emission_point: point.name,
+      selected_emission_point: pointId,
       emissionpoint: point.emission_point_code || '',
       emission_point_name: point.emission_point_name || ''
     }, { emitEvent: false });
-    this.capabilities.setLiteDocumentSelection(establishment.name, point.name);
+    this.capabilities.setLiteDocumentSelection(this.liteEstablishmentId(establishment), pointId);
     this.updateLiteInvoiceSequence(this.ambiente);
   }
 
@@ -1059,28 +1069,30 @@ export class CompanyComponent implements OnInit, DoCheck {
       ? String(localStorage.getItem(`lite_active_establishment:${business}`) || '').trim()
       : '';
     const formEstablishmentId = String(this.form?.get('selected_establishment')?.value || '').trim();
-    const establishment = this.activeLiteEstablishments.find((item: any) => String(item?.name || '') === savedEstablishmentId)
-      || this.activeLiteEstablishments.find((item: any) => String(item?.name || '') === formEstablishmentId)
+    const establishment = this.activeLiteEstablishments.find((item: any) => this.liteEstablishmentId(item) === savedEstablishmentId)
+      || this.activeLiteEstablishments.find((item: any) => this.liteEstablishmentId(item) === formEstablishmentId)
       || this.capabilities.selectedLiteEstablishment;
     const points = establishment ? this.capabilities.activeEmissionPointsFor(establishment) : [];
     const formPointId = String(this.form?.get('selected_emission_point')?.value || '').trim();
-    const point = points.find((item: any) => String(item?.name || '') === formPointId)
+    const point = points.find((item: any) => this.liteEmissionPointId(item) === formPointId)
       || (establishment === this.capabilities.selectedLiteEstablishment ? this.capabilities.selectedLiteEmissionPoint : null)
       || points.find((item: any) => this.normalizeCheck(item?.is_default))
       || (points.length === 1 ? points[0] : null);
     this.form.patchValue({
-      selected_establishment: establishment?.name || '',
-      selected_emission_point: point?.name || '',
+      selected_establishment: establishment ? this.liteEstablishmentId(establishment) : '',
+      selected_emission_point: point ? this.liteEmissionPointId(point) : '',
       establishmentcode: establishment?.establishment_code || '',
       establishment_name: establishment?.establishment_name || '',
       emissionpoint: point?.emission_point_code || '',
       emission_point_name: point?.emission_point_name || ''
     }, { emitEvent: false });
-    if (business && establishment?.name) {
-      localStorage.setItem(`lite_active_establishment:${business}`, String(establishment.name));
+    if (business && establishment) {
+      const establishmentId = this.liteEstablishmentId(establishment);
+      const pointId = point ? this.liteEmissionPointId(point) : '';
+      localStorage.setItem(`lite_active_establishment:${business}`, establishmentId);
       // Mantener la misma selección que utilizan facturación, POS y el resto
       // de la aplicación; el combo y el estado central no deben divergir.
-      this.capabilities.setLiteDocumentSelection(establishment.name, point?.name || '');
+      this.capabilities.setLiteDocumentSelection(establishmentId, pointId);
     }
   }
 

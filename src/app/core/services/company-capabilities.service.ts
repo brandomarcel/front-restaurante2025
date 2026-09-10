@@ -261,12 +261,12 @@ export class CompanyCapabilitiesService {
   }
 
   activeEmissionPointsFor(establishment: any | string | null): any[] {
-    const establishmentId = typeof establishment === 'string' ? establishment : this.recordId(establishment);
+    const establishmentId = this.referenceId(establishment);
     if (!establishmentId) return [];
     return this.emissionPoints.filter((item: any) =>
       this.belongsToActiveBusiness(item)
       && this.isActiveRecord(item)
-      && String(item?.establishment || '').trim() === establishmentId
+      && this.referenceId(item?.establishment) === establishmentId
     );
   }
 
@@ -281,25 +281,35 @@ export class CompanyCapabilitiesService {
     // disponibles. Conservamos esa selección por negocio y completamos el
     // punto cuando el catálogo termine de cargarse.
     if (!normalizedPointId) {
-      localStorage.setItem(this.liteDocumentSelectionKey(business), JSON.stringify({
+      const selection = {
         establishment: this.recordId(establishment),
         emissionPoint: ''
-      }));
+      };
+      localStorage.setItem(this.liteDocumentSelectionKey(business), JSON.stringify(selection));
+      localStorage.setItem(this.liteEstablishmentSelectionKey(business), selection.establishment);
+      localStorage.removeItem(this.liteEmissionPointSelectionKey(business));
       return true;
     }
     const points = this.activeEmissionPointsFor(establishment);
     const point = points.find((item: any) => this.recordId(item) === normalizedPointId);
     if (!point) return false;
-    localStorage.setItem(this.liteDocumentSelectionKey(business), JSON.stringify({
+    const selection = {
       establishment: this.recordId(establishment),
       emissionPoint: this.recordId(point)
-    }));
+    };
+    localStorage.setItem(this.liteDocumentSelectionKey(business), JSON.stringify(selection));
+    localStorage.setItem(this.liteEstablishmentSelectionKey(business), selection.establishment);
+    localStorage.setItem(this.liteEmissionPointSelectionKey(business), selection.emissionPoint);
     return true;
   }
 
   clearLiteDocumentSelection(): void {
     const business = this.activeBusinessId;
-    if (business) localStorage.removeItem(this.liteDocumentSelectionKey(business));
+    if (business) {
+      localStorage.removeItem(this.liteDocumentSelectionKey(business));
+      localStorage.removeItem(this.liteEstablishmentSelectionKey(business));
+      localStorage.removeItem(this.liteEmissionPointSelectionKey(business));
+    }
   }
 
   /** Devuelve una combinación segura para emitir; no genera secuenciales. */
@@ -330,8 +340,8 @@ export class CompanyCapabilitiesService {
       && this.isActiveRecord(item)
       && this.normalize(String(item?.document_type ?? item?.documentType ?? '')) === this.normalize(documentType)
       && this.normalizeEnvironment(item?.environment) === target
-      && String(item?.establishment || '').trim() === this.recordId(establishment)
-      && String(item?.emission_point ?? item?.emissionPoint ?? '').trim() === this.recordId(emissionPoint)
+      && this.referenceId(item?.establishment) === this.recordId(establishment)
+      && this.referenceId(item?.emission_point ?? item?.emissionPoint) === this.recordId(emissionPoint)
     );
     return sequence ? { business, establishment, emissionPoint, sequence, environment: target } : null;
   }
@@ -974,6 +984,14 @@ export class CompanyCapabilitiesService {
     return `lite_document_selection:${business}`;
   }
 
+  private liteEstablishmentSelectionKey(business: string): string {
+    return `lite_active_establishment:${business}`;
+  }
+
+  private liteEmissionPointSelectionKey(business: string): string {
+    return `lite_active_emission_point:${business}`;
+  }
+
   private posTerminalStorageKey(business: string): string {
     return `pos_terminal:${business}`;
   }
@@ -1001,8 +1019,12 @@ export class CompanyCapabilitiesService {
     const business = this.activeBusinessId;
     if (!business) return;
     const stored = this.getLiteDocumentSelection();
+    const explicitEstablishment = String(localStorage.getItem(this.liteEstablishmentSelectionKey(business)) || '').trim();
+    const explicitPoint = String(localStorage.getItem(this.liteEmissionPointSelectionKey(business)) || '').trim();
+    const storedEstablishment = explicitEstablishment || (!preferredEstablishmentId ? stored.establishment : '');
+    const storedEmissionPoint = explicitPoint || (!preferredEmissionPointId ? stored.emissionPoint : '');
     const establishments = this.activeEstablishments;
-    const establishment = establishments.find((item: any) => this.recordId(item) === stored.establishment)
+    const establishment = establishments.find((item: any) => this.recordId(item) === storedEstablishment)
       || establishments.find((item: any) => this.recordId(item) === preferredEstablishmentId)
       || establishments.find((item: any) => this.toBoolean(item?.is_main))
       || (establishments.length === 1 ? establishments[0] : null);
@@ -1011,7 +1033,7 @@ export class CompanyCapabilitiesService {
       return;
     }
     const points = this.activeEmissionPointsFor(establishment);
-    const point = points.find((item: any) => this.recordId(item) === stored.emissionPoint)
+    const point = points.find((item: any) => this.recordId(item) === storedEmissionPoint)
       || points.find((item: any) => this.recordId(item) === preferredEmissionPointId)
       || points.find((item: any) => this.toBoolean(item?.is_default))
       || (points.length === 1 ? points[0] : null);
@@ -1028,21 +1050,39 @@ export class CompanyCapabilitiesService {
 
   private belongsToActiveBusiness(record: any): boolean {
     const business = this.activeBusinessId;
-    const recordBusiness = String(record?.business || record?.business_name || '').trim();
+    const recordBusiness = this.referenceId(record?.business || record?.business_name);
     return !recordBusiness || !business || recordBusiness === business;
   }
 
   private isActiveRecord(record: any): boolean {
-    return this.normalize(String(record?.status ?? 'Activo')) === 'ACTIVO';
+    const status = this.normalize(String(record?.status ?? ''));
+    if (status) return ['ACTIVO', 'ACTIVE', '1', 'TRUE', 'SI', 'SÍ'].includes(status);
+    return this.toBoolean(record?.active ?? record?.isactive ?? record?.is_active ?? true);
   }
 
   private recordId(record: any): string {
-    return String(record?.name || record?.id || '').trim();
+    return this.referenceId(record);
   }
 
   private extractRecordId(value: unknown): string {
-    if (value && typeof value === 'object') return this.recordId(value);
-    return String(value || '').trim();
+    return this.referenceId(value);
+  }
+
+  /** Acepta tanto el identificador directo como una referencia Frappe. */
+  private referenceId(value: unknown): string {
+    if (value && typeof value === 'object') {
+      const item = value as Record<string, unknown>;
+      return String(
+        item['name']
+        ?? item['id']
+        ?? item['value']
+        ?? item['establishment']
+        ?? item['emission_point']
+        ?? item['code']
+        ?? ''
+      ).trim();
+    }
+    return String(value ?? '').trim();
   }
 
   private normalizeEnvironment(value: unknown): 'Pruebas' | 'Produccion' | '' {
