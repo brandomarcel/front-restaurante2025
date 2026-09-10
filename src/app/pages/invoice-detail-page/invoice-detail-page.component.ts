@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
-import { EcuadorTimePipe } from 'src/app/core/pipes/ecuador-time-pipe.pipe';
 import { InvoicesService } from 'src/app/services/invoices.service';
 import { environment } from 'src/environments/environment';
 import { toast } from 'ngx-sonner';
@@ -20,7 +19,7 @@ import { canConsultLiteInvoice, canRetryLiteInvoice } from 'src/app/core/utils/l
 @Component({
   selector: 'app-invoice-detail-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, EcuadorTimePipe, FontAwesomeModule, ReactiveFormsModule, NgxSpinnerComponent],
+  imports: [CommonModule, RouterModule, FontAwesomeModule, ReactiveFormsModule, NgxSpinnerComponent],
   templateUrl: './invoice-detail-page.component.html',
   styleUrl: './invoice-detail-page.component.css'
 })

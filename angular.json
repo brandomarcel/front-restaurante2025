@@ -39,7 +39,8 @@
               "node_modules/apexcharts/dist/apexcharts.min.js"
             ],
             "allowedCommonJsDependencies": [
-              "apexcharts"
+              "apexcharts",
+              "sweetalert2"
             ],
             "browser": "src/main.ts"
           },
