@@ -555,7 +555,19 @@ export class CompanyCapabilitiesService {
     };
     this.state.set(next);
     localStorage.setItem(this.storageKey, JSON.stringify(next));
-    if (matchesSelectedBusiness) this.ensureLiteDocumentSelection();
+    if (matchesSelectedBusiness) {
+      // El setup puede devolver la ubicación vigente en tax_context. Se usa
+      // únicamente cuando no existe una selección guardada para este negocio;
+      // una elección explícita del usuario siempre tiene prioridad.
+      const taxContext = data?.tax_context && typeof data.tax_context === 'object' ? data.tax_context : {};
+      const contextEstablishment = this.extractRecordId(
+        taxContext?.establishment ?? taxContext?.establishment_name ?? data?.establishment
+      );
+      const contextEmissionPoint = this.extractRecordId(
+        taxContext?.emission_point ?? taxContext?.emission_point_name ?? data?.emission_point
+      );
+      this.ensureLiteDocumentSelection(contextEstablishment, contextEmissionPoint);
+    }
     if (setupEnvironment) this.utilsService.cambiarAmbiente(setupEnvironment);
   }
 
@@ -985,12 +997,13 @@ export class CompanyCapabilitiesService {
    * predeterminado), o el único registro activo. Nunca toma arbitrariamente
    * el primer elemento de una lista con varias alternativas.
    */
-  private ensureLiteDocumentSelection(): void {
+  private ensureLiteDocumentSelection(preferredEstablishmentId = '', preferredEmissionPointId = ''): void {
     const business = this.activeBusinessId;
     if (!business) return;
     const stored = this.getLiteDocumentSelection();
     const establishments = this.activeEstablishments;
     const establishment = establishments.find((item: any) => this.recordId(item) === stored.establishment)
+      || establishments.find((item: any) => this.recordId(item) === preferredEstablishmentId)
       || establishments.find((item: any) => this.toBoolean(item?.is_main))
       || (establishments.length === 1 ? establishments[0] : null);
     if (!establishment) {
@@ -999,6 +1012,7 @@ export class CompanyCapabilitiesService {
     }
     const points = this.activeEmissionPointsFor(establishment);
     const point = points.find((item: any) => this.recordId(item) === stored.emissionPoint)
+      || points.find((item: any) => this.recordId(item) === preferredEmissionPointId)
       || points.find((item: any) => this.toBoolean(item?.is_default))
       || (points.length === 1 ? points[0] : null);
     if (!point) {
@@ -1024,6 +1038,11 @@ export class CompanyCapabilitiesService {
 
   private recordId(record: any): string {
     return String(record?.name || record?.id || '').trim();
+  }
+
+  private extractRecordId(value: unknown): string {
+    if (value && typeof value === 'object') return this.recordId(value);
+    return String(value || '').trim();
   }
 
   private normalizeEnvironment(value: unknown): 'Pruebas' | 'Produccion' | '' {
