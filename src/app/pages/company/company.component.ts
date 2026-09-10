@@ -1244,19 +1244,12 @@ export class CompanyComponent implements OnInit, DoCheck {
     const businessName = `${raw.business_name || raw.businessname || ''}`.trim();
     const legalName = `${raw.legal_name || raw.businessname || businessName}`.trim();
     const address = `${raw.address || ''}`.trim();
-    // current_number es informativo: nunca se incrementa ni se calcula en el
-    // frontend. Para guardar se reenvía el valor que ya devolvió el backend.
-    const currentNumber = Number(this.findLiteInvoiceSequence(selectedEnvironment)?.current_number
-      ?? raw.current_number
-      ?? 0) || 0;
-
     const payload: any = {
       business_name: businessName,
       address,
       phone: `${raw.phone || ''}`.trim(),
       email: `${raw.email || ''}`.trim(),
       environment,
-      sequence_environment: environment,
       legal_name: legalName,
       trade_name: `${raw.trade_name || businessName}`.trim(),
       main_address: address,
@@ -1266,12 +1259,7 @@ export class CompanyComponent implements OnInit, DoCheck {
       emission_type: `${raw.emission_type || 'Normal'}`.trim(),
       invoice_xml_version: `${raw.invoice_xml_version || '2.1.0'}`.trim(),
       software_provider_ruc: `${raw.software_provider_ruc || ''}`.trim(),
-      service_base_url: `${raw.service_base_url || ''}`.trim(),
-      establishment_code: `${raw.establishmentcode || ''}`.trim(),
-      establishment_name: `${raw.establishment_name || 'Matriz'}`.trim(),
-      emission_point_code: `${raw.emissionpoint || ''}`.trim(),
-      emission_point_name: `${raw.emission_point_name || 'Caja 001'}`.trim(),
-      current_number: currentNumber
+      service_base_url: `${raw.service_base_url || ''}`.trim()
     };
 
     const business = this.companyId || this.capabilities.businessId || localStorage.getItem('businessId') || '';
@@ -1288,11 +1276,6 @@ export class CompanyComponent implements OnInit, DoCheck {
     this.updateClaveValidation();
     this.updateProviderRucValidation();
 
-    if (!this.isPrimaryLiteConfigurationSelected) {
-      this.alertService.error('La gestión de establecimientos o puntos secundarios requiere un endpoint administrativo del backend. Esta pantalla solo guarda la configuración principal.');
-      return;
-    }
-
     const requiredControls = [
       'businessname',
       'ruc',
@@ -1300,8 +1283,6 @@ export class CompanyComponent implements OnInit, DoCheck {
       'phone',
       'email',
       'tax_regime',
-      'establishmentcode',
-      'emissionpoint',
       ...(this.requiresCertificatePassword ? ['clave'] : []),
     ];
     const hasInvalidRequired = requiredControls.some((key) => this.form.get(key)?.invalid);
