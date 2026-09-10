@@ -565,7 +565,7 @@
               <ng-container *ngIf="isLiteMode">
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label class="inline-flex items-center gap-2 text-[11px] font-medium text-slate-700">
-                    <input type="checkbox" formControlName="obliged_accounting" />
+                    <input type="checkbox" formControlName="obliged_accounting" readonly aria-readonly="true"/>
                     Obligado a llevar contabilidad
                   </label>
                   <div>
@@ -576,7 +576,9 @@
                   <div>
                     <label class="mb-1 block font-medium">Régimen tributario <span class="text-red-500">*</span></label>
                     <select class="input" formControlName="tax_regime"
-                      [class.border-red-500]="f['tax_regime'].invalid && (submitted || f['tax_regime'].touched)">
+                      [class.border-red-500]="f['tax_regime'].invalid && (submitted || f['tax_regime'].touched)"
+                      readonly aria-readonly="true"
+                      >
                       <option value="Régimen General">Régimen General</option>
                       <option value="RIMPE Emprendedor">RIMPE Emprendedor</option>
                       <option value="RIMPE Negocio Popular">RIMPE Negocio Popular</option>
@@ -586,22 +588,14 @@
                     </small>
                   </div>
                   <label class="inline-flex items-center gap-2 text-[11px] font-medium text-slate-700">
-                    <input type="checkbox" formControlName="withholding_agent" />
+                    <input type="checkbox" formControlName="withholding_agent" readonly aria-readonly="true"/>
                     Agente de retención
                   </label>
                   <div>
                     <label class="mb-1 block font-medium">Tipo de emisión</label>
-                    <input type="text" class="input" formControlName="emission_type" placeholder="Normal" />
+                    <input type="text" class="input" formControlName="emission_type" placeholder="Normal" readonly aria-readonly="true" />
                   </div>
-                  <div>
-                    <label class="mb-1 block font-medium">Versión XML</label>
-                    <input type="text" class="input" formControlName="invoice_xml_version" readonly aria-readonly="true" placeholder="2.1.0" />
-                  </div>
-                  <div>
-                    <label class="mb-1 block font-medium">RUC proveedor de software</label>
-                    <input appOnlyNumbers type="text" maxlength="13" class="input" formControlName="software_provider_ruc" readonly aria-readonly="true" />
-                    <small *ngIf="f['software_provider_ruc'].invalid && submitted" class="text-red-600">Debe tener 13 dígitos.</small>
-                  </div>
+
                 </div>
               </ng-container>
             </div>
