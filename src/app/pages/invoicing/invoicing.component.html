@@ -2,14 +2,14 @@
   <form [formGroup]="invoiceForm" (ngSubmit)="finalizeInvoice()" class="h-full min-h-0">
     <div class="space-y-3 pb-24 md:pb-3">
 
-      <section class="flex items-center justify-between gap-3 rounded-xl border border-primary/15 bg-gradient-to-r from-primary/10 via-white to-white px-3 py-2.5 shadow-sm">
+      <!-- <section class="flex items-center justify-between gap-3 rounded-xl border border-primary/15 bg-gradient-to-r from-primary/10 via-white to-white px-3 py-2.5 shadow-sm">
         <div>
           <p class="text-[10px] font-bold uppercase tracking-wide text-primary">{{ isGenericPos ? 'POS genérico' : 'Facturación directa' }}</p>
           <h1 class="text-base font-black text-slate-900">{{ isGenericPos ? 'Punto de venta' : 'Nueva factura' }}</h1>
           <p class="text-[10px] text-slate-500">{{ isGenericPos ? 'Selecciona cliente, productos, pagos y cobra desde tu terminal.' : 'Emite una factura electrónica con los datos actuales.' }}</p>
         </div>
         <span *ngIf="isGenericPos" class="hidden rounded-full bg-slate-900 px-2.5 py-1 text-[10px] font-bold text-white sm:inline-flex">Venta rápida</span>
-      </section>
+      </section> -->
 
       <section *ngIf="currentFiscalLocation || posTerminalBlockMessage" class="rounded-xl border px-3 py-2 text-[11px]" [ngClass]="posTerminalBlockMessage ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-white text-slate-600'">
         <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
