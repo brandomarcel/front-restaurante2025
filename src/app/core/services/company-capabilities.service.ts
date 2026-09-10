@@ -276,8 +276,19 @@ export class CompanyCapabilitiesService {
     if (!business) return false;
     const establishment = this.activeEstablishments.find((item: any) => this.recordId(item) === String(establishmentId || '').trim());
     if (!establishment) return false;
+    const normalizedPointId = String(emissionPointId || '').trim();
+    // El establecimiento se puede seleccionar antes de que sus puntos estén
+    // disponibles. Conservamos esa selección por negocio y completamos el
+    // punto cuando el catálogo termine de cargarse.
+    if (!normalizedPointId) {
+      localStorage.setItem(this.liteDocumentSelectionKey(business), JSON.stringify({
+        establishment: this.recordId(establishment),
+        emissionPoint: ''
+      }));
+      return true;
+    }
     const points = this.activeEmissionPointsFor(establishment);
-    const point = points.find((item: any) => this.recordId(item) === String(emissionPointId || '').trim());
+    const point = points.find((item: any) => this.recordId(item) === normalizedPointId);
     if (!point) return false;
     localStorage.setItem(this.liteDocumentSelectionKey(business), JSON.stringify({
       establishment: this.recordId(establishment),

@@ -567,7 +567,7 @@ export class CompanyComponent implements OnInit, DoCheck {
       emission_point_name: preferred?.emission_point_name || ''
     }, { emitEvent: false });
     if (preferred) this.capabilities.setLiteDocumentSelection(establishment.name, preferred.name);
-    else this.capabilities.clearLiteDocumentSelection();
+    else this.capabilities.setLiteDocumentSelection(establishment.name, '');
     this.updateLiteInvoiceSequence(this.ambiente);
   }
 
