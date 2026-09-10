@@ -5,7 +5,8 @@
 export const environment = {
   apiUrl: '/api', // con proxy
   URL: 'http://192.168.100.195:8002',
-  frappeSocketNamespace: 'facturada',
+  // El proxy conserva la sesión y añade este sitio al tráfico Socket.IO.
+  frappeSiteNamespace: 'facturada_core_simple_test',
   production: false,
 };
 

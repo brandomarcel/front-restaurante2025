@@ -68,6 +68,11 @@ export class PrintService {
     );
   }
 
+  /** Ticket oficial de una factura Lite usando el formato de impresión Frappe. */
+  downloadLiteInvoiceTicket(invoiceName: string): Observable<Blob> {
+    return this.downloadLiteInvoicePdf(invoiceName, 'FacturADA Lite Ticket');
+  }
+
   /** Descarga el XML de una factura Lite como archivo privado. */
   downloadLiteInvoiceXml(invoiceName: string): Observable<Blob> {
     let params = new HttpParams()

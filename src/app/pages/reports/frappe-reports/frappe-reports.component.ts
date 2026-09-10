@@ -38,6 +38,7 @@ interface ReportDefinition {
   defaultLimit: number;
   visibleColumns: string[];
   filters: ReportFilterDefinition[];
+  restaurantOnly?: boolean;
 }
 
 @Component({
@@ -74,7 +75,8 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
         { key: 'type_orden', label: 'Tipo orden', type: 'select', options: this.options(['Servirse', 'Llevar', 'Domicilio']) },
         { key: 'payment_method', label: 'Forma de pago', type: 'payment' },
         { key: 'limit', label: 'Límite', type: 'number' }
-      ]
+      ],
+      restaurantOnly: true
     },
     {
       name: 'Productos Más Vendidos',
@@ -176,6 +178,12 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
     if (this.capabilities.features.restaurant === true) {
       this.reports = this.restaurantReports();
       this.selectedReportName = this.reports[0].name;
+    } else {
+      // Orders Report pertenece exclusivamente al módulo Restaurante.
+      // No debe quedar disponible para negocios de facturación/API aunque se
+      // acceda a la pantalla mediante una ruta antigua o un enlace guardado.
+      this.reports = this.reports.filter((report) => report.restaurantOnly !== true);
+      this.selectedReportName = this.reports[0]?.name || '';
     }
     this.loadPayments();
     this.routeSub = this.route.data.subscribe((data) => {

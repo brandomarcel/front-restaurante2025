@@ -10,6 +10,7 @@ interface ReportCard {
   route: string;
   accent: string;
   featureKey?: 'cash_register';
+  restaurantOnly?: boolean;
 }
 
 @Component({
@@ -25,7 +26,8 @@ export class ReportsHomeComponent {
       description: 'Ventas por orden, tipo de consumo, factura, SRI y forma de pago.',
       badge: 'Operación',
       route: '/report/orders',
-      accent: 'from-indigo-500 to-violet-500'
+      accent: 'from-indigo-500 to-violet-500',
+      restaurantOnly: true
     },
     {
       title: 'Productos más vendidos',
@@ -61,8 +63,12 @@ export class ReportsHomeComponent {
   constructor(private capabilities: CompanyCapabilitiesService) {}
 
   get visibleReports(): ReportCard[] {
-    const allowed = this.reports.filter((report) => !report.featureKey || this.capabilities.isEnabled(report.featureKey));
-    if (this.capabilities.features.restaurant === true) {
+    const isRestaurant = this.capabilities.features.restaurant === true;
+    const allowed = this.reports.filter((report) =>
+      (!report.featureKey || this.capabilities.isEnabled(report.featureKey))
+      && (!report.restaurantOnly || isRestaurant)
+    );
+    if (isRestaurant) {
       return allowed.filter((report) => report.route === '/report/orders' || report.route === '/report/ventas-forma-pago');
     }
     return allowed;

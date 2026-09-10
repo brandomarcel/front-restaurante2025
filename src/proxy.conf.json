@@ -2,24 +2,20 @@
   "/api": {
     "target": "http://192.168.100.195:8002",
     "secure": false,
-    "changeOrigin": true,
-    "cookieDomainRewrite": "localhost",
+    "changeOrigin": false,
+    "headers": {
+      "X-Frappe-Site-Name": "facturada_core_simple_test"
+    },
     "logLevel": "debug"
   },
   "/socket.io": {
-    "target": "http://192.168.100.195:8002",
+    "target": "http://192.168.100.195:9000",
     "ws": true,
     "secure": false,
-    "changeOrigin": true,
-    "cookieDomainRewrite": "localhost",
-    "logLevel": "debug"
-  },
-  "/facturada": {
-    "target": "http://192.168.100.195:8002",
-    "ws": true,
-    "secure": false,
-    "changeOrigin": true,
-    "cookieDomainRewrite": "localhost",
+    "changeOrigin": false,
+    "headers": {
+      "X-Frappe-Site-Name": "facturada_core_simple_test"
+    },
     "logLevel": "debug"
   }
 }

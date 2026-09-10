@@ -354,7 +354,7 @@
           <div class="h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-primary" [style.width.%]="apiPlanUsagePercent"></div></div>
           <div class="mt-2 flex justify-between text-[11px]"><span>{{ planUsedVouchers }} usados</span><b>{{ planRemainingLabel }} restantes</b></div>
           <div class="mt-3 flex flex-wrap gap-2">
-            <a routerLink="/settings/lite/api-clients" class="rounded-md bg-slate-900 px-3 py-2 text-[10px] font-bold text-white">Documentación API</a>
+            <a *ngIf="capabilities.apiConfiguration?.enabled === true" routerLink="/settings/lite/api" class="rounded-md bg-slate-900 px-3 py-2 text-[10px] font-bold text-white">Integración API</a>
             <a routerLink="/dashboard/invoices" class="rounded-md bg-primary px-3 py-2 text-[10px] font-bold text-white">Ver facturas</a>
             <a routerLink="/dashboard/credit-notes" class="rounded-md bg-amber-500 px-3 py-2 text-[10px] font-bold text-white">Notas de crédito</a>
           </div>
@@ -528,6 +528,10 @@
         <h2 class="text-sm font-bold text-slate-900">Centro de emisión</h2>
         <p class="mb-2 text-[10px] text-slate-500">Accesos pensados para una empresa facturadora.</p>
         <div class="grid gap-2">
+          <a *ngIf="isFeatureEnabled('generic_pos')" routerLink="/dashboard/pos-generic" class="rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-slate-700 transition hover:bg-slate-100">
+            <p class="text-xs font-black">Punto de venta</p>
+            <p class="text-[10px]">Venta rápida con cliente, productos, pagos y terminal.</p>
+          </a>
           <a *ngIf="isFeatureEnabled('direct_invoice')" routerLink="/dashboard/invoicing" class="rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-primary transition hover:bg-primary/10">
             <p class="text-xs font-black">Emitir factura directa</p>
             <p class="text-[10px]">Selecciona cliente, productos y envía al SRI.</p>

@@ -83,7 +83,7 @@ export class UsersComponent implements OnInit, DoCheck {
 
   get canManageUsers(): boolean {
     const role = this.normalized(this.capabilities.businessRole);
-    const isManager = role === 'ADMINISTRADOR' || role === 'GERENTE' || role === 'ADMINISTRADOR DEL NEGOCIO';
+    const isManager = role === 'ADMINISTRADOR' || role === 'GERENTE';
     // El contrato Lite define Administrador/Gerente como administradores de
     // usuarios. El backend mantiene la validación final de permisos.
     return isManager;
@@ -100,7 +100,7 @@ export class UsersComponent implements OnInit, DoCheck {
   get assignableRoles(): FacturadaBusinessRole[] {
     const current = this.normalized(this.capabilities.businessRole);
     if (current !== 'GERENTE') return this.roles;
-    return this.roles.filter((role) => !['ADMINISTRADOR', 'GERENTE', 'ADMINISTRADOR DEL NEGOCIO'].includes(this.normalized(this.roleName(role))));
+    return this.roles.filter((role) => !['ADMINISTRADOR', 'GERENTE'].includes(this.normalized(this.roleName(role))));
   }
 
   get selectedRolePermissions(): string[] {

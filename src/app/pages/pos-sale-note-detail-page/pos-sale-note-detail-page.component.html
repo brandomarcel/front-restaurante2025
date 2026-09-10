@@ -1,0 +1,54 @@
+<div class="app-container space-y-4">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <button type="button" class="btn btn-outline" (click)="goBack()">← Volver a notas de venta</button>
+    <button type="button" class="btn btn-outline" (click)="load()" [disabled]="loading || !!actionName">Actualizar</button>
+  </div>
+
+  <div *ngIf="loading && !note" class="app-card app-card-body text-center text-muted-foreground">Cargando detalle...</div>
+
+  <ng-container *ngIf="note as current">
+    <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-5 py-5 text-primary-foreground shadow-lg">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-primary-foreground/70">Documento no tributario</p>
+          <h1 class="mt-1 text-2xl font-bold">{{ current.document_number || current.name }}</h1>
+          <p class="mt-1 text-sm text-primary-foreground/80">Nota de Venta · {{ current.posting_date || '—' }}</p>
+        </div>
+        <span class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">{{ current.status || '—' }}</span>
+      </div>
+    </section>
+
+    <section class="app-card">
+      <div class="app-card-body">
+        <div class="mb-3 flex items-center justify-between"><h2 class="text-sm font-bold uppercase tracking-wide text-primary">Información general</h2><span class="text-xs text-muted-foreground">{{ current.business || '—' }}</span></div>
+        <div class="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          <div><span class="block text-xs text-muted-foreground">Cliente</span><p class="font-semibold">{{ customerName(current) }}</p></div>
+          <div><span class="block text-xs text-muted-foreground">Identificación</span><p class="font-semibold">{{ customerIdentification(current) }}</p></div>
+          <div><span class="block text-xs text-muted-foreground">Correo</span><p class="truncate font-semibold">{{ customerField(current, 'email') }}</p></div>
+          <div><span class="block text-xs text-muted-foreground">Teléfono</span><p class="font-semibold">{{ customerField(current, 'phone') }}</p></div>
+          <div class="sm:col-span-2"><span class="block text-xs text-muted-foreground">Dirección</span><p class="font-semibold">{{ customerField(current, 'address') }}</p></div>
+          <div><span class="block text-xs text-muted-foreground">Terminal</span><p class="font-semibold">{{ current.pos_terminal_name || current.pos_terminal || '—' }}</p></div>
+          <div><span class="block text-xs text-muted-foreground">Establecimiento / punto</span><p class="font-semibold">{{ current.establishment || '—' }} / {{ current.emission_point || '—' }}</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+      <div class="app-card overflow-hidden">
+        <div class="border-b border-slate-200 px-4 py-3"><h2 class="text-sm font-bold uppercase tracking-wide text-primary">Productos</h2></div>
+        <div *ngIf="!current.items?.length" class="app-card-body text-sm text-muted-foreground">No hay productos registrados.</div>
+        <div *ngFor="let item of current.items" class="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 last:border-0">
+          <div class="min-w-0"><p class="truncate font-semibold">{{ item.item_name || item.item_code || item.item || 'Producto' }}</p><p class="text-xs text-muted-foreground">{{ item.item_code || item.item || '—' }} · {{ item.qty || 0 }} × {{ (item.rate || 0) | currency:'USD':'symbol':'1.2-2' }} · IVA {{ item.tax_rate || 0 }}%</p></div>
+          <span class="whitespace-nowrap font-semibold">{{ itemTotal(item) | currency:'USD':'symbol':'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <section class="app-card"><div class="app-card-body"><h2 class="mb-3 text-sm font-bold uppercase tracking-wide text-primary">Resumen</h2><div class="space-y-2 text-sm"><div class="flex justify-between"><span>Subtotal</span><b>{{ (current.subtotal || 0) | currency:'USD':'symbol':'1.2-2' }}</b></div><div class="flex justify-between"><span>IVA</span><b>{{ (current.taxes || current.iva || 0) | currency:'USD':'symbol':'1.2-2' }}</b></div><div class="flex justify-between border-t border-slate-200 pt-2 text-lg"><span>Total</span><b class="text-primary">{{ (current.total || 0) | currency:'USD':'symbol':'1.2-2' }}</b></div><div class="flex justify-between text-xs text-muted-foreground"><span>Cobrado</span><span>{{ (current.paid_amount || 0) | currency:'USD':'symbol':'1.2-2' }}</span></div><div class="flex justify-between text-xs text-muted-foreground"><span>Cambio</span><span>{{ (current.change_amount || 0) | currency:'USD':'symbol':'1.2-2' }}</span></div></div></div></section>
+        <section class="app-card"><div class="app-card-body"><h2 class="mb-3 text-sm font-bold uppercase tracking-wide text-primary">Pagos</h2><div *ngIf="!current.payments?.length" class="text-sm text-muted-foreground">No hay pagos registrados.</div><div *ngFor="let payment of current.payments" class="flex justify-between gap-3 border-b border-slate-100 py-1.5 text-sm last:border-0"><span>{{ paymentLabel(payment) }} <small class="text-muted-foreground">({{ payment.payment_code || '—' }})</small></span><b>{{ (payment.amount || payment.monto || 0) | currency:'USD':'symbol':'1.2-2' }}</b></div></div></section>
+      </div>
+    </section>
+
+    <section class="app-card"><div class="app-card-body"><div class="mb-2 flex flex-wrap items-center justify-between gap-2"><h2 class="text-sm font-bold uppercase tracking-wide text-primary">Acciones</h2><span class="text-xs text-muted-foreground">Stock: {{ current.stock_moved ? 'movido' : 'pendiente' }}</span></div><p *ngIf="linkedInvoice(current)" class="mb-3 text-sm">Factura vinculada: <b>{{ linkedInvoice(current) }}</b></p><div class="flex flex-wrap gap-2"><button *ngIf="current.status === 'Borrador'" type="button" class="btn btn-success" (click)="collect()" [disabled]="!!actionName">Cobrar nota</button><button *ngIf="current.status === 'Cobrada' && !linkedInvoice(current)" type="button" class="btn btn-primary" (click)="invoice()" [disabled]="!!actionName">Facturar nota</button><button *ngIf="current.status === 'Cobrada' || current.status === 'Facturada'" type="button" class="btn btn-outline" (click)="print()" [disabled]="!!actionName">Imprimir</button><button *ngIf="(current.status === 'Borrador' || current.status === 'Cobrada') && !linkedInvoice(current)" type="button" class="btn btn-danger" (click)="cancel()" [disabled]="!!actionName">Anular</button></div></div></section>
+  </ng-container>
+</div>

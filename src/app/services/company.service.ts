@@ -55,7 +55,8 @@ export interface CompanyInfo {
   current_number?: number;
   software_provider_ruc?: string;
   obliged_accounting?: boolean | number | string;
-  rimpe?: boolean | number | string;
+  tax_regime?: 'Régimen General' | 'RIMPE Emprendedor' | 'RIMPE Negocio Popular' | string;
+  special_taxpayer_number?: string | null;
   withholding_agent?: boolean | number | string;
   emission_type?: string;
   invoice_xml_version?: string;
@@ -533,7 +534,10 @@ export class CompanyService {
       obligado_a_llevar_contabilidad: taxProfile?.obliged_accounting ?? taxProfile?.obligado_a_llevar_contabilidad
         ?? company?.obligado_a_llevar_contabilidad ?? message?.obligado_a_llevar_contabilidad,
       obliged_accounting: taxProfile?.obliged_accounting ?? taxProfile?.obligado_a_llevar_contabilidad,
-      rimpe: taxProfile?.rimpe,
+      // `tax_regime` es la fuente de verdad. `rimpe` puede seguir llegando
+      // desde respuestas antiguas, pero no se utiliza como sustituto.
+      tax_regime: this.normalizeTaxRegime(taxProfile?.tax_regime),
+      special_taxpayer_number: taxProfile?.special_taxpayer_number ?? company?.special_taxpayer_number ?? null,
       withholding_agent: taxProfile?.withholding_agent,
       emission_type: taxProfile?.emission_type,
       invoice_xml_version: taxProfile?.invoice_xml_version,
@@ -558,35 +562,23 @@ export class CompanyService {
     // de Lite usan response.message.data.
     const message = response?.message && typeof response.message === 'object' ? response.message : response || {};
     const rawBusiness = message?.business;
-    const company = rawBusiness && typeof rawBusiness === 'object'
-      ? rawBusiness
-      : (message?.company ?? message?.empresa ?? message?.data ?? message);
-    const mode = String(
-      message?.business_mode ??
-      message?.businessMode ??
-      message?.mode ??
-      message?.app_mode ??
-      company?.business_mode ??
-      company?.businessMode ??
-      company?.mode ??
-      company?.app_mode ??
-      ''
-    ).toUpperCase();
+    const businessId = typeof rawBusiness === 'string'
+      ? rawBusiness.trim()
+      : String(rawBusiness?.name || rawBusiness?.business || '').trim();
+    // El contexto nuevo siempre trae el negocio y sus features. No se usa
+    // business_model, business_type ni el nombre del plan para clasificarlo.
+    return !!businessId && !!message?.features && typeof message.features === 'object';
+  }
 
-    const businessModel = String(company?.business_model ?? company?.businessModel ?? '').toUpperCase();
-    if (mode.includes('LITE') || businessModel.includes('FACTURACION SIMPLE')) return true;
-
-    // El mismo contexto se utiliza también para FacturADA Restaurante. No se
-    // debe rechazar por no ser Lite si el backend ya entregó un negocio válido.
-    if (typeof rawBusiness === 'string' && rawBusiness.trim()) return true;
-    if (company && typeof company === 'object' && (company.name || company.business)) return true;
-
-    const features = message?.features ?? company?.features;
-    if (!features || typeof features !== 'object') return false;
-
-    // Solo aceptamos banderas explícitas del contrato nuevo; nunca deducimos
-    // el modo por la ausencia de órdenes, mesas o caja.
-    return this.toBool(features.billing) || this.toBool(features.restaurant);
+  private normalizeTaxRegime(value: unknown): CompanyInfo['tax_regime'] {
+    const normalized = String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase();
+    if (normalized === 'RIMPE EMPRENDEDOR') return 'RIMPE Emprendedor';
+    if (normalized === 'RIMPE NEGOCIO POPULAR') return 'RIMPE Negocio Popular';
+    return 'Régimen General';
   }
 
   private isPermissionError(error: any): boolean {

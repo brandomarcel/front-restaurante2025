@@ -271,6 +271,98 @@ select {
 
 /* Table compact */
 @layer components {
+  /* SweetAlert compartido: mantiene el lenguaje visual de FacturADA. */
+  .facturada-swal-popup {
+    width: min(92vw, 30rem);
+    max-width: calc(100vw - 2rem);
+    border: 1px solid var(--border) !important;
+    border-radius: 1.25rem !important;
+    background: var(--background) !important;
+    color: var(--foreground) !important;
+    padding: 1.5rem !important;
+    box-shadow: 0 24px 70px rgb(15 23 42 / 22%) !important;
+    font-family: Poppins, system-ui, sans-serif !important;
+  }
+
+  .facturada-swal-title {
+    margin: 0.25rem 0 0 !important;
+    color: var(--foreground) !important;
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    line-height: 1.35 !important;
+  }
+
+  .facturada-swal-content {
+    margin: 0.75rem 0 0 !important;
+    color: var(--muted-foreground) !important;
+    font-size: 0.82rem !important;
+    line-height: 1.55 !important;
+  }
+
+  .facturada-swal-icon {
+    margin: 0.25rem auto 0.5rem !important;
+    transform: scale(0.86);
+  }
+
+  .facturada-swal-actions {
+    gap: 0.6rem !important;
+    margin: 1.25rem 0 0 !important;
+  }
+
+  .facturada-swal-confirm,
+  .facturada-swal-cancel {
+    min-width: 6.5rem;
+    border: 0 !important;
+    border-radius: 0.65rem !important;
+    padding: 0.65rem 1rem !important;
+    font-family: inherit !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    transition: transform 150ms ease, opacity 150ms ease, box-shadow 150ms ease;
+  }
+
+  .facturada-swal-confirm {
+    background: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+    box-shadow: 0 5px 14px color-mix(in srgb, var(--primary) 28%, transparent) !important;
+  }
+
+  .facturada-swal-cancel {
+    border: 1px solid var(--border) !important;
+    background: var(--card) !important;
+    color: var(--foreground) !important;
+  }
+
+  .facturada-swal-confirm:hover,
+  .facturada-swal-cancel:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  .facturada-swal-close {
+    color: var(--muted-foreground) !important;
+    font-size: 1.5rem !important;
+    font-weight: 400 !important;
+  }
+
+  .facturada-swal-enter {
+    animation: facturada-swal-enter 180ms ease-out both;
+  }
+
+  .facturada-swal-leave {
+    animation: facturada-swal-leave 140ms ease-in both;
+  }
+
+  @keyframes facturada-swal-enter {
+    from { opacity: 0; transform: translateY(8px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @keyframes facturada-swal-leave {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to { opacity: 0; transform: translateY(4px) scale(0.98); }
+  }
+
   .table-compact { @apply text-xs leading-4; }
   .table-compact thead th { @apply px-3 py-2 text-[11px] uppercase tracking-wide text-gray-500; }
   .table-compact tbody td { @apply px-3 py-2; }

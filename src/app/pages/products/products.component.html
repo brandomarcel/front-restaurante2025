@@ -4,7 +4,7 @@
       <div>
         <h2 class="text-xl font-bold">Productos</h2>
         <p class="text-xs text-primary-foreground/80">
-          Catalogo comercial con control visual de inventario conectado al backend.
+          {{ inventoryEnabled ? 'Catálogo comercial con control de inventario conectado al backend.' : 'Catálogo comercial para facturación de productos y servicios.' }}
         </p>
       </div>
 
@@ -12,13 +12,13 @@
         <div class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
           Registros: {{ productosFiltradosList.length || 0 }}
         </div>
-        <div class="rounded-full bg-sky-500/20 px-3 py-1 text-xs font-semibold">
+        <div *ngIf="inventoryEnabled" class="rounded-full bg-sky-500/20 px-3 py-1 text-xs font-semibold">
           Con inventario: {{ inventoryControlledCount }}
         </div>
-        <div class="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-semibold">
+        <div *ngIf="inventoryEnabled" class="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-semibold">
           Bajo stock: {{ lowStockCount }}
         </div>
-        <div class="rounded-full bg-rose-500/20 px-3 py-1 text-xs font-semibold">
+        <div *ngIf="inventoryEnabled" class="rounded-full bg-rose-500/20 px-3 py-1 text-xs font-semibold">
           Agotados: {{ outOfStockCount }}
         </div>
         <app-button *ngIf="canManageProducts" impact="bold" tone="light" shape="rounded" size="small" (click)="abrirModal()">
@@ -50,7 +50,7 @@
           Solo activos
         </label>
 
-        <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-700">
+        <label *ngIf="inventoryEnabled" class="inline-flex items-center gap-2 text-xs font-medium text-slate-700">
           <input type="checkbox" [(ngModel)]="soloBajoStock" (ngModelChange)="actualizarProductosFiltrados()" />
           Solo bajo stock
         </label>
@@ -71,10 +71,10 @@
             <th class="app-th">Codigo</th>
             <th class="app-th">Categoria</th>
             <th class="app-th text-right">Precio</th>
-            <th class="app-th">Inventario</th>
-            <th class="app-th">Stock actual</th>
-            <th class="app-th">Stock minimo</th>
-            <th class="app-th">Unidad</th>
+            <th *ngIf="inventoryEnabled" class="app-th">Inventario</th>
+            <th *ngIf="inventoryEnabled" class="app-th">Stock actual</th>
+            <th *ngIf="inventoryEnabled" class="app-th">Stock minimo</th>
+            <th *ngIf="inventoryEnabled" class="app-th">Unidad</th>
             <th class="app-th">Estado</th>
             <th *ngIf="canManageProducts" class="app-th text-center">Acciones</th>
           </tr>
@@ -94,12 +94,12 @@
             <td class="app-td font-mono text-xs text-gray-600">{{ p.codigo || '—' }}</td>
             <td class="app-td">{{ getNameCategory(p.categoria || p.category) }}</td>
             <td class="app-td text-right font-semibold">{{ p.precio | currency }}</td>
-            <td class="app-td">
+            <td *ngIf="inventoryEnabled" class="app-td">
               <span class="badge" [ngClass]="hasInventory(p) ? 'badge-green' : 'badge-gray'">
                 {{ hasInventory(p) ? 'Controlado' : 'No aplica' }}
               </span>
             </td>
-            <td class="app-td">
+            <td *ngIf="inventoryEnabled" class="app-td">
               <div class="flex flex-col" *ngIf="hasInventory(p); else noStockData">
                 <span class="font-semibold">{{ formatStock(p) }}</span>
                 <span *ngIf="isLowStock(p)" class="text-[11px] text-amber-700">Reposicion requerida</span>
@@ -108,13 +108,13 @@
                 <span class="text-slate-400">—</span>
               </ng-template>
             </td>
-            <td class="app-td">
+            <td *ngIf="inventoryEnabled" class="app-td">
               <span *ngIf="hasInventory(p); else noMinStock">{{ p.stock_minimo || 0 }}</span>
               <ng-template #noMinStock>
                 <span class="text-slate-400">—</span>
               </ng-template>
             </td>
-            <td class="app-td">
+            <td *ngIf="inventoryEnabled" class="app-td">
               <span *ngIf="hasInventory(p); else noUnit">{{ getInventoryUnit(p) }}</span>
               <ng-template #noUnit>
                 <span class="text-slate-400">—</span>
@@ -125,8 +125,8 @@
                 <span class="badge" [ngClass]="{ 'badge-green': p.isactive, 'badge-red': !p.isactive }">
                   {{ p.isactive ? 'Activo' : 'Inactivo' }}
                 </span>
-                <span *ngIf="isOutOfStock(p)" class="badge badge-red">Agotado</span>
-                <span *ngIf="hasInventory(p) && isLowStock(p) && !isOutOfStock(p)" class="badge badge-yellow">Bajo stock</span>
+                <span *ngIf="inventoryEnabled && isOutOfStock(p)" class="badge badge-red">Agotado</span>
+                <span *ngIf="inventoryEnabled && hasInventory(p) && isLowStock(p) && !isOutOfStock(p)" class="badge badge-yellow">Bajo stock</span>
               </div>
             </td>
             <td *ngIf="canManageProducts" class="app-td text-center">

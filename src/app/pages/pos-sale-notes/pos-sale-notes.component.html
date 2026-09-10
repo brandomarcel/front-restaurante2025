@@ -1,0 +1,72 @@
+<div class="app-container space-y-4">
+  <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 class="text-xl font-bold">Notas de venta</h2>
+        <p class="text-xs text-primary-foreground/80">Documentos no tributarios de la empresa activa.</p>
+      </div>
+      <div class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">Registros: {{ filteredNotes.length }}</div>
+    </div>
+  </section>
+
+  <section class="rounded-xl border border-primary/15 bg-white p-4 shadow-sm">
+    <div class="toolbar !mb-0">
+      <div class="flex w-full flex-col gap-2 sm:flex-row">
+        <input class="input" type="search" [(ngModel)]="search" placeholder="Buscar número, cliente, terminal o factura..." />
+        <select class="input sm:max-w-[190px]" [(ngModel)]="status" (change)="load()">
+          <option value="">Todos los estados</option>
+          <option value="Borrador">Borrador</option>
+          <option value="Cobrada">Cobrada</option>
+          <option value="Facturada">Facturada</option>
+          <option value="Anulada">Anulada</option>
+        </select>
+        <input class="input sm:max-w-[155px]" type="date" [(ngModel)]="fromDate" (change)="load()" aria-label="Fecha desde" />
+        <input class="input sm:max-w-[155px]" type="date" [(ngModel)]="toDate" (change)="load()" aria-label="Fecha hasta" />
+      </div>
+      <div class="flex gap-2">
+        <button type="button" class="btn btn-outline" (click)="clearFilters()">Limpiar</button>
+        <button type="button" class="btn btn-primary" (click)="load()" [disabled]="loading">Actualizar</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="app-table-wrap">
+    <div *ngIf="loading" class="app-card-body text-center text-muted-foreground">Cargando notas de venta...</div>
+    <div *ngIf="!loading && !filteredNotes.length" class="app-card-body text-center text-muted-foreground">No hay notas de venta para los filtros seleccionados.</div>
+
+    <table *ngIf="!loading && filteredNotes.length" class="app-table text-xs">
+      <thead class="app-thead">
+        <tr>
+          <th class="app-th">Documento</th>
+          <th class="app-th">Fecha emisión</th>
+          <th class="app-th">Cliente / identificación</th>
+          <th class="app-th">Terminal</th>
+          <th class="app-th text-right">Total</th>
+          <th class="app-th">Stock</th>
+          <th class="app-th">Factura</th>
+          <th class="app-th">Estado</th>
+          <th class="app-th text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let note of filteredNotes" class="app-tr">
+          <td class="app-td"><div class="flex flex-col"><span class="font-semibold">{{ note.document_number || note.name || '—' }}</span><span class="text-[11px] text-muted-foreground">{{ note.name || '—' }}</span></div></td>
+          <td class="app-td">{{ note.posting_date || note.creation || '—' }}</td>
+          <td class="app-td"><div>{{ customerName(note) }}</div><div class="text-[10px] text-muted-foreground">{{ customerIdentification(note) }}</div></td>
+          <td class="app-td">{{ note.pos_terminal_name || note.pos_terminal || '—' }}</td>
+          <td class="app-td text-right font-semibold">{{ noteTotal(note) | currency:(note.currency || 'USD'):'symbol':'1.2-2' }}</td>
+          <td class="app-td">{{ note.stock_moved ? 'Movido' : 'Pendiente' }}</td>
+          <td class="app-td">{{ linkedInvoice(note) || '—' }}</td>
+          <td class="app-td"><span class="badge" [ngClass]="statusClass(note.status)">{{ note.status || '—' }}</span></td>
+          <td class="app-td text-center"><div class="flex flex-wrap justify-center gap-1">
+            <button type="button" class="btn btn-outline" (click)="open(note)">Abrir</button>
+            <button *ngIf="note.status === 'Borrador'" type="button" class="btn btn-success" (click)="collect(note)" [disabled]="!!actionName">Cobrar</button>
+            <button *ngIf="note.status === 'Cobrada' && !note.lite_invoice" type="button" class="btn btn-primary" (click)="invoice(note)" [disabled]="!!actionName">Facturar</button>
+            <button *ngIf="note.status === 'Cobrada' || note.status === 'Facturada'" type="button" class="btn btn-outline" (click)="print(note)" [disabled]="!!actionName">Imprimir</button>
+            <button *ngIf="(note.status === 'Borrador' || note.status === 'Cobrada') && !note.lite_invoice" type="button" class="btn btn-danger" (click)="cancel(note)" [disabled]="!!actionName">Anular</button>
+          </div></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</div>

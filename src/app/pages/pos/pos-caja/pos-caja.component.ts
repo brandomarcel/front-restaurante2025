@@ -23,6 +23,8 @@ import { CategoryService } from 'src/app/services/category.service';
 import { CustomersService } from 'src/app/services/customers.service';
 import { OrdersService } from 'src/app/services/orders.service';
 import { PaymentsService } from 'src/app/services/payments.service';
+import { PosSaleService } from 'src/app/services/pos-sale.service';
+import { InvoicesService } from 'src/app/services/invoices.service';
 import { PrintService } from 'src/app/services/print.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { environment } from 'src/environments/environment';
@@ -48,6 +50,8 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   showCustomerModal = false;
   showPrintModal = false;
   isSubmittingOrder = false;
+  isSubmittingPosSale = false;
+  activePosSaleNote: any | null = null;
 
   amountReceived: number | null = null;
   change = 0;
@@ -75,6 +79,8 @@ export class PosCajaComponent implements OnInit, OnDestroy {
 
   printOption: 'comanda' | 'recibo' | 'ambas' = 'ambas';
   private pendingOrderId: string | null = null;
+  private pendingInvoiceId: string | null = null;
+  printContext: 'order' | 'invoice' = 'order';
   private today = '';
   private readonly url = environment.URL;
   private readonly favoritesStorageKey = 'pos_caja_favorites_v1';
@@ -94,6 +100,8 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     private paymentsService: PaymentsService,
     private fb: FormBuilder,
     private ordersService: OrdersService,
+    private posSaleService: PosSaleService,
+    private invoicesService: InvoicesService,
     private spinner: NgxSpinnerService,
     private printService: PrintService,
     public cartService: CartService,
@@ -142,7 +150,17 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   get canCheckout(): boolean {
-    return !!this.customer && this.cartService.cart.length > 0 && !this.isSubmittingOrder;
+    return !!this.customer
+      && this.cartService.cart.length > 0
+      && !this.isSubmittingOrder
+      && (!this.genericMode || !this.posTerminalBlockMessage);
+  }
+
+  /** The generic POS intentionally reuses this component's proven product,
+   * customer, cart and payment UI, but emits a Lite invoice instead of a
+   * restaurant order. */
+  get genericMode(): boolean {
+    return this.capabilities.isEnabled('generic_pos');
   }
 
   get canEmitInvoice(): boolean {
@@ -170,7 +188,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   get invoicePlanBlockMessage(): string | null {
-    return this.capabilities.getPlanBlockMessage('direct_invoice')
+    return this.capabilities.getPlanBlockMessage(this.genericMode ? 'generic_pos' : 'direct_invoice')
       || this.capabilities.getPosTerminalBlockMessage();
   }
 
@@ -497,7 +515,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       toast.error('Agrega productos al carrito.');
       return;
     }
-    if (this.orderType === 'Domicilio' && (!this.deliveryAddress.trim() || !this.deliveryPhone.trim())) {
+    if (!this.genericMode && this.orderType === 'Domicilio' && (!this.deliveryAddress.trim() || !this.deliveryPhone.trim())) {
       toast.error('Completa direccion y telefono para pedidos a domicilio.');
       return;
     }
@@ -517,7 +535,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   confirmarPago(typePago: 'Nota Venta' | 'Factura'): void {
-    if (this.isSubmittingOrder) return;
+    if (this.isSubmittingOrder || this.isSubmittingPosSale) return;
 
     if (typePago === 'Factura') {
       const planBlockMessage = this.invoicePlanBlockMessage;
@@ -535,9 +553,30 @@ export class PosCajaComponent implements OnInit, OnDestroy {
 
     const TYPE_IDENTIFICATION_CF = '07 - Consumidor Final';
     const UMBRAL = 50;
-    const isConsumidorFinal = this.customer?.tipo_identificacion === TYPE_IDENTIFICATION_CF;
-    if (isConsumidorFinal && typePago === 'Factura' && this.total >= UMBRAL) {
-      toast.error(`Consumidor final no puede facturar un monto mayor o igual a $${UMBRAL}.`);
+    const customerType = String(this.customer?.tipo_identificacion || this.customer?.identification_type || '').trim();
+    const customerNumber = String(this.customer?.num_identificacion || this.customer?.identification_number || '').trim();
+    const isConsumidorFinal = customerType === TYPE_IDENTIFICATION_CF
+      || /consumidor final/i.test(customerType)
+      || customerNumber === '9999999999999';
+    if (isConsumidorFinal && typePago === 'Factura' && this.total > UMBRAL) {
+      toast.error(`No se puede emitir una factura a CONSUMIDOR FINAL por un valor superior a USD ${UMBRAL} IVA incluido. Seleccione un cliente identificado.`);
+      return;
+    }
+
+    if (this.genericMode) {
+      const payload = typePago === 'Factura'
+        ? this.buildDirectLiteInvoicePayload()
+        : this.buildPosSaleNotePayload();
+      if (!payload) return;
+      const title = typePago === 'Factura' ? '¿Deseas cobrar y facturar esta venta?' : '¿Deseas guardar esta nota de venta?';
+      const detail = typePago === 'Factura'
+        ? 'Se emitirá directamente una factura electrónica con el cliente y productos actuales.'
+        : 'La nota quedará en borrador para cobrarla después.';
+      this.alertService.confirm(title, detail).then((result) => {
+          if (!result.isConfirmed) return;
+          if (typePago === 'Factura') this.submitDirectLiteInvoice(payload);
+          else this.submitPosSaleNote(payload);
+        });
       return;
     }
 
@@ -605,11 +644,44 @@ export class PosCajaComponent implements OnInit, OnDestroy {
 
   openPrintModal(orderId: string): void {
     this.pendingOrderId = orderId;
+    this.pendingInvoiceId = null;
+    this.printContext = 'order';
     this.showPaymentModal = false;
     this.showPrintModal = true;
   }
 
-  handlePrintSelection(option: 'comanda' | 'recibo' | 'ambas'): void {
+  private openInvoicePrintModal(invoiceId: string): void {
+    this.pendingInvoiceId = invoiceId;
+    this.pendingOrderId = null;
+    this.printContext = 'invoice';
+    this.showPaymentModal = false;
+    this.showPrintModal = true;
+  }
+
+  handlePrintSelection(option: 'comanda' | 'recibo' | 'ambas' | 'ticket' | 'skip'): void {
+    if (this.printContext === 'invoice') {
+      const invoiceId = this.pendingInvoiceId;
+      if (!invoiceId) {
+        this.finishPrintFlow();
+        return;
+      }
+      if (option === 'ticket') {
+        this.printService.downloadLiteInvoiceTicket(invoiceId).subscribe({
+          next: (blob) => {
+            this.openPdfBlob(blob);
+            this.finishPrintFlow();
+          },
+          error: () => {
+            toast.error('El ticket aún no está disponible. Puedes consultarlo desde el detalle de la factura.');
+            this.finishPrintFlow();
+          }
+        });
+      } else {
+        this.finishPrintFlow();
+      }
+      return;
+    }
+
     if (!this.pendingOrderId) return;
 
     if (option === 'comanda') this.openPrintWindow(this.printService.getComanda(this.pendingOrderId));
@@ -619,9 +691,17 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   closePrintModal(): void {
+    this.finishPrintFlow();
+  }
+
+  private finishPrintFlow(): void {
     this.showPrintModal = false;
+    const invoiceId = this.pendingInvoiceId;
     this.pendingOrderId = null;
+    this.pendingInvoiceId = null;
+    this.printContext = 'order';
     this.clearPage();
+    if (invoiceId) this.router.navigate(['/dashboard/invoices', invoiceId]);
   }
 
   onCategorySelected(category: string): void {
@@ -858,6 +938,245 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     };
   }
 
+  private buildPosSaleNotePayload(): any | null {
+    const payment = findPaymentMethod(this.payments, this.paymentMethod);
+    const litePayment = this.mapLitePayment(payment);
+    const business = String(this.capabilities.activeBusinessId || '').trim();
+    if (!business) {
+      toast.error('Selecciona un negocio antes de emitir.');
+      return null;
+    }
+    if (!litePayment || this.total <= 0) {
+      toast.error('Selecciona un método de pago válido.');
+      return null;
+    }
+    const terminal = String(this.capabilities.activePosTerminal?.name || '').trim();
+    if (this.capabilities.getPosTerminalBlockMessage()) {
+      toast.error(this.capabilities.getPosTerminalBlockMessage()!);
+      return null;
+    }
+    const payload: any = {
+      business,
+      pos_terminal: terminal || undefined,
+      customer: this.customer?.name || undefined,
+      items: this.cartService.cart.map((item: any) => ({
+        item: item.name ?? item.nombre,
+        qty: Number(item.quantity || 0),
+        rate: Number(item.price || 0),
+        discount_percentage: Number(item.discount_pct || 0),
+        discount_amount: 0,
+        tax_rate: Number(item.tax_value || 0)
+      })),
+      payments: [{
+        payment_method: litePayment.payment_method,
+        payment_code: litePayment.payment_code,
+        amount: Number((this.isSelectedPaymentCash && Number(this.amountReceived) > 0 ? Number(this.amountReceived) : this.total).toFixed(2)),
+        reference: ''
+      }],
+      notes: ''
+    };
+    if (!payload.pos_terminal) delete payload.pos_terminal;
+    if (!payload.customer) delete payload.customer;
+    return payload;
+  }
+
+  /**
+   * El catálogo de métodos puede llegar con nombres en español, códigos SRI
+   * o aliases del DocType. El contrato de FacturADA Lite, en cambio, espera
+   * siempre el par canónico payment_method/payment_code.
+   */
+  private mapLitePayment(payment: any): { payment_method: 'CASH' | 'CARD' | 'TRANSFER' | 'OTHER'; payment_code: '01' | '19' | '20' } | null {
+    const raw = payment || {};
+    const value = [
+      raw.payment_method,
+      raw.method,
+      raw.nombre,
+      raw.description,
+      raw.name,
+      this.paymentMethod
+    ].filter(Boolean).join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    const code = String(raw.payment_code || raw.codigo || raw.forma_pago || '').trim();
+
+    if (/(^|\s)(CASH|EFECTIVO)(\s|$)/.test(value) || code === '01') {
+      // OTHER también utiliza el código 01, por eso se comprueba explícitamente
+      // antes de aplicar el fallback por código.
+      if (/(^|\s)(OTHER|OTRO|OTROS)(\s|$)/.test(value)) {
+        return { payment_method: 'OTHER', payment_code: '01' };
+      }
+      return { payment_method: 'CASH', payment_code: '01' };
+    }
+    if (/(CARD|TARJETA|CREDITO|CREDIT|DEBITO|DEBIT)/.test(value) || code === '19') {
+      return { payment_method: 'CARD', payment_code: '19' };
+    }
+    if (/(TRANSFER|TRANSFERENCIA|DEPOSITO|DEPOSIT)/.test(value) || code === '20') {
+      return { payment_method: 'TRANSFER', payment_code: '20' };
+    }
+    if (/(OTHER|OTRO|OTROS)/.test(value)) {
+      return { payment_method: 'OTHER', payment_code: '01' };
+    }
+
+    return null;
+  }
+
+  /**
+   * El POS genérico tiene dos documentos distintos:
+   * - Nota de Venta: usa pos_sale y queda en borrador.
+   * - Factura: usa directamente create_and_emit_from_ui_v2.
+   */
+  private buildDirectLiteInvoicePayload(): any | null {
+    const payload = this.buildPosSaleNotePayload();
+    if (!payload) return null;
+
+    return {
+      ...payload,
+      environment: this.ambiente || undefined,
+      // En una factura el pago aplicado debe cuadrar con el total. El
+      // excedente de efectivo se presenta como cambio, no como monto pagado.
+      payments: (payload.payments || []).map((payment: any) => ({
+        ...payment,
+        amount: Number(this.total.toFixed(2))
+      })),
+      additional_fields: [],
+      auto_queue: true
+    };
+  }
+
+  private submitPosSaleNote(payload: any): void {
+    this.isSubmittingPosSale = true;
+    this.spinner.show();
+    this.posSaleService.create(payload).pipe(finalize(() => {
+      this.isSubmittingPosSale = false;
+      this.spinner.hide();
+    })).subscribe({
+      next: (response: any) => {
+        const stockControlled = this.cartService.cart.some((item: any) => hasInventoryControl(item));
+        this.activePosSaleNote = { status: 'Borrador', ...(response?.data || response), __stockControlled: stockControlled };
+        this.clearPage();
+        toast.success('Nota de venta creada en borrador.');
+      },
+      error: (err: any) => toast.error(this.extractApiError(err) || 'No se pudo crear la nota de venta.')
+    });
+  }
+
+  private submitDirectLiteInvoice(payload: any): void {
+    this.isSubmittingPosSale = true;
+    this.spinner.show();
+    this.invoicesService.create_and_emit_from_ui_v2(payload).pipe(finalize(() => {
+      this.isSubmittingPosSale = false;
+      this.spinner.hide();
+    })).subscribe({
+      next: (response: any) => {
+        const state = response?.state || liteEmissionState(response?.emission || response?.data || response);
+        const messages = [
+          ...liteEmissionMessages(response?.emission),
+          ...liteEmissionMessages(response?.data),
+          ...liteEmissionMessages(response)
+        ].filter(Boolean);
+        const invoiceName = String(
+          response?.invoiceName
+            || response?.data?.name
+            || response?.data?.invoice_name
+            || response?.emission?.invoice_name
+            || ''
+        ).trim();
+
+        if (!invoiceName) {
+          toast.error(messages[0] || 'La factura no devolvió un identificador válido.');
+          return;
+        }
+
+        this.clearPage();
+        this.refreshProductsSilently();
+        if (state === 'AUTHORIZED') {
+          toast.success('Factura autorizada por el SRI.');
+          this.openInvoicePrintModal(invoiceName);
+        } else if (state === 'PROCESSING') {
+          toast.info(messages[0] || 'Factura recibida. Consulta su autorización desde el detalle.');
+          this.router.navigate(['/dashboard/invoices', invoiceName]);
+        } else if (state === 'REJECTED') {
+          toast.error(messages[0] || 'La factura fue rechazada por el SRI.');
+          this.router.navigate(['/dashboard/invoices', invoiceName]);
+        } else {
+          toast.error(messages[0] || 'No se pudo emitir la factura.');
+          this.router.navigate(['/dashboard/invoices', invoiceName]);
+        }
+      },
+      error: (error: any) => toast.error(this.extractApiError(error) || 'No se pudo emitir la factura.')
+    });
+  }
+
+  collectPosSaleNote(): void {
+    const name = String(this.activePosSaleNote?.name || '').trim();
+    if (!name || this.isSubmittingPosSale) return;
+    const noteItems = Array.isArray(this.activePosSaleNote?.items) ? this.activePosSaleNote.items : [];
+    if (this.capabilities.features.inventory !== true && (this.activePosSaleNote?.__stockControlled === true || noteItems.some((item: any) => item?.track_stock === true || item?.track_stock === 1))) {
+      toast.error('No se puede cobrar: esta venta contiene productos con control de stock y el inventario no está incluido en el plan.');
+      return;
+    }
+    this.isSubmittingPosSale = true;
+    this.posSaleService.collect(name).pipe(finalize(() => this.isSubmittingPosSale = false)).subscribe({
+      next: (response: any) => {
+        this.activePosSaleNote = { ...this.activePosSaleNote, ...(response?.data || response || {}) };
+        toast.success('Nota de venta cobrada.');
+        this.printPosSaleNote(name);
+      },
+      error: (err: any) => toast.error(this.extractApiError(err) || 'No se pudo cobrar la nota de venta.')
+    });
+  }
+
+  invoicePosSaleNote(): void {
+    const name = String(this.activePosSaleNote?.name || '').trim();
+    if (!name || this.isSubmittingPosSale) return;
+    if (String(this.activePosSaleNote?.status || '').trim() !== 'Cobrada') {
+      toast.warning('La nota debe estar cobrada antes de facturarla.');
+      return;
+    }
+    this.isSubmittingPosSale = true;
+    this.posSaleService.invoice(name).pipe(finalize(() => this.isSubmittingPosSale = false)).subscribe({
+      next: (response: any) => {
+        this.activePosSaleNote = { ...this.activePosSaleNote, ...(response?.data || response || {}) };
+        const invoice = this.activePosSaleNote?.lite_invoice;
+        const invoiceName = String(
+          typeof invoice === 'string' ? invoice : invoice?.name
+            || this.activePosSaleNote?.invoice_name
+            || response?.emission?.invoice_name
+            || ''
+        ).trim();
+        if (invoiceName) {
+          toast.success('Nota facturada.');
+          this.router.navigate(['/dashboard/invoices', invoiceName]);
+        } else {
+          toast.info('La nota fue enviada a facturación.');
+        }
+      },
+      error: (err: any) => toast.error(this.extractApiError(err) || 'No se pudo facturar la nota de venta.')
+    });
+  }
+
+  cancelPosSaleNote(): void {
+    const name = String(this.activePosSaleNote?.name || '').trim();
+    if (!name || this.isSubmittingPosSale) return;
+    if (this.activePosSaleNote?.lite_invoice) {
+      toast.warning('No se puede anular una nota que ya tiene factura.');
+      return;
+    }
+    this.isSubmittingPosSale = true;
+    this.posSaleService.cancel(name).pipe(finalize(() => this.isSubmittingPosSale = false)).subscribe({
+      next: (response: any) => {
+        this.activePosSaleNote = { ...this.activePosSaleNote, ...(response?.data || response || {}) };
+        toast.success('Nota de venta anulada.');
+      },
+      error: (err: any) => toast.error(this.extractApiError(err) || 'No se pudo anular la nota de venta.')
+    });
+  }
+
+  printPosSaleNote(name: string): void {
+    this.posSaleService.downloadPdf(name).subscribe({
+      next: (blob) => this.openPdfBlob(blob),
+      error: () => toast.error('No se pudo descargar la Nota de Venta.')
+    });
+  }
+
   private ensureValidPaymentMethod(): void {
     const current = findPaymentMethod(this.payments, this.paymentMethod);
     this.paymentMethod = current?.name || current?.codigo || getDefaultPaymentValue(this.payments);
@@ -937,6 +1256,13 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     if (!printWindow) {
       toast.error('No se pudo abrir la ventana de impresion.');
     }
+  }
+
+  private openPdfBlob(blob: Blob): void {
+    const url = window.URL.createObjectURL(blob);
+    const popup = window.open(url, '_blank', 'noopener=yes,noreferrer=yes');
+    if (!popup) toast.error('No se pudo abrir el ticket descargado.');
+    window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
   }
 
   private buildEcuadorIsoDate(): string {

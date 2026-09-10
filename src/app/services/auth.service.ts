@@ -265,33 +265,12 @@ login(username: string, password: string) {
   private isLiteContext(response: any): boolean {
     const message = response?.message && typeof response.message === 'object' ? response.message : response || {};
     const rawBusiness = message?.business;
-    const company = rawBusiness && typeof rawBusiness === 'object'
-      ? rawBusiness
-      : (message?.company ?? message?.empresa ?? message?.data ?? message);
-    const mode = String(
-      message?.business_mode ??
-      message?.businessMode ??
-      message?.mode ??
-      message?.app_mode ??
-      company?.business_mode ??
-      company?.businessMode ??
-      company?.mode ??
-      company?.app_mode ??
-      ''
-    ).toUpperCase();
-
-    const businessModel = String(company?.business_model ?? company?.businessModel ?? '').toUpperCase();
-    if (mode.includes('LITE') || businessModel.includes('FACTURACION SIMPLE')) return true;
-
-    // El endpoint de contexto sirve también a restaurantes del modelo nuevo.
-    if (typeof rawBusiness === 'string' && rawBusiness.trim()) return true;
-    if (company && typeof company === 'object' && (company.name || company.business)) return true;
-
-    const features = message?.features ?? company?.features;
-    if (!features || typeof features !== 'object') return false;
-
-    // La API nueva declara el tipo mediante banderas explícitas.
-    return this.toBool(features.billing) || this.toBool(features.restaurant);
+    const businessId = typeof rawBusiness === 'string'
+      ? rawBusiness.trim()
+      : String(rawBusiness?.name || rawBusiness?.business || '').trim();
+    // El contexto nuevo siempre trae el negocio y sus features. El modelo
+    // comercial y el nombre del plan no se usan para aceptar o clasificarlo.
+    return !!businessId && !!message?.features && typeof message.features === 'object';
   }
 
   private toBool(value: any): boolean {

@@ -27,11 +27,13 @@ export class FrappeSocketService {
       return;
     }
 
-    // dentro de connect()
-    const base = environment.production ? environment.URL : ''; // '' en dev para usar el proxy
-    const nsUrl = `${base}/${environment.frappeSocketNamespace}`;
+    // En desarrollo se usa el host del proxy Angular; en producción se usa
+    // el dominio público. En ambos casos el navegador nunca toca :9000:
+    // el proxy/Nginx conserva la cookie y enruta /socket.io al realtime.
+    const base = environment.production ? window.location.origin : '';
+    const site = String(environment.frappeSiteNamespace || '').replace(/^\/+|\/+$/g, '');
+    const nsUrl = `${base}${site ? `/${site}` : ''}`;
 
-    //const nsUrl = `${environment.apiUrl.replace(/^http/, 'ws')}/${environment.frappeSocketNamespace}`;
     console.log('[frappe-socket] connecting to', nsUrl);
     this.socket = io(nsUrl, {
       path: '/socket.io',

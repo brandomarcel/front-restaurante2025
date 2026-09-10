@@ -34,13 +34,21 @@ export class Menu {
     {
       group: 'Facturación',
       separator: true,
-      allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'],
+      allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'],
       items: [
         {
           icon: 'assets/icons/tablericons/cash-register.svg',
           label: 'Facturar',
           route: '/dashboard/invoicing',
           featureKey: 'direct_invoice',
+          hideWhenFeature: 'generic_pos',
+          permissionKey: 'billing.create',
+        },
+        {
+          icon: 'assets/icons/tablericons/cash-register.svg',
+          label: 'Punto de venta',
+          route: '/dashboard/pos-generic',
+          featureKey: 'generic_pos',
           permissionKey: 'billing.create',
         },
         {
@@ -48,7 +56,14 @@ export class Menu {
           label: 'Lista Facturas',
           route: '/dashboard/invoices',
           featureKey: 'direct_invoice',
-          featureKeys: ['direct_invoice', 'api'],
+          featureKeys: ['direct_invoice', 'generic_pos', 'api'],
+          permissionKey: 'billing.read',
+        },
+        {
+          icon: 'assets/icons/tablericons/file-invoice.svg',
+          label: 'Notas de Venta',
+          route: '/dashboard/pos-sale-notes',
+          featureKey: 'generic_pos',
           permissionKey: 'billing.read',
         },
         {
@@ -101,6 +116,7 @@ export class Menu {
       group: 'Reportes',
       separator: false,
       allowedRoles: ['SYSTEM MANAGER', 'GERENTE', 'CAJERO'],
+      hideInApiOnly: true,
       items: [
         {
           icon: 'assets/icons/tablericons/report-analytics.svg',
@@ -175,33 +191,39 @@ export class Menu {
     {
       group: 'Infraestructura fiscal',
       separator: true,
-      allowedRoles: ['ADMINISTRADOR', 'GERENTE'],
+      allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'MESERO', 'COCINA', 'USUARIO'],
       items: [
         {
           icon: 'assets/icons/heroicons/outline/building-storefront.svg',
           label: 'Establecimientos',
           route: '/settings/lite/establishments',
-          permissionKey: 'business.settings.manage',
+          featureKeys: ['direct_invoice', 'billing', 'generic_pos', 'api'],
         },
         {
           icon: 'assets/icons/heroicons/outline/building-storefront.svg',
           label: 'Puntos de emisión',
           route: '/settings/lite/emission-points',
-          permissionKey: 'business.settings.manage',
+          featureKeys: ['direct_invoice', 'billing', 'generic_pos', 'api'],
         },
         {
           icon: 'assets/icons/heroicons/outline/clipboard-document-list.svg',
           label: 'Secuencias de documentos',
           route: '/settings/lite/sequences',
-          permissionKey: 'business.settings.manage',
+          featureKeys: ['direct_invoice', 'billing', 'generic_pos', 'api'],
         },
         {
           icon: 'assets/icons/tablericons/cash-register.svg',
           label: 'Terminales POS',
           route: '/settings/lite/pos-terminals',
-          featureKey: 'pos',
+          featureKey: 'pos_terminal',
           permissionKey: 'business.settings.manage',
           hideInApiOnly: true,
+        },
+        {
+          icon: 'assets/icons/tablericons/file-invoice.svg',
+          label: 'Integración API',
+          route: '/settings/lite/api',
+          requiresApiConfiguration: true,
         },
       ],
     },

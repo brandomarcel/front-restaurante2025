@@ -43,6 +43,7 @@ type DashboardAction = {
   tone: string;
   feature?: CompanyFeatureKey;
   requiresEmission?: boolean;
+  requiresApiConfiguration?: boolean;
 };
 
 @Component({
@@ -123,21 +124,23 @@ export class NftComponent implements OnInit, OnDestroy {
     // El certificado pertenece al perfil tributario de FacturADA Business.
     // También en Restaurante se obtiene de get_lite_setup, no del contexto
     // reducido de usuario que puede omitir certificate_reference.
-    const companyRequest = activeBusiness
-      ? this.companyService.getLiteSetup(activeBusiness)
-      : this.companyService.get_empresa(activeBusiness);
+    // El contexto de usuario decide la experiencia. Solo los negocios no
+    // restaurante necesitan además leer setup para mostrar readiness fiscal.
+    const companyRequest = this.isRestaurantMode
+      ? this.companyService.get_empresa(activeBusiness)
+      : this.companyService.getLiteSetup(activeBusiness);
 
     companyRequest
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: async (empresa: any) => {
-          if (activeBusiness) this.capabilities.setLiteSetupState(empresa);
-          else this.capabilities.setFromResponse(empresa);
+          if (this.isRestaurantMode || !activeBusiness) this.capabilities.setFromResponse(empresa);
+          else this.capabilities.setLiteSetupState(empresa);
           this.businessMode = this.capabilities.businessMode;
           this.currentPlan = this.capabilities.plan;
           this.procesarEmpresa(empresa);
 
-          if (this.isBillingDashboard) {
+          if (this.isBillingDashboard || this.isApiOnlyMode) {
             this.initializeLiteDateRange();
             await this.loadLiteDashboard();
             this.actualizarVisualizaciones();
@@ -517,16 +520,16 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   get isFacturadorMode(): boolean {
-    return !this.isRestaurantMode;
+    return (this.capabilities.features.billing === true || this.capabilities.features.generic_pos === true) && !this.isRestaurantMode;
   }
 
   /** Dashboard informativo de facturación cuando no está habilitado Restaurante. */
   get isBillingDashboard(): boolean {
-    return !this.isRestaurantMode;
+    return (this.capabilities.features.billing === true || this.capabilities.features.generic_pos === true) && !this.isRestaurantMode;
   }
 
   get isLiteMode(): boolean {
-    return this.businessMode === 'FACTURADA_LITE' && !this.isRestaurantMode;
+    return !this.isRestaurantMode && (this.capabilities.features.billing === true || this.capabilities.features.generic_pos === true || this.isApiOnlyMode);
   }
 
   get isApiOnlyMode(): boolean {
@@ -622,6 +625,7 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   get heroClasses(): string {
+    if (this.isApiOnlyMode) return 'from-slate-950 via-slate-700 to-cyan-700';
     return this.isFacturadorMode
       ? 'from-slate-950 via-violet-700 to-primary'
       : 'from-slate-950 via-primary to-sky-700';
@@ -630,7 +634,7 @@ export class NftComponent implements OnInit, OnDestroy {
   get primaryActions(): DashboardAction[] {
     if (this.isApiOnlyMode) {
       return [
-        { label: 'Ver API', detail: 'Clientes y documentación', route: '/settings/lite/api-clients', tone: 'bg-slate-900 text-white', feature: 'api' },
+        { label: 'Ver API', detail: 'Integración y clientes', route: '/settings/lite/api', tone: 'bg-slate-900 text-white', requiresApiConfiguration: true },
         { label: 'Facturas', detail: 'Documentos emitidos', route: '/dashboard/invoices', tone: 'bg-violet-600 text-white', feature: 'api' },
         { label: 'Notas de crédito', detail: 'Ajustes tributarios', route: '/dashboard/credit-notes', tone: 'bg-amber-600 text-white', feature: 'api' },
         { label: 'Configuración', detail: 'Perfil y secuencias', route: '/settings/lite', tone: 'bg-primary text-white' }
@@ -638,6 +642,7 @@ export class NftComponent implements OnInit, OnDestroy {
     }
     if (this.isFacturadorMode) {
       return this.filterAllowedActions([
+        { label: 'Punto de venta', detail: 'Notas de venta, cobro y facturación', route: '/dashboard/pos-generic', tone: 'bg-slate-900 text-white', feature: 'generic_pos' },
         { label: 'Emitir factura', detail: 'Factura directa al SRI', route: '/dashboard/invoicing', tone: 'bg-primary text-white', feature: 'direct_invoice', requiresEmission: true },
         { label: 'Ver facturas', detail: 'Historial y reenvíos', route: '/dashboard/invoices', tone: 'bg-violet-600 text-white', feature: 'direct_invoice' },
         { label: 'Clientes', detail: 'Datos fiscales', route: '/dashboard/customers', tone: 'bg-slate-900 text-white', feature: 'customers' },
@@ -662,7 +667,10 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   private filterAllowedActions(actions: DashboardAction[]): DashboardAction[] {
-    return actions.filter((action) => !action.feature || this.capabilities.isEnabled(action.feature));
+    return actions.filter((action) =>
+      (!action.feature || this.capabilities.isEnabled(action.feature))
+      && (!action.requiresApiConfiguration || this.capabilities.apiConfiguration?.enabled === true)
+    );
   }
 
   isFeatureEnabled(feature: CompanyFeatureKey): boolean {

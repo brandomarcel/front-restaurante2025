@@ -143,7 +143,6 @@ export class RoleAccessGuard implements CanActivate {
     return roles.includes('SYSTEM MANAGER')
       || roles.includes('ADMINISTRATOR')
       || roles.includes('ADMINISTRADOR')
-      || roles.includes('ADMINISTRADOR DEL NEGOCIO')
       || roles.includes('GERENTE');
   }
 }

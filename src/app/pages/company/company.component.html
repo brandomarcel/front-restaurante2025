@@ -7,7 +7,7 @@
           <h2 class="app-page-title">{{ isLiteMode ? 'Configuración FacturADA' : 'Configuración de la empresa' }}</h2>
           <p class="settings-subtitle">{{ isLiteMode ? activeSettingsTitle + ' · datos protegidos y sincronizados con tu negocio.' : 'Administra los datos operativos de tu empresa.' }}</p>
         </div>
-        <app-button
+        <app-button *ngIf="activeSettingsTab !== 'api'"
           impact="bold"
           tone="light"
           shape="rounded"
@@ -40,10 +40,11 @@
           <a routerLink="/settings/lite/establishments" class="settings-tab" [class.is-active]="activeSettingsTab === 'establishments'">Establecimientos</a>
           <a routerLink="/settings/lite/emission-points" class="settings-tab" [class.is-active]="activeSettingsTab === 'emission-points'">Puntos de emisión</a>
           <a routerLink="/settings/lite/sequences" class="settings-tab" [class.is-active]="activeSettingsTab === 'sequences'">Secuencias</a>
-          <a *ngIf="capabilities.isEnabled('pos')" routerLink="/settings/lite/pos-terminals" class="settings-tab" [class.is-active]="activeSettingsTab === 'pos-terminals'">Terminales POS</a>
+          <a *ngIf="capabilities.isEnabled('pos_terminal')" routerLink="/settings/lite/pos-terminals" class="settings-tab" [class.is-active]="activeSettingsTab === 'pos-terminals'">Terminales fiscales</a>
           <a routerLink="/settings/lite/readiness" class="settings-tab" [class.is-active]="activeSettingsTab === 'readiness'">Preparación</a>
+          <a *ngIf="apiConfigurationEnabled" routerLink="/settings/lite/api" class="settings-tab" [class.is-active]="activeSettingsTab === 'api'">Integración API</a>
         </nav>
-        <div *ngIf="isLiteMode && !canEditLiteSetup" class="lg:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <div *ngIf="isLiteMode && !canEditLiteSetup && activeSettingsTab !== 'api'" class="lg:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           Solo Administrador o Gerente pueden modificar la configuración tributaria.
         </div>
         <div *ngIf="isLiteMode && effectiveLiteSetupReady !== true && showSettingsSection('general')" class="settings-help-strip lg:col-span-2 rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 text-xs text-indigo-950">
@@ -567,10 +568,23 @@
                     <input type="checkbox" formControlName="obliged_accounting" />
                     Obligado a llevar contabilidad
                   </label>
-                  <label class="inline-flex items-center gap-2 text-[11px] font-medium text-slate-700">
-                    <input type="checkbox" formControlName="rimpe" />
-                    Régimen RIMPE
-                  </label>
+                  <div>
+                    <label class="mb-1 block font-medium">Contribuyente especial</label>
+                    <input type="text" class="input bg-slate-50" formControlName="special_taxpayer_number"
+                      readonly aria-readonly="true" placeholder="No configurado" />
+                  </div>
+                  <div>
+                    <label class="mb-1 block font-medium">Régimen tributario <span class="text-red-500">*</span></label>
+                    <select class="input" formControlName="tax_regime"
+                      [class.border-red-500]="f['tax_regime'].invalid && (submitted || f['tax_regime'].touched)">
+                      <option value="Régimen General">Régimen General</option>
+                      <option value="RIMPE Emprendedor">RIMPE Emprendedor</option>
+                      <option value="RIMPE Negocio Popular">RIMPE Negocio Popular</option>
+                    </select>
+                    <small *ngIf="f['tax_regime'].invalid && (submitted || f['tax_regime'].touched)" class="text-red-600">
+                      Selecciona un régimen tributario.
+                    </small>
+                  </div>
                   <label class="inline-flex items-center gap-2 text-[11px] font-medium text-slate-700">
                     <input type="checkbox" formControlName="withholding_agent" />
                     Agente de retención
@@ -713,7 +727,7 @@
           
         </div>
 
-        <section *ngIf="isLiteMode && showSettingsSection('readiness')" class="lg:col-span-2 grid grid-cols-1 gap-5 xl:grid-cols-3">
+        <section *ngIf="isLiteMode && showSettingsSection('readiness', 'api')" class="lg:col-span-2 grid grid-cols-1 gap-5 xl:grid-cols-3">
           <article *ngIf="showSettingsSection('general', 'establishments')" class="settings-summary-card rounded-lg border border-slate-200 bg-white shadow-sm">
             <header class="border-b border-slate-100 px-4 py-3">
               <h3 class="text-sm font-semibold text-slate-900">Establecimientos</h3>
@@ -788,9 +802,9 @@
             </div>
           </article>
 
-          <article *ngIf="capabilities.isEnabled('pos') && showSettingsSection('general')" class="settings-summary-card rounded-lg border border-slate-200 bg-white shadow-sm">
+          <article *ngIf="capabilities.isEnabled('billing') && showSettingsSection('general')" class="settings-summary-card rounded-lg border border-slate-200 bg-white shadow-sm">
             <header class="border-b border-slate-100 px-4 py-3">
-              <h3 class="text-sm font-semibold text-slate-900">Terminales POS</h3>
+              <h3 class="text-sm font-semibold text-slate-900">Terminales fiscales</h3>
               <p class="mt-0.5 text-[11px] text-slate-500">Cajas asignadas para emitir en este negocio.</p>
             </header>
             <div class="p-3">
@@ -834,38 +848,92 @@
             </div>
           </article>
 
-          <article *ngIf="capabilities.isEnabled('api') && showSettingsSection('general', 'api')" class="settings-summary-card xl:col-span-3 rounded-lg border border-sky-200 bg-sky-50/40 shadow-sm">
-            <header class="flex flex-wrap items-start justify-between gap-2 border-b border-sky-100 px-4 py-3">
+          <article *ngIf="showSettingsSection('api')" class="settings-summary-card xl:col-span-3 rounded-lg border border-sky-200 bg-sky-50/40 shadow-sm">
+            <header class="flex flex-wrap items-center justify-between gap-3 border-b border-sky-100 px-4 py-3">
               <div>
-                <h3 class="text-sm font-semibold text-slate-900">API e infraestructura tributaria</h3>
-                <p class="mt-0.5 text-[11px] text-slate-600">La API opera con el negocio, certificado y secuencia oficial configurados aquí.</p>
+                <p class="text-[10px] font-bold uppercase tracking-[.12em] text-sky-700">Configuración del negocio</p>
+                <h3 class="mt-0.5 text-base font-semibold text-slate-900">Integración API</h3>
               </div>
-              <span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-700">API habilitada</span>
+              <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-sky-200 bg-white text-sky-700 shadow-sm transition hover:bg-sky-50 disabled:opacity-50"
+                aria-label="Actualizar integración API" title="Actualizar" [disabled]="apiConfigurationLoading" (click)="loadApiConfiguration()">
+                <span aria-hidden="true" class="text-lg leading-none">↻</span>
+              </button>
             </header>
-            <div class="grid grid-cols-1 gap-4 p-4 lg:grid-cols-2">
-              <div>
-                <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Headers de cliente</p>
-                <pre class="mt-2 overflow-auto rounded-lg bg-slate-900 p-3 text-[11px] leading-5 text-slate-100">X-API-Key: &lt;api_key&gt;
-X-API-Secret: &lt;secret_key&gt;
-Content-Type: application/json</pre>
-                <p class="mt-2 text-[10px] text-slate-500">La Secret Key se muestra únicamente al crearla. Nunca se guarda ni se registra en el navegador.</p>
-              </div>
-              <div>
-                <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Endpoints disponibles para integradores</p>
-                <ul class="mt-2 space-y-1 font-mono text-[10px] leading-5 text-slate-700">
-                  <li>GET /api/v1/facturada/license</li>
-                  <li>POST /api/v1/facturada/invoices</li>
-                  <li>POST /api/v1/facturada/invoices/emit</li>
-                  <li>GET /api/v1/facturada/invoices</li>
-                  <li>POST /api/v1/facturada/credit-notes</li>
-                  <li>GET /api/v1/facturada/openapi.json</li>
-                </ul>
-                <p class="mt-2 text-[10px] text-slate-500">RUC, establecimiento, punto de emisión y ambiente deben coincidir con esta configuración.</p>
-              </div>
+
+            <div *ngIf="apiConfigurationLoading" class="px-4 py-8 text-center text-sm text-slate-500">
+              Cargando configuración API...
             </div>
-            <div class="mx-4 mb-4 rounded-lg border border-sky-200 bg-white px-3 py-2 text-[11px] text-slate-600">
-              Clientes API y logs quedan preparados en estas rutas. Se habilitarán cuando el backend publique endpoints administrativos específicos; no se usa <code>/api/resource</code> como sustituto.
+
+            <div *ngIf="!apiConfigurationLoading && (apiConfigurationAccessDenied || apiConfiguration?.can_view === false)" class="m-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+              <p class="font-semibold">Acceso restringido</p>
+              <p class="mt-1 text-xs">No tiene permisos para consultar las integraciones API de este negocio. Solicite acceso a un Administrador o Gerente.</p>
             </div>
+
+            <div *ngIf="!apiConfigurationLoading && apiConfigurationError && !apiConfigurationAccessDenied" class="m-4 rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-800">
+              {{ apiConfigurationError }}
+            </div>
+
+            <div *ngIf="!apiConfigurationLoading && !apiConfigurationError && !apiConfigurationAccessDenied && !apiConfigurationEnabled" class="m-4 rounded-xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600">
+              La integración API no está habilitada para este negocio.
+            </div>
+
+            <ng-container *ngIf="!apiConfigurationLoading && apiConfigurationEnabled && apiConfigurationCanView">
+              <div class="grid grid-cols-1 gap-4 border-b border-sky-100 p-4 md:grid-cols-2">
+                <label class="block">
+                  <span class="text-[10px] font-bold uppercase tracking-wide text-slate-500">URL base API</span>
+                  <div class="mt-1 flex gap-2">
+                    <input readonly [value]="apiConfiguration?.base_url || '—'" class="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700" />
+                    <button type="button" aria-label="Copiar URL base API" title="Copiar URL" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-sky-50 hover:text-sky-700" (click)="copyApiValue(apiConfiguration?.base_url, 'URL base API')">
+                      <span aria-hidden="true">⧉</span>
+                    </button>
+                  </div>
+                </label>
+                <div>
+                  <span class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Autenticación</span>
+                  <p class="mt-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700">{{ apiConfiguration?.authentication || 'API Key + Secret Key' }}</p>
+                </div>
+              </div>
+
+              <div class="mx-4 mt-4 rounded-lg border border-sky-100 bg-white px-3 py-3 text-[11px] leading-5 text-slate-600">
+                <p><strong>API Key:</strong> identifica la integración y puede copiarse desde esta pantalla.</p>
+                <p><strong>Secret Key:</strong> se entrega únicamente por un canal seguro y no puede recuperarse ni mostrarse aquí.</p>
+                <p>El ambiente del API Client debe coincidir con el ambiente enviado al emitir documentos.</p>
+              </div>
+
+              <div *ngIf="apiClients.length === 0" class="m-4 rounded-xl border border-dashed border-slate-300 bg-white px-4 py-7 text-center text-sm text-slate-500">
+                No hay API Clients configurados para este negocio.
+              </div>
+
+              <div *ngIf="apiClients.length > 0" class="m-4 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                <table class="min-w-[760px] w-full text-left text-xs">
+                  <thead class="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th class="px-3 py-3 font-bold">Nombre de integración</th>
+                      <th class="px-3 py-3 font-bold">Ambiente</th>
+                      <th class="px-3 py-3 font-bold">Estado</th>
+                      <th class="px-3 py-3 font-bold">API Key</th>
+                      <th class="px-3 py-3 text-right font-bold">Límite/min</th>
+                      <th class="px-3 py-3 font-bold">Última modificación</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    <tr *ngFor="let client of apiClients">
+                      <td class="px-3 py-3 font-semibold text-slate-800">{{ client.client_name || client.name || 'Integración API' }}</td>
+                      <td class="px-3 py-3"><span class="rounded-full border px-2 py-1 text-[10px] font-bold" [ngClass]="apiEnvironmentClass(client.environment)">{{ client.environment || '—' }}</span></td>
+                      <td class="px-3 py-3"><span class="rounded-full border px-2 py-1 text-[10px] font-bold" [ngClass]="apiStatusClass(client.status)">{{ client.status || '—' }}</span></td>
+                      <td class="px-3 py-3">
+                        <div class="flex min-w-[180px] items-center gap-2">
+                          <input readonly [value]="client.api_key || '—'" class="min-w-0 flex-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 font-mono text-[11px] text-slate-700" />
+                          <button *ngIf="client.api_key" type="button" aria-label="Copiar API Key" title="Copiar API Key" class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-sky-50 hover:text-sky-700" (click)="copyApiValue(client.api_key, 'API Key')"><span aria-hidden="true">⧉</span></button>
+                        </div>
+                      </td>
+                      <td class="px-3 py-3 text-right font-semibold text-slate-700">{{ client.rate_limit ?? '—' }}</td>
+                      <td class="px-3 py-3 whitespace-nowrap text-slate-600">{{ client.modified || '—' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </ng-container>
           </article>
         </section>
       </form>

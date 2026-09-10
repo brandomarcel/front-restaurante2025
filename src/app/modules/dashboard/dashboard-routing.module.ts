@@ -17,6 +17,9 @@ import { CreditNotesComponent } from 'src/app/pages/credit-notes/credit-notes.co
 import { CreditNoteDetailPageComponent } from 'src/app/pages/credit-note-detail-page/credit-note-detail-page.component';
 import { OrdersRealtimeComponent } from 'src/app/pages/orders-realtime/orders-realtime.component';
 import { PosShellComponent } from 'src/app/pages/pos/pos-shell/pos-shell.component';
+import { PosCajaComponent } from 'src/app/pages/pos/pos-caja/pos-caja.component';
+import { PosSaleNotesComponent } from 'src/app/pages/pos-sale-notes/pos-sale-notes.component';
+import { PosSaleNoteDetailPageComponent } from 'src/app/pages/pos-sale-note-detail-page/pos-sale-note-detail-page.component';
 import { CajaAbiertaGuard } from 'src/app/core/guards/caja-abierta.guard';
 import { RoleAccessGuard } from 'src/app/core/guards/role-access.guard';
 import { SuppliersComponent } from 'src/app/pages/suppliers/suppliers.component';
@@ -33,6 +36,9 @@ const routes: Routes = [
       { path: 'main', component: NftComponent, canActivate: [RoleAccessGuard], data: { allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
       // { path: 'pos', component: PosComponent },
       { path: 'pos', component: PosShellComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { featureKey: 'restaurant_pos', allowedRoles: ['GERENTE', 'CAJERO', 'MESERO'], liteBlocked: true } },
+      { path: 'pos-generic', component: PosCajaComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'generic_pos', readOnlyFeature: true, permissionKey: 'billing.create', allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION'] } },
+      { path: 'pos-sale-notes', component: PosSaleNotesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'generic_pos', permissionKey: 'billing.read', allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION'] } },
+      { path: 'pos-sale-notes/:id', component: PosSaleNoteDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'generic_pos', permissionKey: 'billing.read', allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION'] } },
       { path: 'customers', component: CustomersComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'customers', permissionKey: 'customers.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'] } },
       { path: 'suppliers', component: SuppliersComponent, canActivate: [RoleAccessGuard], data: { allowedRoles: ['GERENTE'], liteBlocked: true } },
       { path: 'inventory', component: InventoryComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'inventory', permissionKey: 'inventory.read', allowedRoles: ['GERENTE'] } },
@@ -47,8 +53,8 @@ const routes: Routes = [
       
       { path: 'invoicing', component: InvoicingComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', permissionKey: 'billing.create', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION'] } },
 
-      { path: 'invoices', component: InvoicesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', featureKeys: ['direct_invoice', 'api'], readOnlyFeature: true, permissionKey: 'billing.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
-      { path: 'invoices/:id', component: InvoiceDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', featureKeys: ['direct_invoice', 'api'], readOnlyFeature: true, permissionKey: 'billing.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
+      { path: 'invoices', component: InvoicesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', featureKeys: ['direct_invoice', 'generic_pos', 'api'], readOnlyFeature: true, permissionKey: 'billing.read', allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
+      { path: 'invoices/:id', component: InvoiceDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', featureKeys: ['direct_invoice', 'generic_pos', 'api'], readOnlyFeature: true, permissionKey: 'billing.read', allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
 
       { path: 'credit-notes', component: CreditNotesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'credit_note', featureKeys: ['credit_note', 'api'], readOnlyFeature: true, permissionKey: 'billing.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
       { path: 'credit-note/:id', component: CreditNoteDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'credit_note', featureKeys: ['credit_note', 'api'], readOnlyFeature: true, permissionKey: 'billing.read', allowedRoles: ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },

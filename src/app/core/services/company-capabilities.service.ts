@@ -17,6 +17,8 @@ export type CompanyFeatureKey =
   | 'restaurant'
   | 'pos'
   | 'restaurant_pos'
+  | 'generic_pos'
+  | 'pos_terminal'
   | 'billing'
   | 'api';
 
@@ -66,6 +68,8 @@ export interface CompanyCapabilitiesConfig {
   requiresTerminalSelection?: boolean;
   hasTerminalAccess?: boolean;
   terminal?: any | null;
+  /** Configuración de integración API devuelta por get_user_context. */
+  apiConfiguration?: any | null;
   loaded: boolean;
 }
 
@@ -83,6 +87,8 @@ const RESTAURANT_FALLBACK: CompanyFeatures = {
   restaurant: false,
   pos: false,
   restaurant_pos: false,
+  generic_pos: false,
+  pos_terminal: false,
   billing: false,
   api: false
 };
@@ -135,6 +141,7 @@ export class CompanyCapabilitiesService {
   get emissionPoints(): any[] { return this.state().emissionPoints || []; }
   get sequences(): any[] { return this.state().sequences || []; }
   get posTerminals(): any[] { return this.state().posTerminals || []; }
+  get apiConfiguration(): any | null { return this.state().apiConfiguration ?? null; }
   get terminalAccessRequired(): boolean { return this.state().terminalAccessRequired === true; }
   get requiresTerminalSelection(): boolean { return this.state().requiresTerminalSelection === true; }
   get hasTerminalAccess(): boolean { return this.state().hasTerminalAccess !== false; }
@@ -332,9 +339,8 @@ export class CompanyCapabilitiesService {
   get isApiOnlyMode(): boolean {
     const features = this.features;
     return features.api === true
-      && features.restaurant !== true
-      && features.restaurant_pos !== true
-      && features.pos !== true;
+      && features.billing !== true
+      && features.restaurant !== true;
   }
 
   /** La configuración tributaria es administrativa, incluso si el backend
@@ -343,7 +349,6 @@ export class CompanyCapabilitiesService {
     const role = this.normalize(String(this.businessRole || ''));
     return this.hasAdminRole(this.roles)
       || role === 'ADMINISTRADOR'
-      || role === 'ADMINISTRADOR DEL NEGOCIO'
       || role === 'GERENTE';
   }
 
@@ -378,38 +383,17 @@ export class CompanyCapabilitiesService {
       const previousEnvironment = this.state().business?.environment ?? this.state().business?.ambiente;
       if (previousEnvironment) normalizedCompany.environment = previousEnvironment;
     }
-    const businessModeValue =
-      normalizedCompany?.business_mode ??
-      normalizedCompany?.businessMode ??
-      nestedCompany?.business_mode ??
-      nestedCompany?.businessMode ??
-      normalizedCompany?.business_model ??
-      normalizedCompany?.businessModel ??
-      nestedCompany?.business_model ??
-      nestedCompany?.businessModel ??
-      company?.mode ??
-      nestedCompany?.mode ??
-      company?.app_mode ??
-      nestedCompany?.app_mode ??
-      message?.business_mode ??
-      message?.businessMode ??
-      message?.mode ??
-      message?.app_mode;
     const received = message?.features ?? normalizedCompany?.features ?? nestedCompany?.features ?? response?.features;
-    // El modo comercial sigue siendo informativo. La presentación de los
-    // módulos se controla exclusivamente con las banderas explícitas del
-    // contexto, nunca por inferencias basadas en órdenes, mesas o caja.
-    let businessMode = this.resolveBusinessMode(businessModeValue);
-    if (!businessModeValue && this.hasExplicitBillingFeature(received)) {
-      businessMode = 'FACTURADA_LITE';
-    }
     const features = received && typeof received === 'object'
       ? this.featureKeys.reduce((result, key) => {
           const value = this.coerceOptionalBoolean(received[key]);
           if (value !== undefined) result[key] = value === true;
           return result;
-        }, this.defaultFeaturesForMode(businessMode))
-      : this.defaultFeaturesForMode(businessMode);
+        }, this.emptyFeatures())
+      : this.state().features;
+    // La modalidad es una vista derivada de las features del contexto. No se
+    // toma del nombre del plan, business_model, business_type ni roles Frappe.
+    const businessMode = this.resolveBusinessModeFromFeatures(features);
 
     const plan = this.normalizePlan(message?.plan ?? normalizedCompany?.plan ?? nestedCompany?.plan ?? response?.plan);
     // Algunos contextos resumidos no devuelven `businesses`. Conservamos el
@@ -434,7 +418,7 @@ export class CompanyCapabilitiesService {
     const setupEnvironment = taxProfile?.environment ?? taxProfile?.ambiente;
     const hasCertificatePassword = taxProfile?.has_certificate_password ?? normalizedCompany?.has_certificate_password;
     const certificateStatus = taxProfile?.certificate_status ?? normalizedCompany?.certificate_status
-      ?? (businessMode === 'FACTURADA_LITE' && hasCertificatePassword !== undefined && this.coerceOptionalBoolean(hasCertificatePassword) !== true
+      ?? ((features.billing === true || features.direct_invoice === true) && hasCertificatePassword !== undefined && this.coerceOptionalBoolean(hasCertificatePassword) !== true
         ? 'NO CONFIGURADO'
         : null);
     const terminalContext = message?.terminal && typeof message.terminal === 'object' ? message.terminal : null;
@@ -463,6 +447,9 @@ export class CompanyCapabilitiesService {
       || terminalCandidates.find((item: any) => String(item?.name || '') === contextTerminalName)
       || (contextTerminal && (!contextTerminal.business || !responseBusinessId || String(contextTerminal.business) === responseBusinessId) ? contextTerminal : null);
 
+    const apiConfiguration = message?.api_configuration === undefined
+      ? this.state().apiConfiguration
+      : this.normalizeApiConfiguration(message.api_configuration);
     const config: CompanyCapabilitiesConfig = {
       businessMode,
       features,
@@ -485,10 +472,13 @@ export class CompanyCapabilitiesService {
       emissionPoints: Array.isArray(message?.emission_points) ? message.emission_points : (this.state().emissionPoints || []),
       sequences: Array.isArray(message?.sequences) ? message.sequences : (this.state().sequences || []),
       posTerminals: terminalCandidates,
-      terminalAccessRequired: this.toBoolean(message?.terminal_access_required),
-      requiresTerminalSelection: this.toBoolean(message?.requires_terminal_selection),
-      hasTerminalAccess: message?.has_terminal_access === undefined ? this.state().hasTerminalAccess : this.toBoolean(message.has_terminal_access),
+      terminalAccessRequired: this.toBoolean(message?.terminal_access_required ?? terminalContext?.terminal_access_required),
+      requiresTerminalSelection: this.toBoolean(message?.requires_terminal_selection ?? terminalContext?.requires_terminal_selection),
+      hasTerminalAccess: message?.has_terminal_access === undefined && terminalContext?.has_terminal_access === undefined
+        ? this.state().hasTerminalAccess
+        : this.toBoolean(message?.has_terminal_access ?? terminalContext?.has_terminal_access),
       terminal: selectedTerminal,
+      apiConfiguration,
       loaded: true
     };
     this.state.set(config);
@@ -530,10 +520,8 @@ export class CompanyCapabilitiesService {
       // ajena o retrasada: la configuración siempre debe corresponder al
       // `business` elegido antes de aplicarse al estado.
       activeBusiness: matchesSelectedBusiness ? (business || current.activeBusiness) : current.activeBusiness,
-      plan: data?.plan && typeof data.plan === 'object' ? this.normalizePlan(data.plan) : current.plan,
-      features: data?.features && typeof data.features === 'object'
-        ? this.mergeFeatures(current.features, data.features)
-        : current.features,
+      // Plan y features vienen del contexto de usuario. get_lite_setup solo
+      // actualiza configuración tributaria, readiness e infraestructura.
       // No conservar "NO CONFIGURADO" de un contexto anterior cuando el
       // setup recién consultado confirma que existe contraseña/certificado.
       // Si el backend aún no publica vigencia, queda pendiente de validar y
@@ -574,7 +562,7 @@ export class CompanyCapabilitiesService {
       business: selected,
       activeBusiness: selected,
       businesses: list,
-      features: this.defaultFeaturesForMode(current.businessMode),
+      features: this.emptyFeatures(),
       permissions: null,
       businessRole: null,
       plan: null,
@@ -589,7 +577,8 @@ export class CompanyCapabilitiesService {
       terminalAccessRequired: false,
       requiresTerminalSelection: false,
       hasTerminalAccess: true,
-      terminal: null
+      terminal: null,
+      apiConfiguration: null
     };
     this.state.set(next);
     localStorage.setItem('active_business', String(selectedId));
@@ -605,7 +594,7 @@ export class CompanyCapabilitiesService {
 
   useSafeFallback(): void {
     if (this.state().loaded) return;
-    this.state.set({ businessMode: 'RESTAURANTE', features: { ...RESTAURANT_FALLBACK }, plan: null, business: null, activeBusiness: null, businesses: [], roles: [], businessRole: null, permissions: null, certificateStatus: null, certificateLastError: null, liteSetupReady: null, liteSetupMissing: [], establishments: [], emissionPoints: [], loaded: true });
+    this.state.set({ businessMode: 'RESTAURANTE', features: this.emptyFeatures(), plan: null, business: null, activeBusiness: null, businesses: [], roles: [], businessRole: null, permissions: null, certificateStatus: null, certificateLastError: null, liteSetupReady: null, liteSetupMissing: [], establishments: [], emissionPoints: [], sequences: [], posTerminals: [], terminalAccessRequired: false, requiresTerminalSelection: false, hasTerminalAccess: false, terminal: null, apiConfiguration: null, loaded: true });
   }
 
   setCertificateStatus(status?: unknown, lastError?: unknown): void {
@@ -622,7 +611,7 @@ export class CompanyCapabilitiesService {
   isCertificateEmissionBlocked(): boolean {
     // FacturADA Restaurante también emite mediante la infraestructura Lite;
     // la condición es la capacidad de facturación, no el nombre del modo.
-    if (!this.isLiteMode && this.features.billing !== true) return false;
+    if (this.features.billing !== true) return false;
     const status = this.normalize(this.certificateStatus || '');
     return ['NO CONFIGURADO', 'VENCIDO', 'NO VIGENTE', 'ERROR DE LECTURA'].includes(status) || !!this.certificateLastError;
   }
@@ -634,27 +623,29 @@ export class CompanyCapabilitiesService {
 
     if (feature === 'restaurant') return isRestaurant;
     if (feature === 'restaurant_pos') return isRestaurant && features.restaurant_pos === true;
-    if (feature === 'pos') return isRestaurant && (features.pos === true || features.restaurant_pos === true);
-    // `cash_register` es el alias histórico de `pos` para apertura, cierre
-    // y retiros. Se conserva para no romper rutas existentes.
-    if (feature === 'cash_register') return isRestaurant && (features.pos === true || features.cash_register === true);
+    if (feature === 'generic_pos') return features.generic_pos === true;
+    if (feature === 'pos_terminal') return features.pos_terminal === true;
+    // `pos` es la licencia POS; no habilita por sí sola la caja.
+    if (feature === 'pos') return features.pos === true;
+    // La caja de restaurante requiere su bandera explícita.
+    if (feature === 'cash_register') return features.cash_register === true;
 
     // Facturación no depende del modo restaurante. `billing` habilita la
     // experiencia facturable completa; las claves previas se aceptan como
     // compatibilidad granular cuando billing aún no llegue del backend.
-    if (feature === 'direct_invoice') return features.billing === true || features.direct_invoice === true;
-    if (feature === 'credit_note') return features.billing === true || features.credit_note === true;
+    if (feature === 'direct_invoice') return features.direct_invoice === true;
+    if (feature === 'credit_note') return features.credit_note === true;
 
     // Las mesas pueden estar habilitadas en un negocio restaurante incluso
     // mientras el backend termina de publicar la bandera granular `tables`.
     if (feature === 'tables') {
-      const mode = this.normalize(this.business?.business_mode ?? this.business?.businessMode ?? '');
-      return features.tables === true || mode === 'RESTAURANT' || mode === 'RESTAURANTE';
+      return isRestaurant && features.tables === true;
     }
 
     if (this.restaurantOnlyFeatures.includes(feature)) {
       return isRestaurant && features[feature] === true;
     }
+    if (this.isApiOnlyMode && ['customers', 'products', 'inventory', 'additional_fields'].includes(feature)) return false;
     return features[feature] === true;
   }
 
@@ -788,7 +779,8 @@ export class CompanyCapabilitiesService {
   }
 
   canEmit(): boolean {
-    return this.validateFeatureUse('direct_invoice').allowed && !this.getLiteSetupBlockMessage();
+    const feature: CompanyFeatureKey = this.isEnabled('generic_pos') ? 'generic_pos' : 'direct_invoice';
+    return this.validateFeatureUse(feature).allowed && !this.getLiteSetupBlockMessage();
   }
 
   getPlanBlockMessage(feature: CompanyFeatureKey = 'direct_invoice'): string | null {
@@ -797,7 +789,7 @@ export class CompanyCapabilitiesService {
   }
 
   getLiteSetupBlockMessage(): string | null {
-    if ((!this.isLiteMode && this.features.billing !== true) || this.liteSetupReady === true) return null;
+    if (this.features.billing !== true || this.liteSetupReady === true) return null;
     if (this.liteSetupMissing.length) {
       const labels: Record<string, string> = {
         tax_profile: 'perfil tributario',
@@ -812,7 +804,7 @@ export class CompanyCapabilitiesService {
   }
 
   getLandingRoute(userRoles: unknown): string {
-    if (!this.isEnabled('restaurant') && this.isLiteMode && this.hasRole(userRoles, ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO', 'ADMINISTRADOR DEL NEGOCIO', 'ALL'])) {
+    if (!this.isEnabled('restaurant') && this.isLiteMode && this.hasRole(userRoles, ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO', 'ALL'])) {
       return '/dashboard/main';
     }
     if (this.businessMode === 'FACTURADOR' && this.hasRole(userRoles, ['GERENTE', 'CAJERO'])) {
@@ -840,21 +832,36 @@ export class CompanyCapabilitiesService {
   }
 
   private get featureKeys(): CompanyFeatureKey[] {
-    return ['restaurant', 'restaurant_pos', 'pos', 'billing', 'api', 'orders', 'tables', 'kitchen', 'cash_register', 'direct_invoice', 'credit_note', 'customers', 'products', 'additional_fields', 'inventory'];
+    return ['restaurant', 'restaurant_pos', 'generic_pos', 'pos_terminal', 'pos', 'billing', 'api', 'orders', 'tables', 'kitchen', 'cash_register', 'direct_invoice', 'credit_note', 'customers', 'products', 'additional_fields', 'inventory'];
+  }
+
+  /** Actualiza o limpia la configuración API sin tocar el resto del contexto. */
+  setApiConfiguration(value: any | null): void {
+    const next = { ...this.state(), apiConfiguration: this.normalizeApiConfiguration(value) };
+    this.state.set(next);
+    if (next.loaded) localStorage.setItem(this.storageKey, JSON.stringify(next));
+  }
+
+  private emptyFeatures(): CompanyFeatures {
+    return this.featureKeys.reduce((result, key) => {
+      result[key] = false;
+      return result;
+    }, {} as CompanyFeatures);
   }
 
   private get restaurantOnlyFeatures(): CompanyFeatureKey[] {
-    return ['restaurant_pos', 'pos', 'orders', 'tables', 'kitchen', 'cash_register'];
+    return ['restaurant_pos', 'orders', 'tables', 'kitchen'];
   }
 
   private readStored(): CompanyCapabilitiesConfig {
     try {
       const stored = JSON.parse(localStorage.getItem(this.storageKey) || 'null');
       if (stored?.features) {
-        const businessMode = this.resolveBusinessMode(stored.businessMode);
+        const features = { ...this.emptyFeatures(), ...stored.features } as CompanyFeatures;
+        const businessMode = this.resolveBusinessModeFromFeatures(features);
         return {
           businessMode,
-          features: { ...this.defaultFeaturesForMode(businessMode), ...stored.features },
+          features,
           plan: this.normalizePlan(stored.plan),
           business: stored.business ?? null,
           activeBusiness: stored.activeBusiness ?? stored.business ?? null,
@@ -874,6 +881,7 @@ export class CompanyCapabilitiesService {
           requiresTerminalSelection: stored.requiresTerminalSelection === true,
           hasTerminalAccess: stored.hasTerminalAccess !== false,
           terminal: stored.terminal ?? null,
+          apiConfiguration: this.normalizeApiConfiguration(stored.apiConfiguration),
           loaded: stored.loaded === true
         };
       }
@@ -882,7 +890,7 @@ export class CompanyCapabilitiesService {
   }
 
   private defaultState(): CompanyCapabilitiesConfig {
-    return { businessMode: 'RESTAURANTE', features: { ...RESTAURANT_FALLBACK }, plan: null, business: null, activeBusiness: null, businesses: [], roles: [], permissions: null, certificateStatus: null, certificateLastError: null, liteSetupReady: null, liteSetupMissing: [], establishments: [], emissionPoints: [], sequences: [], posTerminals: [], terminalAccessRequired: false, requiresTerminalSelection: false, hasTerminalAccess: true, terminal: null, loaded: false };
+    return { businessMode: 'RESTAURANTE', features: this.emptyFeatures(), plan: null, business: null, activeBusiness: null, businesses: [], roles: [], permissions: null, certificateStatus: null, certificateLastError: null, liteSetupReady: null, liteSetupMissing: [], establishments: [], emissionPoints: [], sequences: [], posTerminals: [], terminalAccessRequired: false, requiresTerminalSelection: false, hasTerminalAccess: false, terminal: null, apiConfiguration: null, loaded: false };
   }
 
   private normalizePlan(value: unknown): CompanyPlan | null {
@@ -1029,7 +1037,7 @@ export class CompanyCapabilitiesService {
   }
 
   private isEmissionFeature(feature?: CompanyFeatureKey): boolean {
-    return feature === 'direct_invoice' || feature === 'credit_note';
+    return feature === 'direct_invoice' || feature === 'generic_pos' || feature === 'credit_note';
   }
 
   private hasUnlimitedVouchers(plan: CompanyPlan): boolean {
@@ -1088,12 +1096,51 @@ export class CompanyCapabilitiesService {
         restaurant: false,
         pos: false,
         restaurant_pos: false,
+        generic_pos: false,
+        pos_terminal: false,
         billing: false,
         api: false
       };
     }
 
     return { ...RESTAURANT_FALLBACK };
+  }
+
+  /** Conserva únicamente los datos públicos que la pantalla de integración necesita. */
+  private normalizeApiConfiguration(value: any): any | null {
+    if (!value || typeof value !== 'object') return null;
+    const enabled = this.toBoolean(value.enabled);
+    const canView = value.can_view === undefined ? true : this.toBoolean(value.can_view);
+    if (!canView) return { enabled, can_view: false, clients: [] };
+    const clients = Array.isArray(value.clients)
+      ? value.clients.map((client: any) => ({
+          name: client?.name,
+          client_name: client?.client_name,
+          api_key: client?.api_key,
+          status: client?.status,
+          environment: client?.environment,
+          rate_limit: client?.rate_limit,
+          modified: client?.modified
+        }))
+      : [];
+    return {
+      enabled,
+      can_view: true,
+      base_url: value.base_url,
+      authentication: value.authentication,
+      clients
+    };
+  }
+
+  private resolveBusinessModeFromFeatures(features: CompanyFeatures): BusinessMode {
+    if (features.restaurant === true) return 'RESTAURANTE';
+    // Billing y API-only usan la infraestructura Lite. La diferencia entre
+    // ambos queda determinada por isApiOnlyMode, también basado únicamente
+    // en las banderas del contexto.
+    if (features.billing === true || features.api === true || features.direct_invoice === true || features.credit_note === true || features.generic_pos === true || features.pos_terminal === true) {
+      return 'FACTURADA_LITE';
+    }
+    return 'RESTAURANTE';
   }
 
   private hasExplicitBillingFeature(features: unknown): boolean {
@@ -1108,7 +1155,7 @@ export class CompanyCapabilitiesService {
   }
 
   private hasAdminRole(roles: string[]): boolean {
-    return roles.includes('SYSTEM MANAGER') || roles.includes('ADMINISTRATOR') || roles.includes('ADMINISTRADOR') || roles.includes('ADMINISTRADOR DEL NEGOCIO');
+    return roles.includes('SYSTEM MANAGER') || roles.includes('ADMINISTRATOR') || roles.includes('ADMINISTRADOR');
   }
 
   private normalize(value: string): string {

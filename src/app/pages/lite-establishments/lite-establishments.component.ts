@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, DoCheck, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { toast } from 'ngx-sonner';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
@@ -10,7 +11,7 @@ import { CompanyService } from 'src/app/services/company.service';
 @Component({
   selector: 'app-lite-establishments',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './lite-establishments.component.html'
 })
 export class LiteEstablishmentsComponent implements OnInit, DoCheck {
@@ -22,6 +23,7 @@ export class LiteEstablishmentsComponent implements OnInit, DoCheck {
   saving = false;
   error = '';
   submitted = false;
+  statusFilter: 'all' | 'Activo' | 'Inactivo' = 'Activo';
   private loadedBusiness = '';
   private requestId = 0;
 
@@ -65,7 +67,7 @@ export class LiteEstablishmentsComponent implements OnInit, DoCheck {
 
   get canManage(): boolean {
     const role = this.normalize(this.capabilities.businessRole);
-    return ['ADMINISTRADOR', 'GERENTE', 'ADMINISTRADOR DEL NEGOCIO'].includes(role);
+    return ['ADMINISTRADOR', 'GERENTE'].includes(role);
   }
 
   get roleLabel(): string {
@@ -74,13 +76,18 @@ export class LiteEstablishmentsComponent implements OnInit, DoCheck {
 
   /** Lite guarda datos de contacto simples; ERPNext usa enlaces a documentos. */
   get isLiteBusiness(): boolean {
-    const business = this.capabilities.activeBusiness || this.capabilities.business;
-    const mode = this.normalize(business?.business_mode || business?.businessMode || '');
-    return this.capabilities.businessMode === 'FACTURADA_LITE' || mode === 'LITE' || mode === 'FACTURADA_LITE';
+    return this.capabilities.isApiOnlyMode
+      || this.capabilities.features.billing === true
+      || this.capabilities.features.restaurant === true;
   }
 
   get activeCount(): number {
     return this.establishments.filter((item) => this.isActive(item)).length;
+  }
+
+  get visibleEstablishments(): any[] {
+    if (this.statusFilter === 'all') return this.establishments;
+    return this.establishments.filter((item) => this.isActive(item) === (this.statusFilter === 'Activo'));
   }
 
   loadForBusiness(): void {

@@ -7,6 +7,7 @@ export interface MenuItem {
   allowedRoles?: Role[]; // opcional: regla a nivel grupo
   hideInLite?: boolean;
   hideInApiOnly?: boolean;
+  hideWhenFeature?: import('../services/company-capabilities.service').CompanyFeatureKey;
 }
 
 export interface SubMenuItem {
@@ -23,5 +24,8 @@ export interface SubMenuItem {
   permissionKey?: string;
   hideInLite?: boolean;
   hideInApiOnly?: boolean;
+  /** Requiere que el contexto exponga api_configuration.enabled. */
+  requiresApiConfiguration?: boolean;
+  hideWhenFeature?: import('../services/company-capabilities.service').CompanyFeatureKey;
 }
 export type Role = 'SYSTEM MANAGER' | 'ADMINISTRADOR' | 'GERENTE' | 'CAJERO' | 'FACTURACION' | 'MESERO' | 'COCINA' | 'USUARIO';

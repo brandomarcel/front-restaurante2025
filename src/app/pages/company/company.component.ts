@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, DoCheck, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgxSpinnerService } from 'ngx-spinner';
@@ -32,7 +32,7 @@ type LiteSettingsTab = 'general' | 'tax-profile' | 'certificate' | 'plan' | 'est
   templateUrl: './company.component.html',
   styleUrl: './company.component.scss'
 })
-export class CompanyComponent implements OnInit {
+export class CompanyComponent implements OnInit, DoCheck {
   form!: FormGroup;
   companyId = '';
   submitted = false;
@@ -45,6 +45,13 @@ export class CompanyComponent implements OnInit {
   liteSequences: any[] = [];
   activeInvoiceSequence: any | null = null;
   liteSequenceError = '';
+
+  /** Configuración de integración devuelta por get_user_context. Es solo de lectura. */
+  apiConfiguration: any | null = null;
+  apiConfigurationLoading = false;
+  apiConfigurationError = '';
+  apiConfigurationAccessDenied = false;
+  private apiConfigurationBusiness = '';
 
   ambiente: 'PRUEBAS' | 'PRODUCCION' = 'PRUEBAS';
 
@@ -77,7 +84,17 @@ export class CompanyComponent implements OnInit {
 
   ngOnInit(): void {
     this.initForm();
+    this.apiConfiguration = this.capabilities.apiConfiguration;
     this.loadCompanyInfo();
+    this.loadApiConfiguration();
+  }
+
+  ngDoCheck(): void {
+    const business = String(this.capabilities.activeBusinessId || localStorage.getItem('active_business') || '').trim();
+    if (business !== this.apiConfigurationBusiness && !this.apiConfigurationLoading
+      && !(this.apiConfigurationAccessDenied && !business)) {
+      this.loadApiConfiguration();
+    }
   }
 
   get f() {
@@ -98,8 +115,96 @@ export class CompanyComponent implements OnInit {
     if (path.endsWith('/sequences')) return 'sequences';
     if (path.endsWith('/pos-terminals')) return 'pos-terminals';
     if (path.endsWith('/readiness')) return 'readiness';
-    if (path.endsWith('/api-clients') || path.endsWith('/api-logs')) return 'api';
+    if (path.endsWith('/api') || path.endsWith('/api-clients') || path.endsWith('/api-logs')) return 'api';
     return 'general';
+  }
+
+  get apiConfigurationEnabled(): boolean {
+    return this.apiConfiguration?.enabled === true;
+  }
+
+  get apiConfigurationCanView(): boolean {
+    return !this.apiConfigurationAccessDenied && this.apiConfiguration?.can_view !== false;
+  }
+
+  get apiClients(): any[] {
+    return Array.isArray(this.apiConfiguration?.clients) ? this.apiConfiguration.clients : [];
+  }
+
+  /** Recarga el contexto del negocio activo y reemplaza por completo la vista API. */
+  loadApiConfiguration(): void {
+    const business = String(this.capabilities.activeBusinessId || localStorage.getItem('active_business') || '').trim();
+    this.apiConfigurationBusiness = business;
+    this.apiConfiguration = null;
+    this.apiConfigurationError = '';
+    this.apiConfigurationAccessDenied = false;
+    // Evita que una configuración cacheada de otra respuesta aparezca
+    // mientras se carga el contexto actual.
+    this.capabilities.setApiConfiguration(null);
+    if (!business) return;
+
+    this.apiConfigurationLoading = true;
+    this.service.getLiteContext(business).pipe(finalize(() => {
+      this.apiConfigurationLoading = false;
+    })).subscribe({
+      next: (context: any) => {
+        // Ignorar respuestas tardías de otra empresa.
+        const responseBusiness = context?.business;
+        const responseBusinessId = typeof responseBusiness === 'string'
+          ? responseBusiness
+          : responseBusiness?.name || responseBusiness?.business;
+        const activeBusiness = String(this.capabilities.activeBusinessId || localStorage.getItem('active_business') || '').trim();
+        if (responseBusinessId && activeBusiness && String(responseBusinessId).trim() !== activeBusiness) return;
+        // El contrato actual entrega api_configuration directamente en
+        // response.message. Usamos también el fallback data para tolerar
+        // respuestas transitorias, y siempre sanitizamos antes de guardar.
+        const contextConfiguration = context?.api_configuration ?? context?.data?.api_configuration;
+        if (contextConfiguration !== undefined) this.capabilities.setApiConfiguration(contextConfiguration);
+        // CompanyCapabilitiesService sanitiza el contexto antes de persistirlo:
+        // nunca conservar accidentalmente un secret_key recibido por backend.
+        const configuration = this.capabilities.apiConfiguration;
+        this.apiConfiguration = configuration && typeof configuration === 'object'
+          ? configuration
+          : { enabled: false, can_view: false, clients: [] };
+        try {
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          this.menuService.setMenuForRoles(Array.isArray(user?.roles) ? user.roles : []);
+        } catch {
+          // El contexto queda disponible aunque no exista el perfil local.
+        }
+      },
+      error: (error: any) => {
+        this.apiConfiguration = null;
+        this.capabilities.setApiConfiguration(null);
+        this.apiConfigurationAccessDenied = Number(error?.status || error?.error?.status || 0) === 403;
+        this.apiConfigurationError = this.apiConfigurationAccessDenied
+          ? 'No tiene permisos para consultar la integración API de este negocio.'
+          : (this.readBackendError(error) || 'No se pudo cargar la configuración API.');
+      }
+    });
+  }
+
+  async copyApiValue(value: unknown, label: string): Promise<void> {
+    const text = String(value ?? '').trim();
+    if (!text || typeof navigator === 'undefined' || !navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      this.alertService.success(`${label} copiada correctamente.`);
+    } catch {
+      this.alertService.error(`No se pudo copiar la ${label.toLowerCase()}.`);
+    }
+  }
+
+  apiEnvironmentClass(environment: unknown): string {
+    return String(environment || '').trim().toUpperCase() === 'PRODUCCION'
+      ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+      : 'bg-amber-100 text-amber-700 border-amber-200';
+  }
+
+  apiStatusClass(status: unknown): string {
+    return String(status || '').trim().toUpperCase() === 'ACTIVO'
+      ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+      : 'bg-slate-100 text-slate-600 border-slate-200';
   }
 
   get activeSettingsTitle(): string {
@@ -170,7 +275,8 @@ export class CompanyComponent implements OnInit {
     return this.capabilities.isLiteMode
       || this.capabilities.isEnabled('restaurant')
       || this.capabilities.isEnabled('billing')
-      || this.capabilities.isEnabled('api');
+      || this.capabilities.isEnabled('api')
+      || this.apiConfigurationEnabled;
   }
 
   get activeBusiness(): any | null {
@@ -220,7 +326,8 @@ export class CompanyComponent implements OnInit {
       service_base_url: [''],
       obligado_a_llevar_contabilidad: ['NO', Validators.required],
       obliged_accounting: [false],
-      rimpe: [false],
+      special_taxpayer_number: [{ value: '', disabled: true }],
+      tax_regime: ['Régimen General', Validators.required],
       withholding_agent: [false],
       emission_type: ['Normal'],
       invoice_xml_version: ['2.1.0'],
@@ -273,7 +380,8 @@ export class CompanyComponent implements OnInit {
           business_mode: this.normalizeBusinessMode(company.business_mode),
           obligado_a_llevar_contabilidad: this.normalizeContabilidad(company.obligado_a_llevar_contabilidad),
           obliged_accounting: this.normalizeCheck(company.obliged_accounting ?? company.obligado_a_llevar_contabilidad),
-          rimpe: this.normalizeCheck(company.rimpe),
+          special_taxpayer_number: company.special_taxpayer_number || '',
+          tax_regime: this.normalizeTaxRegime(company.tax_regime),
           withholding_agent: this.normalizeCheck(company.withholding_agent),
           emission_type: company.emission_type || 'Normal',
           invoice_xml_version: company.invoice_xml_version || '2.1.0',
@@ -1034,6 +1142,11 @@ export class CompanyComponent implements OnInit {
     const data = response?.data ?? response?.message?.data ?? response ?? {};
     this.capabilities.setLiteSetupState(data);
     this.currentPlan = this.capabilities.plan;
+    const normalizedCompany = this.service.normalizeLiteSetup(data);
+    this.form.patchValue({
+      tax_regime: this.normalizeTaxRegime(normalizedCompany.tax_regime),
+      special_taxpayer_number: normalizedCompany.special_taxpayer_number || ''
+    }, { emitEvent: false });
     this.liteEstablishments = Array.isArray(data?.establishments) ? data.establishments : this.liteEstablishments;
     this.liteEmissionPoints = Array.isArray(data?.emission_points) ? data.emission_points : this.liteEmissionPoints;
     this.liteSequences = Array.isArray(data?.sequences) ? data.sequences : this.liteSequences;
@@ -1148,7 +1261,7 @@ export class CompanyComponent implements OnInit {
       trade_name: `${raw.trade_name || businessName}`.trim(),
       main_address: address,
       obliged_accounting: raw.obliged_accounting ? 1 : 0,
-      rimpe: raw.rimpe ? 1 : 0,
+      tax_regime: this.normalizeTaxRegime(raw.tax_regime),
       withholding_agent: raw.withholding_agent ? 1 : 0,
       emission_type: `${raw.emission_type || 'Normal'}`.trim(),
       invoice_xml_version: `${raw.invoice_xml_version || '2.1.0'}`.trim(),
@@ -1186,6 +1299,7 @@ export class CompanyComponent implements OnInit {
       'address',
       'phone',
       'email',
+      'tax_regime',
       'establishmentcode',
       'emissionpoint',
       ...(this.requiresCertificatePassword ? ['clave'] : []),
@@ -1206,6 +1320,11 @@ export class CompanyComponent implements OnInit {
         tap((response: any) => {
           this.capabilities.setLiteSetupState(response);
           this.currentPlan = this.capabilities.plan;
+          const savedCompany = this.service.normalizeLiteSetup(response);
+          this.form.patchValue({
+            tax_regime: this.normalizeTaxRegime(savedCompany.tax_regime),
+            special_taxpayer_number: savedCompany.special_taxpayer_number || ''
+          }, { emitEvent: false });
         })
       )),
       switchMap(() => this.uploadLiteCertificateIfNeeded()),
@@ -1252,6 +1371,17 @@ export class CompanyComponent implements OnInit {
       return 'SI';
     }
     return 'NO';
+  }
+
+  private normalizeTaxRegime(value: unknown): 'Régimen General' | 'RIMPE Emprendedor' | 'RIMPE Negocio Popular' {
+    const normalized = `${value ?? ''}`
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase();
+    if (normalized === 'RIMPE EMPRENDEDOR') return 'RIMPE Emprendedor';
+    if (normalized === 'RIMPE NEGOCIO POPULAR') return 'RIMPE Negocio Popular';
+    return 'Régimen General';
   }
 
   private normalizeBusinessMode(value: unknown): 'RESTAURANTE' | 'FACTURADOR' | 'FACTURADA_LITE' {

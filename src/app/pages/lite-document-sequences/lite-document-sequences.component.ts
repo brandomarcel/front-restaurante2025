@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, DoCheck, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { toast } from 'ngx-sonner';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
@@ -10,7 +11,7 @@ import { CompanyService } from 'src/app/services/company.service';
 @Component({
   selector: 'app-lite-document-sequences',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './lite-document-sequences.component.html'
 })
 export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
@@ -25,6 +26,8 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
   consecutiveError = '';
   selectedEstablishmentId = '';
   selectedEmissionPointId = '';
+  environmentFilter: 'all' | 'Pruebas' | 'Produccion' = 'all';
+  documentFilter: 'all' | 'Factura' | 'Nota de Credito' = 'all';
 
   readonly documentTypes = ['Factura', 'Nota de Credito'];
   readonly environments = ['Pruebas', 'Produccion'];
@@ -71,7 +74,7 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
 
   get canManage(): boolean {
     const role = this.normalize(this.capabilities.businessRole);
-    return ['ADMINISTRADOR', 'GERENTE', 'ADMINISTRADOR DEL NEGOCIO'].includes(role);
+    return ['ADMINISTRADOR', 'GERENTE'].includes(role);
   }
 
   get activeEstablishments(): any[] {
@@ -131,6 +134,13 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
 
   get creditNoteCount(): number {
     return this.sequences.filter((item) => this.normalize(item?.document_type) === 'NOTA DE CREDITO').length;
+  }
+
+  get visibleSequences(): any[] {
+    return this.sequences.filter((sequence) =>
+      (this.environmentFilter === 'all' || this.normalizeEnvironment(sequence?.environment) === this.environmentFilter)
+      && (this.documentFilter === 'all' || this.normalize(sequence?.document_type) === this.normalize(this.documentFilter))
+    );
   }
 
   onEstablishmentChange(value: unknown): void {

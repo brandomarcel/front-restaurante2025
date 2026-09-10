@@ -68,6 +68,11 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   private subscriptions: Subscription[] = [];
   private readonly customerSearch$ = new Subject<string>();
   private readonly destroy$ = new Subject<void>();
+
+  /** La misma vista compacta de venta sirve para POS genérico, sin crear órdenes. */
+  get isGenericPos(): boolean {
+    return this.capabilities.isEnabled('generic_pos');
+  }
   isEmitting = false;
   emissionState: LiteEmissionState | null = null;
   emissionMessages: string[] = [];
@@ -604,7 +609,8 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
   // ------------------ Factura ------------------
   finalizeInvoice(): void {
-    const planBlockMessage = this.capabilities.getPlanBlockMessage('direct_invoice');
+    const emissionFeature = this.capabilities.isEnabled('generic_pos') ? 'generic_pos' : 'direct_invoice';
+    const planBlockMessage = this.capabilities.getPlanBlockMessage(emissionFeature);
     if (planBlockMessage) {
       toast.error(planBlockMessage);
       return;
@@ -634,7 +640,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
         toast.error(terminalBlockMessage);
         return;
       }
-      if (!this.capabilities.isEnabled('direct_invoice')) {
+      if (!this.capabilities.isEnabled('direct_invoice') && !this.capabilities.isEnabled('generic_pos')) {
         toast.error('La facturación no está habilitada para este negocio.');
         return;
       }
@@ -774,7 +780,8 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   }
 
   get invoicePlanBlockMessage(): string | null {
-    return this.capabilities.getPlanBlockMessage('direct_invoice');
+    const emissionFeature = this.capabilities.isEnabled('generic_pos') ? 'generic_pos' : 'direct_invoice';
+    return this.capabilities.getPlanBlockMessage(emissionFeature);
   }
 
   get canUseAdditionalFields(): boolean {

@@ -67,7 +67,7 @@ export class LitePosTerminalsComponent implements OnInit, DoCheck {
 
   get canManage(): boolean {
     const role = this.normalize(this.capabilities.businessRole);
-    return ['ADMINISTRADOR', 'GERENTE', 'ADMINISTRADOR DEL NEGOCIO'].includes(role);
+    return ['ADMINISTRADOR', 'GERENTE'].includes(role);
   }
 
   get activeEstablishments(): any[] {

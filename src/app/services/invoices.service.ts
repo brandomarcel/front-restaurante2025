@@ -189,12 +189,16 @@ export class InvoicesService {
     });
 
     normalized.payments = (payload?.payments || []).map((payment: any) => {
-      const method = payment?.payment_method || payment?.formas_de_pago || payment?.name || payment?.codigo;
+      const rawMethod = payment?.payment_method || payment?.formas_de_pago || payment?.name || payment?.codigo;
+      const litePayment = this.normalizeLitePayment(rawMethod, payment?.payment_code || payment?.forma_pago || payment?.codigo);
       const amount = Number(payment?.amount ?? payment?.monto ?? 0);
       return {
-        payment_method: method,
-        payment_code: payment?.payment_code || payment?.forma_pago || payment?.codigo || '',
-        amount
+        payment_method: litePayment.payment_method,
+        payment_code: litePayment.payment_code,
+        amount,
+        ...(payment?.reference !== undefined || payment?.referencia !== undefined
+          ? { reference: String(payment?.reference ?? payment?.referencia ?? '').trim() }
+          : {})
       };
     });
 
@@ -213,6 +217,28 @@ export class InvoicesService {
     delete normalized.auto_queue;
 
     return normalized;
+  }
+
+  /** Normaliza los métodos visibles en español al contrato de emisión Lite. */
+  private normalizeLitePayment(method: any, code: any): { payment_method: string; payment_code: string } {
+    const text = String(method ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase();
+    const paymentCode = String(code ?? '').trim();
+
+    if (/(^|\s)(CASH|EFECTIVO)(\s|$)/.test(text)) return { payment_method: 'CASH', payment_code: '01' };
+    if (/(^|\s)(CARD|TARJETA|CREDITO|CREDIT|DEBITO|DEBIT)(\s|$)/.test(text) || paymentCode === '19') {
+      return { payment_method: 'CARD', payment_code: '19' };
+    }
+    if (/(^|\s)(TRANSFER|TRANSFERENCIA|DEPOSITO|DEPOSIT)(\s|$)/.test(text) || paymentCode === '20') {
+      return { payment_method: 'TRANSFER', payment_code: '20' };
+    }
+    if (/(^|\s)(OTHER|OTRO|OTROS)(\s|$)/.test(text)) return { payment_method: 'OTHER', payment_code: '01' };
+    if (paymentCode === '01') return { payment_method: 'CASH', payment_code: '01' };
+
+    return { payment_method: String(method ?? '').trim(), payment_code: paymentCode };
   }
 
   private normalizeListResponse(res: any): any {

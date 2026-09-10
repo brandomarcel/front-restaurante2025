@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, DoCheck, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { toast } from 'ngx-sonner';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
@@ -10,7 +11,7 @@ import { CompanyService } from 'src/app/services/company.service';
 @Component({
   selector: 'app-lite-emission-points',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './lite-emission-points.component.html'
 })
 export class LiteEmissionPointsComponent implements OnInit, DoCheck {
@@ -23,6 +24,7 @@ export class LiteEmissionPointsComponent implements OnInit, DoCheck {
   error = '';
   submitted = false;
   selectedEstablishmentId = '';
+  statusFilter: 'all' | 'Activo' | 'Inactivo' = 'Activo';
 
   private loadedBusiness = '';
   private loadedEstablishment = '';
@@ -66,7 +68,7 @@ export class LiteEmissionPointsComponent implements OnInit, DoCheck {
 
   get canManage(): boolean {
     const role = this.normalize(this.capabilities.businessRole);
-    return ['ADMINISTRADOR', 'GERENTE', 'ADMINISTRADOR DEL NEGOCIO'].includes(role);
+    return ['ADMINISTRADOR', 'GERENTE'].includes(role);
   }
 
   get activeEstablishments(): any[] {
@@ -87,6 +89,11 @@ export class LiteEmissionPointsComponent implements OnInit, DoCheck {
 
   get activeCount(): number {
     return this.points.filter((point) => this.isActive(point)).length;
+  }
+
+  get visiblePoints(): any[] {
+    if (this.statusFilter === 'all') return this.points;
+    return this.points.filter((point) => this.isActive(point) === (this.statusFilter === 'Activo'));
   }
 
   get pendingSequenceCount(): number {

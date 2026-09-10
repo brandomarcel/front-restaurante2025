@@ -99,6 +99,8 @@ export class MenuService implements OnDestroy {
     const filterItem = (item: SubMenuItem, inheritedRoles?: Role[], inheritedFeature?: SubMenuItem['featureKey']): SubMenuItem | null => {
       if (this.capabilities.isLiteMode && !this.capabilities.isEnabled('restaurant') && item.hideInLite) return null;
       if (this.capabilities.isApiOnlyMode && item.hideInApiOnly) return null;
+      if (item.hideWhenFeature && this.capabilities.isEnabled(item.hideWhenFeature)) return null;
+      if (item.requiresApiConfiguration && this.capabilities.apiConfiguration?.enabled !== true) return null;
 
       const rolesForThisItem = normRoles(item.allowedRoles) ?? normRoles(inheritedRoles);
       const featureKey = item.featureKey ?? inheritedFeature;
@@ -158,7 +160,13 @@ export class MenuService implements OnDestroy {
   }
 
   private syncLayoutByRoute(url: string): void {
-    const isPos = this.normalizeUrl(url).startsWith('/dashboard/pos');
+    const normalizedUrl = this.normalizeUrl(url);
+    // Solo las pantallas operativas de POS deben ocultar el menú lateral.
+    // La lista de Notas de Venta es un módulo documental independiente,
+    // igual que Facturas y Notas de Crédito.
+    const isPos = normalizedUrl === '/dashboard/pos'
+      || normalizedUrl.startsWith('/dashboard/pos/')
+      || normalizedUrl === '/dashboard/pos-generic';
     const wasPos = this._isPosMode();
     this._isPosMode.set(isPos);
 
@@ -277,7 +285,7 @@ export class MenuService implements OnDestroy {
 
   private expandAdminRoles(roles: string[]): string[] {
     const expanded = new Set(roles);
-    if (roles.includes('SYSTEM MANAGER') || roles.includes('ADMINISTRATOR') || roles.includes('ADMINISTRADOR') || roles.includes('ADMINISTRADOR DEL NEGOCIO')) {
+    if (roles.includes('SYSTEM MANAGER') || roles.includes('ADMINISTRATOR') || roles.includes('ADMINISTRADOR')) {
       expanded.add('GERENTE');
       expanded.add('CAJERO');
     }
