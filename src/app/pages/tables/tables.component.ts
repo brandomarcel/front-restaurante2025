@@ -52,6 +52,15 @@ export class TablesComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    console.log('[FacturADA][Mesas][acceso]', {
+      business: this.capabilities.activeBusinessId,
+      businessRole: this.capabilities.businessRole,
+      features: this.capabilities.features,
+      permissions: this.capabilities.permissions,
+      hasTablesModule: this.hasTablesModule,
+      canCreateOrders: this.canCreateOrders,
+      canManageTables: this.canManageTables
+    });
     if (!this.hasTablesModule) {
       this.error = 'El módulo de mesas no está habilitado para este negocio.';
       return;
@@ -161,6 +170,11 @@ export class TablesComponent implements OnInit, OnDestroy {
     this.orders.getTables(this.showInactive ? null : true).pipe(finalize(() => this.loading = false)).subscribe({
       next: (response: any) => {
         this.tables = this.readRows(response).map((table) => this.normalizeTable(table));
+        console.log('[FacturADA][Mesas][cargadas]', {
+          business: this.capabilities.activeBusinessId,
+          total: this.tables.length,
+          tables: this.tables.map((table) => ({ name: table.name, status: table.status, business: table.business }))
+        });
         if (this.selectedTable) {
           this.selectedTable = this.tables.find((table) => table.name === this.selectedTable.name) || null;
         }

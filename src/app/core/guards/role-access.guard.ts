@@ -62,6 +62,21 @@ export class RoleAccessGuard implements CanActivate {
     const apiOnlyBlocked = route.data?.['apiOnlyBlocked'] === true;
     const isAdmin = this.hasAdminRole(currentRoles);
 
+    console.groupCollapsed(`[FacturADA][Guard] ${state.url}`);
+    console.log({
+      business: this.capabilities.activeBusinessId,
+      businessRole: this.capabilities.businessRole,
+      currentRoles,
+      featureKey,
+      requiredFeatures,
+      permissionKey,
+      permissionKeys,
+      anyPermissionKeys,
+      features: this.capabilities.features,
+      permissions: this.capabilities.permissions
+    });
+    console.groupEnd();
+
     if (permissionKey === 'reports.view'
       && !this.capabilities.hasPermission('*')
       && !this.capabilities.hasPermission('reports.view')) {

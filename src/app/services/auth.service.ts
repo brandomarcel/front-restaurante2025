@@ -177,6 +177,19 @@ login(username: string, password: string) {
           throw new Error('__NOT_FACTURADA_LITE_CONTEXT__');
         }
 
+        const contextMessage = res?.message && typeof res.message === 'object' ? res.message : {};
+        console.log('[FacturADA][get_user_context]', {
+          requestedBusiness: selectedBusiness,
+          responseBusiness: typeof contextMessage?.business === 'string'
+            ? contextMessage.business
+            : contextMessage?.business?.name,
+          businessRole: contextMessage?.business_role,
+          permissions: contextMessage?.permissions,
+          features: contextMessage?.features,
+          terminalAccessRequired: contextMessage?.terminal_access_required ?? contextMessage?.terminal?.terminal_access_required,
+          hasTerminalAccess: contextMessage?.has_terminal_access ?? contextMessage?.terminal?.has_terminal_access
+        });
+
         this.capabilities.setFromResponse(res);
         // El contexto es la fuente de verdad para activar el canal privado.
         // Si el negocio no tiene restaurante, el servicio limpia cualquier

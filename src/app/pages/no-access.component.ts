@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 @Component({
   selector: 'app-no-access',
@@ -12,4 +13,16 @@ import { Component } from '@angular/core';
     </section>
   `
 })
-export class NoAccessComponent {}
+export class NoAccessComponent implements OnInit {
+  constructor(private capabilities: CompanyCapabilitiesService) {}
+
+  ngOnInit(): void {
+    console.error('[FacturADA][NoAccess] Se mostró la pantalla sin módulos', {
+      business: this.capabilities.activeBusinessId,
+      businessRole: this.capabilities.businessRole,
+      permissions: this.capabilities.permissions,
+      features: this.capabilities.features,
+      landingRoute: this.capabilities.getLandingRoute([])
+    });
+  }
+}

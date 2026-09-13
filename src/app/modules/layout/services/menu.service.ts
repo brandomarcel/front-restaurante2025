@@ -68,6 +68,21 @@ export class MenuService implements OnDestroy {
     this._currentRole.set(appRole || normalizedRoles[0] || '');
     const filtered = this.filterMenuByAccess(Menu.pages, effectiveRoles);
     this._pagesMenu.set(filtered);
+    console.groupCollapsed('[FacturADA][Menú filtrado]');
+    console.log({
+      contextRole,
+      receivedRoles: roles,
+      effectiveRoles,
+      currentRole: this._currentRole(),
+      business: this.capabilities.activeBusinessId,
+      permissions: this.capabilities.permissions,
+      features: this.capabilities.features,
+      visibleGroups: filtered.map(group => ({
+        group: group.group,
+        items: group.items.map(item => item.label)
+      }))
+    });
+    console.groupEnd();
     this.applyActiveState();
     this.rebuildQuickActions();
   }

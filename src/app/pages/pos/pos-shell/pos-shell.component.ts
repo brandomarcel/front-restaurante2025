@@ -39,6 +39,13 @@ export class PosShellComponent implements OnInit {
       && this.capabilities.hasPermission('restaurant.orders.create')
       && !this.capabilities.hasPermission('billing.create')) {
       this.roleName = 'Mesero';
+      console.log('[FacturADA][POS Restaurante][Mesero]', {
+        business: this.capabilities.activeBusinessId,
+        businessRole: this.capabilities.businessRole,
+        permissions: this.capabilities.permissions,
+        features: this.capabilities.features,
+        selectedTable: this.selectedTableId || null
+      });
       return;
     }
     // El rol de negocio del contexto decide la experiencia POS. Los roles
@@ -48,6 +55,13 @@ export class PosShellComponent implements OnInit {
       ? me.roles.find((role: unknown) => /mesero|cajero|gerente|admin/i.test(String(role || '')))
       : undefined;
     this.roleName = this.mapRawRole(contextRole || String(fallbackRole || ''));
+    console.log('[FacturADA][POS Restaurante][variante]', {
+      business: this.capabilities.activeBusinessId,
+      businessRole: this.capabilities.businessRole,
+      resolvedRole: this.roleName,
+      permissions: this.capabilities.permissions,
+      features: this.capabilities.features
+    });
 
   }
 

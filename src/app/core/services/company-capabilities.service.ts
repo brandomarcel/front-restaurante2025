@@ -531,6 +531,23 @@ export class CompanyCapabilitiesService {
       loaded: true
     };
     this.state.set(config);
+    // Diagnóstico temporal de acceso: no registrar credenciales, secretos ni
+    // certificados. Estos datos permiten comprobar por qué aparece o no un
+    // módulo para el negocio seleccionado.
+    console.groupCollapsed('[FacturADA][Contexto de negocio]');
+    console.log({
+      business: responseBusinessId,
+      businessRole,
+      permissions,
+      features,
+      restaurantPos: this.isEnabled('restaurant_pos'),
+      restaurant: this.isEnabled('restaurant'),
+      orders: this.isEnabled('orders'),
+      tables: this.isEnabled('tables'),
+      terminalAccessRequired: config.terminalAccessRequired,
+      hasTerminalAccess: config.hasTerminalAccess
+    });
+    console.groupEnd();
     localStorage.setItem(this.storageKey, JSON.stringify(config));
     this.ensureLiteDocumentSelection();
     if (setupEnvironment) this.utilsService.cambiarAmbiente(setupEnvironment);
@@ -720,7 +737,12 @@ export class CompanyCapabilitiesService {
       const normalized = permissions.map((item) => String(item || '').trim().toLowerCase());
       if (normalized.includes('*')) return true;
       const resource = normalizedPermission.toLowerCase();
-      const [resourceName, action] = resource.split('.', 2);
+      // Los permisos de restaurante pueden tener tres segmentos, por
+      // ejemplo `restaurant.orders.create`. Comparar primero el permiso
+      // completo evita perder el tercer segmento al separarlo.
+      if (normalized.includes(resource)) return true;
+      const [resourceName, ...actionParts] = resource.split('.');
+      const action = actionParts.join('.');
       // El contexto Lite usa billing.* para las operaciones de facturación,
       // mientras que las pantallas históricas consultan direct_invoice y
       // credit_note. Ambos nombres representan el mismo permiso funcional.
@@ -729,7 +751,8 @@ export class CompanyCapabilitiesService {
         : [resourceName];
       return aliases.some((alias) => {
         if (action) {
-          return normalized.includes(`${alias}.${action}`)
+          const aliasPermission = `${alias}.${action}`;
+          return normalized.includes(aliasPermission)
             || (action === 'read' && normalized.includes(`${alias}.manage`));
         }
         return normalized.includes(alias)
@@ -869,6 +892,19 @@ export class CompanyCapabilitiesService {
   }
 
   getLandingRoute(userRoles: unknown): string {
+    const landingChecks = {
+      business: this.activeBusinessId,
+      businessRole: this.businessRole,
+      permissions: this.permissions,
+      restaurant: this.isEnabled('restaurant'),
+      orders: this.isEnabled('orders'),
+      restaurantPos: this.isEnabled('restaurant_pos'),
+      createOrders: this.hasPermission('restaurant.orders.create'),
+      billingCreate: this.hasPermission('billing.create'),
+      genericPos: this.isEnabled('generic_pos'),
+      directInvoice: this.isEnabled('direct_invoice')
+    };
+    console.log('[FacturADA][Ruta inicial]', landingChecks);
     if (this.isEnabled('restaurant')
       && this.isEnabled('orders')
       && this.hasPermission('restaurant.orders.create')
