@@ -8,6 +8,11 @@ export interface MenuItem {
   hideInLite?: boolean;
   hideInApiOnly?: boolean;
   hideWhenFeature?: import('../services/company-capabilities.service').CompanyFeatureKey;
+  featureKey?: import('../services/company-capabilities.service').CompanyFeatureKey;
+  featureKeys?: import('../services/company-capabilities.service').CompanyFeatureKey[];
+  requiredFeatures?: import('../services/company-capabilities.service').CompanyFeatureKey[];
+  permissionKey?: string;
+  permissionKeys?: string[];
 }
 
 export interface SubMenuItem {
@@ -21,7 +26,9 @@ export interface SubMenuItem {
   featureKey?: import('../services/company-capabilities.service').CompanyFeatureKey;
   /** Capacidades alternativas para módulos que pueden operar en más de un plan. */
   featureKeys?: import('../services/company-capabilities.service').CompanyFeatureKey[];
+  requiredFeatures?: import('../services/company-capabilities.service').CompanyFeatureKey[];
   permissionKey?: string;
+  permissionKeys?: string[];
   hideInLite?: boolean;
   hideInApiOnly?: boolean;
   /** Requiere que el contexto exponga api_configuration.enabled. */

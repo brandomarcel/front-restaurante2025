@@ -47,11 +47,27 @@ export class RoleAccessGuard implements CanActivate {
     const featureKeys = Array.isArray(route.data?.['featureKeys'])
       ? route.data['featureKeys'] as CompanyFeatureKey[]
       : [];
+    const requiredFeatures = Array.isArray(route.data?.['requiredFeatures'])
+      ? route.data['requiredFeatures'] as CompanyFeatureKey[]
+      : [];
     const readOnlyFeature = route.data?.['readOnlyFeature'] === true;
     const permissionKey = route.data?.['permissionKey'] as string | undefined;
+    const permissionKeys = Array.isArray(route.data?.['permissionKeys'])
+      ? route.data['permissionKeys'] as string[]
+      : [];
+    const anyPermissionKeys = Array.isArray(route.data?.['anyPermissionKeys'])
+      ? route.data['anyPermissionKeys'] as string[]
+      : [];
     const liteBlocked = route.data?.['liteBlocked'] === true;
     const apiOnlyBlocked = route.data?.['apiOnlyBlocked'] === true;
     const isAdmin = this.hasAdminRole(currentRoles);
+
+    if (permissionKey === 'reports.view'
+      && !this.capabilities.hasPermission('*')
+      && !this.capabilities.hasPermission('reports.view')) {
+      toast.error('No tienes permiso para consultar este reporte.');
+      return this.redirectToAvailable(state.url, currentRoles, 'permission');
+    }
 
     if (apiOnlyBlocked && this.capabilities.isApiOnlyMode) {
       toast.info('Este negocio utiliza únicamente la API externa; no requiere usuarios operativos ni terminales POS.');
@@ -68,24 +84,41 @@ export class RoleAccessGuard implements CanActivate {
     // Las pantallas marcadas como solo lectura (historiales y detalles) solo
     // necesitan que exista una capacidad compatible. No deben bloquearse por
     // certificado, secuencia o cupo, que son requisitos exclusivos de emisión.
-    const hasReadFeature = featureKeys.length
-      ? featureKeys.some((key) => this.capabilities.isEnabled(key))
-      : !!featureKey && this.capabilities.isEnabled(featureKey);
-    const featureAccess = readOnlyFeature
+    const hasReadFeature = requiredFeatures.length
+      ? requiredFeatures.every((key) => this.capabilities.isEnabled(key))
+      : (featureKeys.length
+        ? featureKeys.some((key) => this.capabilities.isEnabled(key))
+        : !!featureKey && this.capabilities.isEnabled(featureKey));
+    const featureAccess = (readOnlyFeature || requiredFeatures.length > 0 || featureKeys.length > 0)
       ? (hasReadFeature
         ? { allowed: true }
         : { allowed: false, message: 'Este módulo no está incluido en el plan de la empresa.' })
       : this.capabilities.validateFeatureUse(featureKey);
+    if (requiredFeatures.length && requiredFeatures.some((key) => !this.capabilities.isEnabled(key))) {
+      toast.error('Este módulo no está incluido en el plan de la empresa.');
+      return this.redirectToAvailable(state.url, currentRoles, 'feature');
+    }
     if (!featureAccess.allowed) {
       toast.error(featureAccess.message || 'Este módulo no está disponible para la empresa.');
       return this.redirectToAvailable(state.url, currentRoles, 'feature');
     }
-    // Las features determinan si un módulo forma parte del plan. Los permisos
-    // determinan si la persona puede operar dentro de él. System Manager y
-    // Administrador conservan acceso administrativo completo.
-    console.log('RoleAccessGuard - currentRoles:', currentRoles, 'isAdmin:', isAdmin, 'permissionKey:', permissionKey, 'deniedRoles:', deniedRoles, 'allowedRoles:', allowedRoles);
-    if (permissionKey && !isAdmin && !this.capabilities.hasPermission(permissionKey)) {
-      toast.error('No tienes permiso para realizar esta operación.');
+    // Las features determinan si un módulo forma parte del plan y los
+    // permisos del contexto determinan si la persona puede operar dentro de
+    // él. Incluso los perfiles administrativos deben recibir la capacidad
+    // correspondiente desde el backend (normalmente mediante `*`).
+    const requiredPermissions = permissionKeys.length
+      ? permissionKeys
+      : (permissionKey ? [permissionKey] : []);
+    if (requiredPermissions.length && requiredPermissions.some((permission) => !this.capabilities.hasPermission(permission))) {
+      toast.error(requiredPermissions.includes('reports.view')
+        ? 'No tienes permiso para consultar este reporte.'
+        : 'No tienes permiso para realizar esta operación.');
+      return this.redirectToAvailable(state.url, currentRoles, 'permission');
+    }
+    if (anyPermissionKeys.length && !anyPermissionKeys.some((permission) => this.capabilities.hasPermission(permission))) {
+      toast.error(anyPermissionKeys.includes('reports.view')
+        ? 'No tienes permiso para consultar este reporte.'
+        : 'No tienes permiso para realizar esta operación.');
       return this.redirectToAvailable(state.url, currentRoles, 'permission');
     }
     if (deniedRoles.length && currentRoles.some((role) => deniedRoles.includes(role))) {
@@ -142,7 +175,6 @@ export class RoleAccessGuard implements CanActivate {
   private hasAdminRole(roles: string[]): boolean {
     return roles.includes('SYSTEM MANAGER')
       || roles.includes('ADMINISTRATOR')
-      || roles.includes('ADMINISTRADOR')
-      || roles.includes('GERENTE');
+      || roles.includes('ADMINISTRADOR');
   }
 }

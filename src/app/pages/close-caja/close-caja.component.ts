@@ -26,6 +26,8 @@ export class CloseCajaComponent implements OnInit {
   };
 
   detallePorMetodo: any = {};
+  paymentTotals: Array<{ payment_method: string; payment_code: string; amount: number }> = [];
+  lastClose: any | null = null;
   sinApertura = true;
   loadingData = false;
   saving = false;
@@ -75,6 +77,7 @@ export class CloseCajaComponent implements OnInit {
     this.cierre.diferencia = 0;
     this.cierre.observaciones = '';
     this.detallePorMetodo = {};
+    this.paymentTotals = [];
   }
 
   getDatosCierre(): void {
@@ -94,7 +97,7 @@ export class CloseCajaComponent implements OnInit {
     ).subscribe({
       next: (response: any) => {
         const respuesta = response?.message ?? {};
-        const apertura = respuesta?.apertura ?? null;
+        const apertura = respuesta?.apertura ?? respuesta?.cash_opening ?? null;
 
         this.sinApertura = !apertura;
         if (this.sinApertura) {
@@ -102,16 +105,23 @@ export class CloseCajaComponent implements OnInit {
           return;
         }
 
-        this.cierre.apertura = apertura;
-        this.cierre.monto_apertura = Number(respuesta?.monto_apertura) || 0;
-        this.cierre.efectivo_sistema = Number(respuesta?.efectivo_sistema) || 0;
+        this.cierre.apertura = typeof apertura === 'string'
+          ? apertura
+          : (apertura?.name || (typeof apertura?.cash_opening === 'string' ? apertura.cash_opening : ''));
+        this.cierre.monto_apertura = Number(respuesta?.monto_apertura ?? respuesta?.opening_amount) || 0;
+        this.cierre.efectivo_sistema = this.getPaymentAmount(respuesta, '01');
         this.cierre.total_retiros = Number(respuesta?.total_retiros) || 0;
-        this.detallePorMetodo = respuesta?.payments ?? respuesta?.detalle ?? {};
+        this.paymentTotals = this.normalizePaymentTotals(respuesta);
+        this.detallePorMetodo = this.paymentTotals.reduce((result, payment) => {
+          result[payment.payment_code] = payment.amount;
+          return result;
+        }, {} as Record<string, number>);
         this.calcularDiferencia();
       },
       error: (error) => {
         console.warn('No hay apertura activa o no se pudo cargar datos de cierre:', error);
         this.resetCajaValores();
+        this.alertService.error(this.readBackendMessage(error) || 'No se pudo consultar la apertura de caja.');
       }
     });
   }
@@ -137,14 +147,17 @@ export class CloseCajaComponent implements OnInit {
       return;
     }
 
-    const payments = Object.keys(this.detallePorMetodo).map(key => ({
-      metodo_pago: key,
-      monto: this.detallePorMetodo[key]
-    }));
-
     const data = {
-      ...this.cierre,
-      payments
+      cash_opening: this.cierre.apertura,
+      cash_counted: Number(this.cierre.efectivo_real) || 0,
+      payments: (this.paymentTotals.length ? this.paymentTotals : [{ payment_method: 'Efectivo', payment_code: '01', amount: 0 }]).map((payment) => ({
+        payment_method: payment.payment_method,
+        payment_code: payment.payment_code,
+        counted_amount: payment.payment_code === '01'
+          ? Number(this.cierre.efectivo_real) || 0
+          : payment.amount
+      })),
+      notes: String(this.cierre.observaciones || '').trim()
     };
 
     this.saving = true;
@@ -155,13 +168,14 @@ export class CloseCajaComponent implements OnInit {
         this.endLoading();
       })
     ).subscribe({
-      next: () => {
+      next: (response: any) => {
         this.alertService.success('Cierre guardado correctamente');
+        this.lastClose = response?.message?.data ?? response?.data ?? response?.message ?? response;
         this.cleanCaja();
       },
       error: (error) => {
         console.error('Error al guardar cierre:', error);
-        this.alertService.error('No se pudo guardar el cierre de caja.');
+        this.alertService.error(this.readBackendMessage(error) || 'No se pudo guardar el cierre de caja.');
       }
     });
   }
@@ -171,7 +185,15 @@ export class CloseCajaComponent implements OnInit {
   }
 
   get totalEsperado(): number {
-    return (Number(this.cierre.monto_apertura) || 0) + (Number(this.cierre.efectivo_sistema) || 0);
+    return (Number(this.cierre.monto_apertura) || 0)
+      + (Number(this.cierre.efectivo_sistema) || 0)
+      - (Number(this.cierre.total_retiros) || 0);
+  }
+
+  paymentAmount(code: string): number {
+    return this.paymentTotals
+      .filter((payment) => payment.payment_code === code)
+      .reduce((sum, payment) => sum + payment.amount, 0);
   }
 
   get canSave(): boolean {
@@ -180,5 +202,55 @@ export class CloseCajaComponent implements OnInit {
       && (Number(this.cierre.efectivo_real) || 0) >= 0
       && !this.loadingData
       && !this.saving;
+  }
+
+  private getPaymentAmount(response: any, code: string): number {
+    return this.normalizePaymentTotals(response)
+      .filter((payment) => payment.payment_code === code)
+      .reduce((sum, payment) => sum + payment.amount, 0);
+  }
+
+  private normalizePaymentTotals(response: any): Array<{ payment_method: string; payment_code: string; amount: number }> {
+    const rows = Array.isArray(response?.payment_totals)
+      ? response.payment_totals
+      : Array.isArray(response?.payments)
+        ? response.payments
+        : Object.entries(response?.payments || response?.detalle || {}).map(([payment_method, amount]) => ({ payment_method, amount }));
+    const codes: Record<string, string> = {
+      efectivo: '01', cash: '01',
+      'tarjeta de credito/debito': '19', tarjeta: '19', card: '19',
+      transferencia: '20', transfer: '20'
+    };
+    return rows.map((row: any) => {
+      const rawMethod = String(row?.payment_method ?? row?.metodo_pago ?? row?.method ?? row?.name ?? 'Otros');
+      const explicitCode = String(row?.payment_code ?? row?.codigo ?? '').trim();
+      const paymentCode = /^\d{1,2}$/.test(explicitCode)
+        ? explicitCode.padStart(2, '0')
+        : (/^\d{1,2}$/.test(rawMethod) ? rawMethod.padStart(2, '0') : (codes[rawMethod.toLowerCase()] ?? '21'));
+      return {
+        payment_method: /^\d{1,2}$/.test(rawMethod) ? this.paymentLabel(paymentCode) : rawMethod,
+        payment_code: paymentCode,
+        amount: Number(row?.amount ?? row?.total ?? row?.monto ?? row?.system_amount ?? 0) || 0
+      };
+    }).filter((row: { payment_method: string; payment_code: string; amount: number }) => row.amount >= 0);
+  }
+
+  private paymentLabel(code: string): string {
+    return ({ '01': 'Efectivo', '19': 'Tarjeta de credito/debito', '20': 'Transferencia' } as Record<string, string>)[code] || 'Otros';
+  }
+
+  private readBackendMessage(error: any): string {
+    const payload = error?.error ?? error;
+    const direct = payload?.message ?? payload?.msg ?? payload?._server_messages;
+    if (Array.isArray(direct)) return direct.map((item: any) => String(item?.message || item)).join(' ');
+    if (direct && typeof direct === 'object') return String(direct.message || direct.error || direct.msg || '');
+    if (typeof direct === 'string') {
+      try {
+        const parsed = JSON.parse(direct);
+        if (Array.isArray(parsed)) return parsed.map((item: any) => String(item?.message || item)).join(' ');
+      } catch { /* mensaje plano */ }
+      return direct;
+    }
+    return error?.message || '';
   }
 }

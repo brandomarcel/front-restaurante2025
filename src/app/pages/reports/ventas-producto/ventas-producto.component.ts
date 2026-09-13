@@ -6,11 +6,12 @@ import { NgxPaginationModule } from 'ngx-pagination';
 import * as XLSX from 'xlsx';
 import * as FileSaver from 'file-saver';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
+import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
 
 @Component({
   selector: 'app-ventas-producto',
   standalone: true,
-  imports: [CommonModule, FormsModule,NgxPaginationModule,ButtonComponent],
+  imports: [CommonModule, FormsModule,NgxPaginationModule,ButtonComponent, AppPaginationComponent],
   templateUrl: './ventas-producto.component.html',
   styleUrl: './ventas-producto.component.css'
 })
@@ -46,6 +47,9 @@ export class VentasProductoComponent implements OnInit {
 get totalPages(): number {
   return Math.ceil(this.data.length / this.pageSize) || 1;
 }
+
+  onPaginationPage(page: number): void { this.page = page; }
+  onPaginationPageSize(size: number): void { this.pageSize = size; this.page = 1; }
 
   cargarDatos(): void {
     this.loading = true;

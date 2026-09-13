@@ -22,6 +22,7 @@ export class AperturaCajaComponent implements OnInit {
   };
 
   cajaActiva = false;
+  aperturaActual: any | null = null;
   loadingStatus = false;
   saving = false;
   private loadingCounter = 0;
@@ -76,11 +77,15 @@ export class AperturaCajaComponent implements OnInit {
       })
     ).subscribe({
       next: (res: any) => {
-        this.cajaActiva = !!(res?.message?.apertura ?? (Array.isArray(res?.data) && res.data.length > 0));
+        this.aperturaActual = res?.message?.apertura || (Array.isArray(res?.data) ? res.data[0] : null);
+        const status = String(this.aperturaActual?.status || this.aperturaActual?.estado || 'Abierta').toLowerCase();
+        this.cajaActiva = !!this.aperturaActual && status !== 'cerrada' && status !== 'closed';
       },
       error: (error) => {
         console.error('Error al verificar apertura activa:', error);
         this.cajaActiva = false;
+        this.aperturaActual = null;
+        this.alertService.error(this.readBackendMessage(error) || 'No se pudo consultar la apertura de caja.');
       }
     });
   }
@@ -91,8 +96,8 @@ export class AperturaCajaComponent implements OnInit {
     }
 
     const data = {
-      ...this.apertura,
-      fecha_hora: this.getFechaHoraEcuador()
+      opening_amount: Number(this.apertura.monto_apertura),
+      notes: String(this.apertura.observacion || '').trim()
     };
 
     this.saving = true;
@@ -106,11 +111,11 @@ export class AperturaCajaComponent implements OnInit {
     ).subscribe({
       next: () => {
         this.alertService.success('Caja abierta correctamente');
-        this.cajaActiva = true;
+        this.verificarCajaAbierta();
       },
       error: (error) => {
         console.error('Error al abrir caja:', error);
-        this.alertService.error('No se pudo abrir la caja.');
+        this.alertService.error(this.readBackendMessage(error) || 'No se pudo abrir la caja.');
       }
     });
   }
@@ -131,5 +136,20 @@ export class AperturaCajaComponent implements OnInit {
       && Number(this.apertura.monto_apertura) > 0
       && !this.loadingStatus
       && !this.saving;
+  }
+
+  private readBackendMessage(error: any): string {
+    const payload = error?.error ?? error;
+    const direct = payload?.message ?? payload?.msg ?? payload?._server_messages;
+    if (Array.isArray(direct)) return direct.map((item: any) => String(item?.message || item)).join(' ');
+    if (direct && typeof direct === 'object') return String(direct.message || direct.error || direct.msg || '');
+    if (typeof direct === 'string') {
+      try {
+        const parsed = JSON.parse(direct);
+        if (Array.isArray(parsed)) return parsed.map((item: any) => String(item?.message || item)).join(' ');
+      } catch { /* mensaje plano */ }
+      return direct;
+    }
+    return error?.message || '';
   }
 }

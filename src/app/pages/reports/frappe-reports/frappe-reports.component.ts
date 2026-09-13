@@ -176,16 +176,22 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     if (this.capabilities.features.restaurant === true) {
-      this.reports = this.restaurantReports();
-      this.selectedReportName = this.reports[0].name;
+      this.reports = [...this.restaurantReports(), ...this.reports.filter((report) => report.restaurantOnly !== true)];
     } else {
       // Orders Report pertenece exclusivamente al módulo Restaurante.
       // No debe quedar disponible para negocios de facturación/API aunque se
       // acceda a la pantalla mediante una ruta antigua o un enlace guardado.
       this.reports = this.reports.filter((report) => report.restaurantOnly !== true);
-      this.selectedReportName = this.reports[0]?.name || '';
     }
-    this.loadPayments();
+    this.reports = this.reports.filter((report) => this.canViewReport(report));
+    this.selectedReportName = this.reports[0]?.name || '';
+    if (!this.canViewReports() || !this.reports.length) {
+      this.errorMessage = 'No tienes permiso para consultar este reporte.';
+      return;
+    }
+    if (this.reports.some((report) => report.filters.some((filter) => filter.type === 'payment'))) {
+      this.loadPayments();
+    }
     this.routeSub = this.route.data.subscribe((data) => {
       const defaultReport = data?.['defaultReport'];
       this.selectReport(defaultReport || this.selectedReportName, false);
@@ -234,7 +240,7 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
   }
 
   get selectedReport(): ReportDefinition {
-    return this.reports.find((report) => report.name === this.selectedReportName) || this.reports[0];
+    return this.reports.find((report) => report.name === this.selectedReportName) || this.reports[0] || this.emptyReport();
   }
 
   get hasRows(): boolean {
@@ -252,7 +258,7 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
   }
 
   selectReport(reportName: string, fetch = true): void {
-    const report = this.reports.find((item) => item.name === reportName) || this.reports[0];
+    const report = this.reports.find((item) => item.name === reportName) || this.reports[0] || this.emptyReport();
     this.selectedReportName = report.name;
     this.filters = this.buildDefaultFilters(report);
     this.columns = [];
@@ -262,6 +268,12 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
   }
 
   runReport(): void {
+    if (!this.canViewReports() || !this.reports.length || !this.canViewReport(this.selectedReport)) {
+      this.rows = [];
+      this.columns = [];
+      this.errorMessage = 'No tienes permiso para consultar este reporte.';
+      return;
+    }
     if (!this.validateFilters()) return;
 
     this.loading = true;
@@ -290,7 +302,7 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
         error: (error) => {
           this.columns = [];
           this.rows = [];
-          this.errorMessage = error?.message || 'No se pudo cargar el reporte.';
+          this.errorMessage = this.readReportError(error);
           toast.error(this.errorMessage);
         }
       });
@@ -302,7 +314,7 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
   }
 
   exportExcel(): void {
-    if (this.exporting || !this.validateFilters()) return;
+    if (this.exporting || !this.canViewReports() || !this.canViewReport(this.selectedReport) || !this.validateFilters()) return;
 
     const visibleIndexes = this.getVisibleColumnIndexes();
     if (!visibleIndexes.length) {
@@ -324,7 +336,7 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
           toast.success('Reporte exportado correctamente.');
         },
         error: (error) => {
-          toast.error(error?.message || 'No se pudo exportar el reporte.');
+          toast.error(this.readReportError(error, 'No se pudo exportar el reporte.'));
         }
       });
   }
@@ -387,6 +399,44 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
         this.payments = [];
       }
     });
+  }
+
+  private canViewReports(): boolean {
+    return this.capabilities.hasPermission('*') || this.capabilities.hasPermission('reports.view');
+  }
+
+  private canViewReport(report: ReportDefinition): boolean {
+    const features = this.capabilities.features;
+    if (!this.canViewReports()) return false;
+    const anyPermission = (...permissions: string[]) => permissions.some((permission) => this.capabilities.hasPermission(permission));
+
+    if (report.name === 'Orders Report' || report.name === 'FacturADA Restaurant Orders') {
+      return features.restaurant === true && anyPermission('restaurant.orders.read', 'restaurant.manage');
+    }
+    if (report.name === 'Productos Más Vendidos') {
+      return features.products === true && anyPermission('products.read', 'products.manage');
+    }
+    if (report.name === 'Comprobantes Electronicos') {
+      return features.billing === true && anyPermission('billing.read', 'billing.manage');
+    }
+    if (report.name === 'Ventas por Forma de Pago' || report.name === 'FacturADA Restaurant Sales by Payment') {
+      return (features.billing === true && anyPermission('billing.read', 'billing.manage'))
+        || (features.restaurant === true && anyPermission('restaurant.orders.read', 'restaurant.manage'));
+    }
+    return false;
+  }
+
+  private emptyReport(): ReportDefinition {
+    return {
+      name: '', title: 'Reportes', description: '', badge: '', accent: '', defaultLimit: 50,
+      visibleColumns: [], filters: []
+    };
+  }
+
+  private readReportError(error: any, fallback = 'No se pudo cargar el reporte.'): string {
+    const status = Number(error?.status || error?.error?.status || 0);
+    if (status === 403) return 'No tienes permiso para consultar este reporte.';
+    return String(error?.message || error?.error?.message || fallback);
   }
 
   private buildDefaultFilters(report: ReportDefinition): Record<string, any> {

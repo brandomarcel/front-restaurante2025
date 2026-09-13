@@ -1088,20 +1088,24 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   get canCloseOrder(): boolean {
     const status = this.normalizeStatus(this.order?.status);
-    return !!this.order?.name && !this.isLocked && (status.includes('prepar') || status.includes('lista'));
+    return !!this.order?.name && !this.isLocked && this.capabilities.hasPermission('restaurant.orders.update')
+      && (status.includes('prepar') || status.includes('lista'));
   }
 
   get canStartPreparation(): boolean {
-    return !!this.order?.name && !this.isLocked && this.normalizeStatus(this.order?.status).includes('ingres');
+    return !!this.order?.name && !this.isLocked && this.capabilities.hasPermission('restaurant.orders.update')
+      && this.normalizeStatus(this.order?.status).includes('ingres');
   }
 
   get canMarkReady(): boolean {
-    return !!this.order?.name && !this.isLocked && this.normalizeStatus(this.order?.status).includes('prepar');
+    return !!this.order?.name && !this.isLocked && this.capabilities.hasPermission('restaurant.orders.update')
+      && this.normalizeStatus(this.order?.status).includes('prepar');
   }
 
   get canCancelOrder(): boolean {
     const status = this.normalizeStatus(this.order?.status);
-    return !!this.order?.name && !this.isLocked && (status.includes('ingres') || status.includes('prepar') || status.includes('lista'));
+    return !!this.order?.name && !this.isLocked && this.capabilities.hasPermission('restaurant.orders.update')
+      && (status.includes('ingres') || status.includes('prepar') || status.includes('lista'));
   }
 
   get isCancelled(): boolean {
@@ -1140,7 +1144,10 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   }
 
   setOrderStatus(status: 'Preparacion' | 'Lista' | 'Cancelada'): void {
-    if (!this.order?.name || this.closingOrder) return;
+    if (!this.order?.name || this.closingOrder || !this.capabilities.hasPermission('restaurant.orders.update')) {
+      if (!this.capabilities.hasPermission('restaurant.orders.update')) toast.error('No tienes permisos para actualizar órdenes.');
+      return;
+    }
     if (!this.ordersSvc.canTransitionOrder(this.order.status, status)) {
       toast.error('No se puede cambiar la orden a ese estado desde su estado actual.');
       return;
@@ -1207,5 +1214,10 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     if (!productSelection) return null;
     if (typeof productSelection !== 'string') return productSelection;
     return this.products.find((item) => item.name === productSelection) || null;
+  }
+
+  productImage(productId: unknown): string {
+    const product = this.products.find((item) => item.name === String(productId || '').trim());
+    return String(product?.image_url || product?.image || '').trim();
   }
 }

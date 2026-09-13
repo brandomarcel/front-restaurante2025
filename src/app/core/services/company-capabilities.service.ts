@@ -20,7 +20,8 @@ export type CompanyFeatureKey =
   | 'generic_pos'
   | 'pos_terminal'
   | 'billing'
-  | 'api';
+  | 'api'
+  | 'gym';
 
 export type CompanyFeatures = Record<CompanyFeatureKey, boolean>;
 
@@ -90,7 +91,8 @@ const RESTAURANT_FALLBACK: CompanyFeatures = {
   generic_pos: false,
   pos_terminal: false,
   billing: false,
-  api: false
+  api: false,
+  gym: false
 };
 
 @Injectable({ providedIn: 'root' })
@@ -324,12 +326,28 @@ export class CompanyCapabilitiesService {
     const terminal = this.activePosTerminal;
     const terminalEstablishmentId = String(terminal?.establishment || '').trim();
     const terminalPointId = String(terminal?.emission_point || '').trim();
-    const establishment = this.selectedLiteEstablishment
-      || this.activeEstablishments.find((item: any) => this.recordId(item) === terminalEstablishmentId)
-      || null;
-    const emissionPoint = this.selectedLiteEmissionPoint
-      || (establishment ? this.activeEmissionPointsFor(establishment).find((item: any) => this.recordId(item) === terminalPointId) : null)
-      || null;
+    // Un terminal POS fija la ubicación fiscal. Nunca permitir que una
+    // selección guardada en el navegador la reemplace, especialmente para
+    // usuarios operativos que no administran la infraestructura.
+    const terminalEstablishment = terminalEstablishmentId
+      ? (this.activeEstablishments.find((item: any) => this.recordId(item) === terminalEstablishmentId)
+        || (terminal?.establishment ? {
+          name: terminal.establishment,
+          establishment_code: terminal.establishment_code,
+          establishment_name: terminal.establishment_name
+        } : null))
+      : null;
+    const establishment = terminalEstablishment || this.selectedLiteEstablishment || null;
+    const terminalPoint = terminalPointId && establishment
+      ? (this.activeEmissionPointsFor(establishment).find((item: any) => this.recordId(item) === terminalPointId)
+        || (terminal?.emission_point ? {
+          name: terminal.emission_point,
+          emission_point_code: terminal.emission_point_code,
+          emission_point_name: terminal.emission_point_name,
+          establishment: terminal.establishment
+        } : null))
+      : null;
+    const emissionPoint = terminalPoint || (terminal ? null : this.selectedLiteEmissionPoint) || null;
     const target = this.normalizeEnvironment(environment
       || this.business?.environment
       || this.business?.ambiente
@@ -364,13 +382,9 @@ export class CompanyCapabilitiesService {
       && features.restaurant !== true;
   }
 
-  /** La configuración tributaria es administrativa, incluso si el backend
-   * entrega permisos operativos a otros roles. */
+  /** La configuración tributaria se habilita con el permiso del contexto. */
   get canManageBusinessInfrastructure(): boolean {
-    const role = this.normalize(String(this.businessRole || ''));
-    return this.hasAdminRole(this.roles)
-      || role === 'ADMINISTRADOR'
-      || role === 'GERENTE';
+    return this.hasPermission('*') || this.hasPermission('business.settings.manage');
   }
 
   /** Rol autorizado para modificar la configuración tributaria del negocio. */
@@ -380,7 +394,19 @@ export class CompanyCapabilitiesService {
 
   setFromResponse(response: any): void {
     const selectedBusinessId = this.activeBusinessId;
-    const message = frappeData<any>(response) || {};
+    // get_user_context entrega el contexto directamente en `response.message`.
+    // Algunos endpoints antiguos lo envuelven en `message.data`; aceptar ambos
+    // formatos sin perder un contexto válido que casualmente tenga una clave
+    // `data` propia.
+    const rawMessage = response?.message ?? response ?? {};
+    const hasContextShape = rawMessage && typeof rawMessage === 'object' && (
+      rawMessage.features !== undefined
+      || rawMessage.permissions !== undefined
+      || rawMessage.business_role !== undefined
+      || rawMessage.terminal !== undefined
+      || rawMessage.api_configuration !== undefined
+    );
+    const message = (hasContextShape ? rawMessage : frappeData<any>(response)) || {};
     const rawBusiness = message?.business;
     const rawCompany = rawBusiness && typeof rawBusiness === 'object'
       ? rawBusiness
@@ -404,14 +430,16 @@ export class CompanyCapabilitiesService {
       const previousEnvironment = this.state().business?.environment ?? this.state().business?.ambiente;
       if (previousEnvironment) normalizedCompany.environment = previousEnvironment;
     }
-    const received = message?.features ?? normalizedCompany?.features ?? nestedCompany?.features ?? response?.features;
+    const received = message?.features;
     const features = received && typeof received === 'object'
       ? this.featureKeys.reduce((result, key) => {
           const value = this.coerceOptionalBoolean(received[key]);
           if (value !== undefined) result[key] = value === true;
           return result;
         }, this.emptyFeatures())
-      : this.state().features;
+      // Si el contexto no entrega features, fallar cerrado. Nunca reutilizar
+      // las capacidades de la empresa anterior para decidir el menú.
+      : this.emptyFeatures();
     // La modalidad es una vista derivada de las features del contexto. No se
     // toma del nombre del plan, business_model, business_type ni roles Frappe.
     const businessMode = this.resolveBusinessModeFromFeatures(features);
@@ -426,7 +454,7 @@ export class CompanyCapabilitiesService {
     const businesses = this.state().businesses.length
       ? this.state().businesses
       : (Array.isArray(message?.businesses) ? message.businesses : []);
-    const businessRole = message?.business_role ?? normalizedCompany?.business_role ?? null;
+    const businessRole = message?.business_role ?? null;
     const roles = this.normalizeRoles(message?.roles ?? message?.user_roles ?? normalizedCompany?.roles ?? response?.roles);
     if (businessRole) {
       const normalizedBusinessRole = this.normalize(String(businessRole));
@@ -443,13 +471,13 @@ export class CompanyCapabilitiesService {
         ? 'NO CONFIGURADO'
         : null);
     const terminalContext = message?.terminal && typeof message.terminal === 'object' ? message.terminal : null;
-    const posTerminals = Array.isArray(message?.pos_terminals)
-      ? message.pos_terminals
-      : (Array.isArray(terminalContext?.pos_terminals)
-        ? terminalContext.pos_terminals
-        : (Array.isArray(terminalContext?.terminals) ? terminalContext.terminals : (this.state().posTerminals || [])));
+    const posTerminals = Array.isArray(terminalContext?.pos_terminals)
+      ? terminalContext.pos_terminals
+      : (Array.isArray(message?.pos_terminals)
+        ? message.pos_terminals
+        : (Array.isArray(terminalContext?.terminals) ? terminalContext.terminals : []));
     const terminalCandidates = posTerminals.filter((item: any) =>
-      !item?.business || !responseBusinessId || String(item.business) === responseBusinessId
+      !responseBusinessId || String(item?.business || '').trim() === responseBusinessId
     );
     const persistedTerminalName = responseBusinessId
       ? String(localStorage.getItem(this.posTerminalStorageKey(responseBusinessId)) || '').trim()
@@ -466,7 +494,7 @@ export class CompanyCapabilitiesService {
       : String(contextTerminal?.name || message?.terminal_name || '').trim();
     const selectedTerminal = terminalCandidates.find((item: any) => String(item?.name || '') === persistedTerminalName)
       || terminalCandidates.find((item: any) => String(item?.name || '') === contextTerminalName)
-      || (contextTerminal && (!contextTerminal.business || !responseBusinessId || String(contextTerminal.business) === responseBusinessId) ? contextTerminal : null);
+      || (contextTerminal && (!responseBusinessId || String(contextTerminal.business || '').trim() === responseBusinessId) ? contextTerminal : null);
 
     const apiConfiguration = message?.api_configuration === undefined
       ? this.state().apiConfiguration
@@ -669,8 +697,6 @@ export class CompanyCapabilitiesService {
     if (feature === 'direct_invoice') return features.direct_invoice === true;
     if (feature === 'credit_note') return features.credit_note === true;
 
-    // Las mesas pueden estar habilitadas en un negocio restaurante incluso
-    // mientras el backend termina de publicar la bandera granular `tables`.
     if (feature === 'tables') {
       return isRestaurant && features.tables === true;
     }
@@ -683,13 +709,16 @@ export class CompanyCapabilitiesService {
   }
 
   hasPermission(permission?: string): boolean {
-    if (!permission || !this.permissions) return true;
-    if (this.hasAdminRole(this.roles)) return true;
+    if (!permission) return true;
+    // Antes de recibir el contexto no bloquear la carga inicial. Cuando el
+    // contexto ya está disponible, una ausencia de permisos debe ser segura.
+    if (!this.permissions) return !this.isLoaded;
     const permissions = this.permissions;
     const normalizedPermission = String(permission).trim();
 
     if (Array.isArray(permissions)) {
       const normalized = permissions.map((item) => String(item || '').trim().toLowerCase());
+      if (normalized.includes('*')) return true;
       const resource = normalizedPermission.toLowerCase();
       const [resourceName, action] = resource.split('.', 2);
       // El contexto Lite usa billing.* para las operaciones de facturación,
@@ -711,8 +740,10 @@ export class CompanyCapabilitiesService {
     }
 
     const [resource, action] = normalizedPermission.split('.', 2);
-    const requiresExplicitPermission = action === 'manage';
-    const resourceKeys = Object.keys(permissions);
+    if (permissions && typeof permissions === 'object') {
+      const wildcard = (permissions as any)['*'];
+      if (wildcard === true || wildcard === 1 || String(wildcard).toLowerCase() === 'true') return true;
+    }
     const candidates = [
       action ? undefined : `${normalizedPermission}.read`,
       action ? undefined : `${normalizedPermission}.manage`,
@@ -739,13 +770,14 @@ export class CompanyCapabilitiesService {
       }
     }
 
-    // Las capacidades de lectura mantienen compatibilidad con contextos
-    // antiguos que no enviaban permisos. Las capacidades de gestión, en
-    // cambio, solo se habilitan si el backend las declara expresamente.
-    const hasResourceEntries = resourceKeys.some((key) =>
-      key === resource || key.startsWith(`${resource}.`) || key.startsWith(`can_${resource}`) || key.startsWith(`view_${resource}`)
-    );
-    return !requiresExplicitPermission && !hasResourceEntries;
+    // El backend es la autoridad: si entregó un mapa y la clave no existe,
+    // no se concede acceso por omisión.
+    return false;
+  }
+
+  /** Regla única para botones y navegación: permiso + feature (si aplica). */
+  can(permission?: string, feature?: CompanyFeatureKey): boolean {
+    return (!feature || this.isEnabled(feature)) && this.hasPermission(permission);
   }
 
   hasRole(userRoles: unknown, allowedRoles?: string[]): boolean {
@@ -837,23 +869,31 @@ export class CompanyCapabilitiesService {
   }
 
   getLandingRoute(userRoles: unknown): string {
-    if (!this.isEnabled('restaurant') && this.isLiteMode && this.hasRole(userRoles, ['GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO', 'ALL'])) {
-      return '/dashboard/main';
-    }
-    if (this.businessMode === 'FACTURADOR' && this.hasRole(userRoles, ['GERENTE', 'CAJERO'])) {
-      return '/dashboard/main';
-    }
-    if (this.canAccess('restaurant_pos', ['GERENTE', 'CAJERO', 'MESERO'], userRoles)) return '/dashboard/pos';
-    if (this.canAccess('direct_invoice', ['GERENTE', 'CAJERO', 'FACTURACION'], userRoles)) return '/dashboard/invoicing';
-    if (this.canAccess('kitchen', ['GERENTE', 'COCINA'], userRoles)) return '/dashboard/orders-realtime';
+    if (this.isEnabled('restaurant')
+      && this.isEnabled('orders')
+      && this.hasPermission('restaurant.orders.create')
+      && !this.hasPermission('billing.create')) return '/dashboard/pos';
+    if (this.isEnabled('restaurant_pos') && this.hasPermission('billing.create')) return '/dashboard/pos';
+    if (this.isEnabled('generic_pos') && this.hasPermission('billing.create')) return '/dashboard/pos-generic';
+    if (this.isEnabled('direct_invoice') && this.hasPermission('billing.create')) return '/dashboard/invoicing';
+    if (this.isEnabled('orders') && this.hasPermission('restaurant.orders.read')) return '/dashboard/orders';
+    if (this.isEnabled('kitchen')
+      && this.hasPermission('restaurant.orders.read')
+      && this.hasPermission('restaurant.orders.update')) return '/dashboard/orders-realtime';
     return '/dashboard/no-access';
   }
 
   getPosExitRoute(userRoles: unknown): string {
-    if (!this.isEnabled('restaurant') && this.isLiteMode && this.canAccess('direct_invoice', ['GERENTE', 'CAJERO', 'FACTURACION'], userRoles)) return '/dashboard/invoicing';
-    if (this.canAccess('orders', ['GERENTE', 'CAJERO', 'MESERO'], userRoles)) return '/dashboard/orders';
-    if (this.canAccess('direct_invoice', ['GERENTE', 'CAJERO', 'FACTURACION'], userRoles)) return '/dashboard/invoicing';
-    if (this.canAccess('kitchen', ['GERENTE', 'COCINA'], userRoles)) return '/dashboard/orders-realtime';
+    if (this.isEnabled('restaurant')
+      && this.isEnabled('orders')
+      && this.hasPermission('restaurant.orders.create')
+      && !this.hasPermission('billing.create')) return '/dashboard/pos';
+    if (this.isEnabled('generic_pos') && this.hasPermission('billing.create')) return '/dashboard/pos-generic';
+    if (this.isEnabled('direct_invoice') && this.hasPermission('billing.create')) return '/dashboard/invoicing';
+    if (this.isEnabled('orders') && this.hasPermission('restaurant.orders.read')) return '/dashboard/orders';
+    if (this.isEnabled('kitchen')
+      && this.hasPermission('restaurant.orders.read')
+      && this.hasPermission('restaurant.orders.update')) return '/dashboard/orders-realtime';
     return '/dashboard/no-access';
   }
 
@@ -861,11 +901,21 @@ export class CompanyCapabilitiesService {
     localStorage.removeItem(this.storageKey);
     localStorage.removeItem('businessId');
     localStorage.removeItem('active_business');
+    // Las selecciones de infraestructura son por negocio y por sesión. No
+    // deben reaparecer para otro usuario después de cerrar sesión.
+    try {
+      Object.keys(localStorage)
+        .filter((key) => key.startsWith('lite_document_selection:')
+          || key.startsWith('lite_active_establishment:')
+          || key.startsWith('lite_active_emission_point:')
+          || key.startsWith('pos_terminal:'))
+        .forEach((key) => localStorage.removeItem(key));
+    } catch { }
     this.state.set(this.defaultState());
   }
 
   private get featureKeys(): CompanyFeatureKey[] {
-    return ['restaurant', 'restaurant_pos', 'generic_pos', 'pos_terminal', 'pos', 'billing', 'api', 'orders', 'tables', 'kitchen', 'cash_register', 'direct_invoice', 'credit_note', 'customers', 'products', 'additional_fields', 'inventory'];
+    return ['restaurant', 'restaurant_pos', 'generic_pos', 'pos_terminal', 'pos', 'billing', 'api', 'orders', 'tables', 'kitchen', 'cash_register', 'direct_invoice', 'credit_note', 'customers', 'products', 'additional_fields', 'inventory', 'gym'];
   }
 
   /** Actualiza o limpia la configuración API sin tocar el resto del contexto. */
@@ -1169,7 +1219,8 @@ export class CompanyCapabilitiesService {
         generic_pos: false,
         pos_terminal: false,
         billing: false,
-        api: false
+        api: false,
+        gym: false
       };
     }
 

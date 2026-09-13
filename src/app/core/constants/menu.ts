@@ -6,18 +6,21 @@ export class Menu {
     {
       group: 'Principal',
       separator: false,
-      allowedRoles: ['GERENTE', 'CAJERO'],
+      allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO', 'MESERO'],
       items: [
         {
           icon: 'assets/icons/tablericons/chart-donut-3.svg',
           label: 'Dashboard',
           route: '/dashboard/main',
+          allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'],
         },
         {
           icon: 'assets/icons/tablericons/building-store.svg',
           label: 'POS',
           route: '/dashboard/pos',
           featureKey: 'restaurant_pos',
+          allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO'],
+          permissionKey: 'billing.create',
           hideInLite: true,
         },
         {
@@ -25,6 +28,7 @@ export class Menu {
           label: 'Ordenes en vivo',
           route: '/dashboard/orders-realtime',
           featureKey: 'kitchen',
+          permissionKeys: ['restaurant.orders.read', 'restaurant.orders.update'],
           hideInLite: true,
         },
       ],
@@ -34,7 +38,7 @@ export class Menu {
     {
       group: 'Facturación',
       separator: true,
-      allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'],
+      featureKey: 'billing',
       items: [
         {
           icon: 'assets/icons/tablericons/cash-register.svg',
@@ -78,29 +82,30 @@ export class Menu {
     },
 
     {
-      group: 'Caja',
+      group: 'Restaurante',
       separator: false,
-      allowedRoles: ['GERENTE', 'CAJERO'],
+      featureKey: 'restaurant',
       items: [
         {
           icon: 'assets/icons/tablericons/cash-banknote.svg',
           label: 'Caja',
           route: '/caja',
           featureKey: 'cash_register',
-          hideInLite: true,
+          requiredFeatures: ['restaurant_pos', 'cash_register'],
+          permissionKey: 'restaurant.cash.manage',
           children: [
-            { label: 'Apertura', route: '/caja/apertura' },
-            { label: 'Retiros', route: '/caja/retiro' },
-            { label: 'Cierre', route: '/caja/cierre' },
+            { label: 'Apertura', route: '/caja/apertura', permissionKey: 'restaurant.cash.manage' },
+            { label: 'Retiros', route: '/caja/retiro', permissionKey: 'restaurant.cash.manage' },
+            { label: 'Cierre', route: '/caja/cierre', permissionKey: 'restaurant.cash.manage' },
             
           ],
         },
         {
-          allowedRoles: ['CAJERO'],
           icon: 'assets/icons/tablericons/shopping-bag.svg',
           label: 'Lista Órdenes',
           route: '/dashboard/orders',
           featureKey: 'orders',
+          permissionKeys: ['restaurant.orders.read', 'restaurant.orders.update'],
           hideInLite: true,
         },
         {
@@ -108,6 +113,15 @@ export class Menu {
           label: 'Mesas',
           route: '/dashboard/tables',
           featureKey: 'tables',
+          permissionKey: 'restaurant.orders.read',
+        },
+        {
+          icon: 'assets/icons/tablericons/building-store.svg',
+          label: 'POS Restaurante',
+          route: '/dashboard/pos',
+          featureKey: 'restaurant',
+          requiredFeatures: ['orders'],
+          permissionKey: 'restaurant.orders.create',
         },
       ],
     },
@@ -115,7 +129,6 @@ export class Menu {
     {
       group: 'Reportes',
       separator: false,
-      allowedRoles: ['SYSTEM MANAGER', 'GERENTE', 'CAJERO'],
       hideInApiOnly: true,
       items: [
         {
@@ -128,9 +141,8 @@ export class Menu {
     },
 
     {
-      group: 'Configuracion',
+      group: 'Operación',
       separator: false,
-      allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'MESERO', 'COCINA', 'USUARIO'],
       items: [
         {
           icon: 'assets/icons/tablericons/users.svg',
@@ -138,6 +150,7 @@ export class Menu {
           route: '/dashboard/customers',
           featureKey: 'customers',
           permissionKey: 'customers.read',
+          allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'],
         },
         // {
         //   icon: 'assets/icons/tablericons/users-plus.svg',
@@ -150,6 +163,7 @@ export class Menu {
           route: '/dashboard/products',
           featureKey: 'products',
           permissionKey: 'products.read',
+          allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'],
         },
         {
           icon: 'assets/icons/tablericons/repeat.svg',
@@ -159,31 +173,54 @@ export class Menu {
           permissionKey: 'inventory.read',
         },
         {
-          icon: 'assets/icons/tablericons/shopping-bag.svg',
-          label: 'Lista Órdenes',
-          route: '/dashboard/orders',
-          featureKey: 'orders',
-          hideInLite: true,
-        },
-        {
-          icon: 'assets/icons/heroicons/outline/building-storefront.svg',
-          label: 'Mesas',
-          route: '/dashboard/tables',
-          featureKey: 'tables',
-        },
-        {
           icon: 'assets/icons/tablericons/category.svg',
           label: 'Categorias',
           route: '/dashboard/categories',
           featureKey: 'products',
-          permissionKey: 'products.read',
+          permissionKey: 'products.manage',
+        },
+      ],
+    },
+
+    {
+      group: 'Documentos API',
+      separator: true,
+      featureKey: 'api',
+      hideWhenFeature: 'billing',
+      items: [
+        {
+          icon: 'assets/icons/tablericons/file-invoice.svg',
+          label: 'Lista Facturas',
+          route: '/dashboard/invoices',
+          featureKey: 'api',
+          permissionKey: 'billing.read',
+        },
+        {
+          icon: 'assets/icons/tablericons/file-invoice.svg',
+          label: 'Lista Notas Crédito',
+          route: '/dashboard/credit-notes',
+          featureKey: 'api',
+          permissionKey: 'billing.read',
+        },
+      ],
+    },
+
+    {
+      group: 'Configuración',
+      separator: false,
+      permissionKey: 'business.settings.manage',
+      items: [
+        {
+          icon: 'assets/icons/heroicons/outline/cog-6-tooth.svg',
+          label: 'Configuración del negocio',
+          route: '/settings/lite',
+          permissionKey: 'business.settings.manage',
         },
         {
           icon: 'assets/icons/tablericons/users.svg',
           label: 'Usuarios',
           route: '/dashboard/users',
-          allowedRoles: ['ADMINISTRADOR', 'GERENTE'],
-          hideInApiOnly: true,
+          permissionKey: 'business.users.manage',
         },
       ],
     },
@@ -191,25 +228,27 @@ export class Menu {
     {
       group: 'Infraestructura fiscal',
       separator: true,
-      allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'MESERO', 'COCINA', 'USUARIO'],
       items: [
         {
           icon: 'assets/icons/heroicons/outline/building-storefront.svg',
           label: 'Establecimientos',
           route: '/settings/lite/establishments',
           featureKeys: ['direct_invoice', 'billing', 'generic_pos', 'api'],
+          permissionKey: 'business.settings.manage',
         },
         {
           icon: 'assets/icons/heroicons/outline/building-storefront.svg',
           label: 'Puntos de emisión',
           route: '/settings/lite/emission-points',
           featureKeys: ['direct_invoice', 'billing', 'generic_pos', 'api'],
+          permissionKey: 'business.settings.manage',
         },
         {
           icon: 'assets/icons/heroicons/outline/clipboard-document-list.svg',
           label: 'Secuencias de documentos',
           route: '/settings/lite/sequences',
           featureKeys: ['direct_invoice', 'billing', 'generic_pos', 'api'],
+          permissionKey: 'business.settings.manage',
         },
         {
           icon: 'assets/icons/tablericons/cash-register.svg',
@@ -223,54 +262,23 @@ export class Menu {
           icon: 'assets/icons/tablericons/file-invoice.svg',
           label: 'Integración API',
           route: '/settings/lite/api',
-          requiresApiConfiguration: true,
+          featureKey: 'api',
+          permissionKey: 'business.settings.manage',
         },
       ],
     },
 
     {
-      group: 'Configuracion',
+      group: 'Cocina',
       separator: false,
-      allowedRoles: ['MESERO'],
-      items: [
-
-        {
-          allowedRoles: ['MESERO'],
-          icon: 'assets/icons/tablericons/shopping-bag.svg',
-          label: 'Lista Órdenes',
-          route: '/dashboard/orders',
-          featureKey: 'orders',
-          hideInLite: true,
-        },
-        {
-          allowedRoles: ['MESERO'],
-          icon: 'assets/icons/heroicons/outline/building-storefront.svg',
-          label: 'Mesas',
-          route: '/dashboard/tables',
-          featureKey: 'tables',
-        },
-
-        {
-          icon: 'assets/icons/tablericons/building-store.svg',
-          label: 'POS',
-          route: '/dashboard/pos',
-          featureKey: 'restaurant_pos',
-          hideInLite: true,
-        },
-
-      ],
-    },
-
-    {
-      group: 'Produccion',
-      separator: false,
-      allowedRoles: ['COCINA'],
+      featureKey: 'kitchen',
       items: [
         {
           icon: 'assets/icons/tablericons/chart-donut-3.svg',
-          label: 'Ordenes en vivo',
+          label: 'Pantalla de cocina',
           route: '/dashboard/orders-realtime',
           featureKey: 'kitchen',
+          permissionKeys: ['restaurant.orders.read', 'restaurant.orders.update'],
           hideInLite: true,
         },
       ],

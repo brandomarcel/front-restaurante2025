@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } 
 import { NgxPaginationModule } from 'ngx-pagination';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
+import { catchError, finalize, map, of, switchMap } from 'rxjs';
 import { Product } from 'src/app/core/models/product';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
@@ -12,6 +13,7 @@ import { ProductsService } from 'src/app/services/products.service';
 import { TaxesService } from 'src/app/services/taxes.service';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
 import {
   getInventoryUnit,
   hasInventoryControl,
@@ -25,7 +27,7 @@ type StockEditMode = 'absolute' | 'delta';
 
 @Component({
   selector: 'app-products',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule, ButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule, ButtonComponent, AppPaginationComponent],
   templateUrl: './products.component.html',
   styleUrl: './products.component.css'
 })
@@ -56,9 +58,15 @@ export class ProductsComponent implements OnInit {
   productoEditando: Product | null = null;
   productoForm!: FormGroup;
   stockEditMode: StockEditMode = 'absolute';
+  selectedImageFile: File | null = null;
+  imagePreview = '';
 
   page = 1;
   pageSize = 10;
+
+  get totalPages(): number { return Math.max(1, Math.ceil((this.productosFiltradosList.length || 0) / this.pageSize)); }
+  onPaginationPage(page: number): void { this.page = page; }
+  onPaginationPageSize(size: number): void { this.pageSize = size; this.page = 1; }
 
   constructor(
     private productsService: ProductsService,
@@ -97,11 +105,11 @@ export class ProductsComponent implements OnInit {
   }
 
   get canReadProducts(): boolean {
-    return this.capabilities.isEnabled('products');
+    return this.capabilities.isEnabled('products') && this.capabilities.hasPermission('products.read');
   }
 
   get canManageProducts(): boolean {
-    return this.capabilities.isEnabled('products');
+    return this.capabilities.isEnabled('products') && this.capabilities.hasPermission('products.manage');
   }
 
   get searchTerm(): string {
@@ -218,6 +226,8 @@ export class ProductsComponent implements OnInit {
     this.submitted = false;
     this.productoEditando = producto;
     this.stockEditMode = 'absolute';
+    this.selectedImageFile = null;
+    this.imagePreview = producto?.image_url || producto?.image || '';
     this.resetForm();
 
     if (!producto) {
@@ -253,7 +263,24 @@ export class ProductsComponent implements OnInit {
     this.submitted = false;
     this.productoEditando = null;
     this.stockEditMode = 'absolute';
+    this.selectedImageFile = null;
+    this.imagePreview = '';
     this.resetForm();
+  }
+
+  onProductImageSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] || null;
+    if (!file) return;
+    const allowed = ['image/png', 'image/jpeg', 'image/webp'];
+    const extension = file.name.toLowerCase().split('.').pop() || '';
+    if (!allowed.includes(file.type) && !['png', 'jpg', 'jpeg', 'webp'].includes(extension)) {
+      this.alertService.error('La imagen debe estar en formato PNG, JPG, JPEG o WEBP.');
+      input.value = '';
+      return;
+    }
+    this.selectedImageFile = file;
+    this.imagePreview = URL.createObjectURL(file);
   }
 
   guardarProducto() {
@@ -281,19 +308,32 @@ export class ProductsComponent implements OnInit {
 
   createProduct(data: any) {
     this.spinner.show();
-    this.productsService.create(data).subscribe({
-      next: () => {
-        toast.success('Producto creado con exito');
+    const image = this.selectedImageFile;
+    this.productsService.create(data).pipe(
+      switchMap((created: any) => {
+        const itemName = String(created?.name || created?.item || '').trim();
+        if (!image) return of({ product: created, imageError: null });
+        if (!itemName) return of({ product: created, imageError: new Error('El backend no devolvió el nombre del producto creado para cargar la imagen.') });
+        return this.productsService.uploadImage(itemName, image).pipe(
+          map((uploaded: any) => ({ product: { ...created, ...uploaded }, imageError: null })),
+          catchError((error: any) => of({ product: created, imageError: error }))
+        );
+      }),
+      finalize(() => this.spinner.hide())
+    ).subscribe({
+      next: (result: any) => {
+        this.upsertProduct(result.product);
         this.cerrarModal();
-        this.cargarProductos();
+        if (result.imageError) {
+          this.alertService.error(this.frappeErrorService.handle(result.imageError) || 'Producto creado, pero no se pudo cargar la imagen.');
+          toast.success('Producto creado');
+        } else {
+          toast.success(image ? 'Producto creado con imagen' : 'Producto creado con exito');
+        }
       },
       error: (error: any) => {
         const mensaje = this.frappeErrorService.handle(error);
         this.alertService.error(mensaje);
-        this.spinner.hide();
-      },
-      complete: () => {
-        this.spinner.hide();
       }
     });
   }
@@ -304,21 +344,42 @@ export class ProductsComponent implements OnInit {
     }
 
     this.spinner.show();
-    this.productsService.update(this.productoEditando.name, data).subscribe({
-      next: () => {
-        toast.success('Producto actualizado con exito');
+    const image = this.selectedImageFile;
+    this.productsService.update(this.productoEditando.name, data).pipe(
+      switchMap((updated: any) => {
+        if (!image) return of({ product: updated, imageError: null });
+        return this.productsService.uploadImage(String(this.productoEditando?.name || updated?.name || ''), image).pipe(
+          map((uploaded: any) => ({ product: { ...updated, ...uploaded }, imageError: null })),
+          catchError((error: any) => of({ product: updated, imageError: error }))
+        );
+      }),
+      finalize(() => this.spinner.hide())
+    ).subscribe({
+      next: (result: any) => {
+        this.upsertProduct(result.product);
         this.cerrarModal();
-        this.cargarProductos();
+        if (result.imageError) {
+          this.alertService.error(this.frappeErrorService.handle(result.imageError) || 'Producto actualizado, pero no se pudo cargar la imagen.');
+        } else {
+          toast.success(image ? 'Producto actualizado con imagen' : 'Producto actualizado con exito');
+        }
       },
       error: (error: any) => {
         const mensaje = this.frappeErrorService.handle(error);
         this.alertService.error(mensaje);
-        this.spinner.hide();
-      },
-      complete: () => {
-        this.spinner.hide();
       }
     });
+  }
+
+  private upsertProduct(product: Product | null | undefined): void {
+    if (!product) return;
+    const index = this.productos.findIndex((item) => item.name === product.name);
+    if (index >= 0) {
+      this.productos = this.productos.map((item, i) => i === index ? { ...item, ...product } : item);
+    } else {
+      this.productos = [...this.productos, product];
+    }
+    this.actualizarProductosFiltrados();
   }
 
   eliminar(id: string) {

@@ -22,7 +22,8 @@ export class CajaAbiertaGuard implements CanActivate {
     // La apertura pertenece a POS. Si el negocio tiene restaurante pero no
     // contrató caja, la navegación de órdenes/POS no debe bloquearse por una
     // validación de apertura que no aplica.
-    if (!this.capabilities.isEnabled('cash_register')) {
+    if (!(this.capabilities.isEnabled('restaurant_pos') && this.capabilities.isEnabled('cash_register'))
+      || !this.capabilities.hasPermission('restaurant.cash.manage')) {
       return of(true);
     }
     const user = this.readCurrentUser();
@@ -41,7 +42,9 @@ export class CajaAbiertaGuard implements CanActivate {
       return of(this.router.createUrlTree(['/dashboard/main']));
     }
 
-    const cached = this.cacheByUser[email];
+    const business = this.capabilities.activeBusinessId || '';
+    const cacheKey = `${business}:${email}`;
+    const cached = this.cacheByUser[cacheKey];
     const now = Date.now();
     if (cached && now - cached.at < 15000) {
       return of(cached.hasApertura ? true : this.redirectToMain(state.url));
@@ -50,7 +53,7 @@ export class CajaAbiertaGuard implements CanActivate {
     return this.cajasService.verificarAperturaActiva(email).pipe(
       map((resp: any) => {
         const hasApertura = Array.isArray(resp?.data) && resp.data.length > 0;
-        this.cacheByUser[email] = { at: now, hasApertura };
+        this.cacheByUser[cacheKey] = { at: now, hasApertura };
         return hasApertura ? true : this.redirectToMain(state.url);
       }),
       catchError((error) => {
@@ -62,8 +65,11 @@ export class CajaAbiertaGuard implements CanActivate {
   }
 
   private redirectToMain(fromUrl: string): UrlTree {
+    // Un Cajero puede tener acceso al POS, pero no puede operar ventas hasta
+    // abrir su turno. Llevarlo directamente a Apertura evita que parezca que
+    // el acceso está roto o que perdió los módulos disponibles.
     toast.warning('Debes abrir caja para acceder a esta sección.');
-    return this.router.createUrlTree(['/dashboard/main'], {
+    return this.router.createUrlTree(['/caja/apertura'], {
       queryParams: { blocked: 'caja', from: fromUrl }
     });
   }

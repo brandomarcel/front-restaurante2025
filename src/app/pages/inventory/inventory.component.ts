@@ -10,6 +10,7 @@ import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { InventoryService } from 'src/app/services/inventory.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
 import { forkJoin } from 'rxjs';
 import {
   canSellProduct,
@@ -22,7 +23,7 @@ import {
 
 @Component({
   selector: 'app-inventory',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, AppPaginationComponent],
   templateUrl: './inventory.component.html',
   styleUrl: './inventory.component.css'
 })
@@ -140,6 +141,10 @@ export class InventoryComponent implements OnInit {
     return this.capabilities.isEnabled('inventory');
   }
 
+  get canManageInventory(): boolean {
+    return this.inventoryEnabled && this.capabilities.hasPermission('inventory.manage');
+  }
+
   get isLiteMode(): boolean {
     return this.capabilities.isLiteMode;
   }
@@ -176,6 +181,20 @@ export class InventoryComponent implements OnInit {
     const start = this.historyOffset + 1;
     const end = Math.min(this.historyOffset + this.historyLimit, this.historyTotal);
     return `${start}-${end} de ${this.historyTotal}`;
+  }
+
+  get historyPage(): number { return Math.floor(this.historyOffset / this.historyLimit) + 1; }
+  get historyTotalPages(): number { return Math.max(1, Math.ceil(this.historyTotal / this.historyLimit)); }
+
+  onHistoryPage(page: number): void {
+    this.historyOffset = (page - 1) * this.historyLimit;
+    this.cargarMovimientos();
+  }
+
+  onHistoryPageSize(size: number): void {
+    this.historyLimit = size;
+    this.historyOffset = 0;
+    this.cargarMovimientos();
   }
 
   initMovementForm(): void {
@@ -348,8 +367,10 @@ export class InventoryComponent implements OnInit {
   }
 
   abrirMovimientoModal(): void {
-    if (!this.inventoryEnabled) {
-      this.alertService.error('El inventario no está incluido en el plan actual.');
+    if (!this.canManageInventory) {
+      this.alertService.error(this.inventoryEnabled
+        ? 'No tienes permisos para administrar inventario.'
+        : 'El inventario no está incluido en el plan actual.');
       return;
     }
     this.showMovementModal = true;
@@ -387,6 +408,10 @@ export class InventoryComponent implements OnInit {
   }
 
   guardarMovimiento(): void {
+    if (!this.canManageInventory) {
+      this.alertService.error('No tienes permisos para administrar inventario.');
+      return;
+    }
     this.submittedMovement = true;
     if (this.movementForm.invalid) {
       this.movementForm.markAllAsTouched();

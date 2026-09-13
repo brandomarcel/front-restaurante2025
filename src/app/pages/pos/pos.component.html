@@ -1,20 +1,45 @@
 <!-- CONTENEDOR PRINCIPAL -->
 <div class="bg-background flex flex-col ">
     <div class="container mx-auto px-3 sm:px-4 py-3 sm:py-4 flex-grow flex flex-col">
-        <div *ngIf="currentFiscalLocation || posTerminalBlockMessage"
-            class="mb-3 rounded-lg border px-3 py-2 text-[11px]"
-            [ngClass]="posTerminalBlockMessage ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-white text-slate-600'">
-            <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-                <span class="font-semibold text-primary">Ubicación de emisión</span>
-                <span *ngIf="currentFiscalLocation">{{ fiscalLocationLabel(currentFiscalLocation) }} <em *ngIf="terminalAssignmentLabel" class="not-italic text-primary">({{ terminalAssignmentLabel }})</em></span>
-                <span *ngIf="currentFiscalLocation?.environment"><b>Ambiente:</b> {{ currentFiscalLocation.environment }}</span>
-            </div>
-            <p *ngIf="posTerminalBlockMessage" class="mt-1 font-semibold">{{ posTerminalBlockMessage }}</p>
-        </div>
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 flex-grow">
 
             <!-- PRODUCTOS -->
             <div class="col-span-2 flex flex-col overflow-hidden">
+                <div *ngIf="roleName!=='Mesero' && permissions.canSelectCustomer"
+                    class="mb-2 flex-shrink-0 rounded-lg border border-primary/15 bg-primary/5 px-2.5 py-2">
+                    <div class="mb-1 flex items-center justify-between gap-2">
+                        <span class="font-semibold text-primary">Cliente</span>
+                        <button type="button" (click)="showCustomerModal = true"
+                            class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+                            title="Nuevo cliente" aria-label="Nuevo cliente">
+                            <fa-icon icon="user-plus"></fa-icon>
+                        </button>
+                    </div>
+                    <div class="flex min-w-0 flex-wrap items-center gap-1.5">
+                        <span *ngIf="customer" class="max-w-[180px] truncate rounded-md bg-blue-50 px-2 py-1 font-semibold text-blue-700" [title]="customer?.nombre">
+                            {{ customer?.nombre || 'Cliente seleccionado' }}
+                        </span>
+                        <input type="text" maxlength="13" appOnlyNumbers [(ngModel)]="identificationCustomer"
+                            placeholder="Cédula o RUC"
+                            class="h-9 min-w-[130px] flex-1 rounded-md border border-slate-200 px-2.5 text-xs outline-none focus:border-primary md:max-w-[220px]"
+                            [disabled]="!!customer" aria-label="Número de identificación del cliente" />
+                        <button type="button" (click)="findByIdentificationCustomer()"
+                            class="inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary text-white transition hover:bg-primary/90"
+                            title="Buscar cliente" aria-label="Buscar cliente">
+                            <fa-icon icon="search"></fa-icon>
+                        </button>
+                        <button type="button" (click)="selectFinalConsumer()"
+                            class="h-9 rounded-md border border-primary/20 bg-primary/5 px-2 text-[10px] font-semibold text-primary transition hover:bg-primary/10">
+                            Consumidor final
+                        </button>
+                        <button type="button" *ngIf="customer || identificationCustomer"
+                            (click)="identificationCustomer = ''; customer = null"
+                            class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100"
+                            title="Limpiar cliente" aria-label="Limpiar cliente">
+                            <fa-icon icon="times"></fa-icon>
+                        </button>
+                    </div>
+                </div>
                 <!-- Encabezado según rol -->
                 <div class="space-y-3">
                     <!-- Encabezado Mesero -->
@@ -25,59 +50,6 @@
                             placeholder="Alias / nombre para la mesa o entrega" />
                     </div>
 
-                    <!-- Encabezado Caja/Gerente (cliente fiscal) -->
-                    <div *ngIf="roleName!=='Mesero' && permissions.canSelectCustomer">
-                        <div class="flex items-center justify-between gap-3">
-                            <h2 class="text-lg sm:text-xl font-semibold text-primary">Cliente</h2>
-
-                            <div class="flex gap-2">
-                                <button (click)="showCustomerModal = true"
-                                    class="bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition min-h-[44px] flex items-center justify-center"
-                                    title="Nuevo cliente" aria-label="Nuevo cliente">
-                                    <fa-icon icon="user-plus"></fa-icon>
-                                </button>
-
-                                <button
-                                    class="bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition min-h-[44px]"
-                                    (click)="selectFinalConsumer()">
-                                    Consumidor Final
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Buscador (input + botones) -->
-                        <div class="flex items-stretch gap-2 mt-2">
-                            <input type="text" maxlength="13" appOnlyNumbers [(ngModel)]="identificationCustomer"
-                                placeholder="Ingrese el número de cédula o RUC"
-                                class="flex-1 min-w-0 rounded px-3 sm:px-4 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
-                                [disabled]="customer" aria-label="Número de identificación del cliente" />
-
-                            <button (click)="findByIdentificationCustomer()"
-                                class="bg-primary text-white text-sm px-3 py-2 rounded hover:bg-primary/90 transition min-h-[44px] flex items-center justify-center"
-                                title="Buscar cliente" aria-label="Buscar cliente">
-                                <fa-icon icon="search"></fa-icon>
-                            </button>
-
-                            <button (click)="identificationCustomer = '' ; customer = null"
-                                class="bg-red-500 text-white text-sm px-3 py-2 rounded hover:bg-red-600 transition min-h-[44px] flex items-center justify-center"
-                                title="Limpiar" aria-label="Limpiar">
-                                <fa-icon icon="times"></fa-icon>
-                            </button>
-                        </div>
-
-                        <!-- Tarjeta del cliente -->
-                        <div *ngIf="customer"
-                            class="bg-blue-50 rounded-lg p-3 shadow-sm border border-blue-200 text-[13px] sm:text-sm mt-2">
-                            <h4 class="font-bold text-blue-800 flex items-center gap-2">
-                                <span>👤</span> {{ customer?.nombre || '—' }}
-                            </h4>
-
-                            <div *ngIf="customer?.nombre && customer?.nombre !== 'Consumidor Final'" class="mt-1">
-                                <p class="text-blue-700 text-xs leading-5 break-words">{{ customer?.telefono }}</p>
-                                <p class="text-blue-700 text-xs leading-5 break-all">{{ customer?.correo }}</p>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Categorías -->
@@ -118,6 +90,10 @@
                   'hover:bg-muted': canAddProduct(product),
                   'border-red-500 bg-red-50 opacity-70 pointer-events-none': !canAddProduct(product)
                 }">
+                            <div class="mb-2 flex h-[82px] w-full items-center justify-center overflow-hidden rounded-md bg-slate-100">
+                                <img *ngIf="product.image_url" [src]="product.image_url" [alt]="product.nombre" class="h-full w-full object-cover" />
+                                <span *ngIf="!product.image_url" class="text-[10px] text-slate-400">Sin imagen</span>
+                            </div>
                             <h3 class="font-semibold text-foreground leading-snug">
                                 {{ product.nombre }}
                             </h3>
@@ -160,13 +136,19 @@
             <!-- RESUMEN DEL PEDIDO -->
             <div class="flex flex-col min-h-0 text-xs">
 
-                <!-- Texto del ambiente -->
-                <div class="hidden sm:flex items-center justify-center gap-2 text-lg font-semibold">
-                    <span class="text-[15px] text-gray-600">Ambiente</span>
-                    <div class="px-2 py-1 rounded-md border bg-gray-50 text-[15px] font-semibold"
-                        [ngClass]="ambiente === 'PRODUCCION' ? 'text-green-700' : 'text-yellow-600'">
-                        {{ ambiente || '—' }}
+                <div *ngIf="roleName!=='Mesero' && (currentFiscalLocation || posTerminalBlockMessage)"
+                    class="mb-2 rounded-lg border px-2.5 py-2 text-[10px]"
+                    [ngClass]="posTerminalBlockMessage ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-slate-50 text-slate-600'">
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span class="font-semibold uppercase tracking-wide text-primary">Ubicación de emisión</span>
+                        <span *ngIf="currentFiscalLocation" class="rounded-md bg-primary/10 px-1.5 py-0.5 font-semibold text-primary">{{ fiscalLocationLabel(currentFiscalLocation) }}</span>
+                        <span *ngIf="currentFiscalLocation?.environment || ambiente" class="rounded-full px-1.5 py-0.5 font-semibold"
+                            [ngClass]="ambiente === 'PRODUCCION' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'">
+                            {{ currentFiscalLocation?.environment || ambiente }}
+                        </span>
+                        <em *ngIf="terminalAssignmentLabel" class="not-italic text-primary">{{ terminalAssignmentLabel }}</em>
                     </div>
+                    <p *ngIf="posTerminalBlockMessage" class="mt-1 font-semibold">{{ posTerminalBlockMessage }}</p>
                 </div>
 
                 <!-- Tipo de Orden (visible para todos) -->

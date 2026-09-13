@@ -204,6 +204,10 @@
                           [disabled]="isProductBlocked(product)"
                           class="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg px-2 py-1.5 text-left transition hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-55">
                           <span class="min-w-0">
+                            <span class="mr-2 inline-flex h-8 w-8 overflow-hidden rounded-md bg-slate-100 align-middle">
+                              <img *ngIf="product.image_url" [src]="product.image_url" [alt]="product.nombre" class="h-full w-full object-cover" />
+                              <span *ngIf="!product.image_url" class="m-auto text-[8px] text-slate-400">—</span>
+                            </span>
                             <span class="block truncate text-[11px] font-bold text-slate-900">{{ product.nombre }}</span>
                             <span class="block truncate text-[10px] text-slate-500">
                               {{ product.codigo || 'Sin código' }}

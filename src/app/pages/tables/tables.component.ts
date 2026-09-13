@@ -113,22 +113,45 @@ export class TablesComponent implements OnInit, OnDestroy {
   }
 
   get hasTablesModule(): boolean {
-    const mode = String(this.capabilities.business?.business_mode ?? '').trim().toLowerCase();
-    return this.capabilities.isEnabled('tables') || mode === 'restaurant' || mode === 'restaurante';
+    return this.capabilities.isEnabled('tables');
   }
 
   get canManageTables(): boolean {
-    const role = this.normalized(this.capabilities.businessRole);
-    return ['ADMINISTRADOR', 'GERENTE'].includes(role);
+    return this.capabilities.hasPermission('*')
+      || this.capabilities.hasPermission('restaurant.manage')
+      || this.capabilities.hasPermission('restaurant.tables.manage');
   }
 
   get canCreateOrders(): boolean {
-    const role = this.normalized(this.capabilities.businessRole);
-    return this.capabilities.isEnabled('orders') && ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'MESERO'].includes(role);
+    return this.capabilities.features.restaurant === true
+      && this.capabilities.hasPermission('restaurant.orders.create');
   }
 
   get visibleTables(): any[] {
     return this.tables.filter((table) => this.showInactive || !this.isInactive(table));
+  }
+
+  get freeTablesCount(): number {
+    return this.visibleTables.filter((table) => this.isFree(table)).length;
+  }
+
+  get occupiedTablesCount(): number {
+    return this.visibleTables.filter((table) => this.isOccupied(table)).length;
+  }
+
+  get reservedTablesCount(): number {
+    return this.visibleTables.filter((table) => this.isReserved(table)).length;
+  }
+
+  get inactiveTablesCount(): number {
+    return this.visibleTables.filter((table) => this.isInactive(table)).length;
+  }
+
+  tableOrderCount(table: any): number {
+    const name = String(table?.name || '').trim();
+    return name
+      ? this.activeOrders.filter((order) => String(order?.table ?? order?.mesa ?? '').trim() === name).length
+      : 0;
   }
 
   refresh(): void {
@@ -321,7 +344,7 @@ export class TablesComponent implements OnInit, OnDestroy {
 
   private ensureTableManagement(): boolean {
     if (this.canManageTables) return true;
-    toast.error('No tiene permisos para administrar mesas u órdenes en este negocio.');
+    toast.error('No tienes permiso para realizar esta operación.');
     return false;
   }
 
@@ -332,7 +355,7 @@ export class TablesComponent implements OnInit, OnDestroy {
   private showRequestError(error: any, setPageError = true): void {
     const status = Number(error?.status ?? error?.error?.status ?? 0);
     const message = status === 403
-      ? 'No tiene permisos para administrar mesas u órdenes en este negocio.'
+      ? 'No tienes permiso para realizar esta operación.'
       : this.backendMessage(error);
     if (setPageError) this.error = message;
     toast.error(message);

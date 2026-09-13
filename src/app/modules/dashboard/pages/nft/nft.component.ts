@@ -42,6 +42,9 @@ type DashboardAction = {
   route: string;
   tone: string;
   feature?: CompanyFeatureKey;
+  featureKeys?: CompanyFeatureKey[];
+  requiredFeatures?: CompanyFeatureKey[];
+  permission?: string;
   requiresEmission?: boolean;
   requiresApiConfiguration?: boolean;
 };
@@ -174,9 +177,12 @@ export class NftComponent implements OnInit, OnDestroy {
       const userEmail: string = String(this.userData?.email || '');
       const resp: any = await firstValueFrom(this.cajasService.getDatosCierre(userEmail));
       const data = resp?.message || {};
-      this.idApertura = data.apertura;
-      this.cashIsOpen = data.is_open === true || !!data.apertura;
-      this.montoApertura = data.monto_apertura || 0;
+      const apertura = data.apertura || data.cash_opening;
+      this.idApertura = typeof apertura === 'string'
+        ? apertura
+        : String(apertura?.name || apertura?.cash_opening || '');
+      this.cashIsOpen = data.is_open === true || !!apertura;
+      this.montoApertura = Number(data.monto_apertura ?? data.opening_amount ?? apertura?.monto_apertura ?? apertura?.opening_amount) || 0;
       this.totalRetiros = data.total_retiros || 0;
       this.efectivoSistema = data.efectivo_sistema || 0;
       this.efectivoEsperadoBackend = this.dashboardNumber(data.expected_cash ?? data.efectivo_esperado);
@@ -634,41 +640,46 @@ export class NftComponent implements OnInit, OnDestroy {
   get primaryActions(): DashboardAction[] {
     if (this.isApiOnlyMode) {
       return [
-        { label: 'Ver API', detail: 'Integración y clientes', route: '/settings/lite/api', tone: 'bg-slate-900 text-white', requiresApiConfiguration: true },
-        { label: 'Facturas', detail: 'Documentos emitidos', route: '/dashboard/invoices', tone: 'bg-violet-600 text-white', feature: 'api' },
-        { label: 'Notas de crédito', detail: 'Ajustes tributarios', route: '/dashboard/credit-notes', tone: 'bg-amber-600 text-white', feature: 'api' },
-        { label: 'Configuración', detail: 'Perfil y secuencias', route: '/settings/lite', tone: 'bg-primary text-white' }
+        { label: 'Ver API', detail: 'Integración y clientes', route: '/settings/lite/api', tone: 'bg-slate-900 text-white', feature: 'api' },
+        { label: 'Facturas', detail: 'Documentos emitidos', route: '/dashboard/invoices', tone: 'bg-violet-600 text-white', feature: 'api', permission: 'billing.read' },
+        { label: 'Notas de crédito', detail: 'Ajustes tributarios', route: '/dashboard/credit-notes', tone: 'bg-amber-600 text-white', feature: 'api', permission: 'billing.read' },
+        { label: 'Configuración', detail: 'Perfil y secuencias', route: '/settings/lite', tone: 'bg-primary text-white', permission: 'business.settings.manage' }
       ];
     }
     if (this.isFacturadorMode) {
       return this.filterAllowedActions([
-        { label: 'Punto de venta', detail: 'Notas de venta, cobro y facturación', route: '/dashboard/pos-generic', tone: 'bg-slate-900 text-white', feature: 'generic_pos' },
-        { label: 'Emitir factura', detail: 'Factura directa al SRI', route: '/dashboard/invoicing', tone: 'bg-primary text-white', feature: 'direct_invoice', requiresEmission: true },
-        { label: 'Ver facturas', detail: 'Historial y reenvíos', route: '/dashboard/invoices', tone: 'bg-violet-600 text-white', feature: 'direct_invoice' },
-        { label: 'Clientes', detail: 'Datos fiscales', route: '/dashboard/customers', tone: 'bg-slate-900 text-white', feature: 'customers' },
-        { label: 'Productos', detail: 'Catálogo facturable', route: '/dashboard/products', tone: 'bg-emerald-600 text-white', feature: 'products' },
-        { label: 'Notas crédito', detail: 'Anulaciones y ajustes', route: '/dashboard/credit-notes', tone: 'bg-amber-600 text-white', feature: 'credit_note' }
+        { label: 'Punto de venta', detail: 'Notas de venta, cobro y facturación', route: '/dashboard/pos-generic', tone: 'bg-slate-900 text-white', feature: 'generic_pos', permission: 'billing.create' },
+        { label: 'Emitir factura', detail: 'Factura directa al SRI', route: '/dashboard/invoicing', tone: 'bg-primary text-white', feature: 'direct_invoice', permission: 'billing.create', requiresEmission: true },
+        { label: 'Ver facturas', detail: 'Historial y reenvíos', route: '/dashboard/invoices', tone: 'bg-violet-600 text-white', feature: 'direct_invoice', permission: 'billing.read' },
+        { label: 'Clientes', detail: 'Datos fiscales', route: '/dashboard/customers', tone: 'bg-slate-900 text-white', feature: 'customers', permission: 'customers.read' },
+        { label: 'Productos', detail: 'Catálogo facturable', route: '/dashboard/products', tone: 'bg-emerald-600 text-white', feature: 'products', permission: 'products.read' },
+        { label: 'Notas crédito', detail: 'Anulaciones y ajustes', route: '/dashboard/credit-notes', tone: 'bg-amber-600 text-white', feature: 'credit_note', permission: 'billing.read' }
       ]).slice(0, 5);
     }
 
     const restaurantActions: DashboardAction[] = [
-      { label: 'Abrir POS', detail: 'Venta y orden rápida', route: '/dashboard/pos', tone: 'bg-primary text-white', feature: 'restaurant_pos' },
-      { label: 'Órdenes', detail: 'Seguimiento del día', route: '/dashboard/orders', tone: 'bg-slate-900 text-white', feature: 'orders' },
-      { label: 'Tiempo real', detail: 'Cocina y atención', route: '/dashboard/orders-realtime', tone: 'bg-sky-600 text-white', feature: 'kitchen' },
-      { label: this.cajaAbierta ? 'Cerrar caja' : 'Abrir caja', detail: 'Control del turno', route: this.cajaAbierta ? '/caja/cierre' : '/caja/apertura', tone: 'bg-emerald-600 text-white', feature: 'cash_register' }
+      { label: 'Abrir POS', detail: 'Venta y orden rápida', route: '/dashboard/pos', tone: 'bg-primary text-white', feature: 'restaurant_pos', permission: 'billing.create' },
+      { label: 'Órdenes', detail: 'Seguimiento del día', route: '/dashboard/orders', tone: 'bg-slate-900 text-white', feature: 'orders', permission: 'restaurant.orders.read' },
+      { label: 'Tiempo real', detail: 'Cocina y atención', route: '/dashboard/orders-realtime', tone: 'bg-sky-600 text-white', feature: 'kitchen', permission: 'restaurant.orders.read' },
+      { label: this.cajaAbierta ? 'Cerrar caja' : 'Abrir caja', detail: 'Control del turno', route: this.cajaAbierta ? '/caja/cierre' : '/caja/apertura', tone: 'bg-emerald-600 text-white', feature: 'cash_register', requiredFeatures: ['restaurant_pos', 'cash_register'], permission: 'restaurant.cash.manage' }
     ];
     // Facturación no pertenece al POS: puede coexistir con Restaurante y se
     // muestra sin depender de restaurant_pos, mesas, cocina o caja.
     const billingActions: DashboardAction[] = [
-      { label: 'Emitir factura', detail: 'Factura directa al SRI', route: '/dashboard/invoicing', tone: 'bg-violet-600 text-white', feature: 'direct_invoice', requiresEmission: true },
-      { label: 'Notas crédito', detail: 'Ajustes tributarios', route: '/dashboard/credit-notes', tone: 'bg-amber-600 text-white', feature: 'credit_note' }
+      { label: 'Emitir factura', detail: 'Factura directa al SRI', route: '/dashboard/invoicing', tone: 'bg-violet-600 text-white', feature: 'direct_invoice', permission: 'billing.create', requiresEmission: true },
+      { label: 'Notas crédito', detail: 'Ajustes tributarios', route: '/dashboard/credit-notes', tone: 'bg-amber-600 text-white', feature: 'credit_note', permission: 'billing.read' }
     ];
     return this.filterAllowedActions([...restaurantActions, ...billingActions]).slice(0, 6);
   }
 
   private filterAllowedActions(actions: DashboardAction[]): DashboardAction[] {
     return actions.filter((action) =>
-      (!action.feature || this.capabilities.isEnabled(action.feature))
+      (action.requiredFeatures?.length
+        ? action.requiredFeatures.every((feature) => this.capabilities.isEnabled(feature))
+        : action.featureKeys?.length
+        ? action.featureKeys.some((feature) => this.capabilities.isEnabled(feature))
+        : (!action.feature || this.capabilities.isEnabled(action.feature)))
+      && (!action.permission || this.capabilities.hasPermission(action.permission))
       && (!action.requiresApiConfiguration || this.capabilities.apiConfiguration?.enabled === true)
     );
   }

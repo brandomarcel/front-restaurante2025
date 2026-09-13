@@ -9,7 +9,7 @@
                 <div class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
                     Registros: {{ filteredCustomersList.length }}
                 </div>
-                <app-button impact="bold" tone="light" shape="rounded" size="small" (click)="abrirModal()">
+                <app-button *ngIf="canManageCustomers" impact="bold" tone="light" shape="rounded" size="small" (click)="abrirModal()">
                     Nuevo Cliente
                 </app-button>
             </div>
@@ -38,7 +38,7 @@
                         <th class="app-th">Telefono</th>
                         <th class="app-th">Email</th>
                         <th class="app-th">Estado</th>
-                        <th class="app-th text-center">Acciones</th>
+                        <th *ngIf="canManageCustomers" class="app-th text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -53,7 +53,7 @@
                                 {{ c.isactive ? 'Activo' : 'Inactivo' }}
                             </span>
                         </td>
-                        <td class="app-td text-center">
+                        <td *ngIf="canManageCustomers" class="app-td text-center">
                             <div class="inline-flex gap-2">
                                 <button class="btn btn-outline" (click)="abrirModal(c)">Editar</button>
                                 <button class="btn btn-warn" (click)="delete(c.name)">Eliminar</button>
@@ -63,14 +63,14 @@
                 </tbody>
             </table>
 
-            <div class="pager">
-                <button class="pager-btn" (click)="page = page - 1" [disabled]="page === 1">« Anterior</button>
-                <span class="text-sm">Pagina {{ page }}</span>
-                <button class="pager-btn" (click)="page = page + 1"
-                    [disabled]="(filteredCustomersList.length || 0) <= (page * pageSize)">
-                    Siguiente »
-                </button>
-            </div>
+            <app-pagination
+              [page]="page"
+              [totalPages]="totalPages"
+              [totalItems]="filteredCustomersList.length"
+              [pageSize]="pageSize"
+              (pageChange)="onPaginationPage($event)"
+              (pageSizeChange)="onPaginationPageSize($event)">
+            </app-pagination>
         </section>
     </ng-container>
 

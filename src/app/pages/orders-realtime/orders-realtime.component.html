@@ -4,7 +4,7 @@
     <div class="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
-          <h2 class="text-base font-bold leading-tight text-slate-900">Órdenes en vivo</h2>
+          <h2 class="text-base font-bold leading-tight text-slate-900">{{ viewMode === 'cocina' ? 'Cocina · KDS' : 'Órdenes en vivo' }}</h2>
           <span
             class="rounded-full px-2 py-0.5 text-[11px] font-bold"
             [ngClass]="viewMode === 'cocina' ? 'bg-amber-50 text-amber-700' : 'bg-primary/10 text-primary'">
@@ -15,6 +15,9 @@
           </span>
           <span *ngIf="newCount > 0" class="rounded-full bg-emerald-500 px-2 py-0.5 text-[11px] font-bold text-white">
             {{ newCount }} nueva{{ newCount > 1 ? 's' : '' }}
+          </span>
+          <span *ngIf="viewMode === 'cocina'" class="rounded-full px-2 py-0.5 text-[11px] font-semibold" [ngClass]="realtimeConnected ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'">
+            {{ realtimeConnected ? 'En vivo' : 'Sin conexión · respaldo activo' }}
           </span>
         </div>
         <p class="mt-0.5 text-[11px] text-muted-foreground">
@@ -79,7 +82,7 @@
           {{ kitchenOnlyUrgentLabel }}
         </button>
 
-        <button class="min-h-[30px] rounded-md border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-50" type="button" (click)="search = ''; statusFilter = viewMode === 'cocina' ? 'ACTIVAS' : 'ALL';">
+        <button class="min-h-[30px] rounded-md border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-50" type="button" (click)="search = ''; statusFilter = viewMode === 'cocina' ? 'ACTIVAS' : 'ALL'; kitchenFilter = 'ALL'; kitchenOnlyUrgent = false;">
           Limpiar
         </button>
       </div>
@@ -119,73 +122,101 @@
   </ng-container>
 
   <ng-template #kitchenView>
-    <section class="grid grid-cols-4 gap-2">
-      <article class="rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-2">
-        <p class="text-[10px] font-bold uppercase text-rose-700">Nuevas</p>
-        <p class="text-lg font-black leading-tight text-rose-800">{{ kitchenIngresadas.length }}</p>
-      </article>
-      <article class="rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-2">
-        <p class="text-[10px] font-bold uppercase text-amber-700">Preparación</p>
-        <p class="text-lg font-black leading-tight text-amber-800">{{ kitchenPreparacionSafe.length }}</p>
-      </article>
-      <article class="rounded-xl border border-emerald-200 bg-emerald-50 px-2.5 py-2">
-        <p class="text-[10px] font-bold uppercase text-emerald-700">Listas</p>
-        <p class="text-lg font-black leading-tight text-emerald-800">{{ kitchenCerradas.length }}</p>
-      </article>
-      <article class="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2">
-        <p class="text-[10px] font-bold uppercase text-slate-600">+20 min</p>
-        <p class="text-lg font-black leading-tight text-slate-800">{{ kitchenUrgentesCount }}</p>
+    <ng-container *ngIf="kitchenAccessChecked && kitchenAccessGranted; else kitchenAccessState">
+    <section class="grid grid-cols-2 gap-2 sm:grid-cols-5">
+      <button type="button" (click)="setKitchenFilter('ALL')" class="rounded-xl border px-3 py-2 text-left transition" [ngClass]="kitchenFilter === 'ALL' ? 'border-slate-400 bg-slate-900 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'">
+        <span class="block text-[10px] font-bold uppercase opacity-70">Activos</span>
+        <strong class="mt-0.5 block text-xl leading-none">{{ kitchenActivasCount }}</strong>
+      </button>
+      <button type="button" (click)="setKitchenFilter('NEW')" class="rounded-xl border px-3 py-2 text-left transition" [ngClass]="kitchenFilter === 'NEW' ? 'border-rose-500 bg-rose-600 text-white shadow-sm' : 'border-rose-200 bg-rose-50 text-rose-800 hover:border-rose-300'">
+        <span class="block text-[10px] font-bold uppercase opacity-75">Nuevos</span>
+        <strong class="mt-0.5 block text-xl leading-none">{{ kitchenNewCount }}</strong>
+      </button>
+      <button type="button" (click)="setKitchenFilter('PREP')" class="rounded-xl border px-3 py-2 text-left transition" [ngClass]="kitchenFilter === 'PREP' ? 'border-amber-500 bg-amber-500 text-white shadow-sm' : 'border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-300'">
+        <span class="block text-[10px] font-bold uppercase opacity-75">Preparación</span>
+        <strong class="mt-0.5 block text-xl leading-none">{{ kitchenPrepCount }}</strong>
+      </button>
+      <button type="button" (click)="setKitchenFilter('READY')" class="rounded-xl border px-3 py-2 text-left transition" [ngClass]="kitchenFilter === 'READY' ? 'border-emerald-500 bg-emerald-600 text-white shadow-sm' : 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:border-emerald-300'">
+        <span class="block text-[10px] font-bold uppercase opacity-75">Listos</span>
+        <strong class="mt-0.5 block text-xl leading-none">{{ kitchenReadyCount }}</strong>
+      </button>
+      <article class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-left">
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Tiempo promedio</span>
+        <strong class="mt-0.5 block text-xl leading-none text-slate-800">{{ kitchenAverageMinutes }}<span class="ml-1 text-xs font-semibold text-slate-500">min</span></strong>
       </article>
     </section>
 
-    <div class="grid grid-cols-1 gap-3 xl:grid-cols-3">
-      <section class="flex min-h-[300px] flex-col rounded-xl border border-rose-200 bg-white p-2 shadow-sm xl:h-[calc(100dvh-245px)]">
+    <section *ngIf="kitchenError" class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+      {{ kitchenError }}
+      <button type="button" class="ml-2 font-bold underline" (click)="refreshRealtime()">Reintentar</button>
+    </section>
+
+    <section *ngIf="kitchenLoading" class="grid min-h-[280px] place-items-center rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+      <div class="text-center">
+        <div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-primary"></div>
+        <p class="mt-3 text-sm font-bold text-slate-700">Cargando pedidos de cocina…</p>
+        <p class="mt-1 text-xs text-slate-500">Estamos sincronizando la cola del negocio.</p>
+      </div>
+    </section>
+
+    <div *ngIf="!kitchenLoading" class="grid grid-cols-1 gap-3 lg:grid-cols-3">
+      <section class="flex min-h-[320px] flex-col rounded-xl border border-rose-200 bg-white p-2.5 shadow-sm lg:h-[calc(100dvh-245px)]">
         <div class="mb-2 flex items-center justify-between rounded-lg bg-rose-50 px-2 py-1.5">
-          <h3 class="text-sm font-semibold text-rose-800">Nuevas</h3>
+          <div><h3 class="text-sm font-semibold text-rose-800">Nuevos</h3><p class="text-[10px] text-rose-600">Requieren atención</p></div>
           <span class="badge badge-red">{{ kitchenIngresadas.length }}</span>
         </div>
 
         <div class="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
           <app-order-kitchen-card
             *ngFor="let o of kitchenIngresadas; trackBy: trackByName"
-            [order]="o"
-            [allowActions]="allowStatusActions"
-            (open)="open($event)"
+          [order]="o"
+          [allowActions]="allowStatusActions"
+          [actionPending]="isActionPending(o.name)"
+          [kitchenStage]="kitchenBucket(o)"
+          [pendingItemNames]="pendingItemNames"
+          (open)="open($event)"
+          (updateItem)="updateKitchenItem($event)"
             (toPreparacion)="toPreparacion($event)"
-            (toCerrada)="toCerrada($event)">
+            (toCerrada)="toCerrada($event)"
+            (toEntregado)="toEntregado($event)">
           </app-order-kitchen-card>
 
           <p *ngIf="kitchenIngresadas.length === 0" class="py-4 text-center text-xs text-muted-foreground">
-            Sin ordenes nuevas.
+            No hay pedidos nuevos.
           </p>
         </div>
       </section>
 
-      <section class="flex min-h-[300px] flex-col rounded-xl border border-amber-200 bg-white p-2 shadow-sm xl:h-[calc(100dvh-245px)]">
+      <section class="flex min-h-[320px] flex-col rounded-xl border border-amber-200 bg-white p-2.5 shadow-sm lg:h-[calc(100dvh-245px)]">
         <div class="mb-2 flex items-center justify-between rounded-lg bg-amber-50 px-2 py-1.5">
-          <h3 class="text-sm font-semibold text-amber-800">En preparación</h3>
+          <div><h3 class="text-sm font-semibold text-amber-800">En preparación</h3><p class="text-[10px] text-amber-700">En proceso</p></div>
           <span class="badge badge-yellow">{{ kitchenPreparacionSafe.length }}</span>
         </div>
 
         <div class="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
           <app-order-kitchen-card
             *ngFor="let o of kitchenPreparacionSafe; trackBy: trackByName"
-            [order]="o"
-            [allowActions]="allowStatusActions"
-            (open)="open($event)"
+          [order]="o"
+          [allowActions]="allowStatusActions"
+          [actionPending]="isActionPending(o.name)"
+          [kitchenStage]="kitchenBucket(o)"
+          [pendingItemNames]="pendingItemNames"
+          (open)="open($event)"
+          (updateItem)="updateKitchenItem($event)"
             (toPreparacion)="toPreparacion($event)"
-            (toCerrada)="toCerrada($event)">
+            (toCerrada)="toCerrada($event)"
+            (toEntregado)="toEntregado($event)">
           </app-order-kitchen-card>
 
           <p *ngIf="kitchenPreparacionSafe.length === 0" class="py-4 text-center text-xs text-muted-foreground">
-            Sin órdenes en preparación.
+            No hay pedidos en preparación.
           </p>
         </div>
       </section>
 
-      <section class="flex min-h-[300px] flex-col rounded-xl border border-emerald-200 bg-white p-2 shadow-sm xl:h-[calc(100dvh-245px)]">
+      <section class="flex min-h-[320px] flex-col rounded-xl border border-emerald-200 bg-white p-2.5 shadow-sm lg:h-[calc(100dvh-245px)]">
         <div class="mb-2 flex items-center justify-between rounded-lg bg-emerald-50 px-2 py-1.5">
-          <h3 class="text-sm font-semibold text-emerald-800">Listas</h3>
+          <div><h3 class="text-sm font-semibold text-emerald-800">Listos</h3><p class="text-[10px] text-emerald-700">Para entregar</p></div>
           <span class="badge badge-green">{{ kitchenCerradas.length }}</span>
         </div>
 
@@ -194,17 +225,36 @@
             *ngFor="let o of kitchenCerradas; trackBy: trackByName"
             [order]="o"
             [allowActions]="allowStatusActions"
+            [actionPending]="isActionPending(o.name)"
+            [kitchenStage]="kitchenBucket(o)"
+            [pendingItemNames]="pendingItemNames"
             (open)="open($event)"
+            (updateItem)="updateKitchenItem($event)"
             (toPreparacion)="toPreparacion($event)"
-            (toCerrada)="toCerrada($event)">
+            (toCerrada)="toCerrada($event)"
+            (toEntregado)="toEntregado($event)">
           </app-order-kitchen-card>
 
           <p *ngIf="kitchenCerradas.length === 0" class="py-4 text-center text-xs text-muted-foreground">
-            Sin ordenes listas.
+            No hay pedidos listos.
           </p>
         </div>
       </section>
     </div>
+    </ng-container>
+  </ng-template>
+
+  <ng-template #kitchenAccessState>
+    <section *ngIf="!kitchenAccessChecked" class="grid min-h-[280px] place-items-center rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+      <div class="text-center">
+        <div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-primary"></div>
+        <p class="mt-3 text-sm font-bold text-slate-700">Validando acceso a Cocina…</p>
+      </div>
+    </section>
+    <section *ngIf="kitchenAccessChecked && !kitchenAccessGranted" class="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center">
+      <p class="text-sm font-bold text-amber-900">Cocina no disponible</p>
+      <p class="mt-1 text-xs text-amber-800">{{ kitchenAccessError }}</p>
+    </section>
   </ng-template>
 
   <ng-template #emptyState>

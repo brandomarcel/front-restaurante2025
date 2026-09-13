@@ -73,8 +73,8 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
   }
 
   get canManage(): boolean {
-    const role = this.normalize(this.capabilities.businessRole);
-    return ['ADMINISTRADOR', 'GERENTE'].includes(role);
+    return this.capabilities.hasPermission('*')
+      || this.capabilities.hasPermission('business.settings.manage');
   }
 
   get activeEstablishments(): any[] {

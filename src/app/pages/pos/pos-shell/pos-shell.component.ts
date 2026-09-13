@@ -31,6 +31,16 @@ export class PosShellComponent implements OnInit {
     this.selectedTableId = String(this.route.snapshot.queryParamMap.get('table') || '').trim();
     this.selectedTableLabel = String(this.route.snapshot.queryParamMap.get('table_label') || '').trim();
     const me: any = this.auth.getCurrentUser();
+    // La variante de Mesero se determina por el contexto funcional, no por
+    // un rol Frappe genérico. Así el POS nunca muestra acciones de cobro o
+    // facturación cuando solo existen permisos para crear órdenes.
+    if (this.capabilities.isEnabled('restaurant')
+      && this.capabilities.isEnabled('orders')
+      && this.capabilities.hasPermission('restaurant.orders.create')
+      && !this.capabilities.hasPermission('billing.create')) {
+      this.roleName = 'Mesero';
+      return;
+    }
     // El rol de negocio del contexto decide la experiencia POS. Los roles
     // Frappe quedan solo como compatibilidad para sesiones antiguas.
     const contextRole = String(this.capabilities.businessRole || '').trim();
@@ -38,6 +48,7 @@ export class PosShellComponent implements OnInit {
       ? me.roles.find((role: unknown) => /mesero|cajero|gerente|admin/i.test(String(role || '')))
       : undefined;
     this.roleName = this.mapRawRole(contextRole || String(fallbackRole || ''));
+
   }
 
   private mapRawRole(raw?: string): RoleName {

@@ -59,7 +59,7 @@ export class RestaurantRealtimeService {
     const selected = String(
       business || this.capabilities.activeBusinessId || localStorage.getItem('active_business') || ''
     ).trim();
-    const enabled = this.capabilities.features.restaurant === true;
+    const enabled = this.capabilities.features.restaurant === true || this.capabilities.features.kitchen === true;
 
     if (!selected || !enabled) {
       this.deactivate(false);

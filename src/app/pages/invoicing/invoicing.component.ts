@@ -101,17 +101,10 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit(): void {
-
-    this.ambiente = this.utilsService.getAmbienteActual()
-      || localStorage.getItem('ambiente')
-      || '----------';
-    this.subscriptions.push(
-      this.utilsService.ambiente$
-        .pipe(takeUntil(this.destroy$))
-        .subscribe((ambiente) => {
-          if (ambiente) this.ambiente = ambiente;
-        })
-    );
+    // El ambiente de emisión es propiedad del perfil tributario recibido del
+    // backend. No reutilizar valores del navegador: pueden pertenecer a otra
+    // empresa o a una configuración anterior.
+    this.ambiente = this.getLiteEmissionEnvironment() || '';
     this.initializeForms();
     this.initCustomerSearch();
     this.loadInitialData();
@@ -776,7 +769,10 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   }
 
   get canEmitInvoice(): boolean {
-    return this.capabilities.canEmit() && !this.isEmitting && !this.emissionInvoiceName;
+    return this.capabilities.hasPermission('billing.create')
+      && this.capabilities.canEmit()
+      && !this.isEmitting
+      && !this.emissionInvoiceName;
   }
 
   get invoicePlanBlockMessage(): string | null {

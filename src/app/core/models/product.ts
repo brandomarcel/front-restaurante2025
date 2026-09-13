@@ -13,6 +13,8 @@ export interface Product {
   unidad?: string;
   descripcion: string;
   imagen?: string;
+  image?: string;
+  image_url?: string;
   tax?: string;
   isactive: number | boolean;
   is_out_of_stock: number | boolean;

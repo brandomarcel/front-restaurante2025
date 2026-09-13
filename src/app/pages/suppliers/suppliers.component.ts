@@ -22,13 +22,14 @@ import {
 } from 'src/app/models/supplier';
 import { SuppliersService } from 'src/app/services/suppliers.service';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
+import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
 
 type SupplierModalMode = 'create' | 'edit' | 'view';
 type SupplierStatusFilter = '' | '1' | '0';
 
 @Component({
   selector: 'app-suppliers',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule, ButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule, ButtonComponent, AppPaginationComponent],
   templateUrl: './suppliers.component.html',
   styleUrl: './suppliers.component.css'
 })
@@ -63,6 +64,10 @@ export class SuppliersComponent implements OnInit {
 
   page = 1;
   pageSize = 10;
+
+  get totalPages(): number { return Math.max(1, Math.ceil((this.filteredSuppliersList.length || 0) / this.pageSize)); }
+  onPaginationPage(page: number): void { this.page = page; }
+  onPaginationPageSize(size: number): void { this.pageSize = size; this.page = 1; }
 
   constructor(
     private suppliersService: SuppliersService,

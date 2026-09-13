@@ -22,17 +22,6 @@
         </button>
       </div>
 
-      <div *ngIf="currentFiscalLocation || posTerminalBlockMessage"
-        class="rounded-lg border px-2.5 py-2 text-[10px]"
-        [ngClass]="posTerminalBlockMessage ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-slate-50 text-slate-600'">
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span class="font-bold uppercase tracking-wide text-primary">Ubicación</span>
-          <span *ngIf="currentFiscalLocation">{{ fiscalLocationLabel(currentFiscalLocation) }} <em *ngIf="terminalAssignmentLabel" class="not-italic text-primary">({{ terminalAssignmentLabel }})</em></span>
-          <span *ngIf="currentFiscalLocation?.environment"><b>Ambiente:</b> {{ currentFiscalLocation.environment }}</span>
-        </div>
-        <p *ngIf="posTerminalBlockMessage" class="mt-1 font-semibold">{{ posTerminalBlockMessage }}</p>
-      </div>
-
       <div class="grid grid-cols-3 gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1">
         <button
           type="button"
@@ -136,30 +125,40 @@
       <div *ngIf="!isLoadingProducts" class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
         <article
           *ngFor="let product of visibleProductList; trackBy: trackByProduct"
-          class="relative flex min-h-[118px] flex-col rounded-xl border bg-white p-2 shadow-sm transition"
+          class="relative flex min-h-[132px] touch-manipulation flex-col rounded-xl border bg-white p-2 shadow-sm transition active:scale-[.98] sm:min-h-[142px] sm:p-2.5"
           [ngClass]="{
             'border-slate-200': canAddProduct(product),
             'border-red-200 bg-red-50 opacity-80': !canAddProduct(product)
           }">
-          <div class="mb-1 flex items-start justify-between gap-1.5">
-            <button
-              type="button"
-              class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-[12px] transition"
-              [ngClass]="isFavorite(product) ? 'border-amber-300 bg-amber-50 text-amber-600' : 'border-slate-200 bg-white text-slate-400'"
-              (click)="toggleFavorite(product)">
-              ★
-            </button>
-
+          <div class="mb-1 flex h-[82px] cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-slate-100 sm:h-[92px]" (click)="addProduct(product)">
+            <img *ngIf="product.image_url" [src]="product.image_url" [alt]="product.nombre || product.name" class="pointer-events-none h-full w-full object-cover" />
+            <span *ngIf="!product.image_url" class="pointer-events-none text-[10px] text-slate-400">Sin imagen</span>
+          </div>
+          <div class="pointer-events-none absolute left-2 top-2 z-10 flex gap-1">
             <span
               *ngIf="isOutOfStock(product)"
-              class="rounded-full bg-red-100 px-2 py-0.5 text-[9px] font-bold text-red-600">
+              class="rounded-full bg-red-100 px-2 py-0.5 text-[9px] font-bold text-red-600 shadow-sm">
               AGOTADO
             </span>
             <span
               *ngIf="!isOutOfStock(product) && isLowStock(product)"
-              class="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-bold text-amber-700">
+              class="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-bold text-amber-700 shadow-sm">
               BAJO
             </span>
+          </div>
+          <div class="pointer-events-none absolute right-2 top-2 z-10">
+            <button
+              type="button"
+              class="pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full border border-white/80 bg-white/90 text-[11px] text-slate-400 shadow-sm backdrop-blur transition hover:scale-105 hover:text-amber-500"
+              [attr.aria-label]="isFavorite(product) ? 'Quitar de favoritos' : 'Agregar a favoritos'"
+              [attr.title]="isFavorite(product) ? 'Quitar de favoritos' : 'Agregar a favoritos'"
+              [style.color]="isFavorite(product) ? '#d97706' : '#94a3b8'"
+              [style.backgroundColor]="isFavorite(product) ? '#fffbeb' : 'rgba(255,255,255,.9)'"
+              [style.borderColor]="isFavorite(product) ? '#fcd34d' : 'rgba(255,255,255,.8)'"
+              [ngClass]="isFavorite(product) ? 'border-amber-300 bg-amber-50 text-amber-600' : 'border-slate-200 bg-white text-slate-400'"
+              (click)="toggleFavorite(product); $event.stopPropagation()">
+              ★
+            </button>
           </div>
 
           <button
@@ -167,15 +166,15 @@
             class="flex flex-1 flex-col text-left disabled:cursor-not-allowed"
             [disabled]="!canAddProduct(product)"
             (click)="addProduct(product)">
-            <p class="line-clamp-2 min-h-[30px] text-[12px] font-bold leading-4 text-slate-900">
+            <p class="line-clamp-2 min-h-[28px] text-[12px] font-bold leading-4 text-slate-900">
               {{ product.nombre || product.name }}
             </p>
 
-            <p class="mt-1 text-base font-black leading-5 text-primary">
+            <p class="mt-0.5 text-base font-black leading-5 text-primary">
               ${{ (product.precio ?? product.price ?? 0) | number:'1.2-2' }}
             </p>
 
-            <div class="mt-auto flex flex-wrap gap-1 pt-1.5">
+            <div class="mt-auto flex flex-wrap gap-1 pt-1">
               <span
                 *ngIf="hasInventory(product)"
                 class="inline-flex w-fit rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-600">

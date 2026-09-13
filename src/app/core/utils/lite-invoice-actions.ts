@@ -50,7 +50,7 @@ export function getLiteInvoiceAction(invoice: any): LiteInvoiceAction {
   if (processing) return 'consult';
 
   const retryableStatus = [
-    'ERROR DE ENVIO', 'RECHAZADA', 'RECHAZADO', 'REJECTED',
+    'ERROR', 'ERROR DE ENVIO', 'RECHAZADA', 'RECHAZADO', 'REJECTED',
     'NOT_AUTHORIZED', 'PENDIENTE EMISION'
   ].includes(status);
   // En una respuesta de acción puede llegar primero emission.status; se usa

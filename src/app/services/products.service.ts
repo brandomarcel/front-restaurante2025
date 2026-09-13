@@ -4,7 +4,7 @@ import { environment } from 'src/environments/environment';
 import { API_ENDPOINT } from '../core/constants/api.constants';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 import { CompanyCapabilitiesService } from '../core/services/company-capabilities.service';
-import { map } from 'rxjs';
+import { map, throwError } from 'rxjs';
 import { frappeData, frappeList } from '../core/utils/frappe-response';
 
 @Injectable({ providedIn: 'root' })
@@ -61,17 +61,49 @@ export class ProductsService {
   }
 
   create(data: any) {
+    const business = this.activeBusiness();
+    if (!business) return throwError(() => new Error('Selecciona un negocio para crear el producto.'));
     const url = `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.create_producto`;
-    const payload = { ...this.toLiteProductPayload(data, true), business: this.activeBusiness() };
+    const payload = { ...this.toLiteProductPayload(data, true), business };
     return this.http.post(url, payload, {
       context: new HttpContext().set(REQUIRE_AUTH, true),
     }).pipe(map((res: any) => this.fromLiteProduct(frappeData<any>(res))));
   }
 
+  /** Sube la imagen después de crear el Item. FormData deja que el navegador
+   * establezca automáticamente el boundary multipart; no se fija Content-Type.
+   */
+  uploadImage(item: string, file: File) {
+    const business = this.activeBusiness();
+    if (!business) return throwError(() => new Error('Selecciona un negocio para cargar la imagen del producto.'));
+    const itemName = String(item || '').trim();
+    if (!itemName) return throwError(() => new Error('No se recibió el nombre del producto para cargar la imagen.'));
+    const formData = new FormData();
+    formData.append('business', business);
+    formData.append('item', itemName);
+    formData.append('file', file, file.name);
+    return this.http.post(`${this.apiUrl}${API_ENDPOINT.FacturadaLiteUpload}`, formData, {
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(map((res: any) => {
+      // El endpoint puede devolver el Item completo o únicamente los campos
+      // actualizados. No normalizamos los campos faltantes para no sobrescribir
+      // el nombre/precio del producto recién creado con su ID interno.
+      const product = frappeData<any>(res) || {};
+      const image = product.image ?? product.imagen ?? '';
+      return {
+        ...product,
+        image,
+        image_url: this.resolveImageUrl(product.image_url || image)
+      };
+    }));
+  }
+
 
   update(name: string, data: any) {
+    const business = this.activeBusiness();
+    if (!business) return throwError(() => new Error('Selecciona un negocio para editar el producto.'));
     const payload = { name, ...data };
-    const litePayload = { ...this.toLiteProductPayload(payload, false), business: this.activeBusiness() };
+    const litePayload = { ...this.toLiteProductPayload(payload, false), business };
     return this.http.post(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.update_producto`, litePayload, {
       context: new HttpContext().set(REQUIRE_AUTH, true),
     }).pipe(map((res: any) => this.fromLiteProduct(frappeData<any>(res))));
@@ -133,6 +165,8 @@ export class ProductsService {
     const managesStock = product.track_stock ?? product.controlar_inventario ?? product.maneja_stock ?? product.manage_stock ?? product.manages_stock;
     const minimumStock = Number(product.minimum_stock ?? product.stock_minimo ?? product.min_stock ?? 0) || 0;
 
+    const image = product.image ?? product.imagen ?? '';
+    const imageUrl = this.resolveImageUrl(product.image_url || image);
     return {
       ...product,
       nombre: product.nombre ?? product.item_name ?? product.name,
@@ -153,8 +187,18 @@ export class ProductsService {
       current_stock: product.current_stock ?? stock,
       stock: product.stock ?? stock,
       is_out_of_stock: product.is_out_of_stock ?? (managesStock ? stock <= 0 : false),
-      is_low_stock: product.is_low_stock ?? (managesStock ? stock <= minimumStock : false)
+      is_low_stock: product.is_low_stock ?? (managesStock ? stock <= minimumStock : false),
+      image,
+      image_url: imageUrl
     };
+  }
+
+  private resolveImageUrl(value: unknown): string {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
+    const base = String(environment.URL || '').replace(/\/$/, '');
+    return raw.startsWith('/') ? `${base}${raw}` : `${base}/${raw}`;
   }
 
   private parseTaxRate(value: any): number {

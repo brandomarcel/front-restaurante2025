@@ -82,11 +82,8 @@ export class UsersComponent implements OnInit, DoCheck {
   }
 
   get canManageUsers(): boolean {
-    const role = this.normalized(this.capabilities.businessRole);
-    const isManager = role === 'ADMINISTRADOR' || role === 'GERENTE';
-    // El contrato Lite define Administrador/Gerente como administradores de
-    // usuarios. El backend mantiene la validación final de permisos.
-    return isManager;
+    return this.capabilities.hasPermission('*')
+      || this.capabilities.hasPermission('business.users.manage');
   }
 
   get activeCount(): number {

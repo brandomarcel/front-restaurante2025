@@ -104,14 +104,17 @@ export class ProfileMenuComponent implements OnInit, DoCheck {
     const rawRole =
       this.user?.businessRole ??
       this.user?.business_role ??
-      this.user?.roles?.find((role: string) => ['GERENTE', 'CAJERO', 'FACTURACION', 'FACTURADOR', 'MESERO', 'COCINA', 'USUARIO'].includes(String(role || '').trim().toUpperCase())) ??
+      this.user?.roles?.find((role: string) => ['ADMINISTRADOR', 'ADMINISTRATOR', 'SYSTEM MANAGER', 'GERENTE', 'CAJERO', 'FACTURACION', 'FACTURADOR', 'MESERO', 'COCINA', 'USUARIO'].includes(String(role || '').trim().toUpperCase())) ??
       this.user?.role ??
       this.user?.rol ??
       this.user?.tipo ??
       '';
 
-    const r = String(rawRole).trim().toUpperCase() === 'FACTURADOR' ? 'FACTURACION' : String(rawRole).trim().toUpperCase();
-    this.roleUpper = r === 'GERENTE' || r === 'CAJERO' || r === 'FACTURACION' || r === 'MESERO' || r === 'COCINA' || r === 'USUARIO'
+    const normalizedRole = String(rawRole).trim().toUpperCase();
+    const r = normalizedRole === 'FACTURADOR' || normalizedRole === 'FACTURACIÓN'
+      ? 'FACTURACION'
+      : normalizedRole === 'ADMINISTRATOR' ? 'ADMINISTRADOR' : normalizedRole;
+    this.roleUpper = ['ADMINISTRADOR', 'SYSTEM MANAGER', 'GERENTE', 'CAJERO', 'FACTURACION', 'MESERO', 'COCINA', 'USUARIO'].includes(r)
       ? (r as Role)
       : null;
 
@@ -276,6 +279,7 @@ export class ProfileMenuComponent implements OnInit, DoCheck {
   }
 
   get roleLabel(): string {
+    if (this.roleUpper === 'ADMINISTRADOR' || this.roleUpper === 'SYSTEM MANAGER') return 'Administrador';
     if (this.roleUpper === 'GERENTE') return 'Gerente';
     if (this.roleUpper === 'CAJERO') return 'Cajero';
     if (this.roleUpper === 'FACTURACION') return 'Facturación';

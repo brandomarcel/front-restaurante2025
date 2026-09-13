@@ -8,13 +8,13 @@ import { RoleAccessGuard } from 'src/app/core/guards/role-access.guard';
 
 const routes: Routes = [
   { path: '', component: ReportsHomeComponent },
-  { path: 'orders', component: FrappeReportsComponent, canActivate: [RoleAccessGuard], data: { defaultReport: 'Orders Report', featureKey: 'restaurant' } },
-  { path: 'productos-mas-vendidos', component: FrappeReportsComponent, data: { defaultReport: 'Productos Más Vendidos' } },
-  { path: 'comprobantes-electronicos', component: FrappeReportsComponent, data: { defaultReport: 'Comprobantes Electronicos' } },
-  { path: 'ventas-forma-pago', component: FrappeReportsComponent, data: { defaultReport: 'Ventas por Forma de Pago' } },
-  { path: 'ventasproducto', component: FrappeReportsComponent, data: { defaultReport: 'Productos Más Vendidos' } },
-  { path: 'report-cierre-caja', component: ReportCierreCajaComponent },
-  { path: 'report-orders', component: FrappeReportsComponent, canActivate: [RoleAccessGuard], data: { defaultReport: 'Orders Report', featureKey: 'restaurant' } }
+  { path: 'orders', component: FrappeReportsComponent, canActivate: [RoleAccessGuard], data: { defaultReport: 'Orders Report', featureKey: 'restaurant', anyPermissionKeys: ['restaurant.orders.read', 'restaurant.manage'] } },
+  { path: 'productos-mas-vendidos', component: FrappeReportsComponent, canActivate: [RoleAccessGuard], data: { defaultReport: 'Productos Más Vendidos', featureKey: 'products', anyPermissionKeys: ['products.read', 'products.manage'] } },
+  { path: 'comprobantes-electronicos', component: FrappeReportsComponent, canActivate: [RoleAccessGuard], data: { defaultReport: 'Comprobantes Electronicos', featureKey: 'billing', anyPermissionKeys: ['billing.read', 'billing.manage'] } },
+  { path: 'ventas-forma-pago', component: FrappeReportsComponent, canActivate: [RoleAccessGuard], data: { defaultReport: 'Ventas por Forma de Pago', featureKeys: ['billing', 'restaurant'], anyPermissionKeys: ['billing.read', 'billing.manage', 'restaurant.orders.read', 'restaurant.manage'] } },
+  { path: 'ventasproducto', component: FrappeReportsComponent, canActivate: [RoleAccessGuard], data: { defaultReport: 'Productos Más Vendidos', featureKey: 'products', anyPermissionKeys: ['products.read', 'products.manage'] } },
+  { path: 'report-cierre-caja', component: ReportCierreCajaComponent, canActivate: [RoleAccessGuard], data: { featureKeys: ['restaurant_pos', 'cash_register'], requiredFeatures: ['restaurant_pos', 'cash_register'], anyPermissionKeys: ['restaurant.cash.manage'] } },
+  { path: 'report-orders', component: FrappeReportsComponent, canActivate: [RoleAccessGuard], data: { defaultReport: 'Orders Report', featureKey: 'restaurant', anyPermissionKeys: ['restaurant.orders.read', 'restaurant.manage'] } }
 ];
 
 @NgModule({

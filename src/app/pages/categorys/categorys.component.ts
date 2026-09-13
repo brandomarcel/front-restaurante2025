@@ -9,10 +9,11 @@ import { ButtonComponent } from 'src/app/shared/components/button/button.compone
 import { AlertService } from 'src/app/core/services/alert.service';
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
 
 @Component({
   selector: 'app-categorys',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule,ButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule,ButtonComponent, AppPaginationComponent],
   templateUrl: './categorys.component.html',
   styleUrl: './categorys.component.css'
 })
@@ -32,6 +33,10 @@ export class CategorysComponent implements OnInit {
 
   page = 1;
   pageSize = 10;
+
+  get totalPages(): number { return Math.max(1, Math.ceil((this.categoriesFiltradasList.length || 0) / this.pageSize)); }
+  onPaginationPage(page: number): void { this.page = page; }
+  onPaginationPageSize(size: number): void { this.pageSize = size; this.page = 1; }
 
   categoriaForm!: FormGroup;
 
@@ -56,11 +61,11 @@ export class CategorysComponent implements OnInit {
   get isLiteMode(): boolean { return this.capabilities.isLiteMode; }
 
   get canReadCategories(): boolean {
-    return this.capabilities.isEnabled('products');
+    return this.capabilities.isEnabled('products') && this.capabilities.hasPermission('products.read');
   }
 
   get canManageCategories(): boolean {
-    return this.capabilities.isEnabled('products');
+    return this.capabilities.isEnabled('products') && this.capabilities.hasPermission('products.manage');
   }
 
   loadCategory() {
@@ -104,6 +109,7 @@ export class CategorysComponent implements OnInit {
     });
 
     this.categoriesFiltradasList = lista;
+    this.page = 1;
   }
 
   limpiarFiltros() {

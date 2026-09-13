@@ -7,11 +7,12 @@ import { UtilsService } from '../../../core/services/utils.service';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { firstValueFrom } from 'rxjs';
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
+import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
 
 @Component({
   selector: 'app-report-orders',
   standalone: true,
-  imports: [CommonModule, FormsModule, ButtonComponent],
+  imports: [CommonModule, FormsModule, ButtonComponent, AppPaginationComponent],
   templateUrl: './report-orders.component.html',
   styleUrl: './report-orders.component.scss'
 })
@@ -121,6 +122,18 @@ export class ReportOrdersComponent implements OnInit {
   prevPage(): void {
     if (this.currentPage <= 1) return;
     this.currentPage -= 1;
+    this.fetchOrders();
+  }
+
+  onPaginationPage(page: number): void {
+    if (page === this.currentPage) return;
+    this.currentPage = page;
+    this.fetchOrders();
+  }
+
+  onPaginationPageSize(size: number): void {
+    this.pageSize = size;
+    this.currentPage = 1;
     this.fetchOrders();
   }
 

@@ -36,6 +36,8 @@ export class FrappeQueryReportService {
   ) {}
 
   run(reportName: string, filters: Record<string, any>): Observable<FrappeQueryReportResponse> {
+    const accessError = this.reportAccessError();
+    if (accessError) return throwError(() => accessError);
     const query = [
       `report_name=${encodeURIComponent(reportName)}`,
       `filters=${encodeURIComponent(JSON.stringify(this.cleanFilters(filters)))}`,
@@ -47,6 +49,9 @@ export class FrappeQueryReportService {
       context: new HttpContext().set(REQUIRE_AUTH, true)
     }).pipe(
       catchError((error) => {
+        if (Number(error?.status || error?.error?.status) === 403) {
+          return throwError(() => new Error('No tienes permiso para consultar este reporte.'));
+        }
         const message = this.frappeErr.handle(error) || 'No se pudo cargar el reporte.';
         return throwError(() => new Error(message));
       })
@@ -54,6 +59,8 @@ export class FrappeQueryReportService {
   }
 
   exportExcel(reportName: string, filters: Record<string, any>, visibleIdx: number[] = []): Observable<Blob> {
+    const accessError = this.reportAccessError();
+    if (accessError) return throwError(() => accessError);
     const cleanFilters = this.cleanFilters(filters);
     const body = new FormData();
 
@@ -74,6 +81,9 @@ export class FrappeQueryReportService {
       context: new HttpContext().set(REQUIRE_AUTH, true)
     }).pipe(
       catchError((error) => {
+        if (Number(error?.status || error?.error?.status) === 403) {
+          return throwError(() => new Error('No tienes permiso para consultar este reporte.'));
+        }
         const message = this.frappeErr.handle(error) || 'No se pudo exportar el reporte.';
         return throwError(() => new Error(message));
       })
@@ -103,5 +113,11 @@ export class FrappeQueryReportService {
       }
       return acc;
     }, {} as Record<string, any>);
+  }
+
+  private reportAccessError(): Error | null {
+    return this.capabilities.hasPermission('*') || this.capabilities.hasPermission('reports.view')
+      ? null
+      : new Error('No tienes permiso para consultar este reporte.');
   }
 }

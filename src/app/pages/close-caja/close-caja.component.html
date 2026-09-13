@@ -29,6 +29,21 @@
       </article>
     </section>
 
+    <section class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <article class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">Ventas en efectivo</p>
+        <p class="mt-1 text-lg font-bold text-emerald-800">{{ paymentAmount('01') | currency }}</p>
+      </article>
+      <article class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-600">Tarjeta</p>
+        <p class="mt-1 text-lg font-bold text-slate-800">{{ paymentAmount('19') | currency }}</p>
+      </article>
+      <article class="rounded-lg border border-sky-200 bg-sky-50 p-3">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-sky-700">Transferencias</p>
+        <p class="mt-1 text-lg font-bold text-sky-800">{{ paymentAmount('20') | currency }}</p>
+      </article>
+    </section>
+
     <section class="rounded-xl border border-primary/15 bg-white p-4 shadow-sm space-y-4">
       <div *ngIf="objectKeys(detallePorMetodo).length > 0" class="rounded-lg bg-primary/5 p-3">
         <p class="text-[11px] font-semibold uppercase tracking-wide text-primary mb-2">Detalle de pagos</p>
@@ -72,4 +87,14 @@
       </div>
     </section>
   </ng-container>
+
+  <section *ngIf="lastClose" class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+    <p class="text-sm font-bold text-emerald-800">Cierre registrado correctamente</p>
+    <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-emerald-900 sm:grid-cols-4">
+      <span>Estado: <b>{{ lastClose.status || lastClose.estado || 'Cerrada' }}</b></span>
+      <span>Efectivo contado: <b>{{ (lastClose.efectivo_real ?? lastClose.cash_counted ?? 0) | currency }}</b></span>
+      <span>Diferencia: <b>{{ (lastClose.diferencia ?? lastClose.difference ?? 0) | currency }}</b></span>
+      <span>Fecha: <b>{{ lastClose.closed_at || lastClose.fecha_cierre || '—' }}</b></span>
+    </div>
+  </section>
 </div>

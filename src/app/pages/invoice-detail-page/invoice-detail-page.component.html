@@ -49,14 +49,14 @@
           Reintentar emisión
         </button>
 
-        <button *ngIf="invoice?.type !== 'Nota Venta' && (!capabilities.isLiteMode || isLiteAuthorized)" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="getFacturaPdf()" [disabled]="documentActionRunning">
+        <button *ngIf="capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta' && (!capabilities.isLiteMode || isLiteAuthorized)" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="getFacturaPdf()" [disabled]="documentActionRunning">
           <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>
           RIDE
         </button>
-        <button *ngIf="capabilities.isLiteMode && invoice?.type !== 'Nota Venta'" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="getTicketPdf()" [disabled]="documentActionRunning">
+        <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta'" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="getTicketPdf()" [disabled]="documentActionRunning">
           Ticket
         </button>
-        <button *ngIf="capabilities.isLiteMode && isLiteAuthorized" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="downloadLiteXml()" [disabled]="documentActionRunning">
+        <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && isLiteAuthorized" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="downloadLiteXml()" [disabled]="documentActionRunning">
           XML
         </button>
         <button *ngIf="canSendEmail" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="sendLiteInvoiceEmail()" [disabled]="emailActionRunning">
@@ -324,14 +324,14 @@
             Reintentar emisión
           </button>
 
-          <button *ngIf="invoice?.type !== 'Nota Venta' && (!capabilities.isLiteMode || isLiteAuthorized)" class="btn btn-primary w-full !py-1.5 !text-[11px]" (click)="getFacturaPdf()" [disabled]="documentActionRunning">
+          <button *ngIf="capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta' && (!capabilities.isLiteMode || isLiteAuthorized)" class="btn btn-primary w-full !py-1.5 !text-[11px]" (click)="getFacturaPdf()" [disabled]="documentActionRunning">
             <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>
             Descargar RIDE
           </button>
-          <button *ngIf="capabilities.isLiteMode && invoice?.type !== 'Nota Venta'" class="btn btn-outline w-full !py-1.5 !text-[11px]" (click)="getTicketPdf()" [disabled]="documentActionRunning">
+          <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta'" class="btn btn-outline w-full !py-1.5 !text-[11px]" (click)="getTicketPdf()" [disabled]="documentActionRunning">
             Descargar ticket
           </button>
-          <button *ngIf="capabilities.isLiteMode && isLiteAuthorized" class="btn btn-outline w-full !py-1.5 !text-[11px]" (click)="downloadLiteXml()" [disabled]="documentActionRunning">
+          <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && isLiteAuthorized" class="btn btn-outline w-full !py-1.5 !text-[11px]" (click)="downloadLiteXml()" [disabled]="documentActionRunning">
             Descargar XML
           </button>
           <button *ngIf="canSendEmail" class="btn btn-outline w-full !py-1.5 !text-[11px]" (click)="sendLiteInvoiceEmail()" [disabled]="emailActionRunning">
@@ -349,12 +349,12 @@
   </button>
   <button *ngIf="canConsultAuthorization" class="btn btn-warn flex-1 !py-1.5 !text-[11px]" (click)="consultarEstadoSri()" [disabled]="liteActionRunning">Consultar autorización</button>
   <button *ngIf="canRetryLite" class="btn btn-warn flex-1 !py-1.5 !text-[11px]" (click)="retryLiteInvoice()" [disabled]="liteActionRunning">Reintentar emisión</button>
-  <button *ngIf="invoice?.type !== 'Nota Venta' && (!capabilities.isLiteMode || isLiteAuthorized)" class="btn btn-primary flex-1 !py-1.5 !text-[11px]" (click)="getFacturaPdf()" [disabled]="documentActionRunning">
+  <button *ngIf="capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta' && (!capabilities.isLiteMode || isLiteAuthorized)" class="btn btn-primary flex-1 !py-1.5 !text-[11px]" (click)="getFacturaPdf()" [disabled]="documentActionRunning">
     <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>
     RIDE
   </button>
-  <button *ngIf="capabilities.isLiteMode && invoice?.type !== 'Nota Venta'" class="btn btn-outline flex-1 !py-1.5 !text-[11px]" (click)="getTicketPdf()" [disabled]="documentActionRunning">Ticket</button>
-  <button *ngIf="capabilities.isLiteMode && isLiteAuthorized" class="btn btn-outline flex-1 !py-1.5 !text-[11px]" (click)="downloadLiteXml()" [disabled]="documentActionRunning">XML</button>
+  <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta'" class="btn btn-outline flex-1 !py-1.5 !text-[11px]" (click)="getTicketPdf()" [disabled]="documentActionRunning">Ticket</button>
+  <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && isLiteAuthorized" class="btn btn-outline flex-1 !py-1.5 !text-[11px]" (click)="downloadLiteXml()" [disabled]="documentActionRunning">XML</button>
   <button *ngIf="canSendEmail" class="btn btn-outline flex-1 !py-1.5 !text-[11px]" (click)="sendLiteInvoiceEmail()" [disabled]="emailActionRunning">Correo</button>
   <button class="btn btn-outline flex-1 !py-1.5 !text-[11px]" (click)="goBack()">
     Volver

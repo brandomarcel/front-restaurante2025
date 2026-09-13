@@ -9,10 +9,12 @@ import { CustomersService } from 'src/app/services/customers.service';
 import { AlertService } from '../../core/services/alert.service';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
+import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 @Component({
   selector: 'app-customers',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule, ButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule, ButtonComponent, AppPaginationComponent],
   templateUrl: './customers.component.html',
   styleUrl: './customers.component.css'
 })
@@ -34,17 +36,34 @@ export class CustomersComponent implements OnInit {
   page = 1;
   pageSize = 10;
 
+  get totalPages(): number { return Math.max(1, Math.ceil((this.filteredCustomersList.length || 0) / this.pageSize)); }
+  onPaginationPage(page: number): void { this.page = page; }
+  onPaginationPageSize(size: number): void { this.pageSize = size; this.page = 1; }
+
   constructor(
     private customersService: CustomersService,
     private fb: FormBuilder,
     private spinner: NgxSpinnerService,
     private frappeErrorService: FrappeErrorService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private capabilities: CompanyCapabilitiesService
   ) { }
 
   ngOnInit() {
+    if (!this.canReadCustomers) {
+      this.alertService.error('No tienes permisos para consultar clientes en la empresa seleccionada.');
+      return;
+    }
     this.cargarClientes();
     this.initForm();
+  }
+
+  get canReadCustomers(): boolean {
+    return this.capabilities.isEnabled('customers') && this.capabilities.hasPermission('customers.read');
+  }
+
+  get canManageCustomers(): boolean {
+    return this.capabilities.isEnabled('customers') && this.capabilities.hasPermission('customers.manage');
   }
 
   initForm(data: any = null) {
@@ -98,9 +117,14 @@ export class CustomersComponent implements OnInit {
     );
     // Opcional: mantener orden al filtrar
     this.filteredCustomersList.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+    this.page = 1;
   }
 
   abrirModal(cliente: any = null) {
+    if (!this.canManageCustomers) {
+      this.alertService.error('No tienes permisos para administrar clientes.');
+      return;
+    }
     this.mostrarModal = true;
     this.submitted = false;
     this.clienteEditando = cliente;
@@ -139,6 +163,10 @@ export class CustomersComponent implements OnInit {
   }
 
   guardarCliente() {
+    if (!this.canManageCustomers) {
+      this.alertService.error('No tienes permisos para administrar clientes.');
+      return;
+    }
     this.submitted = true;
     if (this.clienteForm.invalid) return;
 
@@ -185,6 +213,10 @@ export class CustomersComponent implements OnInit {
   }
 
   delete(id: string) {
+    if (!this.canManageCustomers) {
+      this.alertService.error('No tienes permisos para administrar clientes.');
+      return;
+    }
 
     this.alertService.confirm('Estás seguro de eliminar este cliente?', 'Confirmar').then((result) => {
       if (result.isConfirmed) {

@@ -39,6 +39,9 @@ export interface OrderVM {
   name: string;
   status: 'Ingresada' | 'Preparación' | 'Cerrada' | string;
   type: string;
+  table?: string;
+  tableName?: string;
+  notes?: string;
 
   createdAt: string;
   createdAtISO?: string;
@@ -75,6 +78,7 @@ export class RealtimeOrdersService {
   private lastLoadKey = '';
   private recentRealtimeEvents = new Map<string, number>();
   private readonly REALTIME_DEDUPE_MS = 1000;
+  private activeRealtimeBusiness: string | null = null;
 
   private readonly STATUS_ORDER: Record<string, number> = {
     'Ingresada': 0,
@@ -90,7 +94,16 @@ export class RealtimeOrdersService {
     // La suscripción se limita al canal privado del negocio activo. El servicio
     // central se encarga de limpiar el canal anterior al cambiar de empresa.
     this.restaurantRealtime.activate();
+    this.activeRealtimeBusiness = this.restaurantRealtime.activeBusiness;
     this.restaurantRealtime.events$.subscribe((event) => this.handleRestaurantEvent(event));
+    this.restaurantRealtime.activeBusiness$.subscribe((business) => {
+      const next = String(business || '').trim() || null;
+      if (next === this.activeRealtimeBusiness) return;
+      this.activeRealtimeBusiness = next;
+      // Nunca conservar órdenes del negocio anterior mientras se cambia el
+      // canal. La pantalla volverá a cargar el catálogo del nuevo negocio.
+      this.clearOrders();
+    });
 
     /* ============ Reconciliación suave ============ */
 
@@ -112,6 +125,8 @@ export class RealtimeOrdersService {
     }
 
     const data = event.data || {};
+    if (this.activeRealtimeBusiness && String(event.business).trim() !== this.activeRealtimeBusiness) return;
+    if (data?.business && String(data.business).trim() !== String(event.business).trim()) return;
     const name = String(data.name || '').trim();
     if (!name) return;
     const action = String(event.action || '').toLowerCase();
@@ -172,6 +187,28 @@ export class RealtimeOrdersService {
     const list = Array.isArray(rows) ? rows.map((row) => this.mapOne(row)) : [];
     this.orders$.next(list);
     this.total$.next(list.length);
+    this.newCount$.next(0);
+  }
+
+  /** Reemplaza una orden con la respuesta completa de una operación HTTP. */
+  replaceOrder(row: any): void {
+    const mapped = this.mapOne(row);
+    if (!mapped?.name) return;
+    const list = [...this.orders$.value];
+    const index = list.findIndex((item) => item.name === mapped.name);
+    if (index >= 0) {
+      list[index] = { ...list[index], ...mapped, _flash: true, _flashType: 'update' };
+    } else {
+      list.unshift({ ...mapped, _flash: true, _flashType: 'insert' });
+    }
+    this.orders$.next(list);
+    this.total$.next(list.length);
+  }
+
+  /** Limpia explícitamente la cola al cambiar de negocio o cerrar sesión. */
+  clearOrders(): void {
+    this.orders$.next([]);
+    this.total$.next(0);
     this.newCount$.next(0);
   }
 
@@ -248,13 +285,16 @@ export class RealtimeOrdersService {
     const createdAt = o.createdAt ?? o.creation ?? o.posting_date ?? o.date ?? '';
     const createdISO = o.createdAtISO || this.toIsoLike(createdAt);
     const status = this.normalizeStatus(o.status);
-    const type = this.normalizeType(o.type ?? o.estado);
+    const type = this.normalizeType(o.type ?? o.type_orden ?? o.estado);
     const customer = o.customer && typeof o.customer === 'object' ? o.customer : {};
     const electronic = o.electronic ?? o.sri ?? {};
 
     return {
       name: o.name,
       alias: o.alias ?? '',
+      table: typeof o.table === 'object' ? (o.table?.name ?? o.table?.id ?? '') : (o.table ?? o.mesa ?? o.table_name ?? ''),
+      tableName: typeof o.table === 'object' ? (o.table?.table_name ?? o.table?.label ?? '') : (o.table_name ?? o.mesa_name ?? o.table_label ?? ''),
+      notes: o.notes ?? o.observaciones ?? '',
       status,
       type,
       createdAt,
@@ -306,7 +346,7 @@ export class RealtimeOrdersService {
 
     if (value.includes('ingres')) return 'Ingresada';
     if (value.includes('prepar')) return 'Preparación';
-    if (value.includes('lista')) return 'Lista';
+    if (value.includes('list')) return 'Lista';
     if (value.includes('cerr') || value.includes('entreg')) return 'Cerrada';
 
     return source || 'Ingresada';

@@ -12,11 +12,12 @@ import { toast } from 'ngx-sonner';
 import { CreditNoteService } from 'src/app/services/credit-note.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { finalize } from 'rxjs';
+import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
 
 @Component({
   selector: 'app-credit-notes',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgxPaginationModule, EcuadorTimePipe, ButtonComponent,RouterModule],
+  imports: [CommonModule, FormsModule, NgxPaginationModule, EcuadorTimePipe, ButtonComponent,RouterModule, AppPaginationComponent],
   templateUrl: './credit-notes.component.html',
   styleUrl: './credit-notes.component.css'
 })
@@ -55,7 +56,7 @@ export class CreditNotesComponent implements OnInit {
       next: (res: any) => {
         const msg = res.message || res; // depende de tu proxy
         this.invoices = msg.data || [];
-        this.total = msg.total || 0;
+        this.total = Number(msg.total ?? msg.total_count ?? msg.count ?? this.invoices.length) || 0;
         this.totalPages = Math.ceil(this.total / this.pageSize) || 1;
         this.aplicarFiltros();
         this.spinner.hide();
@@ -148,6 +149,18 @@ export class CreditNotesComponent implements OnInit {
   nextPage(): void { if (this.page < this.totalPages) { this.page++; this.loadInvoices(); } }
   prevPage(): void { if (this.page > 1) { this.page--; this.loadInvoices(); } }
 
+  onPaginationPage(page: number): void {
+    if (page === this.page) return;
+    this.page = page;
+    this.loadInvoices();
+  }
+
+  onPaginationPageSize(size: number): void {
+    this.pageSize = size;
+    this.page = 1;
+    this.loadInvoices();
+  }
+
  // Abrir/Cerrar modal
   openInvoiceDetail(inv: any) {
     this.invoiceSelected = inv || null;
@@ -158,6 +171,10 @@ export class CreditNotesComponent implements OnInit {
 
   // PDF de factura (usa tu PrintService)
   getFacturaPdf() {
+    if (!this.capabilities.hasPermission('billing.read')) {
+      toast.error('No tienes permisos para descargar documentos.');
+      return;
+    }
     const invoiceName = this.invoiceSelected?.name || this.invoiceSelected?.sri?.invoice;
     if (!invoiceName) {
       toast.error('Factura no disponible');

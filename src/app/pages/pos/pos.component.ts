@@ -14,7 +14,6 @@ import { PaymentsService } from 'src/app/services/payments.service';
 import { PrintService } from 'src/app/services/print.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { environment } from '../../../environments/environment';
-import { UtilsService } from '../../core/services/utils.service';
 import { AlertService } from '../../core/services/alert.service';
 import { finalize } from 'rxjs';
 import { ButtonComponent } from "src/app/shared/components/button/button.component";
@@ -92,7 +91,6 @@ export class PosComponent implements OnInit {
     private ordersService: OrdersService,
     private spinner: NgxSpinnerService,
     private printService: PrintService,
-    private utilsService: UtilsService,
     private alertService: AlertService,
     private auth: AuthService,
     private capabilities: CompanyCapabilitiesService
@@ -111,9 +109,8 @@ export class PosComponent implements OnInit {
     this.permissions = this.getPermissionsFromRole(this.roleName);
     console.log('📦roleName', this.roleName, '📦permissions', this.permissions);
 
-    this.ambiente = this.utilsService.getAmbienteActual()
-      || localStorage.getItem('ambiente')
-      || '----------';
+    // Mostrar únicamente el ambiente recibido para el negocio activo.
+    this.ambiente = this.backendEnvironment() || '';
 
     const fechaEcuador = new Date(
       new Date().toLocaleString('en-US', { timeZone: 'America/Guayaquil' })
@@ -236,7 +233,7 @@ export class PosComponent implements OnInit {
     this.spinner.show();
     this.categoryService.getAll().subscribe((res: any) => {
       this.spinner.hide();
-      this.categories = res.message.data || [];
+      this.categories = Array.isArray(res) ? res : (res?.message?.data || res?.data || []);
     },
     error => {
       this.spinner.hide();
@@ -348,8 +345,7 @@ export class PosComponent implements OnInit {
     const selectedCat = this.normalize(this.selectedCategory);
 
     this.filteredProductList = (this.products || []).filter((product: any) => {
-      const prodCat = this.normalize(this.getProductCategoryName(product));
-      const okCat = !selectedCat || prodCat === selectedCat;
+      const okCat = this.productMatchesCategory(product, selectedCat);
       if (!term) return okCat;
 
       const name = this.normalize(product?.nombre ?? product?.name);
@@ -395,7 +391,23 @@ export class PosComponent implements OnInit {
   }
 
   get canEmitInvoice(): boolean {
-    return this.capabilities.canEmit() && !this.capabilities.getPosTerminalBlockMessage();
+    return this.capabilities.hasPermission('billing.create')
+      && this.capabilities.canEmit()
+      && !this.capabilities.getPosTerminalBlockMessage();
+  }
+
+  private backendEnvironment(): string {
+    const value = this.capabilities.business?.tax_profile?.environment
+      ?? this.capabilities.business?.environment
+      ?? this.capabilities.business?.ambiente;
+    const normalized = String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase();
+    if (normalized.includes('PROD')) return 'PRODUCCION';
+    if (normalized.includes('PRUEB') || normalized === 'TEST') return 'PRUEBAS';
+    return '';
   }
 
   get currentFiscalLocation(): any | null {
@@ -861,12 +873,31 @@ export class PosComponent implements OnInit {
 
   /** Nombre de categoría del producto */
   private getProductCategoryName(p: any): string {
-    return (
-      p?.categoria ||
-      p?.category?.name ||
-      p?.category?.nombre ||
-      ''
-    );
+    return String(this.getProductCategoryValues(p)[0] ?? '');
+  }
+
+  private productMatchesCategory(product: any, selectedCategory: string): boolean {
+    if (!selectedCategory) return true;
+    const selected = this.normalize(selectedCategory);
+    return this.getProductCategoryValues(product).some((value) => {
+      const category = this.normalize(value);
+      return !!category && (category === selected || category.includes(selected) || selected.includes(category));
+    });
+  }
+
+  private getProductCategoryValues(product: any): Array<string | number> {
+    const category = product?.category;
+    const nested = category && typeof category === 'object'
+      ? [category.name, category.category_name, category.nombre]
+      : [category];
+    return [
+      product?.categoria,
+      product?.category_name,
+      product?.categoria_name,
+      product?.item_group,
+      product?.item_group_name,
+      ...nested
+    ].filter((value): value is string | number => value !== null && value !== undefined && value !== '');
   }
 
   trackByProductId = (_: number, p: any) => p?.id || p?._id || p?.codigo || p?.name || p?.nombre;

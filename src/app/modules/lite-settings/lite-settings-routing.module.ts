@@ -13,11 +13,11 @@ import { LitePosTerminalsComponent } from 'src/app/pages/lite-pos-terminals/lite
  */
 const management = {
   canActivate: [RoleAccessGuard],
-  data: { allowedRoles: ['GERENTE'], permissionKey: 'business.settings.manage' }
+  data: { permissionKey: 'business.settings.manage' }
 };
 const establishmentManagement = {
   canActivate: [RoleAccessGuard],
-  data: { allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'MESERO', 'COCINA', 'FACTURACION', 'USUARIO'] }
+  data: { permissionKey: 'business.settings.manage' }
 };
 
 const routes: Routes = [
@@ -34,19 +34,23 @@ const routes: Routes = [
     path: 'lite/api',
     component: CompanyComponent,
     canActivate: [RoleAccessGuard],
-    data: { allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'MESERO', 'COCINA', 'USUARIO'] }
+    data: {
+      featureKey: 'api',
+      readOnlyFeature: true,
+      permissionKey: 'business.settings.manage'
+    }
   },
   {
     path: 'lite/api-clients',
     component: CompanyComponent,
     canActivate: [RoleAccessGuard],
-    data: { allowedRoles: ['ADMINISTRADOR', 'GERENTE'], permissionKey: 'business.settings.manage', featureKey: 'api' }
+    data: { permissionKey: 'business.settings.manage', featureKey: 'api' }
   },
   {
     path: 'lite/api-logs',
     component: CompanyComponent,
     canActivate: [RoleAccessGuard],
-    data: { allowedRoles: ['ADMINISTRADOR', 'GERENTE'], permissionKey: 'business.settings.manage', featureKey: 'api' }
+    data: { permissionKey: 'business.settings.manage', featureKey: 'api' }
   },
   { path: '', redirectTo: 'lite', pathMatch: 'full' }
 ];

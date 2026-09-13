@@ -72,6 +72,10 @@ export class CreditNoteDetailPageComponent implements OnInit {
   }
 
   getFacturaPdf(): void {
+    if (!this.capabilities.hasPermission('billing.read')) {
+      toast.error('No tienes permisos para descargar documentos.');
+      return;
+    }
     const inv = this.invoice?.name || this.invoice?.sri?.invoice;
     if (!inv) {
       toast.error('Nota de Credito no disponible');
@@ -92,6 +96,10 @@ export class CreditNoteDetailPageComponent implements OnInit {
   }
 
   downloadXml(): void {
+    if (!this.capabilities.hasPermission('billing.read')) {
+      toast.error('No tienes permisos para descargar documentos.');
+      return;
+    }
     const inv = this.invoice?.name;
     if (!inv || !this.capabilities.isLiteMode || this.documentLoading) return;
     this.documentLoading = true;
@@ -110,6 +118,10 @@ export class CreditNoteDetailPageComponent implements OnInit {
 
   sendEmail(): void {
     const name = this.invoice?.name;
+    if (!this.capabilities.hasPermission('billing.manage')) {
+      toast.error('No tienes permisos para enviar documentos por correo.');
+      return;
+    }
     if (!name || !this.capabilities.isLiteMode || !this.isAuthorized || this.emailLoading) return;
     this.emailLoading = true;
     this.liteInvoicesSvc.sendLiteInvoiceEmail(name).pipe(
@@ -190,7 +202,7 @@ export class CreditNoteDetailPageComponent implements OnInit {
 
   get canConsultAuthorization(): boolean {
     return this.capabilities.isLiteMode && !this.documentLoading && !this.actionLoading &&
-      canConsultLiteInvoice(this.invoice);
+      this.capabilities.hasPermission('billing.manage') && canConsultLiteInvoice(this.invoice);
   }
 
   get isAuthorizationPending(): boolean {
@@ -199,7 +211,7 @@ export class CreditNoteDetailPageComponent implements OnInit {
 
   get canRetry(): boolean {
     return this.capabilities.isLiteMode && !this.actionLoading && !this.documentLoading &&
-      canRetryLiteInvoice(this.invoice);
+      this.capabilities.hasPermission('billing.manage') && canRetryLiteInvoice(this.invoice);
   }
 
   get canReissue(): boolean {

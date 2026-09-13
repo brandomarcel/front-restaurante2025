@@ -210,11 +210,14 @@
       </section>
     </ng-template>
 
-    <div class="pager rounded-xl border border-slate-200 bg-white px-3 py-1.5 shadow-sm">
-      <button class="pager-btn" (click)="prevPage()" [disabled]="page === 1">Anterior</button>
-      <span class="text-[11px] font-medium text-slate-700">Página {{ page }} de {{ totalPages }}</span>
-      <button class="pager-btn" (click)="nextPage()" [disabled]="page === totalPages">Siguiente</button>
-    </div>
+    <app-pagination
+      [page]="page"
+      [totalPages]="totalPages"
+      [totalItems]="totalOrders"
+      [pageSize]="pageSize"
+      (pageChange)="onPaginationPage($event)"
+      (pageSizeChange)="onPaginationPageSize($event)">
+    </app-pagination>
   </ng-container>
 
   <ng-template #emptyOrders>

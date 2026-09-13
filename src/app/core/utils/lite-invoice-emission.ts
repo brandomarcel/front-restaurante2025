@@ -47,6 +47,23 @@ export function liteEmissionState(emission: any): LiteEmissionState {
   const providerStatus = normalized(emission?.provider_status);
   const emissionMessage = normalized(emission?.message ?? emission?.sri_message);
 
+  // `ok:false` siempre invalida el éxito, aunque otra propiedad llegue con
+  // un estado contradictorio. Los códigos 43/70 siguen siendo consulta
+  // pendiente, no autorización.
+  if (emission?.ok === false) {
+    if (sriCode === '70' || code === '70' || sriCode === '43' || code === '43'
+      || emissionMessage.includes('CLAVE ACCESO REGISTRADA')
+      || ['PROCESSING', 'PENDING', 'RECEIVED', 'PENDIENTE EMISION', 'PENDIENTE EMISIÓN'].includes(status)) {
+      return 'PROCESSING';
+    }
+    if (['REJECTED', 'RECHAZADO', 'RECHAZADA', 'NOT_AUTHORIZED', 'SRI_REJECTED'].includes(status)
+      || code === 'SRI_REJECTED') {
+      return 'REJECTED';
+    }
+    if (PROVIDER_ERROR_CODES.has(code)) return 'PROVIDER_ERROR';
+    return 'ERROR';
+  }
+
   // El backend puede devolver el estado documental sin `ok` (por ejemplo en
   // `message.data.status`). Estos valores son autoritativos y deben
   // conservarse aunque la respuesta no incluya un código de emisión.

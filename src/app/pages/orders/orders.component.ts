@@ -13,6 +13,7 @@ import { RouterModule } from '@angular/router';
 import { environment } from 'src/environments/environment.prod';
 import { UtilsService } from 'src/app/core/services/utils.service';
 import { OrderModalComponent } from '../orders-realtime/ui/order-modal/order-modal.component';
+import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
 
 type EstadoOrden = '' | 'Ingresada' | 'Preparación' | 'Cerrada';
 
@@ -23,7 +24,8 @@ type EstadoOrden = '' | 'Ingresada' | 'Preparación' | 'Cerrada';
     NgxPaginationModule,
     FormsModule, ButtonComponent,
     RouterModule,
-    OrderModalComponent
+    OrderModalComponent,
+    AppPaginationComponent
   ],
   templateUrl: './orders.component.html',
   styleUrl: './orders.component.css'
@@ -74,9 +76,10 @@ export class OrdersComponent implements OnInit {
     this.ordersService.getAll(this.pageSize, offset, createdFrom, createdTo).subscribe({
       next: (res: any) => {
         console.log('res', res);
-        this.orders = res.message.data || [];
+        const rows = res.message.data || [];
+        this.orders = rows;
         console.log('this.orders', this.orders);
-        this.totalOrders = res.message.total || 0;
+        this.totalOrders = Number(res.message?.total ?? res.message?.total_count ?? res.message?.count ?? this.orders.length) || 0;
         this.totalPages = Math.ceil(this.totalOrders / this.pageSize) || 1;
 
         this.actualizarOrdenesFiltradas();  // aplicar filtros con la data nueva
@@ -94,6 +97,18 @@ export class OrdersComponent implements OnInit {
   }
   prevPage(): void {
     if (this.page > 1) { this.page--; this.loadOrders(); }
+  }
+
+  onPaginationPage(page: number): void {
+    if (page === this.page) return;
+    this.page = page;
+    this.loadOrders();
+  }
+
+  onPaginationPageSize(size: number): void {
+    this.pageSize = size;
+    this.page = 1;
+    this.loadOrders();
   }
 
   get searchTerm(): string { return this._searchTerm; }

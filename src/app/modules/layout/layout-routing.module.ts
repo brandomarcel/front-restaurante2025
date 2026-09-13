@@ -24,7 +24,7 @@ const routes: Routes = [
   path: 'caja',
   component: LayoutComponent,
   canActivate: [RoleAccessGuard],
-  data: { allowedRoles: ['GERENTE', 'CAJERO'], featureKey: 'cash_register' },
+  data: { requiredFeatures: ['restaurant_pos', 'cash_register'], permissionKey: 'restaurant.cash.manage' },
   loadChildren: () => import('../caja/caja.module').then((m) => m.CajaModule),
 },
 
@@ -32,7 +32,7 @@ const routes: Routes = [
   path: 'report',
   component: LayoutComponent,
   canActivate: [RoleAccessGuard],
-  data: { allowedRoles: ['SYSTEM MANAGER', 'GERENTE', 'CAJERO'], permissionKey: 'reports.view' },
+  data: { permissionKey: 'reports.view', apiOnlyBlocked: true, featureKeys: ['billing', 'restaurant', 'inventory', 'products', 'customers', 'restaurant_pos', 'cash_register'], readOnlyFeature: true },
   loadChildren: () => import('../report/report.module').then((m) => m.ReportModule),
 },
 

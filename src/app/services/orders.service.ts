@@ -154,12 +154,12 @@ export class OrdersService {
     return this.postRestaurant('update_table', this.normalizeTablePayload(payload, true));
   }
 
-  getKitchenOrders(): Observable<any> {
+  getKitchenOrders(limit: number = 100): Observable<any> {
     const business = this.activeBusinessOrError();
     if (business instanceof Error) return throwError(() => business);
     return this.http.get<any>(`${this.urlBase}.get_kitchen_orders`, {
       context: new HttpContext().set(REQUIRE_AUTH, true),
-      params: new HttpParams().set('business', business)
+      params: new HttpParams().set('business', business).set('limit', String(limit))
     });
   }
 
@@ -178,7 +178,10 @@ export class OrdersService {
     return this.http.post<any>(url, this.normalizeOrderPayload(payload, business), { context: new HttpContext().set(REQUIRE_AUTH, true) }).pipe(
       map((response: any) => this.normalizeCreateResponse(response)),
       catchError((error) => {
-        const msg = this.frappeErr.handle(error) || 'Error al crear la orden.';
+        const status = Number(error?.status ?? error?.error?.status ?? 0);
+        const msg = status === 403
+          ? 'No tienes permiso para realizar esta operación.'
+          : (this.frappeErr.handle(error) || 'Error al crear la orden.');
         toast.error(msg);
         return throwError(() => error);
       })

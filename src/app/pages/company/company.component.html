@@ -33,16 +33,18 @@
           <span class="settings-ready-chip" [ngClass]="effectiveLiteSetupReady ? 'is-ready' : 'is-pending'">{{ effectiveLiteSetupReady ? 'Lista para emitir' : 'Configuración pendiente' }}</span>
         </div>
         <nav *ngIf="isLiteMode" aria-label="Secciones de configuración Lite" class="settings-tabs lg:col-span-2">
-          <a routerLink="/settings/lite" class="settings-tab" [class.is-active]="activeSettingsTab === 'general'">General</a>
-          <a routerLink="/settings/lite/tax-profile" class="settings-tab" [class.is-active]="activeSettingsTab === 'tax-profile'">Perfil tributario</a>
-          <a routerLink="/settings/lite/certificate" class="settings-tab" [class.is-active]="activeSettingsTab === 'certificate'">Firma electrónica</a>
-          <a routerLink="/settings/lite/plan" class="settings-tab" [class.is-active]="activeSettingsTab === 'plan'">Plan actual</a>
-          <a routerLink="/settings/lite/establishments" class="settings-tab" [class.is-active]="activeSettingsTab === 'establishments'">Establecimientos</a>
-          <a routerLink="/settings/lite/emission-points" class="settings-tab" [class.is-active]="activeSettingsTab === 'emission-points'">Puntos de emisión</a>
-          <a routerLink="/settings/lite/sequences" class="settings-tab" [class.is-active]="activeSettingsTab === 'sequences'">Secuencias</a>
-          <a *ngIf="capabilities.isEnabled('pos_terminal')" routerLink="/settings/lite/pos-terminals" class="settings-tab" [class.is-active]="activeSettingsTab === 'pos-terminals'">Terminales fiscales</a>
-          <a routerLink="/settings/lite/readiness" class="settings-tab" [class.is-active]="activeSettingsTab === 'readiness'">Preparación</a>
-          <a *ngIf="apiConfigurationEnabled" routerLink="/settings/lite/api" class="settings-tab" [class.is-active]="activeSettingsTab === 'api'">Integración API</a>
+          <ng-container *ngIf="canEditLiteSetup">
+            <a routerLink="/settings/lite" class="settings-tab" [class.is-active]="activeSettingsTab === 'general'">General</a>
+            <a routerLink="/settings/lite/tax-profile" class="settings-tab" [class.is-active]="activeSettingsTab === 'tax-profile'">Perfil tributario</a>
+            <a routerLink="/settings/lite/certificate" class="settings-tab" [class.is-active]="activeSettingsTab === 'certificate'">Firma electrónica</a>
+            <a routerLink="/settings/lite/plan" class="settings-tab" [class.is-active]="activeSettingsTab === 'plan'">Plan actual</a>
+            <a routerLink="/settings/lite/establishments" class="settings-tab" [class.is-active]="activeSettingsTab === 'establishments'">Establecimientos</a>
+            <a routerLink="/settings/lite/emission-points" class="settings-tab" [class.is-active]="activeSettingsTab === 'emission-points'">Puntos de emisión</a>
+            <a routerLink="/settings/lite/sequences" class="settings-tab" [class.is-active]="activeSettingsTab === 'sequences'">Secuencias</a>
+            <a *ngIf="capabilities.isEnabled('pos_terminal')" routerLink="/settings/lite/pos-terminals" class="settings-tab" [class.is-active]="activeSettingsTab === 'pos-terminals'">Terminales fiscales</a>
+            <a routerLink="/settings/lite/readiness" class="settings-tab" [class.is-active]="activeSettingsTab === 'readiness'">Preparación</a>
+          </ng-container>
+          <a *ngIf="capabilities.isEnabled('api')" routerLink="/settings/lite/api" class="settings-tab" [class.is-active]="activeSettingsTab === 'api'">Integración API</a>
         </nav>
         <div *ngIf="isLiteMode && !canEditLiteSetup && activeSettingsTab !== 'api'" class="lg:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           Solo Administrador o Gerente pueden modificar la configuración tributaria.
@@ -295,7 +297,6 @@
              <div *ngIf="!isLiteMode || showSettingsSection('tax-profile')" class="rounded-lg border border-gray-200 bg-white shadow-sm">
             <div class="px-4 py-3 border-b">
               <h3 class="text-sm font-semibold">Campos adicionales de facturación</h3>
-              <p class="text-[11px] text-gray-500 mt-1">Configuración de solo lectura administrada por el sistema.</p>
             </div>
 
             <div class="p-4 space-y-4">
@@ -305,7 +306,6 @@
                   formControlName="provider_ruc"
                   readonly aria-readonly="true"
                   tabindex="-1" />
-                <small class="text-[11px] text-gray-500">Configurado por el sistema. No se puede modificar desde aquí.</small>
               </div>
               <ng-template #providerRucNotConfigured>
                 <p class="text-sm text-gray-500">RUC del proveedor no configurado.</p>

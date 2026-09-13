@@ -105,11 +105,15 @@ export class MenuService implements OnDestroy {
       const rolesForThisItem = normRoles(item.allowedRoles) ?? normRoles(inheritedRoles);
       const featureKey = item.featureKey ?? inheritedFeature;
       const allowedByRole = !rolesForThisItem || rolesForThisItem.some(role => currentRoles.includes(role));
-      const allowedByPermission = !item.permissionKey || this.capabilities.hasPermission(item.permissionKey);
+      const allowedByPermission = item.permissionKeys?.length
+        ? item.permissionKeys.every((permission) => this.capabilities.hasPermission(permission))
+        : (!item.permissionKey || this.capabilities.hasPermission(item.permissionKey));
       const allowedByFeature = item.featureKeys?.length
         ? item.featureKeys.some(key => this.capabilities.isEnabled(key))
         : this.capabilities.isEnabled(featureKey);
-      const allowed = allowedByRole && allowedByPermission && allowedByFeature;
+      const requiredFeatures = item.requiredFeatures ?? [];
+      const allowedByRequiredFeatures = requiredFeatures.every(key => this.capabilities.isEnabled(key));
+      const allowed = allowedByRole && allowedByPermission && allowedByFeature && allowedByRequiredFeatures;
 
       const children = item.children
         ?.map((child) => filterItem(child, rolesForThisItem, featureKey))
@@ -123,10 +127,16 @@ export class MenuService implements OnDestroy {
       .map((group) => {
         if (this.capabilities.isLiteMode && !this.capabilities.isEnabled('restaurant') && group.hideInLite) return null;
         if (this.capabilities.isApiOnlyMode && group.hideInApiOnly) return null;
+        if (group.hideWhenFeature && this.capabilities.isEnabled(group.hideWhenFeature)) return null;
 
         const groupRoles = normRoles(group.allowedRoles);
         const groupAllowed = !groupRoles || groupRoles.some(role => currentRoles.includes(role));
         if (groupRoles && !groupAllowed) return null;
+        const groupFeatureAllowed = group.featureKeys?.length
+          ? group.featureKeys.some(key => this.capabilities.isEnabled(key))
+          : this.capabilities.isEnabled(group.featureKey);
+        if (!groupFeatureAllowed) return null;
+        if (group.permissionKey && !this.capabilities.hasPermission(group.permissionKey)) return null;
 
         const items = (group.items || [])
           .map((item) => filterItem(item, groupRoles))

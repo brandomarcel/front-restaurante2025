@@ -24,7 +24,7 @@
         <button type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="irAHistorial()">
           Historial
         </button>
-        <button type="button" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="abrirMovimientoModal()">
+        <button *ngIf="canManageInventory" type="button" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="abrirMovimientoModal()">
           + Movimiento
         </button>
       </div>
@@ -221,7 +221,7 @@
           <button type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="cargarMovimientos()">
             Refrescar
           </button>
-          <button type="button" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="abrirMovimientoModal()">
+          <button *ngIf="canManageInventory" type="button" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="abrirMovimientoModal()">
             + Movimiento
           </button>
         </div>
@@ -382,11 +382,14 @@
         </div>
       </div>
 
-      <div class="pager border-t border-border bg-slate-50/70 !py-2">
-        <button class="pager-btn !text-[11px]" (click)="prevHistoryPage()" [disabled]="!canGoPrevHistory">« Anterior</button>
-        <span class="text-[11px] font-semibold text-slate-600">{{ historyRangeLabel }}</span>
-        <button class="pager-btn !text-[11px]" (click)="nextHistoryPage()" [disabled]="!canGoNextHistory">Siguiente »</button>
-      </div>
+      <app-pagination
+        [page]="historyPage"
+        [totalPages]="historyTotalPages"
+        [totalItems]="historyTotal"
+        [pageSize]="historyLimit"
+        (pageChange)="onHistoryPage($event)"
+        (pageSizeChange)="onHistoryPageSize($event)">
+      </app-pagination>
     </section>
   </ng-template>
 

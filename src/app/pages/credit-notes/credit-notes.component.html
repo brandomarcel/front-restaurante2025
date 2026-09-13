@@ -92,11 +92,14 @@
                 </tbody>
             </table>
 
-            <div class="pager">
-                <button class="pager-btn" (click)="prevPage()" [disabled]="page === 1">« Anterior</button>
-                <span class="text-sm">Página {{ page }} de {{ totalPages }}</span>
-                <button class="pager-btn" (click)="nextPage()" [disabled]="page === totalPages">Siguiente »</button>
-            </div>
+            <app-pagination
+              [page]="page"
+              [totalPages]="totalPages"
+              [totalItems]="total"
+              [pageSize]="pageSize"
+              (pageChange)="onPaginationPage($event)"
+              (pageSizeChange)="onPaginationPageSize($event)">
+            </app-pagination>
         </section>
     </ng-container>
 
@@ -125,7 +128,7 @@
 
             <!-- Acciones -->
             <div class="mb-4 flex flex-wrap gap-2">
-                <button class="btn btn-warn" (click)="getFacturaPdf()" [disabled]="!invoiceSelected?.name && !invoiceSelected?.sri?.invoice">
+                <button *ngIf="capabilities.hasPermission('billing.read')" class="btn btn-warn" (click)="getFacturaPdf()" [disabled]="!invoiceSelected?.name && !invoiceSelected?.sri?.invoice">
                     Descargar Nota de Crédito
                 </button>
 

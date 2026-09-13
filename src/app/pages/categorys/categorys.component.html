@@ -66,14 +66,14 @@
         </tbody>
       </table>
 
-      <div class="pager">
-        <button class="pager-btn" (click)="page = page - 1" [disabled]="page === 1">« Anterior</button>
-        <span class="text-sm">Pagina {{ page }}</span>
-        <button class="pager-btn" (click)="page = page + 1"
-          [disabled]="(categoriesFiltradasList.length || 0) <= (page * pageSize)">
-          Siguiente »
-        </button>
-      </div>
+      <app-pagination
+        [page]="page"
+        [totalPages]="totalPages"
+        [totalItems]="categoriesFiltradasList.length"
+        [pageSize]="pageSize"
+        (pageChange)="onPaginationPage($event)"
+        (pageSizeChange)="onPaginationPageSize($event)">
+      </app-pagination>
     </section>
   </ng-container>
 

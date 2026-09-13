@@ -1,6 +1,6 @@
 import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { catchError, map, Observable, shareReplay, throwError } from 'rxjs';
+import { catchError, map, Observable, shareReplay, tap, throwError } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { FrappeErrorService } from '../core/services/frappe-error.service';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
@@ -29,12 +29,14 @@ export class CajasService {
   }
 
 
-  verificarAperturaActiva(usuario: string) {
+  verificarAperturaActiva(_usuario = '') {
+    const accessError = this.cashAccessError();
+    if (accessError) return throwError(() => accessError);
     const business = this.activeBusinessOrError();
     if (business instanceof Error) return throwError(() => business);
     return this.http.get<any>(`${this.restaurantApi}.get_current_cash_opening`, {
       context: new HttpContext().set(REQUIRE_AUTH, true),
-      params: new HttpParams().set('business', business).set('usuario', usuario || '')
+      params: new HttpParams().set('business', business)
     }).pipe(map((response: any) => this.normalizeCurrentOpening(response)));
   }
 
@@ -98,32 +100,64 @@ export class CajasService {
   }
 
   private postRestaurant(method: string, data: any) {
+    const accessError = this.cashAccessError();
+    if (accessError) return throwError(() => accessError);
     const business = this.activeBusinessOrError();
     if (business instanceof Error) return throwError(() => business);
-    return this.http.post<any>(`${this.restaurantApi}.${method}`, { ...(data || {}), business }, {
+    const payload = { ...(data || {}), business };
+    return this.http.post<any>(`${this.restaurantApi}.${method}`, payload, {
       context: new HttpContext().set(REQUIRE_AUTH, true)
-    });
+    }).pipe(
+      tap(() => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('facturada:restaurant-data-changed'));
+        }
+      })
+    );
+  }
+
+  /** Caja solo está disponible con la capacidad POS/caja y el permiso del negocio. */
+  private cashAccessError(): Error | null {
+    const featureEnabled = this.capabilities.isEnabled('restaurant_pos')
+      && this.capabilities.isEnabled('cash_register');
+    if (!featureEnabled) return new Error('La función pos no está habilitada para este negocio.');
+    if (!this.capabilities.hasPermission('restaurant.cash.manage')) {
+      return new Error('El rol del usuario no permite realizar esta operación.');
+    }
+    return null;
   }
 
   private normalizeCurrentOpening(response: any): any {
     const body = response?.message ?? response ?? {};
-    const data = body?.data ?? body;
-    const opening = data?.apertura ?? data?.cash_opening ?? data?.opening
-      ?? (data?.name ? data : null);
-    const payments = data?.payments ?? data?.detalle ?? {};
+    const dataValue = body?.data ?? response?.data;
+    const raw = Array.isArray(dataValue) ? dataValue[0] : (dataValue ?? body);
+    const opening = raw?.cash_opening ?? raw?.apertura ?? raw?.opening
+      ?? (raw?.name ? raw : null);
+    const status = String(opening?.status ?? opening?.estado ?? raw?.status ?? '').trim().toLowerCase();
+    const activeOpening = opening && status !== 'cerrada' && status !== 'closed' ? opening : null;
+    const payments = raw?.payments ?? raw?.detalle ?? activeOpening?.payments ?? {};
+    const normalized = {
+      ...(typeof raw === 'object' ? raw : {}),
+      cash_opening: activeOpening,
+      apertura: activeOpening,
+      opening: activeOpening,
+      is_open: !!activeOpening,
+      monto_apertura: raw?.monto_apertura ?? raw?.opening_amount ?? activeOpening?.monto_apertura ?? activeOpening?.opening_amount ?? 0,
+      efectivo_sistema: raw?.efectivo_sistema ?? raw?.system_cash ?? activeOpening?.efectivo_sistema ?? 0,
+      efectivo_real: raw?.efectivo_real ?? raw?.cash_counted ?? activeOpening?.efectivo_real ?? 0,
+      total_retiros: raw?.total_retiros ?? raw?.total_withdrawals ?? activeOpening?.total_retiros ?? 0,
+      diferencia: raw?.diferencia ?? raw?.difference ?? activeOpening?.diferencia ?? 0,
+      expected_cash: raw?.expected_cash ?? raw?.efectivo_esperado ?? activeOpening?.expected_cash ?? 0,
+      payments,
+      payment_totals: raw?.payment_totals ?? activeOpening?.payment_totals ?? []
+    };
     return {
       ...response,
-      data: opening ? [opening] : [],
+      data: activeOpening ? [activeOpening] : [],
       message: {
         ...(typeof body === 'object' ? body : {}),
-        ...data,
-        apertura: opening,
-        monto_apertura: data?.monto_apertura ?? opening?.monto_apertura ?? 0,
-        efectivo_sistema: data?.efectivo_sistema ?? 0,
-        efectivo_real: data?.efectivo_real ?? 0,
-        total_retiros: data?.total_retiros ?? 0,
-        diferencia: data?.diferencia ?? 0,
-        payments,
+        ...normalized,
+        data: normalized,
         detalle: payments
       }
     };

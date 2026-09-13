@@ -27,10 +27,10 @@
 
         <!-- Acciones rápidas (solo desktop) -->
         <div class="hidden items-center gap-1.5 md:flex">
-            <button class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="getFacturaPdf()" [disabled]="documentLoading"> <fa-icon
+            <button *ngIf="capabilities.hasPermission('billing.read')" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="getFacturaPdf()" [disabled]="documentLoading"> <fa-icon
                     [icon]="['fas','download']" class="mr-1"></fa-icon>Descargar Nota de Crédito</button>
-            <button *ngIf="capabilities.isLiteMode" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="downloadXml()" [disabled]="documentLoading">XML</button>
-            <button *ngIf="capabilities.isLiteMode && isAuthorized" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="sendEmail()" [disabled]="emailLoading">
+            <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read')" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="downloadXml()" [disabled]="documentLoading">XML</button>
+            <button *ngIf="capabilities.isLiteMode && isAuthorized && capabilities.hasPermission('billing.manage')" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="sendEmail()" [disabled]="emailLoading">
                 {{ emailLoading ? 'Enviando…' : 'Enviar por correo' }}
             </button>
             <button *ngIf="canConsultAuthorization" class="btn btn-warn !px-3 !py-1.5 !text-[11px]" (click)="consultAuthorization()" [disabled]="documentLoading">
@@ -262,10 +262,10 @@
 <!-- Barra de acciones móvil (fija en el pie de la página) -->
 <div *ngIf="invoice && !loading"
     class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t px-4 py-2 flex gap-2 text-center text-flex align-items-center justify-center">
-    <button class="btn btn-primary" (click)="getFacturaPdf()" [disabled]="documentLoading"> <fa-icon
+    <button *ngIf="capabilities.hasPermission('billing.read')" class="btn btn-primary" (click)="getFacturaPdf()" [disabled]="documentLoading"> <fa-icon
             [icon]="['fas','download']" class="mr-1"></fa-icon>Nota de Crédito</button>
-    <button *ngIf="capabilities.isLiteMode" class="btn btn-outline" (click)="downloadXml()" [disabled]="documentLoading">XML</button>
-    <button *ngIf="capabilities.isLiteMode && isAuthorized" class="btn btn-outline" (click)="sendEmail()" [disabled]="emailLoading">Correo</button>
+    <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read')" class="btn btn-outline" (click)="downloadXml()" [disabled]="documentLoading">XML</button>
+    <button *ngIf="capabilities.isLiteMode && isAuthorized && capabilities.hasPermission('billing.manage')" class="btn btn-outline" (click)="sendEmail()" [disabled]="emailLoading">Correo</button>
     <button *ngIf="canConsultAuthorization" class="btn btn-warn" (click)="consultAuthorization()" [disabled]="documentLoading">Consultar autorización</button>
     <button *ngIf="canRetry" class="btn btn-warn" (click)="retryEmission()" [disabled]="actionLoading">Reintentar</button>
     <button *ngIf="canReissue" class="btn btn-outline" (click)="reissueWithNewDate()" [disabled]="actionLoading">Nueva fecha</button>

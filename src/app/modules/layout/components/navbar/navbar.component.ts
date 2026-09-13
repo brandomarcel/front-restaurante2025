@@ -63,8 +63,9 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
 
   get canOpenCaja(): boolean {
-    const role = this.menuService.currentRole || this.readStoredRole();
-    return this.capabilities.isEnabled('cash_register') && (role === 'GERENTE' || role === 'CAJERO');
+    return this.capabilities.isEnabled('restaurant_pos')
+      && this.capabilities.isEnabled('cash_register')
+      && this.capabilities.hasPermission('restaurant.cash.manage');
   }
 
   get canOpenOrders(): boolean {

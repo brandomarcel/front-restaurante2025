@@ -89,9 +89,10 @@ login(username: string, password: string) {
       switchMap((businesses) => {
         const persisted = localStorage.getItem('active_business') || localStorage.getItem('businessId') || '';
         const persistedBusiness = businesses.find((item: any) => String(item?.name || item?.business || '') === persisted);
-        const defaultBusiness = businesses.length === 1
-          ? businesses[0]
-          : businesses.find((item: any) => item?.is_default === 1 || item?.is_default === true || item?.is_default === '1');
+        // Con varias empresas no se elige una por conveniencia (ni siquiera
+        // la primera ni una marcada como predeterminada por otra pantalla).
+        // El selector de inicio debe pedir una decisión explícita al usuario.
+        const defaultBusiness = businesses.length === 1 ? businesses[0] : null;
         const active = persistedBusiness || defaultBusiness;
         const activeId = String(active?.name || active?.business || '').trim();
         if (!activeId) {
@@ -259,7 +260,9 @@ login(username: string, password: string) {
       .map((role: any) => String(role || '').trim().toUpperCase())
       .filter((role: string) => !!role);
 
-    return normalized.length ? normalized : ['GERENTE'];
+    // El backend es la única fuente del rol. No asumir Gerente cuando la
+    // respuesta no trae roles, porque eso mostraría acciones administrativas.
+    return normalized;
   }
 
   private isLiteContext(response: any): boolean {

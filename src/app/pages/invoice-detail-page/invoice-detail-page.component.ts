@@ -96,6 +96,10 @@ this.spinner.hide();
   }
 
   getFacturaPdf(): void {
+    if (!this.capabilities.hasPermission('billing.read')) {
+      toast.error('No tienes permisos para descargar documentos.');
+      return;
+    }
     const inv = this.invoice?.name || this.invoice?.sri?.invoice;
     if (!inv) {
       toast.error('Factura no disponible');
@@ -114,6 +118,10 @@ this.spinner.hide();
   }
 
   getTicketPdf(): void {
+    if (!this.capabilities.hasPermission('billing.read')) {
+      toast.error('No tienes permisos para descargar documentos.');
+      return;
+    }
     const inv = this.invoice?.name || this.invoice?.sri?.invoice;
     if (!inv) return;
     if (this.capabilities.isLiteMode) {
@@ -139,6 +147,10 @@ this.spinner.hide();
   }
 
   downloadLiteXml(): void {
+    if (!this.capabilities.hasPermission('billing.read')) {
+      toast.error('No tienes permisos para descargar documentos.');
+      return;
+    }
     const invoiceName = this.invoice?.name;
     if (!invoiceName || !this.isLiteAuthorized || this.documentActionRunning) {
       toast.info('El XML estará disponible cuando la factura sea autorizada.');
@@ -471,10 +483,10 @@ this.spinner.hide();
     return status || '—';
   }
   get canConsultAuthorization(): boolean {
-    return this.capabilities.isLiteMode && canConsultLiteInvoice(this.invoice);
+    return this.capabilities.isLiteMode && this.capabilities.hasPermission('billing.manage') && canConsultLiteInvoice(this.invoice);
   }
   get canRetryLite(): boolean {
-    return this.capabilities.isLiteMode && canRetryLiteInvoice(this.invoice);
+    return this.capabilities.isLiteMode && this.capabilities.hasPermission('billing.manage') && canRetryLiteInvoice(this.invoice);
   }
   get canAnnul(): boolean {
     return !this.annulBlockReason;
@@ -505,9 +517,9 @@ this.spinner.hide();
       return 'Las notas de crédito no están habilitadas para este negocio.';
     }
 
-    const hasBillingPermission = this.capabilities.hasPermission('billing.create')
-      || this.capabilities.hasPermission('billing.manage')
-      || (!this.capabilities.isLiteMode && this.capabilities.hasPermission('direct_invoice'));
+    // Crear una nota de crédito es una operación de emisión; `billing.manage`
+    // solo permite consultar/reintentar estados, no crear documentos.
+    const hasBillingPermission = this.capabilities.hasPermission('billing.create');
     if (this.capabilities.isLiteMode && !this.capabilities.permissions) {
       return 'No se pudieron cargar los permisos de facturación.';
     }
@@ -524,7 +536,10 @@ this.spinner.hide();
 
   get canResend(): boolean {
     if (this.capabilities.isLiteMode) return false;
-    return !!this.invoice && this.invoiceStatusRaw !== 'AUTORIZADO' && this.capabilities.validateFeatureUse('direct_invoice').allowed;
+    return !!this.invoice
+      && this.capabilities.hasPermission('billing.manage')
+      && this.invoiceStatusRaw !== 'AUTORIZADO'
+      && this.capabilities.validateFeatureUse('direct_invoice').allowed;
   }
 
   get sriActionLabel(): string {
@@ -593,7 +608,7 @@ this.spinner.hide();
   }
 
   get canSendEmail(): boolean {
-    return this.capabilities.isLiteMode && this.isLiteAuthorized;
+    return this.capabilities.isLiteMode && this.isLiteAuthorized && this.capabilities.hasPermission('billing.manage');
   }
 
   sendLiteInvoiceEmail(): void {

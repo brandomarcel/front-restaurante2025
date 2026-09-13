@@ -113,14 +113,9 @@ export class PosCajaComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     if (this.selectedTableLabel && !this.alias) this.alias = this.selectedTableLabel;
-    this.ambiente = this.utilsService.getAmbienteActual()
-      || localStorage.getItem('ambiente')
-      || '---';
-    this.utilsService.ambiente$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((ambiente) => {
-        if (ambiente) this.ambiente = ambiente;
-      });
+    // El ambiente se toma exclusivamente del contexto/perfil tributario del
+    // negocio activo. No reutilizar un valor global guardado en el navegador.
+    this.ambiente = this.backendEnvironment();
     this.today = this.buildEcuadorIsoDate();
     this.loadFavorites();
     this.initClienteForm();
@@ -164,7 +159,9 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   get canEmitInvoice(): boolean {
-    return this.capabilities.canEmit() && !this.capabilities.getPosTerminalBlockMessage();
+    return this.capabilities.hasPermission('billing.create')
+      && this.capabilities.canEmit()
+      && !this.capabilities.getPosTerminalBlockMessage();
   }
 
   get currentFiscalLocation(): any | null {
@@ -243,7 +240,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.spinner.show();
     this.categoryService.getAll().pipe(finalize(() => this.spinner.hide())).subscribe({
       next: (res: any) => {
-        this.categories = res?.message?.data || [];
+        this.categories = Array.isArray(res) ? res : (res?.message?.data || res?.data || []);
       },
       error: () => {
         toast.error('Error al cargar categorias.');
@@ -443,8 +440,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.sanitizeFavorites();
 
     const filtered = (this.products || []).filter((product: any) => {
-      const prodCat = this.normalize(this.getProductCategoryName(product));
-      const okCat = !selectedCat || prodCat === selectedCat;
+      const okCat = this.productMatchesCategory(product, selectedCat);
       if (!term) return okCat;
 
       const name = this.normalize(product?.nombre ?? product?.name);
@@ -538,6 +534,10 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     if (this.isSubmittingOrder || this.isSubmittingPosSale) return;
 
     if (typePago === 'Factura') {
+      if (!this.capabilities.hasPermission('billing.create')) {
+        toast.error('No tiene permisos para emitir facturas.');
+        return;
+      }
       const planBlockMessage = this.invoicePlanBlockMessage;
       if (planBlockMessage) {
         toast.error(planBlockMessage);
@@ -1029,7 +1029,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
 
     return {
       ...payload,
-      environment: this.ambiente || undefined,
+      environment: this.backendEnvironment() || undefined,
       // En una factura el pago aplicado debe cuadrar con el total. El
       // excedente de efectivo se presenta como cambio, no como monto pagado.
       payments: (payload.payments || []).map((payment: any) => ({
@@ -1039,6 +1039,20 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       additional_fields: [],
       auto_queue: true
     };
+  }
+
+  private backendEnvironment(): string {
+    const value = this.capabilities.business?.tax_profile?.environment
+      ?? this.capabilities.business?.environment
+      ?? this.capabilities.business?.ambiente;
+    const normalized = String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase();
+    if (normalized.includes('PROD')) return 'Produccion';
+    if (normalized.includes('PRUEB') || normalized === 'TEST') return 'Pruebas';
+    return '';
   }
 
   private submitPosSaleNote(payload: any): void {
@@ -1184,6 +1198,10 @@ export class PosCajaComponent implements OnInit, OnDestroy {
 
   private submitOrder(payload: any): void {
     if (payload?.estado === 'Factura') {
+      if (!this.capabilities.hasPermission('billing.create')) {
+        toast.error('No tiene permisos para emitir facturas.');
+        return;
+      }
       const terminalBlockMessage = this.capabilities.getPosTerminalBlockMessage();
       if (terminalBlockMessage) {
         toast.error(terminalBlockMessage);
@@ -1324,7 +1342,31 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   private getProductCategoryName(p: any): string {
-    return p?.categoria || p?.category?.name || p?.category?.nombre || '';
+    return String(this.getProductCategoryValues(p)[0] ?? '');
+  }
+
+  private productMatchesCategory(product: any, selectedCategory: string): boolean {
+    if (!selectedCategory) return true;
+    const selected = this.normalize(selectedCategory);
+    return this.getProductCategoryValues(product).some((value) => {
+      const category = this.normalize(value);
+      return !!category && (category === selected || category.includes(selected) || selected.includes(category));
+    });
+  }
+
+  private getProductCategoryValues(product: any): Array<string | number> {
+    const category = product?.category;
+    const nested = category && typeof category === 'object'
+      ? [category.name, category.category_name, category.nombre]
+      : [category];
+    return [
+      product?.categoria,
+      product?.category_name,
+      product?.categoria_name,
+      product?.item_group,
+      product?.item_group_name,
+      ...nested
+    ].filter((value): value is string | number => value !== null && value !== undefined && value !== '');
   }
 
   private loadFavorites(): void {

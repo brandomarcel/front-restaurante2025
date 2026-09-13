@@ -74,11 +74,14 @@
         </tbody>
       </table>
 
-      <div class="pager">
-        <button class="pager-btn" (click)="prevPage()" [disabled]="page === 1">« Anterior</button>
-        <span class="text-sm">Página {{ page }} de {{ totalPages }}</span>
-        <button class="pager-btn" (click)="nextPage()" [disabled]="page === totalPages">Siguiente »</button>
-      </div>
+      <app-pagination
+        [page]="page"
+        [totalPages]="totalPages"
+        [totalItems]="total"
+        [pageSize]="pageSize"
+        (pageChange)="onPaginationPage($event)"
+        (pageSizeChange)="onPaginationPageSize($event)">
+      </app-pagination>
     </section>
   </ng-container>
 
@@ -103,10 +106,10 @@
 
             <!-- Acciones -->
             <div class="mb-4 flex flex-wrap gap-2">
-                <button class="btn btn-warn" (click)="getFacturaPdf()" [disabled]="!invoiceSelected?.sri?.invoice && !invoiceSelected?.name">
+                <button *ngIf="capabilities.hasPermission('billing.read')" class="btn btn-warn" (click)="getFacturaPdf()" [disabled]="!invoiceSelected?.sri?.invoice && !invoiceSelected?.name">
                     Descargar RIDE
                 </button>
-                <button *ngIf="capabilities.isLiteMode" class="btn btn-outline" (click)="getTicketPdf()">
+                <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read')" class="btn btn-outline" (click)="getTicketPdf()">
                     Descargar ticket
                 </button>
 
@@ -115,7 +118,7 @@
                     Ver Orden: {{ invoiceSelected?.order }}
                 </button>
 
-                <button *ngIf="!capabilities.isLiteMode ? invoiceSelected?.sri?.status !== 'AUTORIZADO' : (isLiteProcessing(invoiceSelected) || isLiteRetryable(invoiceSelected))" class="btn btn-primary"
+                <button *ngIf="capabilities.hasPermission('billing.manage') && (!capabilities.isLiteMode ? invoiceSelected?.sri?.status !== 'AUTORIZADO' : (isLiteProcessing(invoiceSelected) || isLiteRetryable(invoiceSelected)))" class="btn btn-primary"
                     (click)="reenviarFactura()" [disabled]="actionRunning">
                     {{ sriActionLabel }}
                 </button>

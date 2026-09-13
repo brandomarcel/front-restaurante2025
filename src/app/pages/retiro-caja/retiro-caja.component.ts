@@ -21,6 +21,7 @@ export class RetiroCajaComponent implements OnInit {
   };
 
   cajaActiva = false;
+  cashOpening: any | null = null;
 
   retiros: any[] = [];
   totalRetiros = 0;
@@ -36,14 +37,24 @@ export class RetiroCajaComponent implements OnInit {
   }
 
   verificarCajaAbierta() {
-    this.cajasService.verificarAperturaActiva(this.retiro.usuario).subscribe(res => {
-      if (res.data.length > 0) {
+    this.cajasService.verificarAperturaActiva(this.retiro.usuario).subscribe({
+      next: (res: any) => {
+      const opening = res?.message?.apertura || (Array.isArray(res?.data) ? res.data[0] : null);
+      const status = String(opening?.status || opening?.estado || 'Abierta').toLowerCase();
+      if (opening && status !== 'cerrada' && status !== 'closed') {
         this.cajaActiva = true;
-        this.retiro.relacionado_a = res.data[0].name; // opcional, si quieres vincular
-        this.obtenerRetiros(); // cargar retiros al iniciar
+        this.cashOpening = opening;
+        this.retiro.relacionado_a = typeof opening === 'string'
+          ? opening
+          : (opening.name || (typeof opening.cash_opening === 'string' ? opening.cash_opening : ''));
+        this.totalRetiros = Number(res?.message?.total_retiros || opening.total_retiros || 0);
+        this.obtenerRetiros();
       } else {
         this.cajaActiva = false;
+        this.cashOpening = null;
       }
+      },
+      error: (error) => this.alertService.error(this.readBackendMessage(error) || 'No se pudo consultar la caja.')
     });
   }
 
@@ -53,17 +64,19 @@ export class RetiroCajaComponent implements OnInit {
     }
 
     const data = {
-      ...this.retiro,
-      fecha_hora: this.getFechaHoraEcuador()
+      cash_opening: this.retiro.relacionado_a,
+      amount: Number(this.retiro.monto),
+      reason: String(this.retiro.motivo || '').trim()
     };
 
-    this.cajasService.create_retiro_de_caja(data).subscribe(() => {
-  
-      this.alertService.success('Retiro registrado correctamente');
-      this.retiro.motivo = '';
-      this.retiro.monto = 0;
-      this.obtenerRetiros();
-
+    this.cajasService.create_retiro_de_caja(data).subscribe({
+      next: () => {
+        this.alertService.success('Retiro registrado correctamente');
+        this.retiro.motivo = '';
+        this.retiro.monto = 0;
+        this.verificarCajaAbierta();
+      },
+      error: (error) => this.alertService.error(this.readBackendMessage(error) || 'No se pudo registrar el retiro.')
     });
   }
 
@@ -82,10 +95,13 @@ export class RetiroCajaComponent implements OnInit {
   obtenerRetiros() {
     if (!this.retiro.relacionado_a) return;
 
-    this.cajasService.getRetirosPorApertura(this.retiro.relacionado_a).subscribe(res => {
-      console.log('Retiros obtenidos:', res);
-      this.retiros = res.data;
-      this.totalRetiros = this.retiros.reduce((acc, r) => acc + r.monto, 0);
+    this.cajasService.getRetirosPorApertura(this.retiro.relacionado_a).subscribe({
+      next: (res: any) => {
+        const data = res?.message || {};
+        this.retiros = data.withdrawals || data.retiros || data.cash_withdrawals || this.cashOpening?.withdrawals || [];
+        this.totalRetiros = Number(data.total_retiros) || this.retiros.reduce((acc, r) => acc + Number(r.amount ?? r.monto ?? 0), 0);
+      },
+      error: (error) => this.alertService.error(this.readBackendMessage(error) || 'No se pudo cargar el historial de retiros.')
     });
   }
 
@@ -102,6 +118,21 @@ eliminarRetiro(name: string) {
 
   get canSubmit(): boolean {
     return this.cajaActiva && Number(this.retiro.monto) > 0 && String(this.retiro.motivo || '').trim().length > 0;
+  }
+
+  private readBackendMessage(error: any): string {
+    const payload = error?.error ?? error;
+    const direct = payload?.message ?? payload?.msg ?? payload?._server_messages;
+    if (Array.isArray(direct)) return direct.map((item: any) => String(item?.message || item)).join(' ');
+    if (direct && typeof direct === 'object') return String(direct.message || direct.error || direct.msg || '');
+    if (typeof direct === 'string') {
+      try {
+        const parsed = JSON.parse(direct);
+        if (Array.isArray(parsed)) return parsed.map((item: any) => String(item?.message || item)).join(' ');
+      } catch { /* mensaje plano */ }
+      return direct;
+    }
+    return error?.message || '';
   }
 
 }

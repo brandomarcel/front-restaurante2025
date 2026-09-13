@@ -57,18 +57,13 @@
         <div *ngFor="let r of retiros"
           class="group flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3 transition hover:shadow-sm">
           <div class="min-w-0">
-            <p class="truncate text-sm font-medium text-gray-800">{{ r.motivo }}</p>
-            <p class="text-xs text-gray-500">{{ r.fecha_hora | date:'short' }}</p>
+            <p class="truncate text-sm font-medium text-gray-800">{{ r.reason || r.motivo || 'Retiro de caja' }}</p>
+            <p class="text-xs text-gray-500">{{ (r.posted_at || r.fecha_hora || r.creation) | date:'short' }}</p>
+            <p *ngIf="r.user || r.usuario" class="text-[11px] text-gray-400">{{ r.user || r.usuario }}</p>
           </div>
           <div class="ml-3 flex items-center gap-3">
-            <p class="text-sm font-semibold text-rose-700">- {{ r.monto | currency }}</p>
-            <button class="text-gray-400 transition hover:text-red-600" (click)="eliminarRetiro(r.name)"
-              title="Eliminar retiro" type="button">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <span *ngIf="r.status" class="rounded-full bg-gray-200 px-2 py-1 text-[10px] font-semibold text-gray-600">{{ r.status }}</span>
+            <p class="text-sm font-semibold text-rose-700">- {{ (r.amount ?? r.monto ?? 0) | currency }}</p>
           </div>
         </div>
       </div>

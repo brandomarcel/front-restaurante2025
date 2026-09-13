@@ -22,4 +22,9 @@
       </div>
     </a>
   </section>
+
+  <section *ngIf="visibleReports.length === 0" class="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
+    <h2 class="text-sm font-bold text-amber-900">No hay reportes disponibles</h2>
+    <p class="mt-1 text-xs text-amber-800">Tu usuario no tiene permisos para consultar reportes o las funciones no están habilitadas para esta empresa.</p>
+  </section>
 </div>
