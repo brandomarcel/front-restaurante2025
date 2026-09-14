@@ -545,8 +545,11 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       }
     }
 
+    const hasReceivedAmount = this.amountReceived !== null
+      && String(this.amountReceived).trim() !== '';
     const receivedAmount = Number(this.amountReceived);
-    if (this.isSelectedPaymentCash && (!Number.isFinite(receivedAmount) || receivedAmount < this.total)) {
+    if (this.isSelectedPaymentCash && hasReceivedAmount
+      && (!Number.isFinite(receivedAmount) || receivedAmount < this.total)) {
       toast.error('El monto recibido es menor al total.');
       return;
     }
@@ -642,9 +645,9 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     });
   }
 
-  openPrintModal(orderId: string): void {
+  openPrintModal(orderId: string, invoiceId: string | null = null): void {
     this.pendingOrderId = orderId;
-    this.pendingInvoiceId = null;
+    this.pendingInvoiceId = invoiceId;
     this.printContext = 'order';
     this.showPaymentModal = false;
     this.showPrintModal = true;
@@ -658,21 +661,24 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.showPrintModal = true;
   }
 
-  handlePrintSelection(option: 'comanda' | 'recibo' | 'ambas' | 'ticket' | 'skip'): void {
+  handlePrintSelection(option: 'comanda' | 'recibo' | 'ambas' | 'ticket' | 'ride' | 'skip'): void {
     if (this.printContext === 'invoice') {
       const invoiceId = this.pendingInvoiceId;
       if (!invoiceId) {
         this.finishPrintFlow();
         return;
       }
-      if (option === 'ticket') {
-        this.printService.downloadLiteInvoiceTicket(invoiceId).subscribe({
+      if (option === 'ticket' || option === 'ride') {
+        const format: 'FACTURADA RIDE' | 'FacturADA Lite Ticket' = option === 'ride'
+          ? 'FACTURADA RIDE'
+          : 'FacturADA Lite Ticket';
+        this.printService.downloadLiteInvoicePdf(invoiceId, format).subscribe({
           next: (blob) => {
             this.openPdfBlob(blob);
             this.finishPrintFlow();
           },
           error: () => {
-            toast.error('El ticket aún no está disponible. Puedes consultarlo desde el detalle de la factura.');
+            toast.error('El documento aún no está disponible. Puedes consultarlo desde la lista de facturas.');
             this.finishPrintFlow();
           }
         });
@@ -683,6 +689,15 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     }
 
     if (!this.pendingOrderId) return;
+
+    if (this.pendingInvoiceId && option !== 'comanda') {
+      const invoicePath = option === 'ambas'
+        ? this.printService.getOrderPdf(this.pendingOrderId)
+        : this.printService.getSalesInvoiceTicket(this.pendingInvoiceId);
+      this.openPrintWindow(invoicePath);
+      this.finishPrintFlow();
+      return;
+    }
 
     if (option === 'comanda') this.openPrintWindow(this.printService.getComanda(this.pendingOrderId));
     if (option === 'recibo') this.openPrintWindow(this.printService.getRecibo(this.pendingOrderId));
@@ -696,12 +711,10 @@ export class PosCajaComponent implements OnInit, OnDestroy {
 
   private finishPrintFlow(): void {
     this.showPrintModal = false;
-    const invoiceId = this.pendingInvoiceId;
     this.pendingOrderId = null;
     this.pendingInvoiceId = null;
     this.printContext = 'order';
     this.clearPage();
-    if (invoiceId) this.router.navigate(['/dashboard/invoices', invoiceId]);
   }
 
   onCategorySelected(category: string): void {
@@ -1080,17 +1093,27 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       this.spinner.hide();
     })).subscribe({
       next: (response: any) => {
-        const state = response?.state || liteEmissionState(response?.emission || response?.data || response);
+        const body = response?.message ?? response ?? {};
+        const data = body?.data ?? response?.data ?? {};
+        const emission = body?.emission ?? data?.emission ?? response?.emission ?? data;
+        const state = response?.state || body?.state || data?.state || liteEmissionState(emission);
         const messages = [
-          ...liteEmissionMessages(response?.emission),
-          ...liteEmissionMessages(response?.data),
+          ...liteEmissionMessages(emission),
+          ...liteEmissionMessages(data),
+          ...liteEmissionMessages(body),
           ...liteEmissionMessages(response)
         ].filter(Boolean);
         const invoiceName = String(
           response?.invoiceName
-            || response?.data?.name
-            || response?.data?.invoice_name
-            || response?.emission?.invoice_name
+            || body?.invoiceName
+            || data?.name
+            || data?.invoice_name
+            || data?.invoice?.name
+            || (typeof data?.invoice === 'string' ? data.invoice : '')
+            || data?.lite_invoice?.name
+            || (typeof data?.lite_invoice === 'string' ? data.lite_invoice : '')
+            || emission?.invoice_name
+            || body?.invoice_name
             || ''
         ).trim();
 
@@ -1103,17 +1126,16 @@ export class PosCajaComponent implements OnInit, OnDestroy {
         this.refreshProductsSilently();
         if (state === 'AUTHORIZED') {
           toast.success('Factura autorizada por el SRI.');
-          this.openInvoicePrintModal(invoiceName);
         } else if (state === 'PROCESSING') {
-          toast.info(messages[0] || 'Factura recibida. Consulta su autorización desde el detalle.');
-          this.router.navigate(['/dashboard/invoices', invoiceName]);
+          toast.info(messages[0] || 'Factura recibida. Consulta su autorización cuando esté disponible.');
         } else if (state === 'REJECTED') {
           toast.error(messages[0] || 'La factura fue rechazada por el SRI.');
-          this.router.navigate(['/dashboard/invoices', invoiceName]);
         } else {
           toast.error(messages[0] || 'No se pudo emitir la factura.');
-          this.router.navigate(['/dashboard/invoices', invoiceName]);
         }
+        // El ticket puede entregarse aunque la autorización SRI esté pendiente
+        // o deba reintentarse. El RIDE oficial podrá descargarse cuando exista.
+        this.openInvoicePrintModal(invoiceName);
       },
       error: (error: any) => toast.error(this.extractApiError(error) || 'No se pudo emitir la factura.')
     });
@@ -1227,7 +1249,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
           this.router.navigate(['/dashboard/orders', orderId]);
           return;
         }
-        this.openPrintModal(orderId);
+        this.openPrintModal(orderId, this.extractOrderInvoice(res));
       }
     });
   }
@@ -1274,6 +1296,20 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     if (!printWindow) {
       toast.error('No se pudo abrir la ventana de impresion.');
     }
+  }
+
+  private extractOrderInvoice(response: any): string | null {
+    const raw = response?.message?.data?.invoice
+      ?? response?.message?.invoice
+      ?? response?.data?.invoice
+      ?? response?.message?.data?.lite_invoice
+      ?? response?.message?.lite_invoice
+      ?? response?.data?.lite_invoice
+      ?? null;
+    const name = typeof raw === 'string'
+      ? raw
+      : (raw?.name ?? raw?.invoice_name ?? raw?.id ?? '');
+    return String(name || '').trim() || null;
   }
 
   private openPdfBlob(blob: Blob): void {

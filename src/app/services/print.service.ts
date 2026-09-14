@@ -22,6 +22,7 @@ export class PrintService {
     const url = `/printview?doctype=FacturADA Restaurant Order&name=${orderId}&trigger_print=1&format=FacturADA Restaurant Note and Kitchen Ticket&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
     return url;
   }
+  
   getRecibo(orderId: string) {
     const url = `/printview?doctype=FacturADA Restaurant Order&name=${orderId}&trigger_print=1&format=FacturADA Restaurant Sale Note&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
     return url;
@@ -31,7 +32,10 @@ export class PrintService {
     const url = `/printview?doctype=FacturADA Restaurant Order&name=${orderId}&trigger_print=1&format=FacturADA Restaurant Kitchen Ticket&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
     return url;
   }
-
+  getSalesInvoiceTicket(orderId: string) {
+    const url = `/printview?doctype=FacturADA Lite Invoice&name=${orderId}&trigger_print=1&format=FacturADA Lite Ticket&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
+    return url;
+  }
 
 
   // getComanda(orderId: string) {

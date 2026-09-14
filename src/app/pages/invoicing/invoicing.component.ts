@@ -968,8 +968,16 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   }
 
   private getLiteEmissionEnvironment(): 'Pruebas' | 'Produccion' | '' {
-    const value = this.capabilities.business?.environment
-      ?? this.capabilities.business?.tax_profile?.environment;
+    const business = this.capabilities.business || {};
+    const fiscalLocation = this.capabilities.activeFiscalLocation || {};
+    const value = business?.environment
+      ?? business?.ambiente
+      ?? business?.tax_profile?.environment
+      ?? business?.tax_profile?.ambiente
+      ?? business?.tax_context?.environment
+      ?? business?.tax_context?.ambiente
+      ?? fiscalLocation?.environment
+      ?? fiscalLocation?.ambiente;
     const normalized = String(value ?? '')
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')

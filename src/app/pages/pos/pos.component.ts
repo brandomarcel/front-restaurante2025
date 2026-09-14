@@ -60,6 +60,7 @@ export class PosComponent implements OnInit {
   showPrintModal = false;
   printOption: 'comanda' | 'recibo' | 'ambas' = 'ambas';
   private pendingOrderId: string | null = null;
+  private pendingInvoiceId: string | null = null;
 
   submitted = false;
   clienteForm!: FormGroup;
@@ -518,8 +519,11 @@ export class PosComponent implements OnInit {
     const isConsumidorFinal = this.customer?.tipo_identificacion === TYPE_IDENTIFICATION_RUC;
     const totalN = Number(this.total);
 
+    const hasReceivedAmount = this.amountReceived !== null
+      && String(this.amountReceived).trim() !== '';
     const receivedAmount = Number(this.amountReceived);
-    if (this.isSelectedPaymentCash && (!Number.isFinite(receivedAmount) || receivedAmount < totalN)) {
+    if (this.isSelectedPaymentCash && hasReceivedAmount
+      && (!Number.isFinite(receivedAmount) || receivedAmount < totalN)) {
       toast.error('El monto recibido es menor al total.');
       return;
     }
@@ -567,11 +571,11 @@ export class PosComponent implements OnInit {
             .subscribe({
               next: (res: any) => {
                 console.log('Factura creada', res);
-                const orderId = res.message?.name;
+                const orderId = this.extractOrderName(res);
                 this.pendingOrderId = orderId;
                 this.refreshProductsSilently();
                 this.notifyOrderResult(res, true);
-                this.openPrintModal(orderId);
+                this.openPrintModal(orderId, this.extractOrderInvoice(res));
               },
               error: () => { },
               complete: () => { }
@@ -585,11 +589,11 @@ export class PosComponent implements OnInit {
     this.spinner.show();
     this.ordersService.create_order_v2(order).pipe(finalize(() => this.spinner.hide())).subscribe({
       next: (res) => {
-        const orderId = res.message?.name;
+        const orderId = this.extractOrderName(res);
         this.pendingOrderId = orderId;
         this.refreshProductsSilently();
         toast.success(`Pedido guardado. ${this.isSelectedPaymentCash ? 'Cambio: $' + this.change.toFixed(2) : ''}`);
-        this.openPrintModal(orderId);
+        this.openPrintModal(orderId, this.extractOrderInvoice(res));
       },
       error: () => { }
     });
@@ -737,8 +741,9 @@ export class PosComponent implements OnInit {
   }
 
   // Abre el modal después de crear el pedido
-  openPrintModal(orderId: string) {
+  openPrintModal(orderId: string, invoiceId: string | null = null) {
     this.pendingOrderId = orderId;
+    this.pendingInvoiceId = invoiceId;
     // Para cajero deja 'ambas' por defecto; para mesero mostramos/forzamos comanda
     this.printOption = this.roleName === 'Mesero' ? 'comanda' : 'ambas';
     this.showPrintModal = true;
@@ -756,6 +761,20 @@ export class PosComponent implements OnInit {
     if (this.roleName === 'Mesero' && option === 'ambas') {
       // En mesero "ambas" no aplica; fuerza comanda
       option = 'comanda';
+    }
+
+    // Una orden con invoice es una factura electrónica. En ese caso no se
+    // debe imprimir el formato de Nota de Venta: recibo usa el ticket de la
+    // factura y “ambas” usa su formato recibo.
+    if (this.pendingInvoiceId && option !== 'comanda') {
+      const invoicePath = option === 'ambas'
+        ? this.printService.getOrderPdf(this.pendingOrderId)
+        : this.printService.getSalesInvoiceTicket(this.pendingInvoiceId);
+      this.openPrintWindow(invoicePath);
+      this.showPrintModal = false;
+      this.pendingOrderId = null;
+      this.pendingInvoiceId = null;
+      return;
     }
 
     switch (option) {
@@ -777,7 +796,40 @@ export class PosComponent implements OnInit {
   closePrintModal() {
     this.showPrintModal = false;
     this.pendingOrderId = null;
+    this.pendingInvoiceId = null;
     this.clearPage();
+  }
+
+  private openPrintWindow(path: string): void {
+    const printWindow = window.open(this.url + path, '_blank', 'width=900,height=820,scrollbars=yes,resizable=yes');
+    if (!printWindow) {
+      toast.error('No se pudo abrir la ventana de impresión');
+      return;
+    }
+    this.clearPage();
+  }
+
+  private extractOrderName(response: any): string {
+    return String(
+      response?.message?.data?.name
+      ?? response?.message?.name
+      ?? response?.data?.name
+      ?? ''
+    ).trim();
+  }
+
+  private extractOrderInvoice(response: any): string | null {
+    const raw = response?.message?.data?.invoice
+      ?? response?.message?.invoice
+      ?? response?.data?.invoice
+      ?? response?.message?.data?.lite_invoice
+      ?? response?.message?.lite_invoice
+      ?? response?.data?.lite_invoice
+      ?? null;
+    const name = typeof raw === 'string'
+      ? raw
+      : (raw?.name ?? raw?.invoice_name ?? raw?.id ?? '');
+    return String(name || '').trim() || null;
   }
 
   // ======= Categorías / búsqueda =======

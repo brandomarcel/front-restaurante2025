@@ -1,0 +1,35 @@
+.invoicing-page {
+  /* Permite que el formulario crezca y que el scroll pertenezca a la página,
+     no a una columna fija que se corta en móviles o tablets. */
+  min-width: 0;
+  padding-inline: clamp(0.25rem, 1.5vw, 1rem);
+}
+
+.invoicing-page input,
+.invoicing-page select,
+.invoicing-page button {
+  max-width: 100%;
+}
+
+@media (max-width: 639px) {
+  .invoicing-page {
+    padding-inline: 0;
+  }
+
+  .invoicing-page main > section,
+  .invoicing-page aside > section {
+    border-radius: 0.75rem;
+  }
+
+  .invoicing-page input,
+  .invoicing-page select,
+  .invoicing-page button {
+    touch-action: manipulation;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1279px) {
+  .invoicing-page {
+    padding-inline: 0.5rem;
+  }
+}

@@ -578,13 +578,13 @@
 
                 <!-- Efectivo -->
                 <div *ngIf="isSelectedPaymentCash" class="mt-6">
-
+                    
                     <input type="number" [(ngModel)]="amountReceived" (input)="calcularCambio()"
                         class="w-full border rounded-md px-3 py-3 text-2xl font-semibold text-center focus:ring-2 focus:ring-primary"
-                        placeholder="Monto recibido" />
+                        placeholder="Monto recibido (opcional)" min="0" step="0.01" />
 
                     <div class="mt-4 text-center">
-                        <p class="text-gray-500 text-sm">Cambio</p>
+                        <p class="text-gray-500 text-sm">Cambio a entregar</p>
                         <p class="text-5xl font-bold" [class.text-red-500]="change < 0"
                             [class.text-emerald-500]="change >= 0">
                             ${{ change | number:'1.2-2' }}
@@ -639,18 +639,23 @@
 
         <div class="mb-4">
             <h3 class="text-lg font-semibold text-slate-800">
-                {{ printContext === 'invoice' ? 'Ticket de venta' : 'Impresión de comprobantes' }}
+                {{ printContext === 'invoice' ? 'Comprobante de venta' : 'Impresión de comprobantes' }}
             </h3>
-            <p class="mt-1 text-sm text-slate-500">
-                {{ printContext === 'invoice' ? '¿Deseas imprimir el comprobante FacturADA Lite?' : 'Elige qué documento deseas imprimir para esta orden.' }}
-            </p>
+            <!-- <p class="mt-1 text-sm text-slate-500">
+                {{ printContext === 'invoice' ? '¿Deseas imprimir el comprobante?' : 'Elige qué documento deseas imprimir para esta orden.' }}
+            </p> -->
         </div>
 
-        <div *ngIf="printContext === 'invoice'" class="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <div *ngIf="printContext === 'invoice'" class="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
             <button
                 class="min-h-[44px] rounded-lg bg-primary px-3 py-3 text-sm font-semibold text-white transition hover:bg-primary/90"
                 (click)="handlePrintSelection('ticket')">
-                Imprimir FacturADA Lite Ticket
+                Imprimir Ticket
+            </button>
+            <button
+                class="min-h-[44px] rounded-lg border border-sky-200 bg-sky-50 px-3 py-3 text-sm font-semibold text-sky-700 transition hover:bg-sky-100"
+                (click)="handlePrintSelection('ride')">
+                Imprimir RIDE
             </button>
             <button
                 class="min-h-[44px] rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"

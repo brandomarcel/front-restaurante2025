@@ -426,9 +426,11 @@ export class CompanyCapabilitiesService {
     // get_user_context puede omitir el perfil tributario. Conservamos el
     // ambiente que ya fue cargado desde get_lite_setup para no perderlo al
     // refrescar el contexto de usuario.
+    const contextEnvironment = message?.tax_context?.environment ?? message?.tax_context?.ambiente;
     if (normalizedCompany && !normalizedCompany.environment && !normalizedCompany.ambiente) {
       const previousEnvironment = this.state().business?.environment ?? this.state().business?.ambiente;
-      if (previousEnvironment) normalizedCompany.environment = previousEnvironment;
+      if (contextEnvironment) normalizedCompany.environment = contextEnvironment;
+      else if (previousEnvironment) normalizedCompany.environment = previousEnvironment;
     }
     const received = message?.features;
     const features = received && typeof received === 'object'
@@ -464,7 +466,9 @@ export class CompanyCapabilitiesService {
       ? message.permissions
       : null;
     const taxProfile = message?.tax_profile ?? normalizedCompany?.tax_profile ?? message?.business?.tax_profile ?? {};
-    const setupEnvironment = taxProfile?.environment ?? taxProfile?.ambiente;
+    const setupEnvironment = taxProfile?.environment
+      ?? taxProfile?.ambiente
+      ?? contextEnvironment;
     const hasCertificatePassword = taxProfile?.has_certificate_password ?? normalizedCompany?.has_certificate_password;
     const certificateStatus = taxProfile?.certificate_status ?? normalizedCompany?.certificate_status
       ?? ((features.billing === true || features.direct_invoice === true) && hasCertificatePassword !== undefined && this.coerceOptionalBoolean(hasCertificatePassword) !== true
@@ -568,7 +572,11 @@ export class CompanyCapabilitiesService {
     const selectedBusinessId = this.activeBusinessId;
     const setupBusinessId = String(setupBusiness?.name || setupBusiness?.business || '').trim();
     const matchesSelectedBusiness = !selectedBusinessId || !setupBusinessId || selectedBusinessId === setupBusinessId;
-    const setupEnvironment = taxProfile.environment ?? taxProfile.ambiente;
+    const taxContext = data?.tax_context && typeof data.tax_context === 'object' ? data.tax_context : {};
+    const setupEnvironment = taxProfile.environment
+      ?? taxProfile.ambiente
+      ?? taxContext.environment
+      ?? taxContext.ambiente;
     const business = matchesSelectedBusiness && (Object.keys(setupBusiness).length || setupEnvironment)
       ? {
           ...(current.business || {}),

@@ -1,6 +1,9 @@
 export interface PaymentMethodLike {
   name?: string;
   codigo?: string;
+  payment_code?: string;
+  payment_method?: string;
+  forma_pago?: string;
   description?: string;
   nombre?: string;
 }
@@ -30,17 +33,23 @@ export function findPaymentMethod(
   if (!value) return undefined;
   return (paymentMethods || []).find((payment) =>
     String(payment?.name || '').trim() === value ||
-    String(payment?.codigo || '').trim() === value
+    String(payment?.codigo || '').trim() === value ||
+    String(payment?.payment_code || '').trim() === value ||
+    String(payment?.payment_method || '').trim() === value ||
+    String(payment?.forma_pago || '').trim() === value
   );
 }
 
 export function getPaymentValue(payment: PaymentMethodLike | null | undefined): string {
-  return String(payment?.name || payment?.codigo || '').trim();
+  return String(payment?.name || payment?.payment_method || payment?.codigo || payment?.payment_code || payment?.forma_pago || '').trim();
 }
 
 export function getDefaultPaymentValue(paymentMethods: PaymentMethodLike[] | null | undefined): string {
   const methods = paymentMethods || [];
-  const cash = methods.find((payment) => String(payment?.codigo || '').trim() === '01');
+  const cash = methods.find((payment) =>
+    String(payment?.codigo || payment?.payment_code || '').trim() === '01'
+    || /^(cash|efectivo)$/i.test(String(payment?.name || payment?.payment_method || payment?.description || payment?.nombre || '').trim())
+  );
   return getPaymentValue(cash || methods[0]);
 }
 
@@ -56,7 +65,16 @@ export function isCashPayment(
   selectedValue: string | null | undefined
 ): boolean {
   const payment = findPaymentMethod(paymentMethods, selectedValue);
-  return String(payment?.codigo || selectedValue || '').trim() === '01';
+  const code = String(payment?.codigo || payment?.payment_code || '').trim();
+  const label = String(
+    payment?.name
+      || payment?.payment_method
+      || payment?.description
+      || payment?.nombre
+      || selectedValue
+      || ''
+  ).trim();
+  return code === '01' || /^(cash|efectivo)$/i.test(label);
 }
 
 export function buildSinglePaymentPayload(
