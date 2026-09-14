@@ -1,4 +1,6 @@
-@import '../../../styles.css';
+/* Reutiliza el tema/utilidades sin incrustar todo styles.css en este
+   componente (evita inflar el presupuesto anyComponentStyle). */
+@reference '../../../styles.css';
 
 :host {
   @apply block h-full;
