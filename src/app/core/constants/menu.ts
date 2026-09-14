@@ -97,6 +97,7 @@ export class Menu {
             { label: 'Apertura', route: '/caja/apertura', permissionKey: 'restaurant.cash.manage' },
             { label: 'Retiros', route: '/caja/retiro', permissionKey: 'restaurant.cash.manage' },
             { label: 'Cierre', route: '/caja/cierre', permissionKey: 'restaurant.cash.manage' },
+            { label: 'Gestión de caja', route: '/caja/gestion', permissionKey: 'restaurant.manage' },
             
           ],
         },

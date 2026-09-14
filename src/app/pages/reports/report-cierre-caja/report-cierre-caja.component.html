@@ -1,203 +1,100 @@
-<div class="app-container density-compact space-y-2 pb-4">
-  <section class="rounded-xl border border-border bg-white p-2.5 shadow-sm">
-    <div class="flex flex-col gap-2 xl:flex-row xl:items-end xl:justify-between">
-      <div class="min-w-0">
-        <div class="flex flex-wrap items-center gap-2">
-          <p class="text-[10px] font-bold uppercase tracking-wide text-primary">Reportes</p>
-          <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
-            {{ cierres.length }} cierre(s)
-          </span>
-          <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-            {{ cerradosCount }} cerrado(s)
-          </span>
-        </div>
-        <h1 class="truncate text-base font-black text-slate-900">Cierres de caja</h1>
-        <p class="line-clamp-1 text-[11px] text-muted-foreground">
-          Consulta cierres por usuario y rango de fechas. Usuario: {{ selectedUserLabel }}
-        </p>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-1.5">
-        <a routerLink="/report" class="btn btn-outline !px-2.5 !py-1.5 !text-[11px]">
-          ← Cambiar
-        </a>
-        <button
-          type="button"
-          class="btn btn-primary !px-2.5 !py-1.5 !text-[11px]"
-          (click)="buscar()"
-          [disabled]="loadingCierres || loadingExport">
-          {{ loadingCierres ? 'Buscando...' : 'Buscar' }}
-        </button>
-        <button
-          type="button"
-          class="btn btn-success !gap-1.5 !px-2.5 !py-1.5 !text-[11px]"
-          [disabled]="!canExport"
-          (click)="exportarExcel()">
-          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M4 4.75A2.75 2.75 0 0 1 6.75 2h7.4c.73 0 1.43.29 1.94.8l3.1 3.11c.52.51.81 1.21.81 1.94v9.4A2.75 2.75 0 0 1 17.25 20H6.75A2.75 2.75 0 0 1 4 17.25V4.75Z" fill="currentColor" opacity=".2"/>
-            <path d="M14 2.5V7a1 1 0 0 0 1 1h4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="m8.25 9.5 2.15 3-2.25 3m5.6-6-2.15 3 2.25 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span>{{ loadingExport ? 'Exportando...' : 'Exportar Excel' }}</span>
-        </button>
-      </div>
-    </div>
-
-    <div class="mt-2 grid grid-cols-2 gap-1.5 md:grid-cols-4 xl:flex xl:flex-wrap">
-      <div class="min-w-0 xl:w-64">
-        <label class="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500">Usuario</label>
-        <ng-select
-          class="ng-select-tailwind"
-          [(ngModel)]="filters.usuario"
-          [items]="usuarios"
-          bindLabel="email"
-          bindValue="email"
-          placeholder="Todos"
-          [loading]="loadingUsers"
-          [clearable]="true"
-          [searchable]="true"
-          (change)="buscar()">
-        </ng-select>
-      </div>
-
-      <div class="min-w-0">
-        <label class="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500">Desde</label>
-        <input type="date" class="input !h-8 !w-full xl:!w-36" [(ngModel)]="filters.desde" />
-      </div>
-
-      <div class="min-w-0">
-        <label class="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500">Hasta</label>
-        <input type="date" class="input !h-8 !w-full xl:!w-36" [(ngModel)]="filters.hasta" [max]="today" />
-      </div>
-    </div>
-  </section>
-
-  <section *ngIf="cierres.length" class="grid grid-cols-2 gap-2 lg:grid-cols-4">
-    <article class="rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
-      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Sistema</p>
-      <p class="mt-1 text-base font-black text-slate-900">${{ totalSistema | number: '1.2-2' }}</p>
-    </article>
-    <article class="rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
-      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Real</p>
-      <p class="mt-1 text-base font-black text-slate-900">${{ totalReal | number: '1.2-2' }}</p>
-    </article>
-    <article class="rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
-      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Retiros</p>
-      <p class="mt-1 text-base font-black text-slate-900">${{ totalRetiros | number: '1.2-2' }}</p>
-    </article>
-    <article class="rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
-      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Diferencia</p>
-      <p class="mt-1 text-base font-black" [ngClass]="getDiferenciaClass(diferenciaTotal)">
-        ${{ diferenciaTotal | number: '1.2-2' }}
-      </p>
-    </article>
-  </section>
-
-  <section class="rounded-xl border border-border bg-white shadow-sm">
-    <div class="flex flex-col gap-1 border-b border-border px-3 py-1.5 md:flex-row md:items-center md:justify-between">
+<div class="app-container density-compact space-y-3 pb-6">
+  <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <div>
-        <h2 class="text-xs font-black text-slate-900">Historial de cierres</h2>
-        <p class="text-[10px] text-muted-foreground">Haz clic en una fila para ver el detalle de pagos.</p>
+        <p class="text-[10px] font-black uppercase tracking-[.14em] text-primary">Reportes · Caja</p>
+        <h1 class="mt-1 text-xl font-black text-slate-900">FacturADA Restaurant Cash Closings</h1>
+        <p class="mt-1 text-xs text-slate-500">Cierres oficiales del negocio activo, consultados directamente desde Frappe.</p>
       </div>
-      <div class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
-        Vista compacta
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700">
+          Negocio: {{ businessId || '—' }}
+        </span>
+        <a routerLink="/report" class="btn btn-outline !px-3 !py-2 !text-xs">← Reportes</a>
+        <button type="button" class="btn btn-primary !px-3 !py-2 !text-xs" (click)="buscar()" [disabled]="loading || exporting">
+          {{ loading ? 'Consultando...' : 'Buscar' }}
+        </button>
+        <button type="button" class="btn btn-success !px-3 !py-2 !text-xs" (click)="exportarExcel()" [disabled]="!canExport">
+          {{ exporting ? 'Exportando...' : 'Exportar Excel' }}
+        </button>
       </div>
     </div>
 
-    <ng-container *ngIf="cierres.length > 0; else noData">
-      <div class="app-table-wrap max-h-[72vh]">
-        <table class="app-table text-xs">
-          <thead class="app-thead">
-            <tr>
-              <th class="app-th w-12 text-center">#</th>
-              <th class="app-th">Fecha</th>
-              <th class="app-th">Usuario</th>
-              <th class="app-th">Apertura</th>
-              <th class="app-th text-right">Sistema</th>
-              <th class="app-th text-right">Real</th>
-              <th class="app-th text-right">Retiros</th>
-              <th class="app-th text-right">Diferencia</th>
-              <th class="app-th">Estado</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <ng-container *ngFor="let cierre of cierres; let i = index; trackBy: trackByCierre">
-              <tr
-                class="app-tr cursor-pointer select-none"
-                [ngClass]="isSelected(cierre) ? 'bg-primary/5' : ''"
-                (click)="toggleCierre(cierre)">
-                <td class="app-td text-center">
-                  <span class="inline-flex items-center gap-1 font-semibold">
-                    {{ i + 1 }}
-                    <span class="text-slate-400">{{ isSelected(cierre) ? '▴' : '▾' }}</span>
-                  </span>
-                </td>
-                <td class="app-td whitespace-nowrap">{{ cierre.fecha_hora | date: 'dd-MM-yyyy HH:mm' }}</td>
-                <td class="app-td max-w-[220px] truncate font-semibold text-slate-800">{{ cierre.usuario || '—' }}</td>
-                <td class="app-td max-w-[160px] truncate">{{ cierre.apertura || '—' }}</td>
-                <td class="app-td text-right font-semibold">${{ cierre.efectivo_sistema | number: '1.2-2' }}</td>
-                <td class="app-td text-right font-semibold">${{ cierre.efectivo_real | number: '1.2-2' }}</td>
-                <td class="app-td text-right">${{ cierre.total_retiros | number: '1.2-2' }}</td>
-                <td class="app-td text-right font-black" [ngClass]="getDiferenciaClass(cierre.diferencia)">
-                  ${{ cierre.diferencia | number: '1.2-2' }}
-                </td>
-                <td class="app-td">
-                  <span class="badge" [ngClass]="getEstadoBadge(cierre.estado)">
-                    {{ cierre.estado || '—' }}
-                  </span>
-                </td>
-              </tr>
-
-              <tr *ngIf="isSelected(cierre)" class="bg-slate-50">
-                <td colspan="9" class="app-td">
-                  <div class="grid gap-2 md:grid-cols-[1fr_2fr]">
-                    <div class="rounded-lg border border-slate-200 bg-white p-2">
-                      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Resumen del cierre</p>
-                      <div class="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-700">
-                        <span>Apertura $</span>
-                        <b class="text-right">${{ cierre.monto_apertura | number: '1.2-2' }}</b>
-                        <span>Sistema</span>
-                        <b class="text-right">${{ cierre.efectivo_sistema | number: '1.2-2' }}</b>
-                        <span>Real</span>
-                        <b class="text-right">${{ cierre.efectivo_real | number: '1.2-2' }}</b>
-                        <span>Retiros</span>
-                        <b class="text-right">${{ cierre.total_retiros | number: '1.2-2' }}</b>
-                      </div>
-                    </div>
-
-                    <div class="rounded-lg border border-slate-200 bg-white p-2">
-                      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Detalle de pagos</p>
-                      <div *ngIf="cierre.detalle?.length; else sinDetalle" class="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-                        <div
-                          *ngFor="let pago of cierre.detalle; trackBy: trackByPago"
-                          class="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-2 py-1.5 text-[11px]">
-                          <span class="truncate font-semibold text-slate-700">{{ pago.metodo_pago || 'Método' }}</span>
-                          <b class="shrink-0 text-slate-900">${{ pago.monto | number: '1.2-2' }}</b>
-                        </div>
-                      </div>
-                      <ng-template #sinDetalle>
-                        <p class="mt-2 rounded-lg bg-slate-50 px-2 py-2 text-[11px] text-muted-foreground">
-                          Este cierre no tiene detalle de pagos.
-                        </p>
-                      </ng-template>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            </ng-container>
-          </tbody>
-        </table>
-      </div>
-    </ng-container>
+    <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <label class="block">
+        <span class="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">Usuario</span>
+        <input class="input !h-9 w-full" type="text" [(ngModel)]="filters.user" placeholder="Todos los usuarios" />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">Estado</span>
+        <select class="input !h-9 w-full" [(ngModel)]="filters.status">
+          <option value="">Todos</option>
+          <option value="Borrador">Borrador</option>
+          <option value="Confirmado">Confirmado</option>
+        </select>
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">Fecha desde</span>
+        <input class="input !h-9 w-full" type="date" [(ngModel)]="filters.from_date" />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">Fecha hasta</span>
+        <input class="input !h-9 w-full" type="date" [(ngModel)]="filters.to_date" />
+      </label>
+    </div>
   </section>
 
-  <ng-template #noData>
-    <div class="p-8 text-center">
-      <div class="mx-auto max-w-sm rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6">
-        <p class="text-sm font-bold text-slate-800">No hay cierres registrados</p>
-        <p class="mt-1 text-xs text-muted-foreground">Cambia el rango de fechas o selecciona otro usuario.</p>
+  <div *ngIf="errorMessage" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+    {{ errorMessage }}
+  </div>
+
+  <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+      <div>
+        <h2 class="text-sm font-black text-slate-900">Cierres de caja</h2>
+        <p class="text-xs text-slate-500">{{ rows.length }} resultado(s) · los totales provienen del backend.</p>
       </div>
+      <span *ngIf="loading" class="text-xs font-semibold text-primary">Cargando…</span>
     </div>
-  </ng-template>
+
+    <div *ngIf="!loading && !errorMessage && rows.length === 0" class="px-4 py-12 text-center">
+      <p class="text-sm font-bold text-slate-800">No existen cierres de caja para los filtros seleccionados</p>
+      <p class="mt-1 text-xs text-slate-500">Prueba con otro usuario, estado o rango de fechas.</p>
+    </div>
+
+    <div *ngIf="rows.length" class="app-table-wrap max-h-[70vh]">
+      <table class="app-table min-w-[1180px] text-xs">
+        <thead class="app-thead">
+          <tr>
+            <th class="app-th">Cierre</th>
+            <th class="app-th">Fecha de cierre</th>
+            <th class="app-th">Usuario</th>
+            <th class="app-th">Apertura</th>
+            <th class="app-th text-right">Monto de apertura</th>
+            <th class="app-th text-right">Efectivo del sistema</th>
+            <th class="app-th text-right">Efectivo contado</th>
+            <th class="app-th text-right">Retiros</th>
+            <th class="app-th text-right">Diferencia</th>
+            <th class="app-th">Estado</th>
+            <th class="app-th">Observaciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of rows; trackBy: trackByRow" class="app-tr">
+            <td class="app-td font-semibold">{{ display(row, 'name', 'cierre', 'cash_closing') }}</td>
+            <td class="app-td whitespace-nowrap">{{ display(row, 'closed_at', 'fecha_cierre', 'closing_date', 'fecha_hora') }}</td>
+            <td class="app-td">{{ display(row, 'user', 'usuario') }}</td>
+            <td class="app-td">{{ display(row, 'cash_opening', 'apertura') }}</td>
+            <td class="app-td text-right">{{ money(row, 'monto_apertura', 'opening_amount') | currency:'USD':'symbol':'1.2-2' }}</td>
+            <td class="app-td text-right">{{ money(row, 'efectivo_sistema', 'system_cash') | currency:'USD':'symbol':'1.2-2' }}</td>
+            <td class="app-td text-right">{{ money(row, 'efectivo_real', 'cash_counted') | currency:'USD':'symbol':'1.2-2' }}</td>
+            <td class="app-td text-right">{{ money(row, 'total_retiros', 'withdrawals', 'retiros') | currency:'USD':'symbol':'1.2-2' }}</td>
+            <td class="app-td text-right font-black">{{ money(row, 'diferencia', 'difference') | currency:'USD':'symbol':'1.2-2' }}</td>
+            <td class="app-td"><span class="badge badge-green">{{ display(row, 'status', 'estado') }}</span></td>
+            <td class="app-td max-w-[220px] truncate">{{ display(row, 'notes', 'observaciones', 'observation') }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 </div>

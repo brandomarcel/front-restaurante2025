@@ -56,7 +56,7 @@ export class CajasService {
   // }
 
   create_retiro_de_caja(data: any) {
-    return this.postRestaurant('create_cash_withdrawal', data);
+    return this.postRestaurant('create_retiro_de_caja', data);
   }
 
   getDatosCierre(usuario: string):Observable<any> {
@@ -79,8 +79,95 @@ export class CajasService {
 
 
   /** Obtener retiros del turno actual */
-  getRetirosPorApertura(aperturaId: string) {
-    return this.verificarAperturaActiva('');
+  getCashWithdrawals() {
+    const accessError = this.cashAccessError();
+    if (accessError) return throwError(() => accessError);
+    const business = this.activeBusinessOrError();
+    if (business instanceof Error) return throwError(() => business);
+    return this.http.get<any>(`${this.restaurantApi}.get_cash_withdrawals`, {
+      context: new HttpContext().set(REQUIRE_AUTH, true),
+      params: new HttpParams().set('business', business)
+    });
+  }
+
+  /** Historial administrativo de aperturas, retiros y cierres del negocio. */
+  getCashRegisterHistory() {
+    if (!this.capabilities.hasPermission('*') && !this.capabilities.hasPermission('restaurant.manage')) {
+      return throwError(() => new Error('Solo un gerente o administrador puede consultar toda la gestión de caja'));
+    }
+    const business = this.activeBusinessOrError();
+    if (business instanceof Error) return throwError(() => business);
+    return this.http.get<any>(`${this.restaurantApi}.get_cash_register_history`, {
+      context: new HttpContext().set(REQUIRE_AUTH, true),
+      params: new HttpParams().set('business', business)
+    });
+  }
+
+  /**
+   * Reporte oficial de cierres de caja publicado por Frappe Query Report.
+   * El negocio siempre se toma del contexto activo; el caller no puede
+   * consultar accidentalmente información de otra empresa.
+   */
+  getCashClosingsReport(filters: {
+    user?: string;
+    status?: string;
+    from_date?: string;
+    to_date?: string;
+    limit?: number;
+  } = {}) {
+    const accessError = this.cashClosingsReportAccessError();
+    if (accessError) return throwError(() => accessError);
+    const business = this.activeBusinessOrError();
+    if (business instanceof Error) return throwError(() => business);
+    const reportFilters = {
+      business,
+      user: String(filters.user || ''),
+      status: String(filters.status || ''),
+      from_date: String(filters.from_date || ''),
+      to_date: String(filters.to_date || ''),
+      limit: Number(filters.limit || 100)
+    };
+    const params = new HttpParams()
+      .set('report_name', 'FacturADA Restaurant Cash Closings')
+      .set('filters', JSON.stringify(reportFilters))
+      .set('ignore_prepared_report', '1');
+    return this.http.get<any>(`${this.apiUrl}/method/frappe.desk.query_report.run`, {
+      params,
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    });
+  }
+
+  /** Exporta el mismo reporte usando el exportador nativo de Frappe. */
+  exportCashClosingsReport(filters: {
+    user?: string;
+    status?: string;
+    from_date?: string;
+    to_date?: string;
+  } = {}) {
+    const accessError = this.cashClosingsReportAccessError();
+    if (accessError) return throwError(() => accessError);
+    const business = this.activeBusinessOrError();
+    if (business instanceof Error) return throwError(() => business);
+    const reportFilters = {
+      business,
+      user: String(filters.user || ''),
+      status: String(filters.status || ''),
+      from_date: String(filters.from_date || ''),
+      to_date: String(filters.to_date || '')
+    };
+    return this.http.post(`${this.apiUrl}/method/frappe.desk.query_report.export_query`, {
+      report_name: 'FacturADA Restaurant Cash Closings',
+      filters: JSON.stringify(reportFilters),
+      file_format_type: 'Excel',
+      include_filters: 1
+    }, {
+      responseType: 'blob',
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    });
+  }
+
+  getRetirosPorApertura(_aperturaId?: string) {
+    return this.getCashWithdrawals();
   }
 
 
@@ -127,12 +214,27 @@ export class CajasService {
     return null;
   }
 
+  private cashClosingsReportAccessError(): Error | null {
+    const features = this.capabilities.features;
+    const featureEnabled = features.restaurant === true
+      && features.restaurant_pos === true
+      && features.cash_register === true;
+    if (!featureEnabled) return new Error('Este reporte no está habilitado para este negocio.');
+    if (!this.capabilities.hasPermission('*') && !this.capabilities.hasPermission('restaurant.manage')) {
+      return new Error('No tienes permiso para consultar este reporte.');
+    }
+    return null;
+  }
+
   private normalizeCurrentOpening(response: any): any {
     const body = response?.message ?? response ?? {};
     const dataValue = body?.data ?? response?.data;
     const raw = Array.isArray(dataValue) ? dataValue[0] : (dataValue ?? body);
-    const opening = raw?.cash_opening ?? raw?.apertura ?? raw?.opening
+    const candidate = raw?.cash_opening ?? raw?.apertura ?? raw?.opening
       ?? (raw?.name ? raw : null);
+    // Algunos contratos devuelven `cash_opening: {}` cuando no hay turno.
+    // Un objeto vacío no representa una apertura válida.
+    const opening = this.hasOpeningRecord(candidate) ? candidate : null;
     const status = String(opening?.status ?? opening?.estado ?? raw?.status ?? '').trim().toLowerCase();
     const activeOpening = opening && status !== 'cerrada' && status !== 'closed' ? opening : null;
     const payments = raw?.payments ?? raw?.detalle ?? activeOpening?.payments ?? {};
@@ -141,7 +243,14 @@ export class CajasService {
       cash_opening: activeOpening,
       apertura: activeOpening,
       opening: activeOpening,
+      // Conservamos la última apertura aunque ya esté cerrada para que la
+      // pantalla pueda diferenciar "Cerrada" de "Sin apertura activa".
+      last_cash_opening: opening,
+      opening_status: opening?.status ?? opening?.estado ?? raw?.status ?? null,
       is_open: !!activeOpening,
+      expected_cash_available: raw?.expected_cash !== undefined
+        || raw?.efectivo_esperado !== undefined
+        || raw?.efectivo_sistema !== undefined,
       monto_apertura: raw?.monto_apertura ?? raw?.opening_amount ?? activeOpening?.monto_apertura ?? activeOpening?.opening_amount ?? 0,
       efectivo_sistema: raw?.efectivo_sistema ?? raw?.system_cash ?? activeOpening?.efectivo_sistema ?? 0,
       efectivo_real: raw?.efectivo_real ?? raw?.cash_counted ?? activeOpening?.efectivo_real ?? 0,
@@ -161,6 +270,12 @@ export class CajasService {
         detalle: payments
       }
     };
+  }
+
+  private hasOpeningRecord(value: any): boolean {
+    if (typeof value === 'string') return value.trim().length > 0;
+    if (!value || typeof value !== 'object') return false;
+    return Boolean(String(value.name || value.cash_opening || value.apertura || '').trim());
   }
 
 

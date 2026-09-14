@@ -1,0 +1,68 @@
+<div class="app-container space-y-5">
+  <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-5 py-5 text-primary-foreground shadow-lg">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-primary-foreground/75">Administración</p>
+        <h1 class="mt-1 text-2xl font-black">Gestión de caja</h1>
+        <p class="mt-1 text-sm text-primary-foreground/80">Consulta aperturas, retiros y cierres del negocio seleccionado.</p>
+      </div>
+      <button type="button" class="rounded-lg bg-white/15 px-3 py-2 text-xs font-bold transition hover:bg-white/25 disabled:opacity-60"
+        [disabled]="loading" (click)="loadHistory()">Actualizar</button>
+    </div>
+  </section>
+
+  <div *ngIf="!canView" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm font-medium text-amber-800">
+    Solo un gerente o administrador puede consultar toda la gestión de caja.
+  </div>
+
+  <ng-container *ngIf="canView">
+    <section class="grid grid-cols-2 gap-3 md:grid-cols-6">
+      <article class="metric-card"><span>Total aperturas</span><strong>{{ countSummary('total_openings', 'total_aperturas', 'aperturas_total', 'openings_count') }}</strong></article>
+      <article class="metric-card"><span>Abiertas ahora</span><strong>{{ countSummary('open_openings', 'currently_open', 'aperturas_abiertas', 'abiertas_actualmente') }}</strong></article>
+      <article class="metric-card"><span>Total cierres</span><strong>{{ countSummary('total_closings', 'total_cierres', 'cierres_total', 'closings_count') }}</strong></article>
+      <article class="metric-card"><span>Retiros</span><strong>{{ countSummary('withdrawals_count', 'cantidad_retiros', 'total_withdrawals', 'retiros_total') }}</strong></article>
+      <article class="metric-card"><span>Monto retirado</span><strong>{{ moneySummary('withdrawals_amount', 'monto_total_retirado', 'total_withdrawals_amount', 'total_retirado') | currency }}</strong></article>
+      <article class="metric-card"><span>Diferencia acumulada</span><strong>{{ moneySummary('accumulated_difference', 'diferencia_acumulada', 'total_difference') | currency }}</strong></article>
+    </section>
+
+    <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <label class="field"><span>Usuario</span><input [(ngModel)]="filters.user" placeholder="Correo o usuario" /></label>
+        <label class="field"><span>Estado</span><input [(ngModel)]="filters.status" placeholder="Abierta, Cerrada..." /></label>
+        <label class="field"><span>Desde</span><input type="date" [(ngModel)]="filters.fromDate" /></label>
+        <label class="field"><span>Hasta</span><input type="date" [(ngModel)]="filters.toDate" /></label>
+      </div>
+      <button type="button" class="mt-3 text-xs font-bold text-primary hover:underline" (click)="clearFilters()">Limpiar filtros</button>
+    </section>
+
+    <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <nav class="flex border-b border-slate-200 bg-slate-50 p-2" aria-label="Pestañas de gestión de caja">
+        <button type="button" class="tab-button" [class.tab-active]="activeTab === 'openings'" (click)="activeTab = 'openings'">Aperturas <b>{{ visibleOpenings.length }}</b></button>
+        <button type="button" class="tab-button" [class.tab-active]="activeTab === 'withdrawals'" (click)="activeTab = 'withdrawals'">Retiros <b>{{ visibleWithdrawals.length }}</b></button>
+        <button type="button" class="tab-button" [class.tab-active]="activeTab === 'closings'" (click)="activeTab = 'closings'">Cierres <b>{{ visibleClosings.length }}</b></button>
+      </nav>
+
+      <div *ngIf="loading" class="p-8 text-center text-sm text-slate-500">Cargando historial de caja…</div>
+      <div *ngIf="!loading && error" class="p-8 text-center text-sm font-medium text-red-700">{{ error }}</div>
+
+      <div *ngIf="!loading && !error && activeTab === 'openings'" class="table-wrap">
+        <table><thead><tr><th>Apertura</th><th>Usuario</th><th>Fecha</th><th>Estado</th><th>Monto</th></tr></thead>
+          <tbody><tr *ngFor="let row of visibleOpenings; trackBy: trackByName"><td>{{ row.name || row.apertura || '—' }}</td><td>{{ rowUser(row) }}</td><td>{{ rowDate(row) | date:'short' }}</td><td><span class="status-badge">{{ rowStatus(row) }}</span></td><td>{{ (row.opening_amount ?? row.monto_apertura ?? row.amount ?? 0) | currency }}</td></tr></tbody>
+        </table>
+        <p *ngIf="visibleOpenings.length === 0" class="empty">No hay aperturas para los filtros seleccionados.</p>
+      </div>
+      <div *ngIf="!loading && !error && activeTab === 'withdrawals'" class="table-wrap">
+        <table><thead><tr><th>Retiro</th><th>Usuario</th><th>Fecha</th><th>Motivo</th><th>Estado</th><th>Monto</th></tr></thead>
+          <tbody><tr *ngFor="let row of visibleWithdrawals; trackBy: trackByName"><td>{{ row.name || '—' }}</td><td>{{ rowUser(row) }}</td><td>{{ rowDate(row) | date:'short' }}</td><td>{{ row.reason || row.motivo || '—' }}</td><td><span class="status-badge">{{ rowStatus(row) }}</span></td><td>{{ rowAmount(row) | currency }}</td></tr></tbody>
+        </table>
+        <p *ngIf="visibleWithdrawals.length === 0" class="empty">No hay retiros para los filtros seleccionados.</p>
+      </div>
+      <div *ngIf="!loading && !error && activeTab === 'closings'" class="table-wrap">
+        <table><thead><tr><th>Cierre</th><th>Usuario</th><th>Fecha</th><th>Estado</th><th>Efectivo sistema</th><th>Diferencia</th></tr></thead>
+          <tbody><tr *ngFor="let row of visibleClosings; trackBy: trackByName"><td>{{ row.name || row.cierre || '—' }}</td><td>{{ rowUser(row) }}</td><td>{{ rowDate(row) | date:'short' }}</td><td><span class="status-badge">{{ rowStatus(row) }}</span></td><td>{{ (row.efectivo_sistema ?? row.system_cash ?? 0) | currency }}</td><td>{{ (row.diferencia ?? row.difference ?? 0) | currency }}</td></tr></tbody>
+        </table>
+        <p *ngIf="visibleClosings.length === 0" class="empty">No hay cierres para los filtros seleccionados.</p>
+      </div>
+    </section>
+  </ng-container>
+</div>

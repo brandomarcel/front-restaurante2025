@@ -1,248 +1,183 @@
-import { Component, OnInit } from '@angular/core';
-import * as XLSX from 'xlsx';
-import { CajasService } from 'src/app/services/cajas.service';
 import { CommonModule } from '@angular/common';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { UtilsService } from '../../../core/services/utils.service';
-import { UserService } from '../../../services/user.service';
-import { NgSelectComponent } from "@ng-select/ng-select";
-import { NgxSpinnerService } from 'ngx-spinner';
-import { finalize } from 'rxjs';
 import { RouterModule } from '@angular/router';
+import { finalize } from 'rxjs';
+import { AlertService } from 'src/app/core/services/alert.service';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { CajasService } from 'src/app/services/cajas.service';
+
+interface ClosingFilters {
+  user: string;
+  status: string;
+  from_date: string;
+  to_date: string;
+}
+
 @Component({
   selector: 'app-report-cierre-caja',
-  imports: [CommonModule, FormsModule, RouterModule, NgSelectComponent],
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './report-cierre-caja.component.html',
   styleUrl: './report-cierre-caja.component.css'
 })
-export class ReportCierreCajaComponent implements OnInit {
-  cierres: any[] = [];
-  cierreSeleccionado: string | null = null;
+export class ReportCierreCajaComponent implements OnInit, OnDestroy {
+  readonly filters: ClosingFilters = { user: '', status: '', from_date: '', to_date: '' };
+  columns: any[] = [];
+  rows: any[] = [];
+  loading = false;
+  exporting = false;
+  errorMessage = '';
+  businessId = '';
+  private readonly onDataChanged = () => this.buscar();
 
-  // Filtros
-  filters = {
-    usuario: null as string | null,
-    desde: '',
-    hasta: ''
-  };
+  constructor(
+    private readonly cajasService: CajasService,
+    private readonly capabilities: CompanyCapabilitiesService,
+    private readonly alertService: AlertService
+  ) {}
 
-  today = '';
-
-  usuarios: any[] = [];
-
-  // Filtros
-  filtrosUsers = {
-    usuario: null as string | null,
-    rol: ''
-  };
-
-  loadingUsers = false;
-  loadingCierres = false;
-  loadingExport = false;
-  private loadingCounter = 0;
-
-  constructor(private cajasService: CajasService,
-    private utilsService: UtilsService,
-    private usersService: UserService,
-    private spinner: NgxSpinnerService,
-  ) { }
-
-  ngOnInit(): void {
-    this.today = String(this.utilsService.getSoloFechaEcuador());
-    this.filters.desde = this.today;
-    this.filters.hasta = this.today;
-
-    const user = this.getCurrentUser();
-    this.filtrosUsers.usuario = user?.email || null;
-
-    this.cargarUsuarios();
-    this.buscar(); // Carga inicial
-  }
-
-  get totalSistema(): number {
-    return this.roundMoney(this.cierres.reduce((sum, cierre) => sum + this.toNumber(cierre?.efectivo_sistema), 0));
-  }
-
-  get totalReal(): number {
-    return this.roundMoney(this.cierres.reduce((sum, cierre) => sum + this.toNumber(cierre?.efectivo_real), 0));
-  }
-
-  get totalRetiros(): number {
-    return this.roundMoney(this.cierres.reduce((sum, cierre) => sum + this.toNumber(cierre?.total_retiros), 0));
-  }
-
-  get diferenciaTotal(): number {
-    return this.roundMoney(this.cierres.reduce((sum, cierre) => sum + this.toNumber(cierre?.diferencia), 0));
-  }
-
-  get cerradosCount(): number {
-    return this.cierres.filter((cierre) => String(cierre?.estado || '').toUpperCase() === 'CERRADO').length;
+  get canView(): boolean {
+    const features = this.capabilities.features;
+    return features.restaurant === true
+      && features.restaurant_pos === true
+      && features.cash_register === true
+      && (this.capabilities.hasPermission('*') || this.capabilities.hasPermission('restaurant.manage'));
   }
 
   get canExport(): boolean {
-    return !this.loadingExport && !this.loadingCierres && this.cierres.length > 0;
+    return this.canView && !this.loading && !this.exporting;
   }
 
-  get selectedUserLabel(): string {
-    return this.filters.usuario || 'Todos los usuarios';
-  }
-
-  private getCurrentUser(): { email?: string } | null {
-    try {
-      return JSON.parse(localStorage.getItem('user') || '{}');
-    } catch {
-      return null;
+  ngOnInit(): void {
+    this.businessId = this.capabilities.activeBusinessId || '';
+    if (!this.canView) {
+      this.errorMessage = 'No tienes permiso para consultar este reporte.';
+      return;
     }
+    window.addEventListener('facturada:restaurant-data-changed', this.onDataChanged);
+    this.buscar();
   }
 
-  private beginLoading(): void {
-    this.loadingCounter += 1;
-    if (this.loadingCounter === 1) {
-      this.spinner.show();
-    }
+  ngOnDestroy(): void {
+    window.removeEventListener('facturada:restaurant-data-changed', this.onDataChanged);
   }
 
-  private endLoading(): void {
-    this.loadingCounter = Math.max(0, this.loadingCounter - 1);
-    if (this.loadingCounter === 0) {
-      this.spinner.hide();
-    }
-  }
-
-  cargarUsuarios(): void {
-    this.loadingUsers = true;
-    this.beginLoading();
-    this.usersService.listByCompany({
-      search: undefined,
-      limit: 1000
-    }).pipe(
-      finalize(() => {
-        this.loadingUsers = false;
-        this.endLoading();
-      })
-    ).subscribe({
-      next: (rows: any[]) => {
-        this.usuarios = rows;
-      },
-      error: (err) => {
-        console.error('Error al cargar usuarios:', err);
-        this.usuarios = [];
-      }
-    });
-  }
-
-  /** 🔍 Buscar cierres según filtros */
   buscar(): void {
-    if (!this.filters.desde || !this.filters.hasta) return;
-
-    this.loadingCierres = true;
-    this.beginLoading();
-    this.cajasService.obtenerReporteCierres(
-      this.filters.usuario || '',
-      this.filters.desde,
-      this.filters.hasta
-    ).pipe(
-      finalize(() => {
-        this.loadingCierres = false;
-        this.endLoading();
-      })
-    ).subscribe({
-      next: (res:any) => {
-        const data = res?.message?.data || res?.data || res;
-        this.cierres = Array.isArray(data) ? data : [];
-
-        if (this.cierreSeleccionado && !this.cierres.some((c: any) => c?.name === this.cierreSeleccionado)) {
-          this.cierreSeleccionado = null;
+    const currentBusiness = this.capabilities.activeBusinessId || '';
+    if (!currentBusiness || !this.canView) {
+      this.businessId = currentBusiness;
+      this.rows = [];
+      this.columns = [];
+      this.errorMessage = 'No tienes permiso para consultar este reporte.';
+      return;
+    }
+    this.businessId = currentBusiness;
+    this.errorMessage = '';
+    this.rows = [];
+    this.columns = [];
+    this.loading = true;
+    this.cajasService.getCashClosingsReport({ ...this.filters, limit: 100 })
+      .pipe(finalize(() => this.loading = false))
+      .subscribe({
+        next: (response: any) => {
+          const message = response?.message ?? response ?? {};
+          this.columns = Array.isArray(message.columns) ? message.columns : [];
+          const result = Array.isArray(message.result) ? message.result : [];
+          this.rows = result.map((row: any) => this.normalizeRow(row));
+        },
+        error: (error: any) => {
+          this.rows = [];
+          this.columns = [];
+          this.errorMessage = this.readError(error);
         }
-      },
-      error: (err) => {
-        console.error('Error al obtener cierres:', err);
-        this.cierres = [];
-      }
-    });
+      });
   }
 
-  /** 📦 Exportar los cierres con detalle a Excel */
   exportarExcel(): void {
     if (!this.canExport) return;
-
-    this.loadingExport = true;
-    this.beginLoading();
-
-    setTimeout(() => {
-      try {
-        const datosPlano: any[] = [];
-        const metodosUnicos = new Set<string>();
-
-        this.cierres.forEach(c => c.detalle?.forEach((p: any) => metodosUnicos.add(p.metodo_pago)));
-
-        this.cierres.forEach((cierre) => {
-          const fila: any = {
-            Fecha: new Date(cierre.fecha_hora).toLocaleString(),
-            Usuario: cierre.usuario,
-            Apertura: cierre.apertura,
-            'Monto Apertura': cierre.monto_apertura,
-            'Sistema (Efectivo)': cierre.efectivo_sistema,
-            'Efectivo Real': cierre.efectivo_real,
-            Retiros: cierre.total_retiros,
-            Diferencia: cierre.diferencia,
-            Estado: cierre.estado
-          };
-
-          metodosUnicos.forEach((metodo) => {
-            fila[metodo] = 0;
-          });
-
-          cierre.detalle?.forEach((pago: any) => {
-            fila[pago.metodo_pago] = pago.monto;
-          });
-
-          datosPlano.push(fila);
-        });
-
-        const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(datosPlano);
-        const wb: XLSX.WorkBook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Cierres de Caja');
-
-        XLSX.writeFile(wb, `cierres_de_caja_${this.filters.desde}_${this.filters.hasta}.xlsx`);
-      } finally {
-        this.loadingExport = false;
-        this.endLoading();
-      }
-    }, 0);
+    this.exporting = true;
+    this.errorMessage = '';
+    this.cajasService.exportCashClosingsReport(this.filters)
+      .pipe(finalize(() => this.exporting = false))
+      .subscribe({
+        next: (blob: Blob) => {
+          const url = URL.createObjectURL(blob);
+          const anchor = document.createElement('a');
+          anchor.href = url;
+          anchor.download = `cierre-caja-${this.businessId}.xlsx`;
+          document.body.appendChild(anchor);
+          anchor.click();
+          anchor.remove();
+          URL.revokeObjectURL(url);
+        },
+        error: (error: any) => {
+          this.errorMessage = this.readError(error);
+          this.alertService.error(this.errorMessage);
+        }
+      });
   }
 
-  toggleCierre(cierre: any): void {
-    const name = cierre?.name || cierre?.apertura || cierre?.fecha_hora;
-    this.cierreSeleccionado = this.cierreSeleccionado === name ? null : name;
+  cell(row: any, ...keys: string[]): any {
+    for (const key of keys) {
+      if (row && row[key] !== undefined && row[key] !== null) return row[key];
+    }
+    return null;
   }
 
-  isSelected(cierre: any): boolean {
-    const name = cierre?.name || cierre?.apertura || cierre?.fecha_hora;
-    return this.cierreSeleccionado === name;
+  display(row: any, ...keys: string[]): string {
+    const value = this.cell(row, ...keys);
+    return value === undefined || value === null || value === '' ? '—' : String(value);
   }
 
-  getEstadoBadge(estado: string): string {
-    return String(estado || '').toUpperCase() === 'CERRADO' ? 'badge-green' : 'badge-yellow';
-  }
-
-  getDiferenciaClass(value: any): string {
-    const diferencia = this.toNumber(value);
-    if (diferencia < 0) return 'text-red-600';
-    if (diferencia > 0) return 'text-amber-600';
-    return 'text-emerald-600';
-  }
-
-  trackByCierre = (_: number, cierre: any) => cierre?.name || cierre?.apertura || cierre?.fecha_hora;
-  trackByPago = (_: number, pago: any) => `${pago?.metodo_pago || 'pago'}-${pago?.monto || 0}`;
-
-  private toNumber(value: any): number {
+  money(row: any, ...keys: string[]): number | null {
+    const value = this.cell(row, ...keys);
+    if (value === null || value === undefined || value === '') return null;
     const numeric = Number(value);
-    return Number.isFinite(numeric) ? numeric : 0;
+    return Number.isFinite(numeric) ? numeric : null;
   }
 
-  private roundMoney(value: number): number {
-    return Math.round((value + Number.EPSILON) * 100) / 100;
+  trackByRow = (index: number, row: any) => this.display(row, 'name', 'cierre', 'cash_closing') || index;
+
+  private normalizeRow(row: any): any {
+    if (!Array.isArray(row)) return row || {};
+    const normalized: Record<string, any> = {};
+    const fallbackKeys = [
+      'cierre', 'fecha_cierre', 'usuario', 'apertura', 'monto_apertura',
+      'efectivo_sistema', 'efectivo_real', 'total_retiros', 'diferencia',
+      'estado', 'observaciones'
+    ];
+    this.columns.forEach((column: any, index: number) => {
+      const key = String(column?.fieldname || column?.field || column?.key || column?.label || index);
+      normalized[key] = row[index];
+      if (fallbackKeys[index] && normalized[fallbackKeys[index]] === undefined) {
+        normalized[fallbackKeys[index]] = row[index];
+      }
+    });
+    return normalized;
   }
 
+  private readError(error: any): string {
+    const status = Number(error?.status || error?.error?.status || 0);
+    if (status === 403) return 'No tienes permiso para consultar este reporte.';
+    const payload = error?.error ?? error;
+    const direct = payload?.message || payload?.msg || payload?.sri_message;
+    if (typeof direct === 'string' && direct.trim()) return direct.trim();
+    if (Array.isArray(direct)) return direct.join(', ');
+    const serverMessages = payload?._server_messages;
+    if (serverMessages) {
+      try {
+        const parsed = typeof serverMessages === 'string' ? JSON.parse(serverMessages) : serverMessages;
+        const values = Array.isArray(parsed) ? parsed : [parsed];
+        const text = values.map((item: any) => {
+          if (typeof item === 'string') {
+            try { return JSON.parse(item)?.message || item; } catch { return item; }
+          }
+          return item?.message || item;
+        }).filter(Boolean).join(' ');
+        if (text) return text;
+      } catch { /* el mensaje plano es suficiente */ }
+    }
+    return status === 400 ? 'Los filtros enviados no son válidos.' : 'No se pudo cargar el reporte.';
+  }
 }

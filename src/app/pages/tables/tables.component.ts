@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { finalize, Subscription } from 'rxjs';
 import { toast } from 'ngx-sonner';
@@ -13,8 +14,9 @@ type TableStatus = 'Libre' | 'Ocupada' | 'Reservada' | 'Inactiva';
 @Component({
   selector: 'app-tables',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
-  templateUrl: './tables.component.html'
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
+  templateUrl: './tables.component.html',
+  styleUrl: './tables.component.css'
 })
 export class TablesComponent implements OnInit, OnDestroy {
   tables: any[] = [];
@@ -27,6 +29,8 @@ export class TablesComponent implements OnInit, OnDestroy {
   showForm = false;
   editingTable: any | null = null;
   showInactive = false;
+  tableSearch = '';
+  statusFilter: 'Todas' | TableStatus = 'Todas';
   error = '';
   readonly statuses: TableStatus[] = ['Libre', 'Ocupada', 'Reservada', 'Inactiva'];
   readonly activeOrderStatuses = new Set(['INGRESADA', 'PREPARACION', 'LISTA']);
@@ -138,6 +142,16 @@ export class TablesComponent implements OnInit, OnDestroy {
 
   get visibleTables(): any[] {
     return this.tables.filter((table) => this.showInactive || !this.isInactive(table));
+  }
+
+  get filteredTables(): any[] {
+    const query = this.normalized(this.tableSearch);
+    return this.visibleTables.filter((table) => {
+      const matchesStatus = this.statusFilter === 'Todas' || this.tableStatus(table) === this.statusFilter;
+      if (!matchesStatus) return false;
+      if (!query) return true;
+      return this.normalized(`${this.tableLabel(table)} ${table?.assigned_waiter || ''}`).includes(query);
+    });
   }
 
   get freeTablesCount(): number {

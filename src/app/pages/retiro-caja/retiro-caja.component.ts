@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { CajasService } from 'src/app/services/cajas.service';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 @Component({
   selector: 'app-retiro-caja',
@@ -22,39 +23,74 @@ export class RetiroCajaComponent implements OnInit {
 
   cajaActiva = false;
   cashOpening: any | null = null;
+  cashStatus = 'Sin apertura activa';
+  montoApertura = 0;
+  efectivoSistema = 0;
+  diferencia: number | null = null;
+  loading = false;
+  loadingWithdrawals = false;
+  error = '';
 
   retiros: any[] = [];
   totalRetiros = 0;
   constructor(private cajasService: CajasService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    public capabilities: CompanyCapabilitiesService
   ) { }
 
   ngOnInit(): void {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const user = this.getCurrentUser();
     this.retiro.usuario = user.email;
 
     this.verificarCajaAbierta();
   }
 
   verificarCajaAbierta() {
+    this.loading = true;
+    this.error = '';
+    this.cajaActiva = false;
+    this.cashOpening = null;
+    this.cashStatus = 'Sin apertura activa';
+    this.retiro.relacionado_a = '';
+    this.retiros = [];
+    this.totalRetiros = 0;
+    this.montoApertura = 0;
+    this.efectivoSistema = 0;
+    this.diferencia = null;
     this.cajasService.verificarAperturaActiva(this.retiro.usuario).subscribe({
       next: (res: any) => {
-      const opening = res?.message?.apertura || (Array.isArray(res?.data) ? res.data[0] : null);
-      const status = String(opening?.status || opening?.estado || 'Abierta').toLowerCase();
-      if (opening && status !== 'cerrada' && status !== 'closed') {
-        this.cajaActiva = true;
-        this.cashOpening = opening;
-        this.retiro.relacionado_a = typeof opening === 'string'
-          ? opening
-          : (opening.name || (typeof opening.cash_opening === 'string' ? opening.cash_opening : ''));
-        this.totalRetiros = Number(res?.message?.total_retiros || opening.total_retiros || 0);
+        this.loading = false;
+        const body = res?.message ?? res ?? {};
+        const normalized = body?.data && !Array.isArray(body.data) ? body.data : body;
+        const candidateOpening = normalized?.cash_opening
+          ?? normalized?.apertura
+          ?? normalized?.opening
+          ?? normalized?.last_cash_opening
+          ?? (Array.isArray(res?.data) ? res.data[0] : null);
+        const opening = this.hasOpeningRecord(candidateOpening) ? candidateOpening : null;
+        const status = this.normalizeStatus(
+          opening?.status
+          ?? opening?.estado
+          ?? normalized?.opening_status
+          ?? normalized?.status
+        );
+        const isClosed = ['CERRADA', 'CLOSED', 'CANCELADA', 'CANCELLED'].includes(status);
+        this.cashOpening = opening || null;
+        this.cajaActiva = !!opening && !isClosed;
+        this.cashStatus = this.cajaActiva
+          ? 'Abierta'
+          : (opening && isClosed ? 'Cerrada' : 'Sin apertura activa');
+        this.retiro.relacionado_a = this.openingName(opening);
+        this.montoApertura = this.toNumber(normalized?.monto_apertura ?? normalized?.opening_amount ?? opening?.monto_apertura ?? opening?.opening_amount);
+        this.efectivoSistema = this.toNumber(normalized?.efectivo_sistema ?? normalized?.system_cash ?? opening?.efectivo_sistema);
+        this.diferencia = this.readNullableNumber(normalized?.diferencia ?? normalized?.difference ?? opening?.diferencia ?? opening?.difference);
         this.obtenerRetiros();
-      } else {
-        this.cajaActiva = false;
-        this.cashOpening = null;
-      }
       },
-      error: (error) => this.alertService.error(this.readBackendMessage(error) || 'No se pudo consultar la caja.')
+      error: (error) => {
+        this.loading = false;
+        this.error = this.errorMessage(error);
+        this.alertService.error(this.error);
+      }
     });
   }
 
@@ -76,7 +112,7 @@ export class RetiroCajaComponent implements OnInit {
         this.retiro.monto = 0;
         this.verificarCajaAbierta();
       },
-      error: (error) => this.alertService.error(this.readBackendMessage(error) || 'No se pudo registrar el retiro.')
+      error: (error) => this.alertService.error(this.errorMessage(error) || 'No se pudo registrar el retiro.')
     });
   }
 
@@ -93,15 +129,34 @@ export class RetiroCajaComponent implements OnInit {
 
 
   obtenerRetiros() {
-    if (!this.retiro.relacionado_a) return;
-
-    this.cajasService.getRetirosPorApertura(this.retiro.relacionado_a).subscribe({
+    this.loadingWithdrawals = true;
+    this.cajasService.getCashWithdrawals().subscribe({
       next: (res: any) => {
-        const data = res?.message || {};
-        this.retiros = data.withdrawals || data.retiros || data.cash_withdrawals || this.cashOpening?.withdrawals || [];
-        this.totalRetiros = Number(data.total_retiros) || this.retiros.reduce((acc, r) => acc + Number(r.amount ?? r.monto ?? 0), 0);
+        this.loadingWithdrawals = false;
+        const body = res?.message ?? res ?? {};
+        const rows = Array.isArray(body?.data)
+          ? body.data
+          : (Array.isArray(res?.data) ? res.data : (body?.withdrawals ?? body?.retiros ?? body?.cash_withdrawals ?? []));
+        const allRows = Array.isArray(rows) ? rows : [];
+        const openingId = this.retiro.relacionado_a;
+        // El backend debe aplicar el alcance por usuario. Este filtro evita
+        // que una respuesta demasiado amplia muestre otra apertura a un
+        // Cajero; Gerente/Administrador pueden consultar el resultado global.
+        this.retiros = this.canViewOtherOpenings
+          ? allRows
+          : allRows.filter((row: any) => this.openingName(row?.cash_opening ?? row?.apertura) === openingId);
+        const calculated = this.retiros.reduce((acc, row) => acc + this.toNumber(row?.amount ?? row?.monto), 0);
+        // El total devuelto por el backend puede ser global. Para un Cajero
+        // debe coincidir únicamente con las filas de su propia apertura.
+        this.totalRetiros = this.canViewOtherOpenings
+          ? (this.toNumber(body?.total ?? body?.total_retiros ?? res?.total) || calculated)
+          : calculated;
       },
-      error: (error) => this.alertService.error(this.readBackendMessage(error) || 'No se pudo cargar el historial de retiros.')
+      error: (error) => {
+        this.loadingWithdrawals = false;
+        this.error = this.errorMessage(error);
+        this.alertService.error(this.error);
+      }
     });
   }
 
@@ -117,7 +172,57 @@ eliminarRetiro(name: string) {
 }
 
   get canSubmit(): boolean {
-    return this.cajaActiva && Number(this.retiro.monto) > 0 && String(this.retiro.motivo || '').trim().length > 0;
+    return this.cajaActiva
+      && !this.loading
+      && !this.loadingWithdrawals
+      && Number(this.retiro.monto) > 0
+      && String(this.retiro.motivo || '').trim().length > 0;
+  }
+
+  get canViewOtherOpenings(): boolean {
+    if (this.capabilities.hasPermission('*')) return true;
+    const role = String(this.capabilities.businessRole || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+    return role === 'GERENTE' || role === 'ADMINISTRADOR';
+  }
+
+  private getCurrentUser(): { email: string } {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      return { email: String(user?.email || '').trim() };
+    } catch {
+      return { email: '' };
+    }
+  }
+
+  private openingName(opening: any): string {
+    if (typeof opening === 'string') return opening.trim();
+    return String(opening?.name || opening?.cash_opening || opening?.apertura || '').trim();
+  }
+
+  private hasOpeningRecord(opening: any): boolean {
+    return this.openingName(opening).length > 0;
+  }
+
+  private normalizeStatus(value: unknown): string {
+    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+  }
+
+  private toNumber(value: unknown): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private readNullableNumber(value: unknown): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private errorMessage(error: any): string {
+    const status = Number(error?.status ?? error?.error?.status ?? 0);
+    if (status === 403) return 'No tienes permiso para administrar la caja.';
+    return this.readBackendMessage(error) || 'No se pudo consultar la información de caja.';
   }
 
   private readBackendMessage(error: any): string {

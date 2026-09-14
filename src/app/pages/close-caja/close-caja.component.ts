@@ -6,6 +6,7 @@ import { ButtonComponent } from 'src/app/shared/components/button/button.compone
 import { AlertService } from 'src/app/core/services/alert.service';
 import { finalize } from 'rxjs';
 import { NgxSpinnerService } from 'ngx-spinner';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 @Component({
   selector: 'app-close-caja',
@@ -27,6 +28,10 @@ export class CloseCajaComponent implements OnInit {
 
   detallePorMetodo: any = {};
   paymentTotals: Array<{ payment_method: string; payment_code: string; amount: number }> = [];
+  paymentMethodsForCount: Array<{ payment_method: string; payment_code: string; amount: number }> = [];
+  paymentCounts: Record<string, number> = {};
+  ventasEfectivo = 0;
+  backendExpectedCash: number | null = null;
   lastClose: any | null = null;
   sinApertura = true;
   loadingData = false;
@@ -36,12 +41,15 @@ export class CloseCajaComponent implements OnInit {
   constructor(
     private cajasService: CajasService,
     private alertService: AlertService,
-    private spinner: NgxSpinnerService
+    private spinner: NgxSpinnerService,
+    public capabilities: CompanyCapabilitiesService
   ) { }
 
   ngOnInit(): void {
     const user = this.getCurrentUser();
     this.cierre.usuario = user?.email || '';
+    // Evita consultas y spinners para Mesero u otros perfiles sin caja.
+    if (!this.canOperateCash) return;
     this.getDatosCierre();
   }
 
@@ -78,6 +86,10 @@ export class CloseCajaComponent implements OnInit {
     this.cierre.observaciones = '';
     this.detallePorMetodo = {};
     this.paymentTotals = [];
+    this.paymentMethodsForCount = [];
+    this.paymentCounts = {};
+    this.ventasEfectivo = 0;
+    this.backendExpectedCash = null;
   }
 
   getDatosCierre(): void {
@@ -96,10 +108,17 @@ export class CloseCajaComponent implements OnInit {
       })
     ).subscribe({
       next: (response: any) => {
-        const respuesta = response?.message ?? {};
-        const apertura = respuesta?.apertura ?? respuesta?.cash_opening ?? null;
+        const respuesta = response?.message ?? response ?? {};
+        const datos = respuesta?.data && !Array.isArray(respuesta.data) ? respuesta.data : respuesta;
+        const apertura = datos?.apertura
+          ?? datos?.cash_opening
+          ?? datos?.opening
+          ?? datos?.last_cash_opening
+          ?? null;
+        const aperturaStatus = this.normalizeStatus(apertura?.status ?? apertura?.estado ?? datos?.opening_status ?? datos?.status);
 
-        this.sinApertura = !apertura;
+        this.sinApertura = !this.hasOpening(apertura)
+          || ['CERRADA', 'CLOSED', 'CANCELADA', 'CANCELLED'].includes(aperturaStatus);
         if (this.sinApertura) {
           this.resetCajaValores();
           return;
@@ -108,10 +127,25 @@ export class CloseCajaComponent implements OnInit {
         this.cierre.apertura = typeof apertura === 'string'
           ? apertura
           : (apertura?.name || (typeof apertura?.cash_opening === 'string' ? apertura.cash_opening : ''));
-        this.cierre.monto_apertura = Number(respuesta?.monto_apertura ?? respuesta?.opening_amount) || 0;
-        this.cierre.efectivo_sistema = this.getPaymentAmount(respuesta, '01');
-        this.cierre.total_retiros = Number(respuesta?.total_retiros) || 0;
-        this.paymentTotals = this.normalizePaymentTotals(respuesta);
+        this.cierre.monto_apertura = this.toNumber(datos?.monto_apertura ?? datos?.opening_amount ?? apertura?.monto_apertura ?? apertura?.opening_amount);
+        this.cierre.total_retiros = this.toNumber(datos?.total_retiros ?? datos?.total_withdrawals ?? apertura?.total_retiros);
+        this.paymentTotals = this.normalizePaymentTotals(datos);
+        this.paymentMethodsForCount = this.buildPaymentMethodsForCount();
+        this.ventasEfectivo = this.paymentAmount('01');
+        const expectedValue = datos?.efectivo_sistema
+          ?? datos?.expected_cash
+          ?? datos?.efectivo_esperado
+          ?? apertura?.efectivo_sistema
+          ?? apertura?.expected_cash;
+        this.backendExpectedCash = datos?.expected_cash_available === true || expectedValue !== undefined
+          ? this.toNumber(expectedValue)
+          : null;
+        this.cierre.efectivo_sistema = this.totalEsperado;
+        this.paymentCounts = this.paymentMethodsForCount.reduce((result, payment) => {
+          result[payment.payment_code] = payment.payment_code === '01' ? 0 : payment.amount;
+          return result;
+        }, {} as Record<string, number>);
+        this.cierre.efectivo_real = this.paymentCounts['01'] || 0;
         this.detallePorMetodo = this.paymentTotals.reduce((result, payment) => {
           result[payment.payment_code] = payment.amount;
           return result;
@@ -121,7 +155,7 @@ export class CloseCajaComponent implements OnInit {
       error: (error) => {
         console.warn('No hay apertura activa o no se pudo cargar datos de cierre:', error);
         this.resetCajaValores();
-        this.alertService.error(this.readBackendMessage(error) || 'No se pudo consultar la apertura de caja.');
+        this.alertService.error(this.errorMessage(error) || 'No se pudo consultar la apertura de caja.');
       }
     });
   }
@@ -133,29 +167,44 @@ export class CloseCajaComponent implements OnInit {
   onEfectivoRealChange(valor: number) {
     const parsed = Number(valor);
     this.cierre.efectivo_real = Number.isFinite(parsed) ? parsed : 0;
+    this.paymentCounts['01'] = this.cierre.efectivo_real;
+    this.calcularDiferencia();
+  }
+
+  onPaymentCountChange(code: string, value: number): void {
+    const parsed = Number(value);
+    this.paymentCounts[code] = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+    if (code === '01') this.cierre.efectivo_real = this.paymentCounts[code];
     this.calcularDiferencia();
   }
 
   calcularDiferencia() {
-    const esperado = (Number(this.cierre.monto_apertura) || 0) + (Number(this.cierre.efectivo_sistema) || 0);
-    const totalCaja = (Number(this.cierre.efectivo_real) || 0) + (Number(this.cierre.total_retiros) || 0);
-    this.cierre.diferencia = Math.round((totalCaja - esperado) * 100) / 100;
+    this.cierre.diferencia = Math.round(((Number(this.cierre.efectivo_real) || 0) - this.totalEsperado) * 100) / 100;
   }
 
   guardarCierre() {
-    if (!this.canSave) {
+    if (!this.canSave || this.saving) {
       return;
     }
+
+    void this.alertService.confirm(
+      `Se cerrará la apertura ${this.cierre.apertura} con ${Number(this.cierre.efectivo_real || 0).toFixed(2)} de efectivo contado.`,
+      '¿Cerrar caja?'
+    ).then((result) => {
+      if (result.isConfirmed) this.ejecutarCierre();
+    });
+  }
+
+  private ejecutarCierre(): void {
+    if (!this.canSave || this.saving) return;
 
     const data = {
       cash_opening: this.cierre.apertura,
       cash_counted: Number(this.cierre.efectivo_real) || 0,
-      payments: (this.paymentTotals.length ? this.paymentTotals : [{ payment_method: 'Efectivo', payment_code: '01', amount: 0 }]).map((payment) => ({
+      payments: this.paymentMethodsForCount.map((payment) => ({
         payment_method: payment.payment_method,
         payment_code: payment.payment_code,
-        counted_amount: payment.payment_code === '01'
-          ? Number(this.cierre.efectivo_real) || 0
-          : payment.amount
+        counted_amount: this.toNumber(this.paymentCounts[payment.payment_code])
       })),
       notes: String(this.cierre.observaciones || '').trim()
     };
@@ -170,12 +219,13 @@ export class CloseCajaComponent implements OnInit {
     ).subscribe({
       next: (response: any) => {
         this.alertService.success('Cierre guardado correctamente');
-        this.lastClose = response?.message?.data ?? response?.data ?? response?.message ?? response;
+        const body = response?.message ?? response ?? {};
+        this.lastClose = body?.data ?? response?.data ?? body;
         this.cleanCaja();
       },
       error: (error) => {
         console.error('Error al guardar cierre:', error);
-        this.alertService.error(this.readBackendMessage(error) || 'No se pudo guardar el cierre de caja.');
+        this.alertService.error(this.errorMessage(error) || 'No se pudo guardar el cierre de caja.');
       }
     });
   }
@@ -185,8 +235,9 @@ export class CloseCajaComponent implements OnInit {
   }
 
   get totalEsperado(): number {
+    if (this.backendExpectedCash !== null) return this.backendExpectedCash;
     return (Number(this.cierre.monto_apertura) || 0)
-      + (Number(this.cierre.efectivo_sistema) || 0)
+      + this.ventasEfectivo
       - (Number(this.cierre.total_retiros) || 0);
   }
 
@@ -194,6 +245,34 @@ export class CloseCajaComponent implements OnInit {
     return this.paymentTotals
       .filter((payment) => payment.payment_code === code)
       .reduce((sum, payment) => sum + payment.amount, 0);
+  }
+
+  private buildPaymentMethodsForCount(): Array<{ payment_method: string; payment_code: string; amount: number }> {
+    const defaults = [
+      { payment_method: 'Efectivo', payment_code: '01', amount: 0 },
+      { payment_method: 'Tarjeta de credito/debito', payment_code: '19', amount: 0 },
+      { payment_method: 'Transferencia', payment_code: '20', amount: 0 }
+    ];
+    const values = [...defaults, ...this.paymentTotals];
+    const byCode = new Map<string, { payment_method: string; payment_code: string; amount: number }>();
+    values.forEach((payment) => {
+      if (!byCode.has(payment.payment_code)) byCode.set(payment.payment_code, payment);
+    });
+    return Array.from(byCode.values());
+  }
+
+  paymentCount(code: string): number {
+    return this.toNumber(this.paymentCounts[code]);
+  }
+
+  trackPayment(_index: number, payment: { payment_code: string }): string {
+    return payment.payment_code;
+  }
+
+  get canOperateCash(): boolean {
+    return this.capabilities.isEnabled('restaurant_pos')
+      && this.capabilities.isEnabled('cash_register')
+      && this.capabilities.hasPermission('restaurant.cash.manage');
   }
 
   get canSave(): boolean {
@@ -204,10 +283,18 @@ export class CloseCajaComponent implements OnInit {
       && !this.saving;
   }
 
-  private getPaymentAmount(response: any, code: string): number {
-    return this.normalizePaymentTotals(response)
-      .filter((payment) => payment.payment_code === code)
-      .reduce((sum, payment) => sum + payment.amount, 0);
+  private hasOpening(value: any): boolean {
+    if (typeof value === 'string') return value.trim().length > 0;
+    return Boolean(String(value?.name || value?.cash_opening || value?.apertura || '').trim());
+  }
+
+  private normalizeStatus(value: unknown): string {
+    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+  }
+
+  private toNumber(value: unknown): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
   }
 
   private normalizePaymentTotals(response: any): Array<{ payment_method: string; payment_code: string; amount: number }> {
@@ -252,5 +339,11 @@ export class CloseCajaComponent implements OnInit {
       return direct;
     }
     return error?.message || '';
+  }
+
+  private errorMessage(error: any): string {
+    const status = Number(error?.status ?? error?.error?.status ?? 0);
+    if (status === 403) return 'No tienes permiso para administrar la caja';
+    return this.readBackendMessage(error);
   }
 }
