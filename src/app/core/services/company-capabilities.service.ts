@@ -923,7 +923,15 @@ export class CompanyCapabilitiesService {
     if (this.isEnabled('restaurant')
       && this.isEnabled('orders')
       && this.hasPermission('restaurant.orders.create')
-      && !this.hasPermission('billing.create')) return '/dashboard/pos';
+      && !this.hasPermission('billing.create')) {
+      // Para Mesero, salir del POS debe devolver al mapa si el salón tiene
+      // mesas configuradas. Cuando no hay mesas, vuelve al panel para no
+      // quedar atrapado navegando nuevamente al mismo POS.
+      const business = this.activeBusinessId || '';
+      const tablesConfigured = business
+        && localStorage.getItem(`mesero_tables_available:${business}`) === '1';
+      return tablesConfigured ? '/dashboard/tables' : '/dashboard/main';
+    }
     if (this.isEnabled('generic_pos') && this.hasPermission('billing.create')) return '/dashboard/pos-generic';
     if (this.isEnabled('direct_invoice') && this.hasPermission('billing.create')) return '/dashboard/invoicing';
     if (this.isEnabled('orders') && this.hasPermission('restaurant.orders.read')) return '/dashboard/orders';

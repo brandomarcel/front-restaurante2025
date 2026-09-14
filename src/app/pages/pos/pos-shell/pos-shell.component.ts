@@ -1,10 +1,11 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from 'src/app/services/auth.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { PosMeseroComponent } from '../pos-mesero/pos-mesero.component';
 import { PosCajaComponent } from '../pos-caja/pos-caja.component';
 import { CommonModule } from '@angular/common';
+import { OrdersService } from 'src/app/services/orders.service';
 
 type RoleName = 'Cajero' | 'Mesero' | 'Gerente' | 'Desconocido';
 
@@ -20,16 +21,23 @@ export class PosShellComponent implements OnInit {
   roleName: RoleName = 'Desconocido';
   selectedTableId = '';
   selectedTableLabel = '';
+  resolvingMeseroEntry = false;
+  posReady = true;
 
   constructor(
     private auth: AuthService,
     private capabilities: CompanyCapabilitiesService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private orders: OrdersService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
     this.selectedTableId = String(this.route.snapshot.queryParamMap.get('table') || '').trim();
     this.selectedTableLabel = String(this.route.snapshot.queryParamMap.get('table_label') || '').trim();
+    if (this.selectedTableId && this.capabilities.activeBusinessId) {
+      localStorage.setItem(`mesero_tables_available:${this.capabilities.activeBusinessId}`, '1');
+    }
     const me: any = this.auth.getCurrentUser();
     // La variante de Mesero se determina por el contexto funcional, no por
     // un rol Frappe genérico. Así el POS nunca muestra acciones de cobro o
@@ -46,6 +54,9 @@ export class PosShellComponent implements OnInit {
         features: this.capabilities.features,
         selectedTable: this.selectedTableId || null
       });
+      if (!this.selectedTableId) {
+        this.resolveMeseroEntry();
+      }
       return;
     }
     // El rol de negocio del contexto decide la experiencia POS. Los roles
@@ -63,6 +74,41 @@ export class PosShellComponent implements OnInit {
       features: this.capabilities.features
     });
 
+  }
+
+  private resolveMeseroEntry(): void {
+    if (!this.capabilities.isEnabled('tables')) {
+      this.posReady = true;
+      this.resolvingMeseroEntry = false;
+      return;
+    }
+    this.resolvingMeseroEntry = true;
+    this.posReady = false;
+    this.orders.getTables(true).subscribe({
+      next: (response: any) => {
+        const message = response?.message ?? response ?? {};
+        const tables = Array.isArray(message?.data) ? message.data : [];
+        const business = this.capabilities.activeBusinessId || '';
+        if (business) {
+          localStorage.setItem(`mesero_tables_available:${business}`, tables.length > 0 ? '1' : '0');
+        }
+        if (tables.length > 0) {
+          this.router.navigate(['/dashboard/tables'], { replaceUrl: true });
+          return;
+        }
+        this.posReady = true;
+        this.resolvingMeseroEntry = false;
+      },
+      error: (error: any) => {
+        // Si la consulta falla, no bloqueamos el POS del mesero. El backend
+        // seguirá validando el negocio y los permisos al crear la orden.
+        console.warn('[FacturADA][POS Restaurante][Mesero] No se pudieron consultar mesas', error);
+        const business = this.capabilities.activeBusinessId || '';
+        if (business) localStorage.setItem(`mesero_tables_available:${business}`, '0');
+        this.posReady = true;
+        this.resolvingMeseroEntry = false;
+      }
+    });
   }
 
   private mapRawRole(raw?: string): RoleName {
