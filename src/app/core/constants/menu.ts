@@ -88,16 +88,16 @@ export class Menu {
       items: [
         {
           icon: 'assets/icons/tablericons/cash-banknote.svg',
-          label: 'Caja',
+          label: 'Mi Caja',
           route: '/caja',
           featureKey: 'cash_register',
           requiredFeatures: ['restaurant_pos', 'cash_register'],
-          permissionKey: 'restaurant.cash.manage',
+          anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage'],
           children: [
-            { label: 'Apertura', route: '/caja/apertura', permissionKey: 'restaurant.cash.manage' },
-            { label: 'Retiros', route: '/caja/retiro', permissionKey: 'restaurant.cash.manage' },
-            { label: 'Cierre', route: '/caja/cierre', permissionKey: 'restaurant.cash.manage' },
-            { label: 'Gestión de caja', route: '/caja/gestion', permissionKey: 'restaurant.manage' },
+            { label: 'Apertura', route: '/caja/apertura', anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage'] },
+            { label: 'Retiros', route: '/caja/retiro', anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage'] },
+            { label: 'Cierre', route: '/caja/cierre', anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage'] },
+            { label: 'Gestión de Cajas', route: '/caja/gestion', permissionKey: 'restaurant.manage' },
             
           ],
         },

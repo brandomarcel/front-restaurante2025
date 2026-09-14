@@ -84,6 +84,7 @@ export class RetiroCajaComponent implements OnInit {
         this.montoApertura = this.toNumber(normalized?.monto_apertura ?? normalized?.opening_amount ?? opening?.monto_apertura ?? opening?.opening_amount);
         this.efectivoSistema = this.toNumber(normalized?.efectivo_sistema ?? normalized?.system_cash ?? opening?.efectivo_sistema);
         this.diferencia = this.readNullableNumber(normalized?.diferencia ?? normalized?.difference ?? opening?.diferencia ?? opening?.difference);
+        this.loadDashboardMetrics();
         this.obtenerRetiros();
       },
       error: (error) => {
@@ -91,6 +92,20 @@ export class RetiroCajaComponent implements OnInit {
         this.error = this.errorMessage(error);
         this.alertService.error(this.error);
       }
+    });
+  }
+
+  private loadDashboardMetrics(): void {
+    this.cajasService.getDashboardMetrics().subscribe({
+      next: (response: any) => {
+        const message = response?.message ?? response ?? {};
+        const cash = message?.data?.cash ?? message?.cash ?? null;
+        if (!cash) return;
+        this.montoApertura = this.toNumber(cash.monto_apertura ?? cash.opening_amount ?? this.montoApertura);
+        this.efectivoSistema = this.toNumber(cash.efectivo_sistema ?? cash.expected_cash ?? this.efectivoSistema);
+        this.diferencia = this.readNullableNumber(cash.difference ?? cash.diferencia ?? this.diferencia);
+      },
+      error: () => { /* La apertura sigue siendo utilizable si no hay métricas. */ }
     });
   }
 
@@ -139,18 +154,11 @@ export class RetiroCajaComponent implements OnInit {
           : (Array.isArray(res?.data) ? res.data : (body?.withdrawals ?? body?.retiros ?? body?.cash_withdrawals ?? []));
         const allRows = Array.isArray(rows) ? rows : [];
         const openingId = this.retiro.relacionado_a;
-        // El backend debe aplicar el alcance por usuario. Este filtro evita
-        // que una respuesta demasiado amplia muestre otra apertura a un
-        // Cajero; Gerente/Administrador pueden consultar el resultado global.
-        this.retiros = this.canViewOtherOpenings
-          ? allRows
-          : allRows.filter((row: any) => this.openingName(row?.cash_opening ?? row?.apertura) === openingId);
+        // “Mi Caja” siempre muestra únicamente el turno del usuario actual.
+        // La consulta consolidada para otros usuarios vive en Gestión de Cajas.
+        this.retiros = allRows.filter((row: any) => this.openingName(row?.cash_opening ?? row?.apertura) === openingId);
         const calculated = this.retiros.reduce((acc, row) => acc + this.toNumber(row?.amount ?? row?.monto), 0);
-        // El total devuelto por el backend puede ser global. Para un Cajero
-        // debe coincidir únicamente con las filas de su propia apertura.
-        this.totalRetiros = this.canViewOtherOpenings
-          ? (this.toNumber(body?.total ?? body?.total_retiros ?? res?.total) || calculated)
-          : calculated;
+        this.totalRetiros = calculated;
       },
       error: (error) => {
         this.loadingWithdrawals = false;
@@ -177,13 +185,6 @@ eliminarRetiro(name: string) {
       && !this.loadingWithdrawals
       && Number(this.retiro.monto) > 0
       && String(this.retiro.motivo || '').trim().length > 0;
-  }
-
-  get canViewOtherOpenings(): boolean {
-    if (this.capabilities.hasPermission('*')) return true;
-    const role = String(this.capabilities.businessRole || '')
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
-    return role === 'GERENTE' || role === 'ADMINISTRADOR';
   }
 
   private getCurrentUser(): { email: string } {

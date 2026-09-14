@@ -1,12 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { CajasService } from 'src/app/services/cajas.service';
 
-type CashTab = 'openings' | 'withdrawals' | 'closings';
+type CashTab = 'openings' | 'withdrawals' | 'closings' | 'summary';
 
 @Component({
   selector: 'app-cash-management',
@@ -14,7 +14,7 @@ type CashTab = 'openings' | 'withdrawals' | 'closings';
   templateUrl: './cash-management.component.html',
   styleUrls: ['./cash-management.component.css']
 })
-export class CashManagementComponent implements OnInit {
+export class CashManagementComponent implements OnInit, OnDestroy {
   activeTab: CashTab = 'openings';
   openings: any[] = [];
   withdrawals: any[] = [];
@@ -29,6 +29,7 @@ export class CashManagementComponent implements OnInit {
     fromDate: '',
     toDate: ''
   };
+  private readonly onCashChanged = () => this.loadHistory();
 
   constructor(
     private cajasService: CajasService,
@@ -38,12 +39,20 @@ export class CashManagementComponent implements OnInit {
 
   ngOnInit(): void {
     if (!this.canView) return;
+    window.addEventListener('facturada:restaurant-data-changed', this.onCashChanged);
     this.loadHistory();
   }
 
+  ngOnDestroy(): void {
+    window.removeEventListener('facturada:restaurant-data-changed', this.onCashChanged);
+  }
+
   get canView(): boolean {
-    return this.capabilities.hasPermission('*')
-      || this.capabilities.hasPermission('restaurant.manage');
+    const features = this.capabilities.features;
+    return features.restaurant === true
+      && features.restaurant_pos === true
+      && features.cash_register === true
+      && (this.capabilities.hasPermission('*') || this.capabilities.hasPermission('restaurant.manage'));
   }
 
   loadHistory(): void {

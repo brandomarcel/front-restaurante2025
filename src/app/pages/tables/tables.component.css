@@ -159,6 +159,11 @@
 
 .selected-table-panel { padding: 1rem; }
 .selected-table-kicker { color: #64748b; font-size: .62rem; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
+.table-popup-backdrop { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(15, 23, 42, .42); backdrop-filter: blur(5px); }
+.table-popup { width: min(100%, 34rem); max-height: min(90vh, 42rem); overflow-y: auto; border-color: #cbd5e1; box-shadow: 0 24px 70px rgba(15, 23, 42, .22); animation: table-popup-in .18s ease-out; }
+.table-popup-close { display: grid; width: 2rem; height: 2rem; flex: 0 0 auto; place-items: center; border-radius: .65rem; background: #f1f5f9; color: #64748b; font-size: 1.25rem; line-height: 1; transition: background .15s ease, color .15s ease; }
+.table-popup-close:hover { background: #e2e8f0; color: #0f172a; }
+@keyframes table-popup-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
 @media (max-width: 640px) {
   .tables-hero { padding: 1rem; }

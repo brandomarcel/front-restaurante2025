@@ -151,6 +151,7 @@ export class CloseCajaComponent implements OnInit {
           return result;
         }, {} as Record<string, number>);
         this.calcularDiferencia();
+        this.loadDashboardMetrics();
       },
       error: (error) => {
         console.warn('No hay apertura activa o no se pudo cargar datos de cierre:', error);
@@ -192,6 +193,42 @@ export class CloseCajaComponent implements OnInit {
       '¿Cerrar caja?'
     ).then((result) => {
       if (result.isConfirmed) this.ejecutarCierre();
+    });
+  }
+
+  /**
+   * El resumen operativo debe venir del endpoint oficial de métricas.
+   * Solo se usa para mostrar el turno actual; los valores contados siguen
+   * siendo editables y son los únicos que se envían al cerrar.
+   */
+  private loadDashboardMetrics(): void {
+    this.cajasService.getDashboardMetrics().subscribe({
+      next: (response: any) => {
+        const message = response?.message ?? response ?? {};
+        const cash = message?.data?.cash ?? message?.cash ?? null;
+        if (!cash) return;
+        this.cierre.monto_apertura = this.toNumber(cash.monto_apertura ?? cash.opening_amount ?? this.cierre.monto_apertura);
+        this.cierre.total_retiros = this.toNumber(cash.total_retiros ?? cash.total_withdrawals ?? this.cierre.total_retiros);
+        const expected = cash.efectivo_sistema ?? cash.expected_cash ?? cash.efectivo_esperado;
+        if (expected !== undefined && expected !== null) {
+          this.backendExpectedCash = this.toNumber(expected);
+          this.cierre.efectivo_sistema = this.backendExpectedCash;
+        }
+        const rows = Array.isArray(cash.payment_totals)
+          ? cash.payment_totals
+          : (Array.isArray(cash.payments) ? cash.payments : null);
+        if (rows) {
+          this.paymentTotals = this.normalizePaymentTotals({ payment_totals: rows });
+          this.paymentMethodsForCount = this.buildPaymentMethodsForCount();
+          this.ventasEfectivo = this.paymentAmount('01');
+          this.detallePorMetodo = this.paymentTotals.reduce((result, payment) => {
+            result[payment.payment_code] = payment.amount;
+            return result;
+          }, {} as Record<string, number>);
+        }
+        this.calcularDiferencia();
+      },
+      error: () => { /* La apertura sigue siendo cerrable sin métricas. */ }
     });
   }
 
@@ -272,7 +309,9 @@ export class CloseCajaComponent implements OnInit {
   get canOperateCash(): boolean {
     return this.capabilities.isEnabled('restaurant_pos')
       && this.capabilities.isEnabled('cash_register')
-      && this.capabilities.hasPermission('restaurant.cash.manage');
+      && (this.capabilities.hasPermission('*')
+        || this.capabilities.hasPermission('restaurant.cash.manage')
+        || this.capabilities.hasPermission('restaurant.manage'));
   }
 
   get canSave(): boolean {

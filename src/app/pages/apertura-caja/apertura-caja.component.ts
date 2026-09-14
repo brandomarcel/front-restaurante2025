@@ -6,6 +6,7 @@ import { CajasService } from 'src/app/services/cajas.service';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { finalize } from 'rxjs';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 @Component({
   selector: 'app-apertura-caja',
@@ -25,11 +26,14 @@ export class AperturaCajaComponent implements OnInit {
   aperturaActual: any | null = null;
   loadingStatus = false;
   saving = false;
+  cashMetrics: any | null = null;
+  loadingMetrics = false;
   private loadingCounter = 0;
 
   constructor(private cajasService: CajasService,
     private alertService: AlertService,
-    private spinner: NgxSpinnerService
+    private spinner: NgxSpinnerService,
+    public capabilities: CompanyCapabilitiesService
   ) { }
 
   ngOnInit(): void {
@@ -80,6 +84,7 @@ export class AperturaCajaComponent implements OnInit {
         this.aperturaActual = res?.message?.apertura || (Array.isArray(res?.data) ? res.data[0] : null);
         const status = String(this.aperturaActual?.status || this.aperturaActual?.estado || 'Abierta').toLowerCase();
         this.cajaActiva = !!this.aperturaActual && status !== 'cerrada' && status !== 'closed';
+        this.loadMetrics();
       },
       error: (error) => {
         console.error('Error al verificar apertura activa:', error);
@@ -87,6 +92,24 @@ export class AperturaCajaComponent implements OnInit {
         this.aperturaActual = null;
         this.alertService.error(this.readBackendMessage(error) || 'No se pudo consultar la apertura de caja.');
       }
+    });
+  }
+
+  loadMetrics(): void {
+    if (!this.cajaActiva) {
+      this.cashMetrics = null;
+      return;
+    }
+    this.loadingMetrics = true;
+    this.cajasService.getDashboardMetrics().pipe(
+      finalize(() => this.loadingMetrics = false)
+    ).subscribe({
+      next: (response: any) => {
+        const message = response?.message ?? response ?? {};
+        const data = message?.data ?? {};
+        this.cashMetrics = data?.cash ?? data ?? null;
+      },
+      error: () => { this.cashMetrics = null; }
     });
   }
 

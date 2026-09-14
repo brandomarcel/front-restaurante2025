@@ -13,6 +13,8 @@ export interface MenuItem {
   requiredFeatures?: import('../services/company-capabilities.service').CompanyFeatureKey[];
   permissionKey?: string;
   permissionKeys?: string[];
+  /** Permite mostrar la opción cuando cualquiera de estos permisos está activo. */
+  anyPermissionKeys?: string[];
 }
 
 export interface SubMenuItem {
@@ -29,6 +31,8 @@ export interface SubMenuItem {
   requiredFeatures?: import('../services/company-capabilities.service').CompanyFeatureKey[];
   permissionKey?: string;
   permissionKeys?: string[];
+  /** Permite mostrar la opción cuando cualquiera de estos permisos está activo. */
+  anyPermissionKeys?: string[];
   hideInLite?: boolean;
   hideInApiOnly?: boolean;
   /** Requiere que el contexto exponga api_configuration.enabled. */

@@ -31,6 +31,13 @@
     </span>
   </div>
 
+  <section *ngIf="cajaActiva && cashMetrics" class="grid grid-cols-2 gap-2 md:grid-cols-4">
+    <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"><p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Monto de apertura</p><strong class="mt-1 block text-lg text-slate-900">{{ (cashMetrics.monto_apertura ?? cashMetrics.opening_amount ?? 0) | currency }}</strong></article>
+    <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"><p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Retiros</p><strong class="mt-1 block text-lg text-slate-900">{{ (cashMetrics.total_retiros ?? cashMetrics.total_withdrawals ?? 0) | currency }}</strong></article>
+    <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"><p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Efectivo del sistema</p><strong class="mt-1 block text-lg text-slate-900">{{ (cashMetrics.efectivo_sistema ?? cashMetrics.expected_cash ?? 0) | currency }}</strong></article>
+    <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"><p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Diferencia</p><strong class="mt-1 block text-lg text-slate-900">{{ cashMetrics.difference ?? cashMetrics.diferencia ?? '—' }}</strong></article>
+  </section>
+
   <div *ngIf="loadingStatus" class="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm font-medium text-primary">
     Verificando estado de caja...
   </div>

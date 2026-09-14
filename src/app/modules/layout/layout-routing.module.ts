@@ -24,7 +24,7 @@ const routes: Routes = [
   path: 'caja',
   component: LayoutComponent,
   canActivate: [RoleAccessGuard],
-  data: { requiredFeatures: ['restaurant_pos', 'cash_register'] },
+  data: { requiredFeatures: ['restaurant', 'restaurant_pos', 'cash_register'] },
   loadChildren: () => import('../caja/caja.module').then((m) => m.CajaModule),
 },
 

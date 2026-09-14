@@ -3,8 +3,8 @@
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
         <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-primary-foreground/75">Administración</p>
-        <h1 class="mt-1 text-2xl font-black">Gestión de caja</h1>
-        <p class="mt-1 text-sm text-primary-foreground/80">Consulta aperturas, retiros y cierres del negocio seleccionado.</p>
+        <h1 class="mt-1 text-2xl font-black">Gestión de Cajas</h1>
+        <p class="mt-1 text-sm text-primary-foreground/80">Auditoría de aperturas, retiros y cierres del negocio seleccionado.</p>
       </div>
       <button type="button" class="rounded-lg bg-white/15 px-3 py-2 text-xs font-bold transition hover:bg-white/25 disabled:opacity-60"
         [disabled]="loading" (click)="loadHistory()">Actualizar</button>
@@ -28,7 +28,7 @@
     <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
         <label class="field"><span>Usuario</span><input [(ngModel)]="filters.user" placeholder="Correo o usuario" /></label>
-        <label class="field"><span>Estado</span><input [(ngModel)]="filters.status" placeholder="Abierta, Cerrada..." /></label>
+        <label class="field"><span>Estado</span><select [(ngModel)]="filters.status"><option value="">Todos</option><option value="Borrador">Borrador</option><option value="Confirmado">Confirmado</option><option value="Abierta">Abierta</option><option value="Cerrada">Cerrada</option></select></label>
         <label class="field"><span>Desde</span><input type="date" [(ngModel)]="filters.fromDate" /></label>
         <label class="field"><span>Hasta</span><input type="date" [(ngModel)]="filters.toDate" /></label>
       </div>
@@ -40,6 +40,7 @@
         <button type="button" class="tab-button" [class.tab-active]="activeTab === 'openings'" (click)="activeTab = 'openings'">Aperturas <b>{{ visibleOpenings.length }}</b></button>
         <button type="button" class="tab-button" [class.tab-active]="activeTab === 'withdrawals'" (click)="activeTab = 'withdrawals'">Retiros <b>{{ visibleWithdrawals.length }}</b></button>
         <button type="button" class="tab-button" [class.tab-active]="activeTab === 'closings'" (click)="activeTab = 'closings'">Cierres <b>{{ visibleClosings.length }}</b></button>
+        <button type="button" class="tab-button" [class.tab-active]="activeTab === 'summary'" (click)="activeTab = 'summary'">Resumen</button>
       </nav>
 
       <div *ngIf="loading" class="p-8 text-center text-sm text-slate-500">Cargando historial de caja…</div>
@@ -62,6 +63,14 @@
           <tbody><tr *ngFor="let row of visibleClosings; trackBy: trackByName"><td>{{ row.name || row.cierre || '—' }}</td><td>{{ rowUser(row) }}</td><td>{{ rowDate(row) | date:'short' }}</td><td><span class="status-badge">{{ rowStatus(row) }}</span></td><td>{{ (row.efectivo_sistema ?? row.system_cash ?? 0) | currency }}</td><td>{{ (row.diferencia ?? row.difference ?? 0) | currency }}</td></tr></tbody>
         </table>
         <p *ngIf="visibleClosings.length === 0" class="empty">No hay cierres para los filtros seleccionados.</p>
+      </div>
+      <div *ngIf="!loading && !error && activeTab === 'summary'" class="grid grid-cols-2 gap-3 p-4 md:grid-cols-3">
+        <article class="metric-card"><span>Total aperturas</span><strong>{{ countSummary('total_openings', 'total_aperturas', 'aperturas_total', 'openings_count') }}</strong></article>
+        <article class="metric-card"><span>Aperturas activas</span><strong>{{ countSummary('open_openings', 'currently_open', 'aperturas_abiertas', 'abiertas_actualmente') }}</strong></article>
+        <article class="metric-card"><span>Total cierres</span><strong>{{ countSummary('total_closings', 'total_cierres', 'cierres_total', 'closings_count') }}</strong></article>
+        <article class="metric-card"><span>Cantidad de retiros</span><strong>{{ countSummary('withdrawals_count', 'cantidad_retiros', 'total_withdrawals', 'retiros_total') }}</strong></article>
+        <article class="metric-card"><span>Monto retirado</span><strong>{{ moneySummary('withdrawals_amount', 'monto_total_retirado', 'total_withdrawals_amount', 'total_retirado') | currency }}</strong></article>
+        <article class="metric-card"><span>Diferencia acumulada</span><strong>{{ moneySummary('accumulated_difference', 'diferencia_acumulada', 'total_difference') | currency }}</strong></article>
       </div>
     </section>
   </ng-container>

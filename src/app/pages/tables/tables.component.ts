@@ -23,6 +23,7 @@ export class TablesComponent implements OnInit, OnDestroy {
   activeOrders: any[] = [];
   selectedTable: any | null = null;
   selectedOrders: any[] = [];
+  showTablePopup = false;
   loading = false;
   loadingOrders = false;
   saving = false;
@@ -212,7 +213,12 @@ export class TablesComponent implements OnInit, OnDestroy {
   selectTable(table: any): void {
     this.selectedTable = table;
     this.updateSelectedOrders();
+    this.showTablePopup = true;
     if (this.isOccupied(table) && !this.activeOrders.length && !this.loadingOrders) this.refreshActiveOrders();
+  }
+
+  closeTablePopup(): void {
+    this.showTablePopup = false;
   }
 
   openCreate(): void {

@@ -90,8 +90,24 @@ export class CajasService {
     });
   }
 
+  /** Métricas oficiales de la caja del usuario y negocio activo. */
+  getDashboardMetrics() {
+    const accessError = this.cashAccessError();
+    if (accessError) return throwError(() => accessError);
+    const business = this.activeBusinessOrError();
+    if (business instanceof Error) return throwError(() => business);
+    return this.http.get<any>(`${this.restaurantApi}.get_dashboard_metrics`, {
+      context: new HttpContext().set(REQUIRE_AUTH, true),
+      params: new HttpParams().set('business', business)
+    });
+  }
+
   /** Historial administrativo de aperturas, retiros y cierres del negocio. */
   getCashRegisterHistory() {
+    const features = this.capabilities.features;
+    if (!(features.restaurant === true && features.restaurant_pos === true && features.cash_register === true)) {
+      return throwError(() => new Error('La gestión de cajas no está habilitada para este negocio.'));
+    }
     if (!this.capabilities.hasPermission('*') && !this.capabilities.hasPermission('restaurant.manage')) {
       return throwError(() => new Error('Solo un gerente o administrador puede consultar toda la gestión de caja'));
     }
@@ -208,7 +224,9 @@ export class CajasService {
     const featureEnabled = this.capabilities.isEnabled('restaurant_pos')
       && this.capabilities.isEnabled('cash_register');
     if (!featureEnabled) return new Error('La función pos no está habilitada para este negocio.');
-    if (!this.capabilities.hasPermission('restaurant.cash.manage')) {
+    if (!this.capabilities.hasPermission('*')
+      && !this.capabilities.hasPermission('restaurant.cash.manage')
+      && !this.capabilities.hasPermission('restaurant.manage')) {
       return new Error('El rol del usuario no permite realizar esta operación.');
     }
     return null;

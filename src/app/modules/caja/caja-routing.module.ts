@@ -8,15 +8,15 @@ import { RoleAccessGuard } from 'src/app/core/guards/role-access.guard';
 
 
 const routes: Routes = [
-  { path: 'apertura', component: AperturaCajaComponent, canActivate: [RoleAccessGuard], data: { permissionKey: 'restaurant.cash.manage' } },
-  { path: 'cierre', component: CloseCajaComponent, canActivate: [RoleAccessGuard], data: { permissionKey: 'restaurant.cash.manage' } },
-  { path: 'retiro', component: RetiroCajaComponent, canActivate: [RoleAccessGuard], data: { permissionKey: 'restaurant.cash.manage' } },
+  { path: 'apertura', component: AperturaCajaComponent, canActivate: [RoleAccessGuard], data: { anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage'] } },
+  { path: 'cierre', component: CloseCajaComponent, canActivate: [RoleAccessGuard], data: { anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage'] } },
+  { path: 'retiro', component: RetiroCajaComponent, canActivate: [RoleAccessGuard], data: { anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage'] } },
   {
     path: 'gestion',
     component: CashManagementComponent,
     canActivate: [RoleAccessGuard],
     data: {
-      requiredFeatures: ['restaurant_pos', 'cash_register'],
+      requiredFeatures: ['restaurant', 'restaurant_pos', 'cash_register'],
       anyPermissionKeys: ['restaurant.manage']
     }
   },
