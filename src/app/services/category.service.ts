@@ -14,7 +14,7 @@ export class CategoryService {
   constructor(private http: HttpClient, private capabilities: CompanyCapabilitiesService) {}
 
 
-  getAll(isactive?: number) {
+  getAll(isactive?: number, limit?: number, offset = 0, search = '', status?: string) {
     const business = this.getLiteBusiness();
     if (!business) return throwError(() => new Error('No hay un negocio seleccionado.'));
 
@@ -22,11 +22,38 @@ export class CategoryService {
     if (isactive !== undefined && isactive !== null) {
       params = params.set('isactive', String(isactive));
     }
+    if (limit !== undefined) {
+      params = params.set('limit', String(limit)).set('offset', String(offset));
+    }
+    if (search.trim()) params = params.set('search', search.trim());
+    if (status) params = params.set('status', status);
 
     return this.http.get(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_categorias`, {
       params,
       context: new HttpContext().set(REQUIRE_AUTH, true)
-    }).pipe(map((response: any) => frappeList<any>(response).map((category) => this.fromLiteCategory(category))));
+    }).pipe(map((response: any) => {
+      const message = response?.message ?? response ?? {};
+      const rawData = message?.data;
+      const rows = (Array.isArray(rawData)
+        ? rawData
+        : (Array.isArray(rawData?.data) ? rawData.data : frappeList<any>(response)))
+        .map((category:any) => this.fromLiteCategory(category));
+      if (limit === undefined) return rows;
+      const totalValue = Number(message?.total ?? message?.total_count ?? message?.count ?? rawData?.total ?? response?.total);
+      const total = Number.isFinite(totalValue) && totalValue >= 0 ? totalValue : rows.length;
+      const hasNext = message?.has_next ?? message?.hasNext ?? (offset + rows.length < total);
+      return {
+        ...response,
+        message: {
+          ...message,
+          data: rows,
+          total,
+          limit: Number(message?.limit ?? limit),
+          offset: Number(message?.offset ?? offset),
+          has_next: Boolean(hasNext)
+        }
+      };
+    }));
   }
 
   create(data: any) {

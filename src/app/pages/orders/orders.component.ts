@@ -3,7 +3,6 @@ import { Component, OnInit } from '@angular/core';
 import { OrdersService } from 'src/app/services/orders.service';
 import { EcuadorTimePipe } from '../../core/pipes/ecuador-time-pipe.pipe';
 import { NgxSpinnerService } from 'ngx-spinner';
-import { NgxPaginationModule } from 'ngx-pagination';
 import { FormsModule } from '@angular/forms';
 import { PrintService } from 'src/app/services/print.service';
 import { toast } from 'ngx-sonner';
@@ -21,7 +20,6 @@ type EstadoOrden = '' | 'Ingresada' | 'Preparación' | 'Cerrada';
   selector: 'app-orders',
   imports: [CommonModule,
     // EcuadorTimePipe,
-    NgxPaginationModule,
     FormsModule, ButtonComponent,
     RouterModule,
     OrderModalComponent,
@@ -72,15 +70,22 @@ export class OrdersComponent implements OnInit {
     const today = String(this.utils.getSoloFechaEcuador());
     const createdFrom = this.isMeseroOrCajero ? today : undefined;
     const createdTo = this.isMeseroOrCajero ? today : undefined;
+    const status = this.estadoFiltro === 'Preparación' ? 'Preparacion' : (this.estadoFiltro || undefined);
 
-    this.ordersService.getAll(this.pageSize, offset, createdFrom, createdTo).subscribe({
+    this.ordersService.getAll(this.pageSize, offset, createdFrom, createdTo, 'desc', status).subscribe({
       next: (res: any) => {
         console.log('res', res);
         const rows = res.message.data || [];
         this.orders = rows;
         console.log('this.orders', this.orders);
+        this.pageSize = Number(res.message?.limit ?? this.pageSize) || this.pageSize;
+        const responseOffset = Number(res.message?.offset);
+        if (Number.isFinite(responseOffset) && responseOffset >= 0) {
+          this.page = Math.floor(responseOffset / this.pageSize) + 1;
+        }
         this.totalOrders = Number(res.message?.total ?? res.message?.total_count ?? res.message?.count ?? this.orders.length) || 0;
-        this.totalPages = Math.ceil(this.totalOrders / this.pageSize) || 1;
+        const hasNext = Boolean(res.message?.has_next ?? res.message?.hasNext);
+        this.totalPages = Math.max(1, Math.ceil(this.totalOrders / this.pageSize) || 1, hasNext ? this.page + 1 : 1);
 
         this.actualizarOrdenesFiltradas();  // aplicar filtros con la data nueva
         this.spinner.hide();
@@ -174,12 +179,14 @@ export class OrdersComponent implements OnInit {
     this.tipoFiltro = '';
     this.estadoFiltro = '';
     this.anulacionFiltro = '';
-    this.actualizarOrdenesFiltradas();
+    this.page = 1;
+    this.loadOrders();
   }
 
   setEstadoFiltro(value: EstadoOrden): void {
     this.estadoFiltro = value;
-    this.actualizarOrdenesFiltradas();
+    this.page = 1;
+    this.loadOrders();
   }
 
   countByEstado(value: EstadoOrden): number {

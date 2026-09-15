@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { NgxPaginationModule } from 'ngx-pagination';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { CategoryService } from 'src/app/services/category.service';
@@ -13,7 +12,7 @@ import { AppPaginationComponent } from 'src/app/shared/components/pagination/app
 
 @Component({
   selector: 'app-categorys',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule,ButtonComponent, AppPaginationComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonComponent, AppPaginationComponent],
   templateUrl: './categorys.component.html',
   styleUrl: './categorys.component.css'
 })
@@ -23,7 +22,11 @@ export class CategorysComponent implements OnInit {
 
   private _searchTerm = '';
   get searchTerm() { return this._searchTerm; }
-  set searchTerm(v: string) { this._searchTerm = v || ''; this.actualizarCategoriasFiltradas(); }
+  set searchTerm(v: string) {
+    this._searchTerm = v || '';
+    this.page = 1;
+    this.loadCategory();
+  }
 
   // filtro de estado: '' | 'activos' | 'inactivos'
   estadoFiltro: '' | 'activos' | 'inactivos' = '';
@@ -33,10 +36,19 @@ export class CategorysComponent implements OnInit {
 
   page = 1;
   pageSize = 10;
+  totalCategories = 0;
+  totalPages = 1;
 
-  get totalPages(): number { return Math.max(1, Math.ceil((this.categoriesFiltradasList.length || 0) / this.pageSize)); }
-  onPaginationPage(page: number): void { this.page = page; }
-  onPaginationPageSize(size: number): void { this.pageSize = size; this.page = 1; }
+  onPaginationPage(page: number): void {
+    if (page === this.page) return;
+    this.page = page;
+    this.loadCategory();
+  }
+  onPaginationPageSize(size: number): void {
+    this.pageSize = size;
+    this.page = 1;
+    this.loadCategory();
+  }
 
   categoriaForm!: FormGroup;
 
@@ -70,14 +82,25 @@ export class CategorysComponent implements OnInit {
 
   loadCategory() {
     this.spinner.show();
-    this.categoryService.getAll().subscribe({
+    const offset = (this.page - 1) * this.pageSize;
+    const status = this.estadoFiltro === 'activos' ? 'Activo' : this.estadoFiltro === 'inactivos' ? 'Inactivo' : undefined;
+    this.categoryService.getAll(undefined, this.pageSize, offset, this._searchTerm, status).subscribe({
       next: (res: any) => {
         this.spinner.hide();
-        const data = Array.isArray(res) ? res : (res?.message?.data ?? res?.data ?? []);
+        const message = res?.message ?? res ?? {};
+        const data = Array.isArray(message?.data) ? message.data : (Array.isArray(res) ? res : []);
         this.categories = data;
+        this.pageSize = Number(message?.limit ?? this.pageSize) || this.pageSize;
+        const responseOffset = Number(message?.offset);
+        if (Number.isFinite(responseOffset) && responseOffset >= 0) {
+          this.page = Math.floor(responseOffset / this.pageSize) + 1;
+        }
+        this.totalCategories = Number(message?.total ?? this.categories.length) || 0;
+        const hasNext = Boolean(message?.has_next ?? message?.hasNext);
+        this.totalPages = Math.max(1, Math.ceil(this.totalCategories / this.pageSize), hasNext ? this.page + 1 : 1);
         // ordena por nombre visible
         this.categories.sort((a: any, b: any) => (a?.category_name || a?.nombre || '').localeCompare(b?.category_name || b?.nombre || ''));
-        this.actualizarCategoriasFiltradas();
+        this.categoriesFiltradasList = [...this.categories];
       },
       error: (error: any) => {
         this.spinner.hide();
@@ -87,29 +110,8 @@ export class CategorysComponent implements OnInit {
   }
 
   actualizarCategoriasFiltradas() {
-    const term = (this._searchTerm || '').toLowerCase();
-
-    let lista = Array.isArray(this.categories) ? [...this.categories] : [];
-
-    lista = lista.filter((c: any) => {
-      const byText =
-        ((c?.category_name || c?.nombre) && String(c.category_name || c.nombre).toLowerCase().includes(term)) ||
-        ((c?.description || c?.descripcion) && String(c.description || c.descripcion).toLowerCase().includes(term)) ||
-        (c?.name && c.name.toLowerCase().includes(term));
-
-      const activo = !!c?.isactive; // del backend suele venir isactive
-      const byEstado =
-        this.estadoFiltro === ''
-          ? true
-          : this.estadoFiltro === 'activos'
-            ? activo
-            : !activo;
-
-      return byText && byEstado;
-    });
-
-    this.categoriesFiltradasList = lista;
     this.page = 1;
+    this.loadCategory();
   }
 
   limpiarFiltros() {

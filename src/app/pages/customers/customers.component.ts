@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
-import { NgxPaginationModule } from 'ngx-pagination';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
@@ -14,7 +13,7 @@ import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabi
 
 @Component({
   selector: 'app-customers',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule, ButtonComponent, AppPaginationComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonComponent, AppPaginationComponent],
   templateUrl: './customers.component.html',
   styleUrl: './customers.component.css'
 })
@@ -35,10 +34,19 @@ export class CustomersComponent implements OnInit {
 
   page = 1;
   pageSize = 10;
+  totalCustomers = 0;
+  totalPages = 1;
 
-  get totalPages(): number { return Math.max(1, Math.ceil((this.filteredCustomersList.length || 0) / this.pageSize)); }
-  onPaginationPage(page: number): void { this.page = page; }
-  onPaginationPageSize(size: number): void { this.pageSize = size; this.page = 1; }
+  onPaginationPage(page: number): void {
+    if (page === this.page) return;
+    this.page = page;
+    this.cargarClientes();
+  }
+  onPaginationPageSize(size: number): void {
+    this.pageSize = size;
+    this.page = 1;
+    this.cargarClientes();
+  }
 
   constructor(
     private customersService: CustomersService,
@@ -89,10 +97,20 @@ export class CustomersComponent implements OnInit {
 
   cargarClientes() {
     this.spinner.show();
-    this.customersService.getAll().subscribe({
+    const offset = (this.page - 1) * this.pageSize;
+    this.customersService.getAll(1, this.pageSize, offset, this._searchTerm).subscribe({
       next: (res: any) => {
         this.spinner.hide();
-        this.customers = Array.isArray(res) ? res : (res?.message?.data || []);
+        const message = res?.message ?? res ?? {};
+        this.customers = Array.isArray(message?.data) ? message.data : (Array.isArray(res) ? res : []);
+        this.pageSize = Number(message?.limit ?? this.pageSize) || this.pageSize;
+        const responseOffset = Number(message?.offset);
+        if (Number.isFinite(responseOffset) && responseOffset >= 0) {
+          this.page = Math.floor(responseOffset / this.pageSize) + 1;
+        }
+        this.totalCustomers = Number(message?.total ?? this.customers.length) || 0;
+        const hasNext = Boolean(message?.has_next ?? message?.hasNext);
+        this.totalPages = Math.max(1, Math.ceil(this.totalCustomers / this.pageSize), hasNext ? this.page + 1 : 1);
         this.filteredCustomersList = [...this.customers].sort((a, b) =>
           (a.nombre || '').localeCompare(b.nombre || '')
         );
@@ -110,14 +128,8 @@ export class CustomersComponent implements OnInit {
   }
 
   filtrarClientes() {
-    const term = (this._searchTerm || '').toLowerCase();
-    this.filteredCustomersList = (this.customers || []).filter(c =>
-      (c.nombre && c.nombre.toLowerCase().includes(term)) ||
-      (c.num_identificacion && c.num_identificacion.toLowerCase().includes(term))
-    );
-    // Opcional: mantener orden al filtrar
-    this.filteredCustomersList.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
     this.page = 1;
+    this.cargarClientes();
   }
 
   abrirModal(cliente: any = null) {

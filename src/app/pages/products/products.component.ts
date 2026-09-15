@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { NgxPaginationModule } from 'ngx-pagination';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { catchError, finalize, map, of, switchMap } from 'rxjs';
@@ -27,7 +26,7 @@ type StockEditMode = 'absolute' | 'delta';
 
 @Component({
   selector: 'app-products',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule, ButtonComponent, AppPaginationComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonComponent, AppPaginationComponent],
   templateUrl: './products.component.html',
   styleUrl: './products.component.css'
 })
@@ -63,10 +62,19 @@ export class ProductsComponent implements OnInit {
 
   page = 1;
   pageSize = 10;
+  totalProducts = 0;
+  totalPages = 1;
 
-  get totalPages(): number { return Math.max(1, Math.ceil((this.productosFiltradosList.length || 0) / this.pageSize)); }
-  onPaginationPage(page: number): void { this.page = page; }
-  onPaginationPageSize(size: number): void { this.pageSize = size; this.page = 1; }
+  onPaginationPage(page: number): void {
+    if (page === this.page) return;
+    this.page = page;
+    this.cargarProductos();
+  }
+  onPaginationPageSize(size: number): void {
+    this.pageSize = size;
+    this.page = 1;
+    this.cargarProductos();
+  }
 
   constructor(
     private productsService: ProductsService,
@@ -118,7 +126,8 @@ export class ProductsComponent implements OnInit {
 
   set searchTerm(value: string) {
     this._searchTerm = value || '';
-    this.actualizarProductosFiltrados();
+    this.page = 1;
+    this.cargarProductos();
   }
 
   get inventoryControlledCount(): number {
@@ -139,11 +148,23 @@ export class ProductsComponent implements OnInit {
 
   cargarProductos() {
     this.spinner.show();
-    this.productsService.getAll().subscribe({
+    const offset = (this.page - 1) * this.pageSize;
+    const activeFilter = this.soloActivos ? 1 : null;
+    const statusFilter = this.soloActivos ? 'Activo' : undefined;
+    this.productsService.getAll(activeFilter, this.pageSize, offset, this._searchTerm, statusFilter, this.categoriaFiltro, this.soloBajoStock).subscribe({
       next: (res: any) => {
-        const data = Array.isArray(res) ? res : (res?.message?.data || []);
+        const message = res?.message ?? res ?? {};
+        const data = Array.isArray(message?.data) ? message.data : (Array.isArray(res) ? res : []);
         this.productos = Array.isArray(data) ? data : [];
-        this.actualizarProductosFiltrados();
+        this.pageSize = Number(message?.limit ?? this.pageSize) || this.pageSize;
+        const responseOffset = Number(message?.offset);
+        if (Number.isFinite(responseOffset) && responseOffset >= 0) {
+          this.page = Math.floor(responseOffset / this.pageSize) + 1;
+        }
+        this.totalProducts = Number(message?.total ?? this.productos.length) || 0;
+        const hasNext = Boolean(message?.has_next ?? message?.hasNext);
+        this.totalPages = Math.max(1, Math.ceil(this.totalProducts / this.pageSize), hasNext ? this.page + 1 : 1);
+        this.productosFiltradosList = [...this.productos];
       },
       error: (error: any) => {
         const mensaje = this.frappeErrorService.handle(error);
@@ -187,24 +208,8 @@ export class ProductsComponent implements OnInit {
   }
 
   actualizarProductosFiltrados() {
-    const term = (this._searchTerm || '').toLowerCase();
-    const cat = this.categoriaFiltro || '';
-
-    this.productosFiltradosList = (this.productos || []).filter((product) => {
-      const nombre = String(product?.nombre || '').toLowerCase();
-      const codigo = String(product?.codigo || '').toLowerCase();
-      const byText = !term || nombre.includes(term) || codigo.includes(term);
-      const productCategory = product?.categoria || (product as any)?.category || '';
-      const byCat = !cat || String(productCategory).toLowerCase().includes(cat.toLowerCase());
-      const byActive = !this.soloActivos || toInventoryBool(product?.isactive);
-      const byLowStock = !this.soloBajoStock || this.isLowStock(product);
-
-      return byText && byCat && byActive && byLowStock;
-    }).sort((a, b) => String(a?.nombre || '').localeCompare(String(b?.nombre || '')));
-
-    if (this.page > 1 && (this.productosFiltradosList.length || 0) <= ((this.page - 1) * this.pageSize)) {
-      this.page = 1;
-    }
+    this.page = 1;
+    this.cargarProductos();
   }
 
   limpiarFiltros() {

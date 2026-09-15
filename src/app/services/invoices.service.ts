@@ -90,11 +90,13 @@ export class InvoicesService {
     return this.retryLiteInvoice(invoice_name);
   }
 
-  getAllInvoices(limit: number = 10, offset: number = 0, status?: string) {
+  getAllInvoices(limit: number = 10, offset: number = 0, status?: string, search = '') {
+  const pageSize = Math.max(1, Number(limit) || 10);
   let params = new HttpParams()
-    .set('limit', limit.toString())
+    .set('limit', pageSize.toString())
     .set('offset', offset.toString());
   if (status) params = params.set('status', this.normalizeLiteStatusFilter(status));
+  if (search.trim()) params = params.set('search', search.trim());
   const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId');
   if (business) params = params.set('business', business);
 
@@ -103,9 +105,43 @@ export class InvoicesService {
     { context: new HttpContext().set(REQUIRE_AUTH, true), params }
   );
   return request$.pipe(map((res: any) => {
-        const rows = frappeList<any>(res).map((item) => this.fromLiteInvoice(item));
-        const message = res?.message ?? res ?? {};
-        return { data: rows, total: Number(message?.total ?? res?.total ?? rows.length) };
+        const body = res?.message ?? res ?? {};
+        const rawData = body?.data;
+        const sourceRows = Array.isArray(rawData)
+          ? rawData
+          : (Array.isArray(rawData?.data) ? rawData.data : frappeList<any>(res));
+        const rows = sourceRows.map((item:any) => this.fromLiteInvoice(item));
+        const totalCandidate = body?.total
+          ?? body?.total_count
+          ?? body?.count
+          ?? body?.pagination?.total
+          ?? rawData?.total
+          ?? res?.total
+          ?? res?.total_count;
+        const parsedTotal = Number(totalCandidate);
+        const hasBackendTotal = Number.isFinite(parsedTotal) && parsedTotal >= 0;
+        const hasNext = Boolean(body?.has_next ?? body?.hasNext ?? (
+          hasBackendTotal ? offset + rows.length < parsedTotal : false
+        ));
+        const visibleRows = rows.slice(0, pageSize);
+        const total = hasBackendTotal ? parsedTotal : visibleRows.length;
+        const paginationMessage = {
+          ...body,
+          data: visibleRows,
+          total,
+          limit: Number(body?.limit ?? pageSize),
+          offset: Number(body?.offset ?? offset),
+          has_next: hasNext
+        };
+        return {
+          data: visibleRows,
+          total,
+          hasNext,
+          has_next: hasNext,
+          limit: Number(body?.limit ?? pageSize),
+          offset: Number(body?.offset ?? offset),
+          message: paginationMessage
+        };
       }));
 }
 

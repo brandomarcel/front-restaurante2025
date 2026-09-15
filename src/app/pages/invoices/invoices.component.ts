@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NgxPaginationModule } from 'ngx-pagination';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { EcuadorTimePipe } from '../../core/pipes/ecuador-time-pipe.pipe';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
@@ -18,7 +17,7 @@ import { AppPaginationComponent } from 'src/app/shared/components/pagination/app
 @Component({
   selector: 'app-invoices',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgxPaginationModule, EcuadorTimePipe, ButtonComponent,RouterModule, AppPaginationComponent],
+  imports: [CommonModule, FormsModule, EcuadorTimePipe, ButtonComponent,RouterModule, AppPaginationComponent],
   templateUrl: './invoices.component.html',
   styleUrls: ['./invoices.component.css']
 })
@@ -55,12 +54,18 @@ export class InvoicesComponent implements OnInit {
   loadInvoices(): void {
     this.spinner.show();
     const offset = (this.page - 1) * this.pageSize;
-    this.svc.getAllInvoices(this.pageSize, offset, this.statusFiltro || undefined).subscribe({
+    this.svc.getAllInvoices(this.pageSize, offset, this.statusFiltro || undefined, this._search).subscribe({
       next: (res: any) => {
         const msg = res.message || res; // depende de tu proxy
         this.invoices = msg.data || [];
+        this.pageSize = Number(res?.limit ?? msg?.limit ?? this.pageSize) || this.pageSize;
+        const responseOffset = Number(res?.offset ?? msg?.offset);
+        if (Number.isFinite(responseOffset) && responseOffset >= 0) {
+          this.page = Math.floor(responseOffset / this.pageSize) + 1;
+        }
         this.total = Number(msg.total ?? msg.total_count ?? msg.count ?? this.invoices.length) || 0;
-        this.totalPages = Math.ceil(this.total / this.pageSize) || 1;
+        const hasNext = Boolean(res?.hasNext ?? msg?.has_next ?? msg?.hasNext);
+        this.totalPages = Math.max(1, Math.ceil(this.total / this.pageSize) || 1, hasNext ? this.page + 1 : 1);
         this.aplicarFiltros();
         this.spinner.hide();
       },
@@ -74,7 +79,8 @@ export class InvoicesComponent implements OnInit {
   get search(): string { return this._search; }
   set search(v: string) {
     this._search = v || '';
-    this.aplicarFiltros();
+    this.page = 1;
+    this.loadInvoices();
   }
 
   aplicarFiltros(): void {

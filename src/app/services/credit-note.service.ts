@@ -57,11 +57,13 @@ export class CreditNoteService {
   }
 
 
-  getAllCreditNotes(limit: number = 10, offset: number = 0, status?: string) {
+  getAllCreditNotes(limit: number = 10, offset: number = 0, status?: string, search = '') {
+      const pageSize = Math.max(1, Number(limit) || 10);
       let params = new HttpParams()
-        .set('limit', limit.toString())
+        .set('limit', pageSize.toString())
         .set('offset', offset.toString());
       if (status) params = params.set('status', status);
+      if (search.trim()) params = params.set('search', search.trim());
       const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId');
       if (!business) return throwError(() => new Error('Selecciona un negocio para consultar las notas de crédito.'));
       params = params.set('business', business);
@@ -71,7 +73,11 @@ export class CreditNoteService {
       ).pipe(
         map((response: any) => {
           const message = response?.message ?? response ?? {};
-          const rows = Array.isArray(message?.data) ? message.data : [];
+          const rawData = message?.data;
+          const sourceRows = Array.isArray(rawData)
+            ? rawData
+            : (Array.isArray(rawData?.data) ? rawData.data : []);
+          const rows = sourceRows;
           // Este endpoint ya devuelve únicamente notas de crédito. No se
           // infiere el tipo por el nombre interno del documento.
           const creditNotes = rows.map((item: any) => ({
@@ -98,11 +104,28 @@ export class CreditNoteService {
               access_key: item?.access_key ?? item?.sri?.access_key
             }
           }));
+          const totalCandidate = message?.total
+            ?? message?.total_count
+            ?? message?.count
+            ?? message?.pagination?.total
+            ?? rawData?.total
+            ?? response?.total
+            ?? response?.total_count;
+          const parsedTotal = Number(totalCandidate);
+          const hasBackendTotal = Number.isFinite(parsedTotal) && parsedTotal >= 0;
+          const hasNext = Boolean(message?.has_next ?? message?.hasNext ?? (
+            hasBackendTotal ? offset + creditNotes.length < parsedTotal : false
+          ));
+          const visibleNotes = creditNotes.slice(0, pageSize);
+          const total = hasBackendTotal ? parsedTotal : visibleNotes.length;
           return {
             message: {
               ...message,
-              data: creditNotes,
-              total: Number(message?.total ?? message?.total_count ?? message?.count ?? response?.total ?? creditNotes.length)
+              data: visibleNotes,
+              total,
+              limit: Number(message?.limit ?? pageSize),
+              offset: Number(message?.offset ?? offset),
+              has_next: hasNext
             }
           };
         })

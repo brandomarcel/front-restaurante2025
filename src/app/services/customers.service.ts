@@ -46,12 +46,17 @@ export class CustomersService {
   // }
 
 
-  getAll(isactive: number = 1) {
+  getAll(isactive: number | undefined = 1, limit?: number, offset = 0, search = '', status?: string) {
     let params = new HttpParams();
 
     if (isactive !== undefined && isactive !== null) {
       params = params.set('isactive', isactive.toString());
     }
+    if (limit !== undefined) {
+      params = params.set('limit', String(limit)).set('offset', String(offset));
+    }
+    if (search.trim()) params = params.set('search', search.trim());
+    if (status) params = params.set('status', status);
     params = this.withLiteBusiness(params);
 
     const url = `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_clientes`;
@@ -60,7 +65,29 @@ export class CustomersService {
       params,
       context: new HttpContext().set(REQUIRE_AUTH, true)
     });
-    return request$.pipe(map((res: any) => frappeList<any>(res).map((item) => this.fromLiteCustomer(item))));
+    return request$.pipe(map((res: any) => {
+      const message = res?.message ?? res ?? {};
+      const rawData = message?.data;
+      const rows = (Array.isArray(rawData)
+        ? rawData
+        : (Array.isArray(rawData?.data) ? rawData.data : frappeList<any>(res)))
+        .map((item:any) => this.fromLiteCustomer(item));
+      if (limit === undefined) return rows;
+      const totalValue = Number(message?.total ?? message?.total_count ?? message?.count ?? rawData?.total ?? res?.total);
+      const total = Number.isFinite(totalValue) && totalValue >= 0 ? totalValue : rows.length;
+      const hasNext = message?.has_next ?? message?.hasNext ?? (offset + rows.length < total);
+      return {
+        ...res,
+        message: {
+          ...message,
+          data: rows,
+          total,
+          limit: Number(message?.limit ?? limit),
+          offset: Number(message?.offset ?? offset),
+          has_next: Boolean(hasNext)
+        }
+      };
+    }));
   }
 
   searchClientes(search: string, limit = 10, isactive = 1): Observable<any[]> {

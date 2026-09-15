@@ -54,6 +54,8 @@ export interface OrdersListResponse {
     total: number;
     limit: number;
     offset: number;
+    has_next?: boolean;
+    hasNext?: boolean;
     filters?: any;
   }
 }
@@ -80,8 +82,9 @@ export class OrdersService {
     order: 'asc' | 'desc' = 'desc',
     status?: string
   ): Observable<OrdersListResponse> {
+    const pageSize = Math.max(1, Number(limit) || 10);
     let params = new HttpParams()
-      .set('limit', String(limit))
+      .set('limit', String(pageSize))
       .set('offset', String(offset));
 
     const business = this.activeBusinessOrError();
@@ -95,7 +98,7 @@ export class OrdersService {
     return this.http.get<OrdersListResponse>(`${this.urlBase}.get_all_orders`, {
       context: new HttpContext().set(REQUIRE_AUTH, true),
       params
-    }).pipe(map((response: any) => this.normalizeListResponse(response)));
+    }).pipe(map((response: any) => this.normalizeListResponse(response, pageSize, offset)));
   }
 
   get_dashboard_metrics() {
@@ -457,10 +460,38 @@ updateOrderForInvoice(payload: any): Observable<any> {
     return null;
   }
 
-  private normalizeListResponse(response: any): OrdersListResponse {
+  private normalizeListResponse(response: any, pageSize?: number, offset = 0): OrdersListResponse {
     const message = response?.message ?? response ?? {};
-    const rows = Array.isArray(message?.data) ? message.data : [];
-    return { message: { ...message, data: rows.map((row: any) => this.normalizeRestaurantOrder(row)), total: Number(message?.total ?? message?.total_count ?? rows.length), limit: Number(message?.limit ?? rows.length), offset: Number(message?.offset ?? 0) } };
+    const rawData = message?.data;
+    const sourceRows = Array.isArray(rawData)
+      ? rawData
+      : (Array.isArray(rawData?.data) ? rawData.data : []);
+    const rows = sourceRows.map((row: any) => this.normalizeRestaurantOrder(row));
+    const size = Math.max(1, Number(pageSize) || Number(message?.limit) || rows.length || 10);
+    const totalCandidate = message?.total
+      ?? message?.total_count
+      ?? message?.count
+      ?? message?.pagination?.total
+      ?? rawData?.total
+      ?? response?.total
+      ?? response?.total_count;
+    const parsedTotal = Number(totalCandidate);
+    const hasBackendTotal = Number.isFinite(parsedTotal) && parsedTotal >= 0;
+    const hasNext = Boolean(message?.has_next ?? message?.hasNext ?? (
+      hasBackendTotal ? offset + rows.length < parsedTotal : false
+    ));
+    const visibleRows = rows.slice(0, size);
+    const total = hasBackendTotal ? parsedTotal : visibleRows.length;
+    return {
+      message: {
+        ...message,
+        data: visibleRows,
+        total,
+        has_next: hasNext,
+        limit: size,
+        offset
+      }
+    };
   }
 
   private normalizeDetailResponse(response: any): any {
