@@ -125,6 +125,10 @@
 
           <div *ngIf="activeDetailTab === 'electronic'" class="rounded-lg bg-slate-50 px-2.5 py-2">
             <div class="grid gap-x-3 gap-y-1 sm:grid-cols-2">
+               <div *ngIf="invoice?.sri?.access_key" class="sm:col-span-2">
+                <span class="text-[10px] font-bold uppercase text-muted-foreground">Clave de acceso</span>
+                <p class="truncate font-mono text-[11px] font-semibold text-blue-700">{{ invoice?.sri?.access_key }}</p>
+              </div>
               <div>
                 <span class="text-[10px] font-bold uppercase text-muted-foreground">Número SRI</span>
                 <p class="font-bold text-slate-900">{{ invoice?.sri?.number || '—' }}</p>
@@ -149,10 +153,7 @@
                 <span class="text-[10px] font-bold uppercase text-muted-foreground">Número de autorización</span>
                 <p class="truncate font-semibold">{{ invoice?.sri?.authorization_number }}</p>
               </div>
-              <div *ngIf="invoice?.sri?.access_key" class="sm:col-span-2">
-                <span class="text-[10px] font-bold uppercase text-muted-foreground">Clave</span>
-                <p class="truncate font-mono text-[11px] font-semibold text-blue-700">{{ invoice?.sri?.access_key }}</p>
-              </div>
+             
             </div>
           </div>
         </div>

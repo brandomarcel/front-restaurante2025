@@ -69,6 +69,7 @@ export class InvoiceDetailPageComponent implements OnInit {
     this.spinner.show();
     this.invoicesSvc.getInvoiceDetail(id).subscribe({
       next: (res: any) => {
+        console.log('response invoice detail', res);
         this.invoice = res?.data && typeof res.data === 'object' && !Array.isArray(res.data)
           ? res.data
           : (res?.message?.data || (res?.message && typeof res.message === 'object' && !Array.isArray(res.message) && (res.message.name || res.message.invoice_name) ? res.message : res));

@@ -3,7 +3,6 @@
     <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h2 class="text-xl font-bold">Facturas</h2>
-        <p class="text-xs text-primary-foreground/80">Comprobantes electrónicos de la empresa activa.</p>
       </div>
       <div class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">Registros: {{ total }}</div>
     </div>
@@ -34,6 +33,7 @@
         <thead class="app-thead">
           <tr>
             <th class="app-th">Documento</th>
+            <th class="app-th">Clave Acceso</th>
             <th class="app-th">Fecha emisión</th>
             <th class="app-th">Cliente / identificación</th>
             <th class="app-th text-right">Total</th>
@@ -52,6 +52,13 @@
                 <span class="text-[11px] text-muted-foreground">{{ inv.name || '—' }}</span>
               </div>
             </td>
+
+            <td class="app-td">
+              <div class="flex flex-col">
+                <span class="font-semibold">{{ inv.access_key || '—' }}</span>
+              </div>
+            </td>
+
             <td class="app-td">{{ postingDate(inv) }}</td>
             <td class="app-td">
               <div>{{ customerName(inv) }}</div>
