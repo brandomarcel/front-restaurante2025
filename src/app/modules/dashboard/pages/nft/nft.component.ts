@@ -748,7 +748,7 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   get planVoucherUsageLabel(): string {
-    if (!this.currentPlan) return '—';
+    if (!this.currentPlan && !this.liteDashboard?.plan) return '—';
     if (this.planUnlimitedVouchers) return `${this.planUsedVouchers} usados / Ilimitados`;
     return `${this.planUsedVouchers} usados / ${this.planPurchasedVouchers} incluidos`;
   }
