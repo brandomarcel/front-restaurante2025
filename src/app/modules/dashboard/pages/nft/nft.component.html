@@ -40,16 +40,17 @@
         </p>
       </div>
 
-      <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-4 xl:min-w-[520px]">
-        <a
-          *ngFor="let action of primaryActions"
-          [routerLink]="isActionBlocked(action) ? null : action.route"
-          (click)="onPrimaryActionClick($event, action)"
-          class="rounded-lg px-2.5 py-2 shadow-sm transition hover:scale-[1.01] hover:shadow"
-          [ngClass]="[action.tone, isActionBlocked(action) ? 'cursor-not-allowed opacity-60 grayscale' : '']">
-          <p class="text-[11px] font-bold leading-tight">{{ action.label }}</p>
-          <p class="mt-0.5 text-[10px] opacity-80">{{ action.detail }}</p>
-        </a>
+      <div *ngIf="hasCurrentPlan" class="min-w-0 rounded-xl border border-white/15 bg-white/10 px-3 py-2.5 backdrop-blur-sm sm:min-w-[230px]">
+        <div class="flex items-center justify-between gap-3">
+          <p class="text-[9px] font-bold uppercase tracking-[.14em] text-white/65">Plan activo</p>
+          <span class="rounded-full bg-white/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+            {{ planStatus }}
+          </span>
+        </div>
+        <p class="mt-1 truncate text-sm font-black text-white">{{ planName }}</p>
+        <p class="mt-1 text-[10px] text-white/70">
+          {{ planUnlimitedVouchers ? 'Comprobantes ilimitados' : (planRemainingLabel + ' comprobantes disponibles') }}
+        </p>
       </div>
     </div>
   </section>
@@ -57,35 +58,6 @@
   <app-avisos [avisos]="avisos" (eliminar)="eliminarAviso($event)" class="mb-3 block"></app-avisos>
 
   <section class="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
-    <div class="flex flex-col gap-3 border-b border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-      <div class="flex min-w-0 items-center gap-3">
-        <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-violet-50 text-violet-700 ring-1 ring-violet-100">
-          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 7.5 12 4l8 3.5v9L12 20l-8-3.5v-9Z" />
-            <path stroke-linecap="round" stroke-linejoin="round" d="m4 7.5 8 3.5 8-3.5M12 11v9" />
-          </svg>
-        </div>
-        <div class="min-w-0">
-          <div class="flex flex-wrap items-center gap-2">
-            <p class="text-[10px] font-bold uppercase tracking-[.14em] text-slate-500">Plan actual</p>
-            <span class="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" [ngClass]="planStatusClasses">
-              {{ hasCurrentPlan ? planStatus : 'Sin plan' }}
-            </span>
-          </div>
-          <p class="truncate text-lg font-black leading-tight text-slate-950">{{ planName }}</p>
-          <p class="mt-0.5 truncate text-[11px] text-slate-500">
-            <ng-container *ngIf="hasCurrentPlan; else noDashboardPlanText">
-              Vigencia: {{ planVigenciaLabel }}
-            </ng-container>
-            <ng-template #noDashboardPlanText>Sin plan asignado</ng-template>
-          </p>
-        </div>
-      </div>
-      <div *ngIf="planIsInactive || planExpiringSoon" class="rounded-xl px-3 py-2 text-[11px] font-semibold sm:max-w-[250px]" [ngClass]="planIsInactive ? 'bg-orange-50 text-orange-700' : 'bg-amber-50 text-amber-700'">
-        {{ planIsInactive ? 'El plan no está activo.' : ('Vence en ' + planDaysToExpire + ' día(s).') }}
-      </div>
-    </div>
-
     <div *ngIf="hasCurrentPlan" class="grid gap-3 p-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,.8fr)]">
       <div class="rounded-xl border border-violet-100 bg-gradient-to-br from-violet-50/80 to-white p-4">
         <div class="flex items-end justify-between gap-3">
@@ -123,6 +95,9 @@
           <p class="mt-0.5 text-base font-black text-slate-900">{{ planAutoRenewLabel }}</p>
         </div>
       </div>
+    </div>
+    <div *ngIf="planIsInactive || planExpiringSoon" class="mx-4 mb-4 rounded-xl px-3 py-2 text-[11px] font-semibold" [ngClass]="planIsInactive ? 'bg-orange-50 text-orange-700' : 'bg-amber-50 text-amber-700'">
+      {{ planIsInactive ? 'El plan no está activo.' : ('El plan vence en ' + planDaysToExpire + ' día(s).') }}
     </div>
     <div *ngIf="!hasCurrentPlan" class="px-4 py-4 text-xs font-semibold text-slate-600">
       Asigna un plan para habilitar la emisión de comprobantes.
