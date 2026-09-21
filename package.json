@@ -72,6 +72,7 @@
     "@types/file-saver": "^2.0.7",
     "@types/jasmine": "~3.10.0",
     "@types/node": "^12.11.1",
+    "angular-eslint": "^22.5.0",
     "autoprefixer": "^10.4.21",
     "cz-conventional-changelog": "^3.3.0",
     "jasmine-core": "~3.10.0",
