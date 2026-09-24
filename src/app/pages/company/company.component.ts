@@ -548,14 +548,6 @@ export class CompanyComponent implements OnInit, DoCheck {
     return establishment && point && next !== '—' ? `${establishment}-${point}-${next}` : '—';
   }
 
-  get isPrimaryLiteConfigurationSelected(): boolean {
-    const establishment = this.selectedLiteEstablishment;
-    const point = this.selectedLiteEmissionPoint;
-    return !!establishment && !!point
-      && this.normalizeCheck(establishment.is_main)
-      && this.normalizeCheck(point.is_default);
-  }
-
   onLiteEstablishmentSelected(value: unknown): void {
     const establishment = this.activeLiteEstablishments.find((item: any) => this.liteEstablishmentId(item) === String(value || '').trim());
     if (!establishment) {
@@ -674,12 +666,6 @@ export class CompanyComponent implements OnInit, DoCheck {
     const previous = this.ambiente;
     if (target === previous) {
       this.updateLiteInvoiceSequence(target);
-      return;
-    }
-
-    if (!this.isPrimaryLiteConfigurationSelected) {
-      this.form.patchValue({ sequence_environment: previous, ambiente: previous === 'PRODUCCION' }, { emitEvent: false });
-      this.alertService.error('El cambio de ambiente se guarda sobre el establecimiento principal y el punto predeterminado. Selecciónalos antes de continuar.');
       return;
     }
 
