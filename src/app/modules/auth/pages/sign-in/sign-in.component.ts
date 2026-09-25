@@ -73,7 +73,17 @@ export class SignInComponent implements OnInit {
         this.menu.setMenuForRoles(Array.isArray(role?.roles) ? role.roles : []);
         this.spinner.hide();
         this.isSubmitting = false;
-        this._router.navigateByUrl(this.capabilities.getLandingRoute(role?.roles));
+        const landingRoute = this.capabilities.getLandingRoute(role?.roles);
+        // navigateByUrl no lanza excepción si la navegación se cancela (por
+        // ejemplo, un guard más adelante en la cadena redirige a otro lado
+        // que a su vez falla): antes esto dejaba al usuario en el login sin
+        // ningún aviso ni rastro en consola de qué pasó.
+        this._router.navigateByUrl(landingRoute).then((success) => {
+          if (!success) {
+            console.error('[FacturADA][Login] La navegación a la ruta de aterrizaje fue cancelada.', { landingRoute });
+            this.alertService.error('No se pudo abrir la sección inicial de tu cuenta. Contacta al administrador si el problema persiste.');
+          }
+        });
       },
       error: (error: any) => {
         if (error?.message === '__LITE_BUSINESS_SELECTION_REQUIRED__') {
@@ -105,7 +115,13 @@ export class SignInComponent implements OnInit {
         this.needsBusinessSelection = false;
         this.spinner.hide();
         this.isSubmitting = false;
-        this._router.navigateByUrl(this.capabilities.getLandingRoute(user?.roles));
+        const landingRoute = this.capabilities.getLandingRoute(user?.roles);
+        this._router.navigateByUrl(landingRoute).then((success) => {
+          if (!success) {
+            console.error('[FacturADA][Login] La navegación a la ruta de aterrizaje fue cancelada.', { landingRoute });
+            this.alertService.error('No se pudo abrir la sección inicial de tu cuenta. Contacta al administrador si el problema persiste.');
+          }
+        });
       },
       error: (error: any) => {
         if (error?.status === 403) {
