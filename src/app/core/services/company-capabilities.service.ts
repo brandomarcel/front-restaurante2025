@@ -553,7 +553,23 @@ export class CompanyCapabilitiesService {
     });
     console.groupEnd();
     localStorage.setItem(this.storageKey, JSON.stringify(config));
-    this.ensureLiteDocumentSelection();
+    // get_user_context también puede traer la ubicación fiscal activa, aun
+    // cuando no adjunta todo el catálogo de setup. Al llegar posteriormente
+    // get_lite_setup, esos IDs se validan contra el catálogo del negocio.
+    const taxContext = message?.tax_context && typeof message.tax_context === 'object' ? message.tax_context : {};
+    const contextEstablishment = this.extractRecordId(
+      taxContext?.establishment ?? normalizedCompany?.establishment ?? normalizedCompany?.establishment_name
+    );
+    const contextEmissionPoint = this.extractRecordId(
+      taxContext?.emission_point ?? normalizedCompany?.emission_point ?? normalizedCompany?.emission_point_name
+    );
+    const contextEstablishmentIsLoaded = !!contextEstablishment
+      && this.activeEstablishments.some((item: any) => this.recordId(item) === contextEstablishment);
+    // Si acabamos de cambiar de empresa pero todavía no llegó get_lite_setup,
+    // no reutilizamos una lista antigua para decidir la ubicación nueva.
+    if (!contextEstablishment || contextEstablishmentIsLoaded) {
+      this.ensureLiteDocumentSelection(contextEstablishment, contextEmissionPoint, !!contextEstablishment);
+    }
     if (setupEnvironment) this.utilsService.cambiarAmbiente(setupEnvironment);
     const businessId = config.business?.name || (typeof config.business?.business === 'string' ? config.business.business : null) || null;
     if (businessId && matchesSelectedBusiness) {
@@ -619,17 +635,26 @@ export class CompanyCapabilitiesService {
     this.state.set(next);
     localStorage.setItem(this.storageKey, JSON.stringify(next));
     if (matchesSelectedBusiness) {
-      // El setup puede devolver la ubicación vigente en tax_context. Se usa
-      // únicamente cuando no existe una selección guardada para este negocio;
-      // una elección explícita del usuario siempre tiene prioridad.
+      // El setup puede devolver la ubicación fiscal que el backend acaba de
+      // guardar en `tax_context`. En una recarga esa respuesta es la fuente
+      // de verdad: no debe quedar una selección antigua del navegador
+      // mostrando otro establecimiento o punto de emisión.
       const taxContext = data?.tax_context && typeof data.tax_context === 'object' ? data.tax_context : {};
       const contextEstablishment = this.extractRecordId(
-        taxContext?.establishment ?? taxContext?.establishment_name ?? data?.establishment
+        taxContext?.establishment
+        ?? setupBusiness?.establishment
+        ?? current.business?.establishment
+        ?? taxContext?.establishment_name
+        ?? data?.establishment
       );
       const contextEmissionPoint = this.extractRecordId(
-        taxContext?.emission_point ?? taxContext?.emission_point_name ?? data?.emission_point
+        taxContext?.emission_point
+        ?? setupBusiness?.emission_point
+        ?? current.business?.emission_point
+        ?? taxContext?.emission_point_name
+        ?? data?.emission_point
       );
-      this.ensureLiteDocumentSelection(contextEstablishment, contextEmissionPoint);
+      this.ensureLiteDocumentSelection(contextEstablishment, contextEmissionPoint, true);
     }
     if (setupEnvironment) this.utilsService.cambiarAmbiente(setupEnvironment);
   }
@@ -1117,37 +1142,43 @@ export class CompanyCapabilitiesService {
    * predeterminado), o el único registro activo. Nunca toma arbitrariamente
    * el primer elemento de una lista con varias alternativas.
    */
-  private ensureLiteDocumentSelection(preferredEstablishmentId = '', preferredEmissionPointId = ''): void {
+  private ensureLiteDocumentSelection(
+    preferredEstablishmentId = '',
+    preferredEmissionPointId = '',
+    preferBackendContext = false
+  ): void {
     const business = this.activeBusinessId;
     if (!business) return;
     const stored = this.getLiteDocumentSelection();
     const explicitEstablishment = String(localStorage.getItem(this.liteEstablishmentSelectionKey(business)) || '').trim();
     const explicitPoint = String(localStorage.getItem(this.liteEmissionPointSelectionKey(business)) || '').trim();
-    const storedEstablishment = explicitEstablishment || (!preferredEstablishmentId ? stored.establishment : '');
-    const storedEmissionPoint = explicitPoint || (!preferredEmissionPointId ? stored.emissionPoint : '');
+    const storedEstablishment = explicitEstablishment || stored.establishment;
+    const storedEmissionPoint = explicitPoint || stored.emissionPoint;
     const establishments = this.activeEstablishments;
-    const establishment = establishments.find((item: any) => this.recordId(item) === storedEstablishment)
-      || establishments.find((item: any) => this.recordId(item) === preferredEstablishmentId)
+    const establishment = (preferBackendContext
+      ? establishments.find((item: any) => this.recordId(item) === preferredEstablishmentId)
+        || establishments.find((item: any) => this.recordId(item) === storedEstablishment)
+      : establishments.find((item: any) => this.recordId(item) === storedEstablishment)
+        || establishments.find((item: any) => this.recordId(item) === preferredEstablishmentId))
       || establishments.find((item: any) => this.toBoolean(item?.is_main))
       || (establishments.length === 1 ? establishments[0] : null);
     if (!establishment) {
-      localStorage.removeItem(this.liteDocumentSelectionKey(business));
+      this.clearLiteDocumentSelection();
       return;
     }
     const points = this.activeEmissionPointsFor(establishment);
-    const point = points.find((item: any) => this.recordId(item) === storedEmissionPoint)
-      || points.find((item: any) => this.recordId(item) === preferredEmissionPointId)
+    const point = (preferBackendContext
+      ? points.find((item: any) => this.recordId(item) === preferredEmissionPointId)
+        || points.find((item: any) => this.recordId(item) === storedEmissionPoint)
+      : points.find((item: any) => this.recordId(item) === storedEmissionPoint)
+        || points.find((item: any) => this.recordId(item) === preferredEmissionPointId))
       || points.find((item: any) => this.toBoolean(item?.is_default))
       || (points.length === 1 ? points[0] : null);
     if (!point) {
-      localStorage.setItem(this.liteDocumentSelectionKey(business), JSON.stringify({
-        establishment: this.recordId(establishment), emissionPoint: ''
-      }));
+      this.setLiteDocumentSelection(this.recordId(establishment));
       return;
     }
-    localStorage.setItem(this.liteDocumentSelectionKey(business), JSON.stringify({
-      establishment: this.recordId(establishment), emissionPoint: this.recordId(point)
-    }));
+    this.setLiteDocumentSelection(this.recordId(establishment), this.recordId(point));
   }
 
   private belongsToActiveBusiness(record: any): boolean {

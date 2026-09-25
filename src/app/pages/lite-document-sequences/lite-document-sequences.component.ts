@@ -31,6 +31,12 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
 
   readonly documentTypes = ['Factura', 'Nota de Credito'];
   readonly environments = ['Pruebas', 'Produccion'];
+  readonly sequenceMatrix = [
+    { documentType: 'Factura', environment: 'Pruebas', label: 'Factura · Pruebas' },
+    { documentType: 'Factura', environment: 'Produccion', label: 'Factura · Producción' },
+    { documentType: 'Nota de Credito', environment: 'Pruebas', label: 'Nota de crédito · Pruebas' },
+    { documentType: 'Nota de Credito', environment: 'Produccion', label: 'Nota de crédito · Producción' }
+  ] as const;
 
   private loadedBusiness = '';
   private loadedCombination = '';
@@ -112,11 +118,8 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
   }
 
   get activeInvoiceSequenceForProfile(): any | null {
-    return this.sequences.find((sequence) =>
-      this.isActive(sequence)
-      && this.normalize(sequence?.document_type) === 'FACTURA'
-      && this.normalizeEnvironment(sequence?.environment) === this.profileEnvironment
-    ) || null;
+    const sequence = this.sequenceFor('Factura', this.profileEnvironment);
+    return sequence && this.isActive(sequence) ? sequence : null;
   }
 
   get pointReadyForProfile(): boolean {
@@ -162,7 +165,7 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
     this.loadSequences();
   }
 
-  openCreate(): void {
+  openCreate(documentType = 'Factura', environment = this.profileEnvironment): void {
     if (!this.canManage || !this.activeBusinessId || !this.selectedEstablishmentId || !this.selectedEmissionPointId) return;
     this.editing = null;
     this.submitted = false;
@@ -171,8 +174,8 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
     this.form.reset({
       establishment: this.selectedEstablishmentId,
       emission_point: this.selectedEmissionPointId,
-      document_type: 'Factura',
-      environment: this.profileEnvironment,
+      document_type: documentType,
+      environment,
       status: 'Activo',
       current_number: 0
     });
@@ -289,6 +292,31 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
     return this.isActive(sequence) && backendCanEmit && current < 999999999;
   }
 
+  /**
+   * Devuelve la secuencia de la ubicación actualmente configurada. Aunque el
+   * endpoint ya se consulta por establecimiento y punto, este filtro evita
+   * que una respuesta amplia del backend haga aparecer una secuencia ajena.
+   */
+  sequenceFor(documentType: string, environment: string): any | null {
+    return this.sequences.find((sequence) =>
+      this.matchesSelectedLocation(sequence)
+      && this.normalize(sequence?.document_type) === this.normalize(documentType)
+      && this.normalizeEnvironment(sequence?.environment) === this.normalizeEnvironment(environment)
+    ) || null;
+  }
+
+  sequenceState(sequence: any | null): 'ready' | 'blocked' | 'missing' {
+    if (!sequence) return 'missing';
+    return this.canEmit(sequence) ? 'ready' : 'blocked';
+  }
+
+  sequenceStateLabel(sequence: any | null): string {
+    const state = this.sequenceState(sequence);
+    if (state === 'ready') return 'Lista para emitir';
+    if (state === 'blocked') return 'Requiere revisión';
+    return 'Sin configurar';
+  }
+
   nextNumber(sequence: any): string {
     const backendNext = this.numberValue(sequence?.next_number);
     const current = this.numberValue(sequence?.current_number);
@@ -388,6 +416,12 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
       },
       error: () => undefined
     });
+  }
+
+  private matchesSelectedLocation(sequence: any): boolean {
+    return String(sequence?.business || this.activeBusinessId) === this.activeBusinessId
+      && String(sequence?.establishment || '') === this.selectedEstablishmentId
+      && String(sequence?.emission_point || sequence?.emissionPoint || '') === this.selectedEmissionPointId;
   }
 
   private persistSelection(): void {

@@ -145,17 +145,6 @@
             </div>
 
             <div class="p-4 space-y-4">
-              <div *ngIf="isLiteMode" class="space-y-2">
-                <label class="block font-medium mb-1">Ambiente de emisión</label>
-                <select class="input" [value]="ambiente" (change)="onLiteEnvironmentSelected($any($event.target).value)"
-                  [disabled]="isSaving || isLoadingCompany">
-                  <option value="PRUEBAS">Pruebas</option>
-                  <option value="PRODUCCION">Produccion</option>
-                </select>
-                <p class="text-xs text-slate-500">La facturación utilizará la secuencia activa del ambiente seleccionado.</p>
-                <p class="text-xs font-medium text-red-600" *ngIf="liteSequenceError">{{ liteSequenceError }}</p>
-              </div>
-
               <label *ngIf="!isLiteMode" class="inline-flex items-center cursor-pointer relative">
                 <input type="checkbox" class="sr-only peer" formControlName="ambiente" (change)="cambiarAmbiente()"
                   [disabled]="isSaving || isLoadingCompany || isLiteMode" />
@@ -168,6 +157,24 @@
                   Ambiente: {{ ambiente }}
                 </span>
               </label>
+
+              <section *ngIf="isLiteMode" class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p class="text-sm font-semibold text-slate-800">Ubicación fiscal de emisión</p>
+                    <p class="mt-0.5 text-[11px] text-slate-500">Primero elige dónde se emite; después verifica la secuencia del ambiente.</p>
+                  </div>
+                  <span class="rounded-full px-2.5 py-1 text-[10px] font-bold"
+                    [ngClass]="ambiente === 'PRODUCCION' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'">
+                    Ambiente activo: {{ ambiente === 'PRODUCCION' ? 'Producción' : 'Pruebas' }}
+                  </span>
+                </div>
+                <p class="mt-3 text-xs font-medium text-slate-700">
+                  {{ selectedLiteEstablishment ? (selectedLiteEstablishment.establishment_code + ' · ' + selectedLiteEstablishment.establishment_name) : 'Sin establecimiento seleccionado' }}
+                  <span class="mx-1 text-slate-300">/</span>
+                  {{ selectedLiteEmissionPoint ? (selectedLiteEmissionPoint.emission_point_code + ' · ' + selectedLiteEmissionPoint.emission_point_name) : 'Sin punto seleccionado' }}
+                </p>
+              </section>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div *ngIf="isLiteMode; else legacyEstablishmentCode">
@@ -215,15 +222,17 @@
                 </div></ng-template>
               </div>
 
-              <div *ngIf="isLiteMode" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label class="block font-medium mb-1">Nombre del establecimiento</label>
-                  <input type="text" class="input bg-gray-100 cursor-not-allowed" formControlName="establishment_name" readonly aria-readonly="true" />
-                </div>
-                <div>
-                  <label class="block font-medium mb-1">Nombre del punto de emisión</label>
-                  <input type="text" class="input bg-gray-100 cursor-not-allowed" formControlName="emission_point_name" readonly aria-readonly="true" />
-                </div>
+              <div *ngIf="isLiteMode" class="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+                <label for="lite-environment" class="block font-semibold text-slate-800">Ambiente activo de emisión</label>
+                <select id="lite-environment" class="input" [value]="previewEnvironment"
+                  (change)="onLiteEnvironmentSelected($any($event.target).value)"
+                  [disabled]="isSaving || isLoadingCompany || !canEditLiteSetup || !selectedLiteEmissionPoint">
+                  <option value="PRUEBAS">Pruebas</option>
+                  <option value="PRODUCCION">Producción</option>
+                </select>
+                <p class="text-xs text-slate-500">Este valor se guarda en el perfil tributario del negocio. Establecimientos y puntos no se duplican por ambiente; las secuencias sí.</p>
+                <p class="text-xs font-medium text-slate-600">Ambiente guardado actualmente: {{ ambiente === 'PRODUCCION' ? 'Producción' : 'Pruebas' }}</p>
+                <p *ngIf="previewEnvironment !== ambiente" class="text-xs font-semibold text-amber-700" role="status">Cambio pendiente de guardar.</p>
               </div>
 
               <div *ngIf="!isLiteMode">
@@ -233,18 +242,31 @@
                 <p class="mt-1 text-[11px] text-gray-500">Configuración disponible únicamente para instalaciones no Lite.</p>
               </div>
 
-              <div *ngIf="isLiteMode" class="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <h4 class="text-sm font-semibold text-gray-700">Secuencia de factura</h4>
+              <div *ngIf="isLiteMode" class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h4 class="text-sm font-semibold text-gray-800">Disponibilidad para emitir</h4>
+                    <p class="mt-0.5 text-[11px] text-slate-500">Factura · {{ previewEnvironment === 'PRODUCCION' ? 'Producción' : 'Pruebas' }}</p>
+                  </div>
+                  <a routerLink="/settings/lite/sequences" class="text-[11px] font-bold text-primary hover:underline">Administrar secuencias</a>
+                </div>
                 <label class="mt-2 block font-medium mb-1">Número actual</label>
                 <input type="number" min="0" class="input no-spinner bg-gray-100 cursor-not-allowed"
                   formControlName="current_number" readonly aria-readonly="true" />
                 <p class="mt-1 text-[11px] text-gray-500" *ngIf="hasValidLiteInvoiceSequence">
-                  Ambiente {{ ambiente === 'PRODUCCION' ? 'Produccion' : 'Pruebas' }} · Secuencia activa.
+                  Ambiente {{ previewEnvironment === 'PRODUCCION' ? 'Producción' : 'Pruebas' }} · Secuencia activa.
                 </p>
                 <p *ngIf="hasValidLiteInvoiceSequence" class="mt-1 text-[11px] text-slate-600">Próximo comprobante: <span class="font-mono font-bold">{{ liteSequenceNextNumber }}</span> · {{ liteSequenceDocumentNumber }}</p>
                 <p class="mt-1 text-[11px] text-red-600" *ngIf="!hasValidLiteInvoiceSequence">
                   No existe una secuencia activa para esta combinación de establecimiento, punto de emisión y ambiente.
                 </p>
+                <div *ngIf="canEditLiteSetup" class="mt-4 flex flex-wrap justify-end gap-2">
+                  <button type="button" *ngIf="previewEnvironment !== ambiente" (click)="onLiteEnvironmentSelected(ambiente)"
+                    [disabled]="isSaving || isLoadingCompany" class="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 disabled:opacity-50">Descartar cambio</button>
+                  <button type="button" (click)="saveLiteEnvironment()"
+                    [disabled]="isSaving || isLoadingCompany || previewEnvironment === ambiente || !selectedLiteEstablishment || !selectedLiteEmissionPoint || !hasValidLiteInvoiceSequence"
+                    class="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Guardar ambiente</button>
+                </div>
               </div>
 
               <div *ngIf="!isLiteMode">

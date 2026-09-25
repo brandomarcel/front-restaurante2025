@@ -555,7 +555,7 @@ export class CompanyComponent implements OnInit, DoCheck {
       this.capabilities.clearLiteDocumentSelection();
       const business = String(this.capabilities.activeBusinessId || this.companyId || '').trim();
       if (business) localStorage.removeItem(`lite_active_establishment:${business}`);
-      this.updateLiteInvoiceSequence(this.ambiente);
+      this.updateLiteInvoiceSequence(this.previewEnvironment);
       return;
     }
     const points = this.capabilities.activeEmissionPointsFor(establishment);
@@ -573,7 +573,7 @@ export class CompanyComponent implements OnInit, DoCheck {
     const business = String(this.capabilities.activeBusinessId || this.companyId || '').trim();
     if (business) localStorage.setItem(`lite_active_establishment:${business}`, establishmentId);
     this.capabilities.setLiteDocumentSelection(establishmentId, pointId);
-    this.updateLiteInvoiceSequence(this.ambiente);
+    this.updateLiteInvoiceSequence(this.previewEnvironment);
   }
 
   onLiteEmissionPointSelected(value: unknown): void {
@@ -582,7 +582,7 @@ export class CompanyComponent implements OnInit, DoCheck {
     if (!establishment || !point) {
       this.form.patchValue({ selected_emission_point: '', emissionpoint: '' }, { emitEvent: false });
       this.capabilities.clearLiteDocumentSelection();
-      this.updateLiteInvoiceSequence(this.ambiente);
+      this.updateLiteInvoiceSequence(this.previewEnvironment);
       return;
     }
     const pointId = this.liteEmissionPointId(point);
@@ -592,7 +592,7 @@ export class CompanyComponent implements OnInit, DoCheck {
       emission_point_name: point.emission_point_name || ''
     }, { emitEvent: false });
     this.capabilities.setLiteDocumentSelection(this.liteEstablishmentId(establishment), pointId);
-    this.updateLiteInvoiceSequence(this.ambiente);
+    this.updateLiteInvoiceSequence(this.previewEnvironment);
   }
 
   get planIsInactive(): boolean {
@@ -662,6 +662,21 @@ export class CompanyComponent implements OnInit, DoCheck {
   }
 
   onLiteEnvironmentSelected(value: string): void {
+    if (!this.canEditLiteSetup || this.isSaving || this.isLoadingCompany) return;
+    this.updateLiteInvoiceSequence(this.normalizeEnvironment(value));
+  }
+
+  get previewEnvironment(): 'PRUEBAS' | 'PRODUCCION' {
+    return this.normalizeEnvironment(this.form?.get('sequence_environment')?.value || this.ambiente);
+  }
+
+  saveLiteEnvironment(): void {
+    if (!this.canEditLiteSetup || this.isSaving || this.isLoadingCompany || !this.companyId) return;
+    if (!this.selectedLiteEstablishment || !this.selectedLiteEmissionPoint) {
+      this.alertService.error('Selecciona un establecimiento y un punto de emisión activos.');
+      return;
+    }
+    const value = this.previewEnvironment;
     const target = this.normalizeEnvironment(value);
     const previous = this.ambiente;
     if (target === previous) {
@@ -671,11 +686,6 @@ export class CompanyComponent implements OnInit, DoCheck {
 
     const sequence = this.findLiteInvoiceSequence(target);
     if (!sequence) {
-      this.form.patchValue({
-        sequence_environment: previous,
-        ambiente: previous === 'PRODUCCION'
-      }, { emitEvent: false });
-      this.updateLiteInvoiceSequence(previous);
       this.alertService.error('No existe una secuencia activa para este ambiente.');
       return;
     }
@@ -683,24 +693,18 @@ export class CompanyComponent implements OnInit, DoCheck {
     if (target === 'PRODUCCION') {
       const status = this.normalizeStatus(this.certificateStatusLabel);
       if (this.certificateIsBlocking || !this.certificateConfigured || !['VIGENTE', 'POR VENCER'].includes(status)) {
-        this.form.patchValue({
-          sequence_environment: previous,
-          ambiente: previous === 'PRODUCCION'
-        }, { emitEvent: false });
         this.alertService.error('Configura un certificado vigente antes de cambiar a Produccion.');
         return;
       }
     }
 
+    this.isSaving = true;
     this.alertService.confirm(
       `¿Deseas cambiar el ambiente a ${target === 'PRODUCCION' ? 'Produccion' : 'Pruebas'}?`,
-      'Se utilizará la secuencia activa de ese ambiente.'
+      'El cambio se aplica al negocio. Se ha verificado la secuencia del establecimiento y punto seleccionados.'
     ).then((result) => {
       if (!result.isConfirmed) {
-        this.form.patchValue({
-          sequence_environment: previous,
-          ambiente: previous === 'PRODUCCION'
-        }, { emitEvent: false });
+        this.isSaving = false;
         return;
       }
 
@@ -729,6 +733,8 @@ export class CompanyComponent implements OnInit, DoCheck {
           this.alertService.error(this.readBackendError(error) || 'No se pudo cambiar el ambiente.');
         }
       });
+    }).catch(() => {
+      this.isSaving = false;
     });
   }
 
@@ -1055,13 +1061,22 @@ export class CompanyComponent implements OnInit, DoCheck {
       ? String(localStorage.getItem(`lite_active_establishment:${business}`) || '').trim()
       : '';
     const formEstablishmentId = String(this.form?.get('selected_establishment')?.value || '').trim();
-    const establishment = this.activeLiteEstablishments.find((item: any) => this.liteEstablishmentId(item) === savedEstablishmentId)
-      || this.activeLiteEstablishments.find((item: any) => this.liteEstablishmentId(item) === formEstablishmentId)
-      || this.capabilities.selectedLiteEstablishment;
+    // `setLiteSetupState` ya validó y aplicó el `tax_context` recibido del
+    // backend. Se consulta primero para no permitir que un valor viejo del
+    // formulario o del storage reemplace lo que realmente quedó guardado.
+    const capabilityEstablishment = this.capabilities.selectedLiteEstablishment;
+    const establishment = capabilityEstablishment
+      || this.activeLiteEstablishments.find((item: any) => this.liteEstablishmentId(item) === savedEstablishmentId)
+      || this.activeLiteEstablishments.find((item: any) => this.liteEstablishmentId(item) === formEstablishmentId);
     const points = establishment ? this.capabilities.activeEmissionPointsFor(establishment) : [];
     const formPointId = String(this.form?.get('selected_emission_point')?.value || '').trim();
-    const point = points.find((item: any) => this.liteEmissionPointId(item) === formPointId)
-      || (establishment === this.capabilities.selectedLiteEstablishment ? this.capabilities.selectedLiteEmissionPoint : null)
+    const capabilityPoint = capabilityEstablishment
+      && establishment
+      && this.liteEstablishmentId(establishment) === this.liteEstablishmentId(capabilityEstablishment)
+      ? this.capabilities.selectedLiteEmissionPoint
+      : null;
+    const point = capabilityPoint
+      || points.find((item: any) => this.liteEmissionPointId(item) === formPointId)
       || points.find((item: any) => this.normalizeCheck(item?.is_default))
       || (points.length === 1 ? points[0] : null);
     this.form.patchValue({
@@ -1079,6 +1094,11 @@ export class CompanyComponent implements OnInit, DoCheck {
       // Mantener la misma selección que utilizan facturación, POS y el resto
       // de la aplicación; el combo y el estado central no deben divergir.
       this.capabilities.setLiteDocumentSelection(establishmentId, pointId);
+    } else {
+      // La UI no puede conservar un punto suelto: ambos controles deben
+      // pertenecer a la misma ubicación fiscal activa.
+      this.capabilities.clearLiteDocumentSelection();
+      if (business) localStorage.removeItem(`lite_active_establishment:${business}`);
     }
   }
 
