@@ -235,6 +235,16 @@ export class CompanyCapabilitiesService {
     this.state.set({ ...this.state(), terminal: null });
   }
 
+  /**
+   * Un negocio de solo facturación (sin `pos_terminal` habilitado) resuelve
+   * su ubicación fiscal con establecimiento + punto de emisión directo y
+   * nunca tiene terminales cargados — eso es normal, no una configuración
+   * pendiente. Todo lo de esta sección solo aplica al modelo de terminales.
+   */
+  get usesPosTerminalModel(): boolean {
+    return this.isEnabled('pos_terminal');
+  }
+
   /** Terminales activos del negocio actual, sin importar si ya hay uno resuelto o no. */
   get activePosTerminals(): any[] {
     return this.posTerminals.filter((item: any) => this.isActiveRecord(item));
@@ -242,15 +252,16 @@ export class CompanyCapabilitiesService {
 
   /** No hay ningún terminal configurado todavía: hay que crear uno antes de poder vender. */
   get needsPosTerminalConfiguration(): boolean {
-    return this.activePosTerminals.length === 0;
+    return this.usesPosTerminalModel && this.activePosTerminals.length === 0;
   }
 
   /** Hay más de un terminal activo y ninguno quedó seleccionado: hace falta elegir uno antes de vender. */
   get needsPosTerminalSelection(): boolean {
-    return this.activePosTerminals.length > 1 && !this.activePosTerminal;
+    return this.usesPosTerminalModel && this.activePosTerminals.length > 1 && !this.activePosTerminal;
   }
 
   getPosTerminalBlockMessage(): string | null {
+    if (!this.usesPosTerminalModel) return null;
     // Sin ningún terminal configurado, no importa si el rol requiere
     // asignación explícita o no: no hay nada que se pueda seleccionar.
     if (this.needsPosTerminalConfiguration) {
