@@ -19,6 +19,13 @@ export interface PaymentBuildResult {
   error?: string;
 }
 
+/** Fila editable utilizada por Facturación y los POS. */
+export interface PaymentRow {
+  method: string;
+  amount: number;
+  reference?: string;
+}
+
 export function roundMoney(value: any): number {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 0;
@@ -100,6 +107,64 @@ export function buildSinglePaymentPayload(
   };
 }
 
+/**
+ * Identificador estable para evitar que la misma forma de pago aparezca dos
+ * veces. Se prioriza el código SRI porque puede variar la descripción.
+ */
+export function paymentMethodKey(
+  paymentMethods: PaymentMethodLike[] | null | undefined,
+  value: string | null | undefined
+): string {
+  const selected = findPaymentMethod(paymentMethods, value);
+  const code = String(selected?.codigo || selected?.payment_code || selected?.forma_pago || '').trim();
+  const method = String(
+    selected?.name || selected?.payment_method || selected?.description || selected?.nombre || value || ''
+  ).trim().toLocaleLowerCase();
+  return code ? `code:${code}` : (method ? `method:${method}` : '');
+}
+
+export function isPaymentMethodAlreadySelected(
+  paymentMethods: PaymentMethodLike[] | null | undefined,
+  rows: Array<Pick<PaymentRow, 'method'>> | null | undefined,
+  value: string | null | undefined,
+  exceptIndex = -1
+): boolean {
+  const key = paymentMethodKey(paymentMethods, value);
+  if (!key) return false;
+  return (rows || []).some((row, index) => index !== exceptIndex
+    && paymentMethodKey(paymentMethods, row?.method) === key);
+}
+
+/** Convierte y valida pagos combinados; el total debe cuadrar exactamente. */
+export function buildMultiplePaymentPayload(
+  paymentMethods: PaymentMethodLike[] | null | undefined,
+  rows: PaymentRow[] | null | undefined,
+  totalValue: any
+): PaymentBuildResult {
+  const sourceRows = rows || [];
+  if (!sourceRows.length) return { payments: [], error: 'Debes registrar al menos un método de pago.' };
+
+  const normalized: InvoicePaymentPayload[] = [];
+  const seen = new Set<string>();
+  for (const row of sourceRows) {
+    const payment = findPaymentMethod(paymentMethods, row?.method);
+    const paymentId = getPaymentValue(payment);
+    const amount = roundMoney(row?.amount);
+    if (!paymentId || amount <= 0) {
+      return { payments: [], error: 'Cada pago debe tener un método válido y un monto mayor a 0.' };
+    }
+    const key = paymentMethodKey(paymentMethods, row?.method);
+    if (!key || seen.has(key)) {
+      return { payments: [], error: 'No puedes repetir el mismo método de pago.' };
+    }
+    seen.add(key);
+    normalized.push({ formas_de_pago: paymentId, monto: amount });
+  }
+
+  const error = validatePaymentsTotal(normalized, totalValue);
+  return error ? { payments: [], error } : { payments: normalized };
+}
+
 export function validatePaymentsTotal(
   payments: InvoicePaymentPayload[] | null | undefined,
   expectedTotalValue: any
@@ -116,6 +181,13 @@ export function validatePaymentsTotal(
   );
   if (invalidRow) {
     return 'Cada pago debe tener método de pago y monto mayor a 0.';
+  }
+
+  const methods = new Set<string>();
+  for (const payment of rows) {
+    const method = String(payment?.formas_de_pago || '').trim().toLocaleLowerCase();
+    if (methods.has(method)) return 'No puedes repetir el mismo método de pago.';
+    methods.add(method);
   }
 
   const paymentsTotal = roundMoney(rows.reduce((acc, payment) => acc + roundMoney(payment?.monto), 0));

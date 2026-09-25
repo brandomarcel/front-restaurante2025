@@ -562,18 +562,29 @@
                     </p>
                 </div>
 
-                <!-- Método -->
-                <div class="mt-6">
-                    <label class="block text-xs font-medium mb-1">
-                        Método de Pago
-                    </label>
-
-                    <select [(ngModel)]="paymentMethod" (change)="calcularCambio()"
-                        class="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary">
-                        <option *ngFor="let item of payments" [value]="item.name || item.codigo">
-                            {{ item.description || item.nombre }}
-                        </option>
-                    </select>
+                <!-- Pagos combinados -->
+                <div class="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <div class="mb-2 flex items-center justify-between gap-2">
+                        <div>
+                            <p class="text-xs font-bold text-slate-800">Métodos de pago</p>
+                            <p class="text-[10px] text-slate-500">No repitas una forma de pago.</p>
+                        </div>
+                        <button type="button" (click)="addPaymentRow()" class="rounded-md border border-primary/20 bg-white px-2 py-1 text-[11px] font-semibold text-primary">+ Agregar</button>
+                    </div>
+                    <div class="space-y-2">
+                        <div *ngFor="let payment of paymentRows; let index = index" class="grid grid-cols-[1fr_82px_28px] gap-1.5">
+                            <select [(ngModel)]="payment.method" (change)="onPaymentRowMethodChange(index)" class="min-w-0 border rounded-md px-2 py-2 text-xs">
+                                <option value="">Método</option>
+                                <option *ngFor="let item of payments" [value]="item.name || item.codigo">{{ item.description || item.nombre || item.name }}</option>
+                            </select>
+                            <input type="number" min="0.01" step="0.01" [(ngModel)]="payment.amount" (input)="calcularCambio()" class="w-full border rounded-md px-2 py-2 text-right text-xs" placeholder="0.00" />
+                            <button type="button" (click)="removePaymentRow(index)" [disabled]="paymentRows.length === 1" class="rounded-md text-lg text-red-500 disabled:opacity-30">×</button>
+                        </div>
+                    </div>
+                    <div class="mt-2 flex justify-between text-[11px] font-medium">
+                        <span>Pagado: ${{ paymentRowsTotal | number:'1.2-2' }}</span>
+                        <span [class.text-emerald-700]="paymentRemaining === 0" [class.text-amber-700]="paymentRemaining !== 0">Restante: ${{ paymentRemaining | number:'1.2-2' }}</span>
+                    </div>
                 </div>
 
                 <!-- Efectivo -->

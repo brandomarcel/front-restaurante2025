@@ -140,9 +140,9 @@
               <div *ngFor="let payment of orderPayments; let i = index" class="grid grid-cols-[minmax(0,1fr)_92px_auto] items-end gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
                 <label class="min-w-0">
                   <span class="mb-1 block text-[9px] font-semibold uppercase text-slate-400">Método</span>
-                  <select class="h-8 w-full rounded-md border border-slate-200 bg-white px-2 text-[11px]" [(ngModel)]="payment.payment_method" [ngModelOptions]="{standalone: true}" (ngModelChange)="onOrderPaymentMethodChange(payment)">
+                  <select class="h-8 w-full rounded-md border border-slate-200 bg-white px-2 text-[11px]" [(ngModel)]="payment.payment_method" [ngModelOptions]="{standalone: true}" (ngModelChange)="onOrderPaymentMethodChange(payment, i)">
                     <option value="">Seleccionar</option>
-                    <option *ngFor="let method of paymentMethods" [value]="method.name">{{ method.description || method.nombre || method.name }}</option>
+                    <option *ngFor="let method of paymentMethods" [value]="method.name" [disabled]="isOrderPaymentMethodUsed(method.name, i)">{{ method.description || method.nombre || method.name }}</option>
                   </select>
                 </label>
                 <label>

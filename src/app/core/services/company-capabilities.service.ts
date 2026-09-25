@@ -568,7 +568,10 @@ export class CompanyCapabilitiesService {
     // Si acabamos de cambiar de empresa pero todavía no llegó get_lite_setup,
     // no reutilizamos una lista antigua para decidir la ubicación nueva.
     if (!contextEstablishment || contextEstablishmentIsLoaded) {
-      this.ensureLiteDocumentSelection(contextEstablishment, contextEmissionPoint, !!contextEstablishment);
+      // Al iniciar/cambiar de negocio se restaura exclusivamente la
+      // configuración confirmada por backend: tax_context, o en su ausencia
+      // el establecimiento principal y punto predeterminado.
+      this.ensureLiteDocumentSelection(contextEstablishment, contextEmissionPoint, true);
     }
     if (setupEnvironment) this.utilsService.cambiarAmbiente(setupEnvironment);
     const businessId = config.business?.name || (typeof config.business?.business === 'string' ? config.business.business : null) || null;
@@ -635,10 +638,9 @@ export class CompanyCapabilitiesService {
     this.state.set(next);
     localStorage.setItem(this.storageKey, JSON.stringify(next));
     if (matchesSelectedBusiness) {
-      // El setup puede devolver la ubicación fiscal que el backend acaba de
-      // guardar en `tax_context`. En una recarga esa respuesta es la fuente
-      // de verdad: no debe quedar una selección antigua del navegador
-      // mostrando otro establecimiento o punto de emisión.
+      // El setup devuelve la ubicación principal en tax_context. Se utiliza
+      // como respaldo para quien no tenga una selección explícita; la
+      // selección local válida conserva prioridad durante la emisión.
       const taxContext = data?.tax_context && typeof data.tax_context === 'object' ? data.tax_context : {};
       const contextEstablishment = this.extractRecordId(
         taxContext?.establishment
@@ -654,6 +656,8 @@ export class CompanyCapabilitiesService {
         ?? taxContext?.emission_point_name
         ?? data?.emission_point
       );
+      // get_lite_setup es la fuente de carga de la ubicación inicial:
+      // tax_context primero y, si no existe, is_main / is_default.
       this.ensureLiteDocumentSelection(contextEstablishment, contextEmissionPoint, true);
     }
     if (setupEnvironment) this.utilsService.cambiarAmbiente(setupEnvironment);
@@ -1155,24 +1159,28 @@ export class CompanyCapabilitiesService {
     const storedEstablishment = explicitEstablishment || stored.establishment;
     const storedEmissionPoint = explicitPoint || stored.emissionPoint;
     const establishments = this.activeEstablishments;
+    const mainEstablishment = establishments.find((item: any) => this.toBoolean(item?.is_main));
     const establishment = (preferBackendContext
       ? establishments.find((item: any) => this.recordId(item) === preferredEstablishmentId)
+        || mainEstablishment
         || establishments.find((item: any) => this.recordId(item) === storedEstablishment)
       : establishments.find((item: any) => this.recordId(item) === storedEstablishment)
-        || establishments.find((item: any) => this.recordId(item) === preferredEstablishmentId))
-      || establishments.find((item: any) => this.toBoolean(item?.is_main))
+        || establishments.find((item: any) => this.recordId(item) === preferredEstablishmentId)
+        || mainEstablishment)
       || (establishments.length === 1 ? establishments[0] : null);
     if (!establishment) {
       this.clearLiteDocumentSelection();
       return;
     }
     const points = this.activeEmissionPointsFor(establishment);
+    const defaultPoint = points.find((item: any) => this.toBoolean(item?.is_default));
     const point = (preferBackendContext
       ? points.find((item: any) => this.recordId(item) === preferredEmissionPointId)
+        || defaultPoint
         || points.find((item: any) => this.recordId(item) === storedEmissionPoint)
       : points.find((item: any) => this.recordId(item) === storedEmissionPoint)
-        || points.find((item: any) => this.recordId(item) === preferredEmissionPointId))
-      || points.find((item: any) => this.toBoolean(item?.is_default))
+        || points.find((item: any) => this.recordId(item) === preferredEmissionPointId)
+        || defaultPoint)
       || (points.length === 1 ? points[0] : null);
     if (!point) {
       this.setLiteDocumentSelection(this.recordId(establishment));

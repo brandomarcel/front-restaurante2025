@@ -22,7 +22,7 @@ import { PaymentsService } from 'src/app/services/payments.service';
 import { CustomersService } from 'src/app/services/customers.service';
 import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { AlertService } from 'src/app/core/services/alert.service';
-import { InvoicePaymentPayload, roundMoney, validatePaymentsTotal } from 'src/app/shared/utils/payment.utils';
+import { InvoicePaymentPayload, isPaymentMethodAlreadySelected, roundMoney, validatePaymentsTotal } from 'src/app/shared/utils/payment.utils';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { RestaurantRealtimeEvent, RestaurantRealtimeService } from 'src/app/services/restaurant-realtime.service';
 
@@ -1016,7 +1016,15 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   }
 
   addOrderPayment(): void {
-    const defaultPayment = this.paymentMethods[0];
+    const defaultPayment = this.paymentMethods.find((method: any) => !isPaymentMethodAlreadySelected(
+      this.paymentMethods,
+      this.orderPayments.map((payment: any) => ({ method: payment.payment_method })),
+      method?.name || method?.codigo
+    ));
+    if (!defaultPayment) {
+      toast.warning('No hay más métodos de pago disponibles para agregar.');
+      return;
+    }
     this.orderPayments.push({
       payment_method: defaultPayment?.name || '',
       payment_code: defaultPayment?.codigo || '',
@@ -1029,9 +1037,29 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     this.orderPayments.splice(index, 1);
   }
 
-  onOrderPaymentMethodChange(payment: any): void {
+  onOrderPaymentMethodChange(payment: any, index = -1): void {
+    if (isPaymentMethodAlreadySelected(
+      this.paymentMethods,
+      this.orderPayments.map((row: any) => ({ method: row.payment_method })),
+      payment?.payment_method,
+      index
+    )) {
+      payment.payment_method = '';
+      payment.payment_code = '';
+      toast.warning('No puedes repetir el mismo método de pago.');
+      return;
+    }
     const selected = this.paymentMethods.find((item: any) => item?.name === payment?.payment_method);
     payment.payment_code = selected?.codigo || selected?.payment_code || selected?.forma_pago || '';
+  }
+
+  isOrderPaymentMethodUsed(value: string, exceptIndex: number): boolean {
+    return isPaymentMethodAlreadySelected(
+      this.paymentMethods,
+      this.orderPayments.map((payment: any) => ({ method: payment.payment_method })),
+      value,
+      exceptIndex
+    );
   }
 
   private showSplitEmissionResult(response: any): void {

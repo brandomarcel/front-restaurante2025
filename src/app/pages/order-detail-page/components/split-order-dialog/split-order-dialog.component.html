@@ -256,9 +256,10 @@
                   <select
                     class="h-10 w-full rounded-md border border-slate-300 px-2 text-sm"
                     [(ngModel)]="pay.formas_de_pago"
+                    (ngModelChange)="onPaymentMethodChange(p)"
                     [disabled]="submitting">
                     <option value="">Seleccionar forma de pago</option>
-                    <option *ngFor="let payment of paymentOptions" [value]="getPaymentValue(payment)">
+                    <option *ngFor="let payment of paymentOptions" [value]="getPaymentValue(payment)" [disabled]="isSplitPaymentMethodUsed(getPaymentValue(payment), p)">
                       {{ getPaymentLabel(payment) }}
                     </option>
                   </select>

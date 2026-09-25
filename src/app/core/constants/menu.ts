@@ -213,7 +213,7 @@ export class Menu {
       items: [
         {
           icon: 'assets/icons/heroicons/outline/cog-6-tooth.svg',
-          label: 'Configuración del negocio',
+          label: 'Configuración',
           route: '/settings/lite',
           permissionKey: 'business.settings.manage',
         },

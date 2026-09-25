@@ -4,9 +4,6 @@
       <div>
         <p class="text-[11px] font-semibold uppercase tracking-wider text-primary-foreground/70">Configuración del negocio</p>
         <h1 class="mt-1 text-lg font-bold md:text-xl">Usuarios del negocio</h1>
-        <p class="mt-1 text-xs text-primary-foreground/80">
-          Asigna usuarios Frappe existentes y define su rol dentro de FacturADA.
-        </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <span class="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold">{{ currentBusinessRole }}</span>
@@ -58,7 +55,7 @@
       <table class="app-table text-xs">
         <thead class="app-thead">
           <tr>
-            <th class="app-th">Usuario Frappe</th>
+            <th class="app-th">Usuario</th>
             <th class="app-th">Rol FacturADA</th>
             <th class="app-th">Negocio</th>
             <th class="app-th text-center">Predeterminado</th>
@@ -101,7 +98,6 @@
         <div class="flex items-start justify-between gap-3">
           <div>
             <h2 class="text-base font-bold text-slate-800">{{ selectedUser ? 'Editar asignación' : (selectedFrappeUser ? 'Asignar usuario existente' : 'Crear usuario Frappe') }}</h2>
-            <p class="mt-0.5 text-xs text-slate-500">Busca un usuario existente o crea una cuenta Frappe y asígnala a este negocio.</p>
           </div>
           <button type="button" class="btn btn-ghost !px-2" (click)="closeModal()" aria-label="Cerrar">×</button>
         </div>
@@ -110,11 +106,10 @@
       <form [formGroup]="form" (ngSubmit)="save()" class="space-y-4 p-4 md:p-5">
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
           <b class="text-slate-700">Negocio:</b> {{ activeBusinessName }}
-          <span class="text-slate-400"> · {{ activeBusinessId }}</span>
         </div>
 
         <div>
-          <label class="mb-1 block text-xs font-semibold text-slate-700">Usuario Frappe</label>
+          <label class="mb-1 block text-xs font-semibold text-slate-700">Usuario</label>
           <div class="relative">
             <input class="input" type="email" formControlName="user" placeholder="Escriba nombre o correo" [readonly]="!!selectedUser" (input)="searchFrappeUsers($any($event.target).value)" autocomplete="off" />
             <div *ngIf="frappeUsers.length && !selectedUser" class="absolute inset-x-0 top-full z-30 mt-1 max-h-64 overflow-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl">
@@ -124,11 +119,11 @@
                   <span class="block truncate text-[11px] text-slate-500">{{ candidate.email || candidate.user }}</span>
                 </span>
                 <span *ngIf="candidate.assignment" class="shrink-0 text-[10px] font-semibold text-amber-600">Ya asignado</span>
-                <span *ngIf="!isFrappeUserEnabled(candidate)" class="shrink-0 text-[10px] font-semibold text-rose-600">Frappe inactivo</span>
+                <span *ngIf="!isFrappeUserEnabled(candidate)" class="shrink-0 text-[10px] font-semibold text-rose-600">Inactivo</span>
               </button>
             </div>
           </div>
-          <p class="mt-1 text-[11px] text-slate-500">Frappe valida que el usuario exista y esté habilitado.</p>
+          <p class="mt-1 text-[11px] text-slate-500">Valida que el usuario exista y esté habilitado.</p>
           <p *ngIf="submitted && form.get('user')?.invalid" class="field-error">Ingrese un correo válido.</p>
         </div>
 
@@ -146,7 +141,6 @@
           <div class="md:col-span-2">
             <label class="mb-1 block text-xs font-semibold text-slate-700">Contraseña inicial</label>
             <input class="input" type="password" formControlName="new_password" autocomplete="new-password" placeholder="Clave segura" />
-            <p class="mt-1 text-[11px] text-slate-500">Se envía solo al crear la cuenta y no se almacena ni se muestra.</p>
             <p *ngIf="submitted && form.get('new_password')?.hasError('required')" class="field-error">Ingrese una contraseña inicial.</p>
           </div>
         </div>

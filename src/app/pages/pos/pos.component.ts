@@ -21,7 +21,7 @@ import { AuthService } from 'src/app/services/auth.service';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
 import { canSellProduct, canUseInventoryQuantity, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
-import { buildSinglePaymentPayload, findPaymentMethod, getDefaultPaymentValue, isCashPayment } from 'src/app/shared/utils/payment.utils';
+import { buildMultiplePaymentPayload, findPaymentMethod, getDefaultPaymentValue, isCashPayment, isPaymentMethodAlreadySelected, PaymentRow, roundMoney } from 'src/app/shared/utils/payment.utils';
 import { liteEmissionMessages, liteEmissionState } from 'src/app/core/utils/lite-invoice-emission';
 
 type RoleName = 'Cajero' | 'Mesero' | 'Gerente' | 'Desconocido';
@@ -54,6 +54,7 @@ export class PosComponent implements OnInit {
   deliveryPhone: string = '';
 
   paymentMethod: string = '';
+  paymentRows: PaymentRow[] = [{ method: '', amount: 0 }];
 
   showCustomerModal = false;
 
@@ -461,7 +462,48 @@ export class PosComponent implements OnInit {
   }
 
   get isSelectedPaymentCash(): boolean {
-    return isCashPayment(this.payments, this.paymentMethod);
+    return this.paymentRows.some((row) => isCashPayment(this.payments, row.method));
+  }
+
+  get paymentRowsTotal(): number {
+    return roundMoney(this.paymentRows.reduce((total, row) => total + roundMoney(row?.amount), 0));
+  }
+
+  get paymentRemaining(): number {
+    return roundMoney(this.total - this.paymentRowsTotal);
+  }
+
+  get cashPaymentAmount(): number {
+    return roundMoney(this.paymentRows.reduce((total, row) =>
+      total + (isCashPayment(this.payments, row.method) ? roundMoney(row.amount) : 0), 0));
+  }
+
+  addPaymentRow(): void {
+    const method = this.payments.find((item: any) => !isPaymentMethodAlreadySelected(this.payments, this.paymentRows, item?.name || item?.codigo));
+    if (!method) {
+      toast.warning('No hay más métodos de pago disponibles para agregar.');
+      return;
+    }
+    this.paymentRows.push({ method: method.name || method.codigo, amount: Math.max(0, this.paymentRemaining) });
+    this.calcularCambio();
+  }
+
+  removePaymentRow(index: number): void {
+    if (this.paymentRows.length <= 1) {
+      toast.warning('Debes conservar al menos un método de pago.');
+      return;
+    }
+    this.paymentRows.splice(index, 1);
+    this.calcularCambio();
+  }
+
+  onPaymentRowMethodChange(index: number): void {
+    const row = this.paymentRows[index];
+    if (row && isPaymentMethodAlreadySelected(this.payments, this.paymentRows, row.method, index)) {
+      row.method = '';
+      toast.warning('Ese método de pago ya fue agregado.');
+    }
+    this.calcularCambio();
   }
 
   // ======= Pago (solo Cajero/Gerente) =======
@@ -481,6 +523,7 @@ export class PosComponent implements OnInit {
       return;
     }
 
+    if (this.paymentRows.length === 1) this.paymentRows[0].amount = this.total;
     this.amountReceived = null;
     this.change = 0;
     this.showPaymentModal = true;
@@ -490,7 +533,7 @@ export class PosComponent implements OnInit {
     if (this.isSelectedPaymentCash) {
       const recibido = Number(this.amountReceived);
       if (Number.isFinite(recibido)) {
-        this.change = recibido - this.total;
+        this.change = recibido - this.cashPaymentAmount;
       } else {
         this.change = 0;
       }
@@ -513,6 +556,7 @@ export class PosComponent implements OnInit {
       }
     }
 
+    if (this.paymentRows.length === 1) this.paymentRows[0].amount = this.total;
     const TYPE_IDENTIFICATION_RUC = "07 - Consumidor Final";
     const UMBRAL = 50;
 
@@ -523,12 +567,12 @@ export class PosComponent implements OnInit {
       && String(this.amountReceived).trim() !== '';
     const receivedAmount = Number(this.amountReceived);
     if (this.isSelectedPaymentCash && hasReceivedAmount
-      && (!Number.isFinite(receivedAmount) || receivedAmount < totalN)) {
+      && (!Number.isFinite(receivedAmount) || receivedAmount < this.cashPaymentAmount)) {
       toast.error('El monto recibido es menor al total.');
       return;
     }
 
-    const paymentResult = buildSinglePaymentPayload(this.payments, this.paymentMethod, totalN);
+    const paymentResult = buildMultiplePaymentPayload(this.payments, this.paymentRows, totalN);
     if (paymentResult.error) {
       toast.error(paymentResult.error);
       return;
@@ -1016,5 +1060,8 @@ export class PosComponent implements OnInit {
   private ensureValidPaymentMethod(): void {
     const current = findPaymentMethod(this.payments, this.paymentMethod);
     this.paymentMethod = current?.name || current?.codigo || getDefaultPaymentValue(this.payments);
+    if (!this.paymentRows[0]?.method && this.paymentMethod) {
+      this.paymentRows[0] = { method: this.paymentMethod, amount: this.total };
+    }
   }
 }

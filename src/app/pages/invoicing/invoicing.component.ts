@@ -22,7 +22,7 @@ import { RouterModule } from '@angular/router';
 import { canSellProduct, canUseInventoryQuantity, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { AdditionalFieldPayload, normalizeAdditionalFields } from 'src/app/core/models/additional-field';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
-import { buildSinglePaymentPayload, findPaymentMethod, getDefaultPaymentValue } from 'src/app/shared/utils/payment.utils';
+import { buildMultiplePaymentPayload, findPaymentMethod, getDefaultPaymentValue, isPaymentMethodAlreadySelected, PaymentRow, roundMoney } from 'src/app/shared/utils/payment.utils';
 import { LiteEmissionState } from 'src/app/core/utils/lite-invoice-emission';
 
 type Payment = { name: string; codigo: string; nombre: string; description?: string; };
@@ -52,6 +52,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   customers: Customer[] = [];
   products: Product[] = [];
   payments: Payment[] = [];
+  paymentRows: PaymentRow[] = [{ method: '', amount: 0 }];
 
   // --- Estado UI ---
   selectedCustomer: Customer | null = null;
@@ -203,6 +204,46 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
     if (normalizedValue && normalizedValue !== currentValue) {
       control.patchValue(normalizedValue, { emitEvent: false });
+    }
+    if (!this.paymentRows[0]?.method && normalizedValue) {
+      this.paymentRows[0] = { method: normalizedValue, amount: this.total };
+    }
+  }
+
+  get paymentRowsTotal(): number {
+    return roundMoney(this.paymentRows.reduce((total, row) => total + roundMoney(row?.amount), 0));
+  }
+
+  get paymentRemaining(): number {
+    return roundMoney(this.total - this.paymentRowsTotal);
+  }
+
+  addPaymentRow(): void {
+    const method = this.payments.find((item) => !isPaymentMethodAlreadySelected(this.payments, this.paymentRows, item.name || item.codigo));
+    if (!method) {
+      toast.warning('No hay más métodos de pago disponibles para agregar.');
+      return;
+    }
+    this.paymentRows.push({
+      method: method.name || method.codigo,
+      amount: Math.max(0, this.paymentRemaining)
+    });
+  }
+
+  removePaymentRow(index: number): void {
+    if (this.paymentRows.length <= 1) {
+      toast.warning('La factura requiere al menos un método de pago.');
+      return;
+    }
+    this.paymentRows.splice(index, 1);
+  }
+
+  onPaymentRowMethodChange(index: number): void {
+    const row = this.paymentRows[index];
+    if (!row) return;
+    if (isPaymentMethodAlreadySelected(this.payments, this.paymentRows, row.method, index)) {
+      row.method = '';
+      toast.warning('Ese método de pago ya fue agregado.');
     }
   }
 
@@ -685,8 +726,10 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     }
 
     const customerName: string = this.invoiceForm.get('selectedCustomer')?.value;
-    const paymentValue: string = this.invoiceForm.get('paymentMethod')?.value;
-    const paymentResult = buildSinglePaymentPayload(this.payments, paymentValue, total);
+    // En una sola forma el total se completa automáticamente. Para pagos
+    // combinados cada fila debe cuadrar con el total de la factura.
+    if (this.paymentRows.length === 1) this.paymentRows[0].amount = total;
+    const paymentResult = buildMultiplePaymentPayload(this.payments, this.paymentRows, total);
     if (paymentResult.error) {
       toast.error(paymentResult.error);
       return;

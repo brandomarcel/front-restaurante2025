@@ -32,7 +32,7 @@ import { CartService } from '../services/cart.service';
 import { canSellProduct, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { UtilsService } from 'src/app/core/services/utils.service';
-import { buildSinglePaymentPayload, findPaymentMethod, getDefaultPaymentValue, getPaymentDisplayLabel, isCashPayment } from 'src/app/shared/utils/payment.utils';
+import { buildMultiplePaymentPayload, findPaymentMethod, getDefaultPaymentValue, getPaymentDisplayLabel, isCashPayment, isPaymentMethodAlreadySelected, PaymentRow, roundMoney } from 'src/app/shared/utils/payment.utils';
 import { liteEmissionMessages, liteEmissionState } from 'src/app/core/utils/lite-invoice-emission';
 
 @Component({
@@ -76,6 +76,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   deliveryAddress = '';
   deliveryPhone = '';
   paymentMethod = '';
+  paymentRows: PaymentRow[] = [{ method: '', amount: 0 }];
 
   printOption: 'comanda' | 'recibo' | 'ambas' = 'ambas';
   private pendingOrderId: string | null = null;
@@ -203,7 +204,48 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   get isSelectedPaymentCash(): boolean {
-    return isCashPayment(this.payments, this.paymentMethod);
+    return this.paymentRows.some((row) => isCashPayment(this.payments, row.method));
+  }
+
+  get paymentRowsTotal(): number {
+    return roundMoney(this.paymentRows.reduce((total, row) => total + roundMoney(row?.amount), 0));
+  }
+
+  get paymentRemaining(): number {
+    return roundMoney(this.total - this.paymentRowsTotal);
+  }
+
+  get cashPaymentAmount(): number {
+    return roundMoney(this.paymentRows.reduce((total, row) =>
+      total + (isCashPayment(this.payments, row.method) ? roundMoney(row.amount) : 0), 0));
+  }
+
+  addPaymentRow(): void {
+    const method = this.payments.find((item: any) => !isPaymentMethodAlreadySelected(this.payments, this.paymentRows, item?.name || item?.codigo));
+    if (!method) {
+      toast.warning('No hay más métodos de pago disponibles para agregar.');
+      return;
+    }
+    this.paymentRows.push({ method: method.name || method.codigo, amount: Math.max(0, this.paymentRemaining) });
+    this.onPaymentMethodChange();
+  }
+
+  removePaymentRow(index: number): void {
+    if (this.paymentRows.length <= 1) {
+      toast.warning('Debes conservar al menos un método de pago.');
+      return;
+    }
+    this.paymentRows.splice(index, 1);
+    this.onPaymentMethodChange();
+  }
+
+  onPaymentRowMethodChange(index: number): void {
+    const row = this.paymentRows[index];
+    if (row && isPaymentMethodAlreadySelected(this.payments, this.paymentRows, row.method, index)) {
+      row.method = '';
+      toast.warning('Ese método de pago ya fue agregado.');
+    }
+    this.onPaymentMethodChange();
   }
 
   toggleSidebar(): void {
@@ -516,6 +558,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.paymentRows.length === 1) this.paymentRows[0].amount = this.total;
     this.amountReceived = null;
     this.change = 0;
     this.showPaymentModal = true;
@@ -527,11 +570,12 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       return;
     }
     const recibido = Number(this.amountReceived);
-    this.change = Number.isFinite(recibido) ? this.round2(recibido - this.total) : 0;
+    this.change = Number.isFinite(recibido) ? this.round2(recibido - this.cashPaymentAmount) : 0;
   }
 
   confirmarPago(typePago: 'Nota Venta' | 'Factura'): void {
     if (this.isSubmittingOrder || this.isSubmittingPosSale) return;
+    if (this.paymentRows.length === 1) this.paymentRows[0].amount = this.total;
 
     if (typePago === 'Factura') {
       if (!this.capabilities.hasPermission('billing.create')) {
@@ -549,7 +593,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       && String(this.amountReceived).trim() !== '';
     const receivedAmount = Number(this.amountReceived);
     if (this.isSelectedPaymentCash && hasReceivedAmount
-      && (!Number.isFinite(receivedAmount) || receivedAmount < this.total)) {
+      && (!Number.isFinite(receivedAmount) || receivedAmount < this.cashPaymentAmount)) {
       toast.error('El monto recibido es menor al total.');
       return;
     }
@@ -924,7 +968,8 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   private buildOrderPayload(typePago: 'Nota Venta' | 'Factura') {
-    const paymentResult = buildSinglePaymentPayload(this.payments, this.paymentMethod, this.total);
+    if (this.paymentRows.length === 1) this.paymentRows[0].amount = this.total;
+    const paymentResult = buildMultiplePaymentPayload(this.payments, this.paymentRows, this.total);
     if (paymentResult.error) {
       toast.error(paymentResult.error);
       return null;
@@ -952,15 +997,15 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   private buildPosSaleNotePayload(): any | null {
-    const payment = findPaymentMethod(this.payments, this.paymentMethod);
-    const litePayment = this.mapLitePayment(payment);
+    if (this.paymentRows.length === 1) this.paymentRows[0].amount = this.total;
+    const paymentResult = buildMultiplePaymentPayload(this.payments, this.paymentRows, this.total);
     const business = String(this.capabilities.activeBusinessId || '').trim();
     if (!business) {
       toast.error('Selecciona un negocio antes de emitir.');
       return null;
     }
-    if (!litePayment || this.total <= 0) {
-      toast.error('Selecciona un método de pago válido.');
+    if (paymentResult.error || this.total <= 0) {
+      toast.error(paymentResult.error || 'Selecciona un método de pago válido.');
       return null;
     }
     const terminal = String(this.capabilities.activePosTerminal?.name || '').trim();
@@ -980,12 +1025,16 @@ export class PosCajaComponent implements OnInit, OnDestroy {
         discount_amount: 0,
         tax_rate: Number(item.tax_value || 0)
       })),
-      payments: [{
-        payment_method: litePayment.payment_method,
-        payment_code: litePayment.payment_code,
-        amount: Number((this.isSelectedPaymentCash && Number(this.amountReceived) > 0 ? Number(this.amountReceived) : this.total).toFixed(2)),
-        reference: ''
-      }],
+      payments: paymentResult.payments.map((row) => {
+        const selected = findPaymentMethod(this.payments, row.formas_de_pago);
+        const litePayment = this.mapLitePayment(selected, row.formas_de_pago);
+        return litePayment ? {
+          payment_method: litePayment.payment_method,
+          payment_code: litePayment.payment_code,
+          amount: row.monto,
+          reference: ''
+        } : null;
+      }).filter(Boolean),
       notes: ''
     };
     if (!payload.pos_terminal) delete payload.pos_terminal;
@@ -998,7 +1047,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
    * o aliases del DocType. El contrato de FacturADA Lite, en cambio, espera
    * siempre el par canónico payment_method/payment_code.
    */
-  private mapLitePayment(payment: any): { payment_method: 'CASH' | 'CARD' | 'TRANSFER' | 'OTHER'; payment_code: '01' | '19' | '20' } | null {
+  private mapLitePayment(payment: any, fallback = ''): { payment_method: 'CASH' | 'CARD' | 'TRANSFER' | 'OTHER'; payment_code: '01' | '19' | '20' } | null {
     const raw = payment || {};
     const value = [
       raw.payment_method,
@@ -1006,7 +1055,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       raw.nombre,
       raw.description,
       raw.name,
-      this.paymentMethod
+      fallback || this.paymentMethod
     ].filter(Boolean).join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
     const code = String(raw.payment_code || raw.codigo || raw.forma_pago || '').trim();
 
@@ -1043,12 +1092,9 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     return {
       ...payload,
       environment: this.backendEnvironment() || undefined,
-      // En una factura el pago aplicado debe cuadrar con el total. El
-      // excedente de efectivo se presenta como cambio, no como monto pagado.
-      payments: (payload.payments || []).map((payment: any) => ({
-        ...payment,
-        amount: Number(this.total.toFixed(2))
-      })),
+      // Cada fila ya fue validada para cuadrar exactamente con el total. El
+      // excedente recibido en efectivo se trata como cambio, no como pago.
+      payments: payload.payments || [],
       additional_fields: [],
       auto_queue: true
     };
@@ -1216,6 +1262,9 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   private ensureValidPaymentMethod(): void {
     const current = findPaymentMethod(this.payments, this.paymentMethod);
     this.paymentMethod = current?.name || current?.codigo || getDefaultPaymentValue(this.payments);
+    if (!this.paymentRows[0]?.method && this.paymentMethod) {
+      this.paymentRows[0] = { method: this.paymentMethod, amount: this.total };
+    }
   }
 
   private submitOrder(payload: any): void {

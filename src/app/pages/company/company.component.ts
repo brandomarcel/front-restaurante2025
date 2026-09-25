@@ -45,6 +45,9 @@ export class CompanyComponent implements OnInit, DoCheck {
   liteSequences: any[] = [];
   activeInvoiceSequence: any | null = null;
   liteSequenceError = '';
+  /** Valores confirmados por get_lite_setup; se usan para detectar cambios pendientes. */
+  private savedLiteEstablishmentCode = '';
+  private savedLiteEmissionPointCode = '';
 
   /** Configuración de integración devuelta por get_user_context. Es solo de lectura. */
   apiConfiguration: any | null = null;
@@ -52,6 +55,7 @@ export class CompanyComponent implements OnInit, DoCheck {
   apiConfigurationError = '';
   apiConfigurationAccessDenied = false;
   private apiConfigurationBusiness = '';
+  private loadedCompanyBusiness = '';
 
   ambiente: 'PRUEBAS' | 'PRODUCCION' = 'PRUEBAS';
 
@@ -91,6 +95,10 @@ export class CompanyComponent implements OnInit, DoCheck {
 
   ngDoCheck(): void {
     const business = String(this.capabilities.activeBusinessId || localStorage.getItem('active_business') || '').trim();
+    if (business !== this.loadedCompanyBusiness && !this.isLoadingCompany) {
+      this.resetLiteEmissionView();
+      this.loadCompanyInfo();
+    }
     if (business !== this.apiConfigurationBusiness && !this.apiConfigurationLoading
       && !(this.apiConfigurationAccessDenied && !business)) {
       this.loadApiConfiguration();
@@ -291,9 +299,26 @@ export class CompanyComponent implements OnInit, DoCheck {
     return !!this.activeInvoiceSequence && !this.liteSequenceError;
   }
 
+  get hasPendingLiteEmissionConfiguration(): boolean {
+    if (!this.isLiteMode) return false;
+    return this.previewEnvironment !== this.ambiente
+      || this.selectedLiteEstablishmentCode !== this.savedLiteEstablishmentCode
+      || this.selectedLiteEmissionPointCode !== this.savedLiteEmissionPointCode;
+  }
+
+  get selectedLiteEstablishmentCode(): string {
+    return String(this.selectedLiteEstablishment?.establishment_code || '').trim();
+  }
+
+  get selectedLiteEmissionPointCode(): string {
+    return String(this.selectedLiteEmissionPoint?.emission_point_code || '').trim();
+  }
+
   get liteSequenceCurrentNumber(): number | null {
     const value = this.activeInvoiceSequence?.current_number;
-    return value === undefined || value === null || value === '' ? null : Number(value);
+    if (value === undefined || value === null || value === '') return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : null;
   }
 
   initForm(): void {
@@ -345,14 +370,22 @@ export class CompanyComponent implements OnInit, DoCheck {
       || localStorage.getItem('businessId')
       || '';
     if (!activeBusiness) {
+      this.loadedCompanyBusiness = '';
       this.isLoadingCompany = false;
       this.alertService.error('No hay una empresa activa. Selecciona una empresa desde el inicio de sesión.');
       return;
     }
+    // Marcar la solicitud para no convertir un error HTTP en un ciclo de
+    // peticiones desde ngDoCheck. Si el negocio cambia, su ID será distinto y
+    // se disparará una nueva consulta limpia.
+    this.loadedCompanyBusiness = activeBusiness;
     this.service.getLiteSetup(activeBusiness).pipe(finalize(() => {
       this.isLoadingCompany = false;
     })).subscribe({
       next: (response: any) => {
+        // Ignorar una respuesta que terminó después de que el usuario cambió
+        // de negocio. Así nunca se mezclan listas o selecciones entre empresas.
+        if (activeBusiness !== String(this.capabilities.activeBusinessId || '').trim()) return;
         const setupData = response?.data ?? response?.message?.data ?? response ?? {};
         this.capabilities.setLiteSetupState(setupData);
         this.currentPlan = this.capabilities.plan;
@@ -402,6 +435,7 @@ export class CompanyComponent implements OnInit, DoCheck {
         this.liteEmissionPoints = Array.isArray(setupData?.emission_points) ? setupData.emission_points : [];
         this.liteSequences = Array.isArray(setupData?.sequences) ? setupData.sequences : [];
         this.syncLiteDocumentSelection();
+        this.syncSavedLiteEmissionConfiguration(setupData);
         this.updateLiteInvoiceSequence(this.ambiente);
         this.form.patchValue({ sequence_environment: this.ambiente }, { emitEvent: false });
         // Mantener sincronizados el indicador global, POS, facturación y el
@@ -519,10 +553,12 @@ export class CompanyComponent implements OnInit, DoCheck {
   }
 
   liteEstablishmentId(establishment: any): string {
+    if (typeof establishment === 'string') return establishment.trim();
     return String(establishment?.name ?? establishment?.id ?? establishment?.establishment ?? '').trim();
   }
 
   liteEmissionPointId(point: any): string {
+    if (typeof point === 'string') return point.trim();
     return String(point?.name ?? point?.id ?? point?.emission_point ?? '').trim();
   }
 
@@ -546,6 +582,17 @@ export class CompanyComponent implements OnInit, DoCheck {
     const point = this.selectedLiteEmissionPoint?.emission_point_code;
     const next = this.liteSequenceNextNumber;
     return establishment && point && next !== '—' ? `${establishment}-${point}-${next}` : '—';
+  }
+
+  /** Secuencias de la ubicación fiscal elegida actualmente en los combos. */
+  get selectedLiteSequences(): any[] {
+    const establishmentId = this.liteEstablishmentId(this.selectedLiteEstablishment);
+    const emissionPointId = this.liteEmissionPointId(this.selectedLiteEmissionPoint);
+    if (!establishmentId || !emissionPointId) return [];
+    return this.liteSequences.filter((sequence: any) =>
+      this.liteEstablishmentId(sequence?.establishment) === establishmentId
+      && this.liteEmissionPointId(sequence?.emission_point) === emissionPointId
+    );
   }
 
   onLiteEstablishmentSelected(value: unknown): void {
@@ -679,7 +726,7 @@ export class CompanyComponent implements OnInit, DoCheck {
     const value = this.previewEnvironment;
     const target = this.normalizeEnvironment(value);
     const previous = this.ambiente;
-    if (target === previous) {
+    if (!this.hasPendingLiteEmissionConfiguration) {
       this.updateLiteInvoiceSequence(target);
       return;
     }
@@ -700,8 +747,8 @@ export class CompanyComponent implements OnInit, DoCheck {
 
     this.isSaving = true;
     this.alertService.confirm(
-      `¿Deseas cambiar el ambiente a ${target === 'PRODUCCION' ? 'Produccion' : 'Pruebas'}?`,
-      'El cambio se aplica al negocio. Se ha verificado la secuencia del establecimiento y punto seleccionados.'
+      '¿Deseas guardar la configuración de emisión?',
+      `Ambiente: ${target === 'PRODUCCION' ? 'Producción' : 'Pruebas'}. Se guardarán también el establecimiento, punto y consecutivo de la secuencia seleccionada.`
     ).then((result) => {
       if (!result.isConfirmed) {
         this.isSaving = false;
@@ -710,7 +757,7 @@ export class CompanyComponent implements OnInit, DoCheck {
 
       this.isSaving = true;
       this.spinner.show();
-      this.service.saveLiteSetup(this.buildLiteSetupPayload(target)).pipe(
+      this.service.saveLiteSetup(this.buildLiteEmissionConfigurationPayload(target)).pipe(
         switchMap(() => this.service.getLiteSetup(this.companyId)),
         finalize(() => {
           this.isSaving = false;
@@ -720,8 +767,17 @@ export class CompanyComponent implements OnInit, DoCheck {
         next: (response: any) => {
           const data = response?.data ?? response?.message?.data ?? response ?? {};
           this.capabilities.setLiteSetupState(data);
-          this.alertService.success('Ambiente actualizado correctamente.');
-          this.loadCompanyInfo();
+          this.syncLiteDocumentSelection();
+          this.syncSavedLiteEmissionConfiguration(data);
+          this.ambiente = target;
+          this.form.patchValue({
+            ambiente: target === 'PRODUCCION',
+            sequence_environment: target
+          }, { emitEvent: false });
+          this.updateLiteInvoiceSequence(target);
+          localStorage.setItem('ambiente', target);
+          this.utilsService.cambiarAmbiente(target);
+          this.alertService.success('Configuración de emisión actualizada correctamente.');
         },
         error: (error: any) => {
           this.form.patchValue({
@@ -1061,11 +1117,12 @@ export class CompanyComponent implements OnInit, DoCheck {
       ? String(localStorage.getItem(`lite_active_establishment:${business}`) || '').trim()
       : '';
     const formEstablishmentId = String(this.form?.get('selected_establishment')?.value || '').trim();
-    // `setLiteSetupState` ya validó y aplicó el `tax_context` recibido del
-    // backend. Se consulta primero para no permitir que un valor viejo del
-    // formulario o del storage reemplace lo que realmente quedó guardado.
+    // Al cargar el setup, el servicio central ya eligió tax_context o, si
+    // falta, el establecimiento is_main. Este respaldo evita que el combo
+    // quede vacío mientras Angular termina de sincronizar ese estado.
     const capabilityEstablishment = this.capabilities.selectedLiteEstablishment;
     const establishment = capabilityEstablishment
+      || this.activeLiteEstablishments.find((item: any) => this.normalizeCheck(item?.is_main))
       || this.activeLiteEstablishments.find((item: any) => this.liteEstablishmentId(item) === savedEstablishmentId)
       || this.activeLiteEstablishments.find((item: any) => this.liteEstablishmentId(item) === formEstablishmentId);
     const points = establishment ? this.capabilities.activeEmissionPointsFor(establishment) : [];
@@ -1076,8 +1133,8 @@ export class CompanyComponent implements OnInit, DoCheck {
       ? this.capabilities.selectedLiteEmissionPoint
       : null;
     const point = capabilityPoint
-      || points.find((item: any) => this.liteEmissionPointId(item) === formPointId)
       || points.find((item: any) => this.normalizeCheck(item?.is_default))
+      || points.find((item: any) => this.liteEmissionPointId(item) === formPointId)
       || (points.length === 1 ? points[0] : null);
     this.form.patchValue({
       selected_establishment: establishment ? this.liteEstablishmentId(establishment) : '',
@@ -1100,6 +1157,57 @@ export class CompanyComponent implements OnInit, DoCheck {
       this.capabilities.clearLiteDocumentSelection();
       if (business) localStorage.removeItem(`lite_active_establishment:${business}`);
     }
+  }
+
+  private resetLiteEmissionView(): void {
+    this.companyId = '';
+    this.liteEstablishments = [];
+    this.liteEmissionPoints = [];
+    this.liteSequences = [];
+    this.activeInvoiceSequence = null;
+    this.liteSequenceError = '';
+    this.savedLiteEstablishmentCode = '';
+    this.savedLiteEmissionPointCode = '';
+    this.form?.patchValue({
+      selected_establishment: '',
+      selected_emission_point: '',
+      establishmentcode: '',
+      establishment_name: '',
+      emissionpoint: '',
+      emission_point_name: '',
+      current_number: null
+    }, { emitEvent: false });
+  }
+
+  /** Guarda el último principal confirmado por get_lite_setup, nunca el valor
+   * temporal que el usuario apenas eligió en los combos. */
+  private syncSavedLiteEmissionConfiguration(data: any): void {
+    const taxContext = data?.tax_context && typeof data.tax_context === 'object' ? data.tax_context : {};
+    const business = data?.business && typeof data.business === 'object'
+      ? data.business
+      : (this.capabilities.business || this.capabilities.activeBusiness || {});
+    const mainEstablishment = this.activeLiteEstablishments.find((item: any) => this.normalizeCheck(item?.is_main));
+    const configuredEstablishmentCode = String(
+      taxContext?.establishment_code
+      ?? business?.establishmentcode
+      ?? business?.establishment_code
+      ?? mainEstablishment?.establishment_code
+      ?? ''
+    ).trim();
+    const configuredEstablishment = this.activeLiteEstablishments.find((item: any) =>
+      String(item?.establishment_code || '').trim() === configuredEstablishmentCode
+    ) || mainEstablishment;
+    const mainPoint = configuredEstablishment
+      ? this.capabilities.activeEmissionPointsFor(configuredEstablishment).find((item: any) => this.normalizeCheck(item?.is_default))
+      : null;
+    this.savedLiteEstablishmentCode = configuredEstablishmentCode;
+    this.savedLiteEmissionPointCode = String(
+      taxContext?.emission_point_code
+      ?? business?.emissionpoint
+      ?? business?.emission_point_code
+      ?? mainPoint?.emission_point_code
+      ?? ''
+    ).trim();
   }
 
   private updateLiteInvoiceSequence(environment: 'PRUEBAS' | 'PRODUCCION'): void {
@@ -1191,6 +1299,7 @@ export class CompanyComponent implements OnInit, DoCheck {
     this.liteEmissionPoints = Array.isArray(data?.emission_points) ? data.emission_points : this.liteEmissionPoints;
     this.liteSequences = Array.isArray(data?.sequences) ? data.sequences : this.liteSequences;
     this.syncLiteDocumentSelection();
+    this.syncSavedLiteEmissionConfiguration(data);
     const setupEnvironment = data?.tax_profile?.environment ?? data?.tax_profile?.ambiente;
     if (setupEnvironment) {
       this.ambiente = this.normalizeEnvironment(setupEnvironment);
@@ -1279,7 +1388,9 @@ export class CompanyComponent implements OnInit, DoCheck {
 
   private buildLiteSetupPayload(environmentOverride?: 'PRUEBAS' | 'PRODUCCION'): any {
     const raw = this.form.getRawValue();
-    const selectedEnvironment = environmentOverride || (raw.ambiente ? 'PRODUCCION' : 'PRUEBAS');
+    const selectedEnvironment = environmentOverride || (this.isLiteMode
+      ? this.previewEnvironment
+      : (raw.ambiente ? 'PRODUCCION' : 'PRUEBAS'));
     const environment = this.toBackendEnvironment(selectedEnvironment);
     const businessName = `${raw.business_name || raw.businessname || ''}`.trim();
     const legalName = `${raw.legal_name || raw.businessname || businessName}`.trim();
@@ -1307,7 +1418,35 @@ export class CompanyComponent implements OnInit, DoCheck {
       payload.business = business;
     }
 
+    // El guardado general también respeta la configuración fiscal visible.
+    // Solo enviamos consecutivo cuando existe la secuencia validada; crear o
+    // modificar secuencias se mantiene exclusivamente en su propio módulo.
+    if (this.isLiteMode && this.selectedLiteEstablishmentCode && this.selectedLiteEmissionPointCode && this.hasValidLiteInvoiceSequence) {
+      payload.establishment_code = this.selectedLiteEstablishmentCode;
+      payload.emission_point_code = this.selectedLiteEmissionPointCode;
+      payload.current_number = this.liteSequenceCurrentNumber ?? 0;
+    }
+
     return payload;
+  }
+
+  /** Payload mínimo del contrato save_lite_setup para cambiar la ubicación
+   * principal o el ambiente. Los IDs internos no se envían a este endpoint. */
+  private buildLiteEmissionConfigurationPayload(environment: 'PRUEBAS' | 'PRODUCCION'): {
+    business: string;
+    environment: 'Pruebas' | 'Produccion';
+    establishment_code: string;
+    emission_point_code: string;
+    current_number: number;
+  } {
+    const business = String(this.companyId || this.capabilities.businessId || localStorage.getItem('businessId') || '').trim();
+    return {
+      business,
+      environment: this.toBackendEnvironment(environment),
+      establishment_code: this.selectedLiteEstablishmentCode,
+      emission_point_code: this.selectedLiteEmissionPointCode,
+      current_number: this.liteSequenceCurrentNumber ?? 0
+    };
   }
 
   private saveLiteSetup(): void {

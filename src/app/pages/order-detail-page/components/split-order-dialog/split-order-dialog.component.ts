@@ -6,7 +6,7 @@ import {
   SplitOrderPayload,
   SplitPaymentRequest
 } from 'src/app/services/order-split.types';
-import { findPaymentMethod, getPaymentDisplayLabel, getPaymentValue as getInternalPaymentValue } from 'src/app/shared/utils/payment.utils';
+import { findPaymentMethod, getPaymentDisplayLabel, getPaymentValue as getInternalPaymentValue, isPaymentMethodAlreadySelected } from 'src/app/shared/utils/payment.utils';
 
 type SplitItemRowForm = {
   order_item: string;
@@ -183,14 +183,42 @@ export class SplitOrderDialogComponent implements OnChanges {
   }
 
   addPaymentRow(): void {
+    const available = this.paymentOptions.find((payment: any) =>
+      !isPaymentMethodAlreadySelected(this.paymentOptions, this.payments.map((row) => ({ method: row.formas_de_pago })), this.getPaymentValue(payment))
+    );
+    if (!available) {
+      this.formError = 'No hay más métodos de pago disponibles para agregar.';
+      return;
+    }
     this.payments.push({
-      formas_de_pago: this.getDefaultCashPaymentValue(),
+      formas_de_pago: this.getPaymentValue(available),
       monto: 0
     });
   }
 
   removePaymentRow(i: number): void {
     this.payments.splice(i, 1);
+  }
+
+  onPaymentMethodChange(index: number): void {
+    const row = this.payments[index];
+    if (!row) return;
+    const rows = this.payments.map((payment) => ({ method: payment.formas_de_pago }));
+    if (isPaymentMethodAlreadySelected(this.paymentOptions, rows, row.formas_de_pago, index)) {
+      row.formas_de_pago = '';
+      this.formError = 'No puedes repetir el mismo método de pago.';
+      return;
+    }
+    this.formError = '';
+  }
+
+  isSplitPaymentMethodUsed(value: string, exceptIndex: number): boolean {
+    return isPaymentMethodAlreadySelected(
+      this.paymentOptions,
+      this.payments.map((payment) => ({ method: payment.formas_de_pago })),
+      value,
+      exceptIndex
+    );
   }
 
   onSplitLabelChange(value: string): void {
@@ -591,6 +619,17 @@ export class SplitOrderDialogComponent implements OnChanges {
     const cleanedPayments: SplitPaymentRequest[] = normalizedPayments.filter((p) => !!p.formas_de_pago && p.monto > 0);
     if (!cleanedPayments.length) {
       this.formError = 'Debes registrar al menos 1 pago para crear la subcuenta.';
+      return null;
+    }
+
+    const duplicatedPayment = cleanedPayments.some((payment, index) =>
+      cleanedPayments.findIndex((candidate) =>
+        (candidate.payment_code && candidate.payment_code === payment.payment_code)
+        || (!candidate.payment_code && !payment.payment_code && candidate.payment_method === payment.payment_method)
+      ) !== index
+    );
+    if (duplicatedPayment) {
+      this.formError = 'No puedes repetir el mismo método de pago.';
       return null;
     }
 

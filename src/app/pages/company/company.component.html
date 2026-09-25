@@ -184,7 +184,7 @@
                     [disabled]="isSaving || isLoadingCompany || !canEditLiteSetup">
                     <option value="">Selecciona un establecimiento</option>
                     <option *ngFor="let establishment of activeLiteEstablishments" [value]="liteEstablishmentId(establishment)">
-                      {{ establishment.establishment_code }} - {{ establishment.establishment_name }}
+                      {{ establishment.establishment_code }} - {{ establishment.establishment_name }}{{ establishment.is_main ? ' · Principal' : '' }}
                     </option>
                   </select>
                   <small *ngIf="!activeLiteEstablishments.length" class="text-red-600">Configure un establecimiento activo.</small>
@@ -206,7 +206,7 @@
                     [disabled]="isSaving || isLoadingCompany || !selectedLiteEstablishment || !canEditLiteSetup">
                     <option value="">Selecciona un punto de emisión</option>
                     <option *ngFor="let point of activeLiteEmissionPoints" [value]="liteEmissionPointId(point)">
-                      {{ point.emission_point_code }} - {{ point.emission_point_name }}
+                      {{ point.emission_point_code }} - {{ point.emission_point_name }}{{ point.is_default ? ' · Predeterminado' : '' }}
                     </option>
                   </select>
                   <small *ngIf="selectedLiteEstablishment && !activeLiteEmissionPoints.length" class="text-red-600">Configure un punto de emisión activo para este establecimiento.</small>
@@ -264,8 +264,8 @@
                   <button type="button" *ngIf="previewEnvironment !== ambiente" (click)="onLiteEnvironmentSelected(ambiente)"
                     [disabled]="isSaving || isLoadingCompany" class="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 disabled:opacity-50">Descartar cambio</button>
                   <button type="button" (click)="saveLiteEnvironment()"
-                    [disabled]="isSaving || isLoadingCompany || previewEnvironment === ambiente || !selectedLiteEstablishment || !selectedLiteEmissionPoint || !hasValidLiteInvoiceSequence"
-                    class="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Guardar ambiente</button>
+                    [disabled]="isSaving || isLoadingCompany || !hasPendingLiteEmissionConfiguration || !selectedLiteEstablishment || !selectedLiteEmissionPoint || !hasValidLiteInvoiceSequence"
+                    class="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Guardar configuración</button>
                 </div>
               </div>
 
@@ -796,11 +796,11 @@
           <article *ngIf="showSettingsSection('general', 'sequences')" class="settings-summary-card rounded-lg border border-slate-200 bg-white shadow-sm">
             <header class="border-b border-slate-100 px-4 py-3">
               <h3 class="text-sm font-semibold text-slate-900">Secuencias oficiales</h3>
-              <p class="mt-0.5 text-[11px] text-slate-500">Separadas por documento y ambiente.</p>
+              <p class="mt-0.5 text-[11px] text-slate-500">Secuencias de la ubicación seleccionada, separadas por documento y ambiente.</p>
             </header>
             <div class="p-3">
-              <div *ngIf="liteSequences.length; else noSequences" class="space-y-2">
-                <div *ngFor="let sequence of liteSequences" class="rounded-lg border border-slate-100 bg-slate-50 p-2.5 text-[11px]">
+              <div *ngIf="selectedLiteSequences.length; else noSequences" class="space-y-2">
+                <div *ngFor="let sequence of selectedLiteSequences" class="rounded-lg border border-slate-100 bg-slate-50 p-2.5 text-[11px]">
                   <div class="flex items-start justify-between gap-2">
                     <p class="font-bold text-slate-800">{{ sequence.document_type || 'Documento' }} · {{ sequence.environment || '—' }}</p>
                     <span class="rounded-full px-2 py-0.5 text-[10px] font-bold" [ngClass]="sequence.status === 'Activo' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'">{{ sequence.status || 'Sin estado' }}</span>
@@ -810,7 +810,7 @@
                   <p class="mt-1 text-slate-600">Próximo comprobante: <span class="font-mono font-bold text-slate-800">{{ formatNextSequenceNumber(sequence.current_number) }}</span></p>
                 </div>
               </div>
-              <ng-template #noSequences><p class="py-3 text-center text-[11px] text-slate-500">No hay secuencias configuradas.</p></ng-template>
+              <ng-template #noSequences><p class="py-3 text-center text-[11px] text-slate-500">No hay secuencias para el establecimiento y punto de emisión seleccionados.</p></ng-template>
               <div class="mt-3 flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1.5 text-[10px] text-slate-500">
                 <span>El consecutivo oficial lo asigna FacturADA.</span>
                 <a routerLink="/settings/lite/sequences" class="font-bold text-primary hover:underline">Administrar</a>
