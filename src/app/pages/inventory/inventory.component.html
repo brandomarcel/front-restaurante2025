@@ -117,6 +117,7 @@
               <th class="app-th py-2 text-right">Precio</th>
               <th class="app-th py-2">Unidad</th>
               <th class="app-th py-2">Estado</th>
+              <th *ngIf="canManageInventory" class="app-th py-2 text-center">Acciones</th>
             </tr>
           </thead>
 
@@ -125,13 +126,18 @@
               <td class="app-td py-2">
                 <div class="max-w-[360px] leading-tight">
                   <p class="truncate font-semibold text-slate-900">{{ product.nombre }}</p>
-                  <p class="truncate text-[10px] text-muted-foreground">{{ product.descripcion || 'Sin descripción' }}</p>
+                  <p *ngIf="describeVariantContext(product) as context; else plainDescription" class="truncate text-[10px] text-primary">
+                    Variante de {{ context }}
+                  </p>
+                  <ng-template #plainDescription>
+                    <p class="truncate text-[10px] text-muted-foreground">{{ product.descripcion || 'Sin descripción' }}</p>
+                  </ng-template>
                 </div>
               </td>
               <td class="app-td py-2 font-mono text-[11px]">{{ product.codigo || '-' }}</td>
               <td class="app-td py-2 text-center">
                 <span class="badge" [ngClass]="canSell(product) ? 'badge-green' : 'badge-red'">
-                  {{ canSell(product) ? 'Disponible' : 'Bloqueado' }}
+                  {{ canSell(product) ? 'Disponible' : 'Agotado' }}
                 </span>
               </td>
               <td class="app-td py-2 text-right font-bold text-slate-900">{{ formatStock(product) }}</td>
@@ -147,10 +153,15 @@
                   <span *ngIf="isLowStock(product) && !isOutOfStock(product)" class="badge badge-yellow">Bajo</span>
                 </div>
               </td>
+              <td *ngIf="canManageInventory" class="app-td py-2 text-center">
+                <button type="button" class="btn btn-outline !px-3 !py-1 !text-[11px]" (click)="abrirMovimientoParaProducto(product)">
+                  Ajustar
+                </button>
+              </td>
             </tr>
 
             <tr *ngIf="inventoryProducts.length === 0">
-              <td colspan="8" class="app-td py-8 text-center text-xs text-muted-foreground">
+              <td [attr.colspan]="canManageInventory ? 9 : 8" class="app-td py-8 text-center text-xs text-muted-foreground">
                 No encontramos productos con esos filtros.
               </td>
             </tr>
@@ -164,10 +175,15 @@
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
               <p class="truncate text-sm font-bold text-slate-900">{{ product.nombre }}</p>
-              <p class="truncate text-[10px] text-muted-foreground">{{ product.codigo || 'Sin código' }}</p>
+              <p *ngIf="describeVariantContext(product) as context; else plainCode" class="truncate text-[10px] text-primary">
+                Variante de {{ context }}
+              </p>
+              <ng-template #plainCode>
+                <p class="truncate text-[10px] text-muted-foreground">{{ product.codigo || 'Sin código' }}</p>
+              </ng-template>
             </div>
             <span class="badge shrink-0" [ngClass]="canSell(product) ? 'badge-green' : 'badge-red'">
-              {{ canSell(product) ? 'Venta' : 'Bloqueado' }}
+              {{ canSell(product) ? 'Disponible' : 'Agotado' }}
             </span>
           </div>
 
@@ -189,6 +205,11 @@
               <span>{{ getProductStatusSummary(product) }}</span>
             </div>
           </div>
+
+          <button *ngIf="canManageInventory" type="button" class="btn btn-outline mt-2 w-full !py-1.5 !text-[11px]"
+            (click)="abrirMovimientoParaProducto(product)">
+            Ajustar stock
+          </button>
         </article>
 
         <div *ngIf="inventoryProducts.length === 0" class="rounded-xl border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
@@ -228,10 +249,16 @@
       </div>
 
       <div class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_220px_150px_150px_minmax(0,1fr)_auto]">
-        <select class="select h-8 !w-full text-xs" [(ngModel)]="historyProduct">
-          <option value="">Todos los productos</option>
-          <option *ngFor="let product of productOptions" [value]="product.name">{{ product.nombre }}</option>
-        </select>
+        <ng-select
+          class="ng-select-tailwind text-xs"
+          [(ngModel)]="historyProduct"
+          [ngModelOptions]="{standalone: true}"
+          [items]="productSelectOptions"
+          bindLabel="displayLabel"
+          bindValue="name"
+          placeholder="Todos los productos"
+          [clearable]="true"
+        ></ng-select>
 
         <select class="select h-8 !w-full text-xs" [(ngModel)]="historyMovementType">
           <option value="">Todos los tipos</option>
@@ -473,10 +500,14 @@
             >
               <div>
                 <label class="mb-1 block font-semibold text-slate-700">Producto</label>
-                <select class="select h-8 !w-full text-xs" formControlName="product">
-                  <option value="">Selecciona un producto</option>
-                  <option *ngFor="let product of productOptions" [value]="product.name">{{ product.nombre }}</option>
-                </select>
+                <ng-select
+                  class="ng-select-tailwind text-xs"
+                  formControlName="product"
+                  [items]="productSelectOptions"
+                  bindLabel="displayLabel"
+                  bindValue="name"
+                  placeholder="Busca un producto por nombre o código"
+                ></ng-select>
                 <div *ngIf="submittedMovement && itemGroup.get('product')?.invalid" class="field-error">Producto requerido.</div>
               </div>
 

@@ -969,7 +969,10 @@ export class CompanyCapabilitiesService {
         && localStorage.getItem(`mesero_tables_available:${business}`) === '1';
       return tablesConfigured ? '/dashboard/tables' : '/dashboard/main';
     }
-    if (this.isEnabled('generic_pos') && this.hasPermission('billing.create')) return '/dashboard/pos-generic';
+    // El operador de POS genérico ya está parado en /dashboard/pos-generic al
+    // apretar "Salir POS": devolver esa misma ruta es una navegación al mismo
+    // URL, que el router ignora por defecto y deja el botón sin efecto.
+    if (this.isEnabled('generic_pos') && this.hasPermission('billing.create')) return '/dashboard/main';
     if (this.isEnabled('direct_invoice') && this.hasPermission('billing.create')) return '/dashboard/invoicing';
     if (this.isEnabled('orders') && this.hasPermission('restaurant.orders.read')) return '/dashboard/orders';
     if (this.isEnabled('kitchen')

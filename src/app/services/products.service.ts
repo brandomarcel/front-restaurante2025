@@ -4,7 +4,7 @@ import { environment } from 'src/environments/environment';
 import { API_ENDPOINT } from '../core/constants/api.constants';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 import { CompanyCapabilitiesService } from '../core/services/company-capabilities.service';
-import { map, throwError } from 'rxjs';
+import { map, throwError, timeout } from 'rxjs';
 import { frappeData, frappeList } from '../core/utils/frappe-response';
 
 @Injectable({ providedIn: 'root' })
@@ -28,10 +28,12 @@ export class ProductsService {
     search = '',
     status?: string,
     category?: string,
-    onlyLowStock = false
+    onlyLowStock = false,
+    /** Pantallas de inventario/stock: trae las variantes activas en vez del producto agrupador (que nunca tiene stock propio). El catálogo de Productos nunca debe mandar esto. */
+    flattenVariants = false
   ) {
       let params = new HttpParams();
-  
+
       if (isactive !== undefined && isactive !== null) {
         params = params.set('isactive', isactive.toString());
       }
@@ -42,6 +44,7 @@ export class ProductsService {
       if (status) params = params.set('status', status);
       if (category) params = params.set('category', category);
       if (onlyLowStock) params = params.set('only_low_stock', '1');
+      if (flattenVariants) params = params.set('flatten_variants', '1');
       params = this.withLiteBusiness(params);
       const url = `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_productos`;
 
@@ -73,6 +76,50 @@ export class ProductsService {
         };
       }));
     }
+
+  /**
+   * Variantes de un producto principal (`get_producto_variantes`). Se lee de
+   * `response.message.data` con la misma paginación que `getAll`. Si el
+   * producto no tiene variantes, el backend devuelve `total: 0` y el llamador
+   * trata al producto como uno simple (sin romper compatibilidad).
+   */
+  getVariantes(productId: string, limit = 100, offset = 0) {
+    let params = new HttpParams()
+      .set('product_id', productId)
+      .set('limit', String(limit))
+      .set('offset', String(offset));
+    params = this.withLiteBusiness(params);
+    const url = `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_producto_variantes`;
+
+    return this.http.get(url, {
+      context: new HttpContext().set(REQUIRE_AUTH, true),
+      params,
+    })
+    .pipe(
+      // Si el endpoint no responde, la petición quedaría pendiente para
+      // siempre y la pantalla se vería "colgada" en el estado de carga. Con
+      // el timeout, el llamador siempre recibe un error y puede mostrarlo.
+      timeout(20000),
+      map((res: any) => {
+        console.log('getVariantes response:', res);
+        // La respuesta cruda de Frappe trae los datos en `message.data`; acá
+        // se "aplana" a `{ data, total, limit, offset, has_next }` para que
+        // el llamador nunca tenga que conocer ese anidamiento.
+        const message = res?.message ?? res ?? {};
+        const rawData = message?.data;
+        const rows = (Array.isArray(rawData) ? rawData : frappeList<any>(res))
+          .map((item: any) => this.fromLiteProduct(item));
+        const totalValue = Number(message?.total ?? rows.length);
+        return {
+          data: rows,
+          total: Number.isFinite(totalValue) && totalValue >= 0 ? totalValue : rows.length,
+          limit: Number(message?.limit ?? limit),
+          offset: Number(message?.offset ?? offset),
+          has_next: Boolean(message?.has_next ?? (offset + rows.length < totalValue))
+        };
+      })
+    );
+  }
 
   searchProductos(search: string, limit = 10) {
     const params = new HttpParams()
@@ -156,6 +203,31 @@ export class ProductsService {
     }).pipe(map((res: any) => frappeData<any>(res)));
   }
 
+  /**
+   * Crea una variante concreta de un producto principal. El payload sigue
+   * exactamente el contrato de `create_producto` para variantes (item_name,
+   * item_code, variant_of, is_variant, attributes, standard_rate, tax_rate,
+   * track_stock) y no pasa por `toLiteProductPayload`: esa función traduce
+   * nombres en español (categoria/descripcion/iva) pensados para el
+   * formulario clásico y renombraría/perdería campos ya nativos del contrato.
+   */
+  createVariante(payload: any) {
+    const business = this.activeBusiness();
+    if (!business) return throwError(() => new Error('Selecciona un negocio para crear la variante.'));
+    const url = `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.create_producto`;
+    return this.http.post(url, { ...payload, business }, {
+      context: new HttpContext().set(REQUIRE_AUTH, true),
+    }).pipe(map((res: any) => this.fromLiteProduct(frappeData<any>(res))));
+  }
+
+  updateVariante(name: string, payload: any) {
+    const business = this.activeBusiness();
+    if (!business) return throwError(() => new Error('Selecciona un negocio para editar la variante.'));
+    return this.http.post(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.update_producto`, { name, ...payload, business }, {
+      context: new HttpContext().set(REQUIRE_AUTH, true),
+    }).pipe(map((res: any) => this.fromLiteProduct(frappeData<any>(res))));
+  }
+
   private toLiteProductPayload(data: any, isCreate = false): any {
     const payload = { ...(data || {}) };
     payload.tipo = payload.tipo || 'Producto';
@@ -225,6 +297,7 @@ export class ProductsService {
       stock: product.stock ?? stock,
       is_out_of_stock: product.is_out_of_stock ?? (managesStock ? stock <= 0 : false),
       is_low_stock: product.is_low_stock ?? (managesStock ? stock <= minimumStock : false),
+      variant_count: Number(product.variant_count ?? 0) || 0,
       image,
       image_url: imageUrl
     };

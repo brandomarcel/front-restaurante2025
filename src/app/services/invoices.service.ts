@@ -215,9 +215,15 @@ export class InvoicesService {
     }
 
     normalized.items = (payload?.items || []).map((item: any) => {
-      const itemId = item?.item || item?.product || item?.item_code || item?.name || item?.productId;
+      // `item` identifica el registro exacto (el producto simple o la
+      // variante ya seleccionada, nunca el producto principal agrupador).
+      // `item_code` es el código legible que espera el motor de facturación;
+      // sin él, el backend no puede distinguir una variante de otra.
+      const itemId = item?.item || item?.product || item?.name || item?.productId || item?.item_code;
+      const itemCode = item?.item_code || item?.codigo || itemId;
       return {
         item: itemId,
+        item_code: itemCode,
         qty: Number(item?.qty ?? item?.quantity ?? 1),
         rate: Number(item?.rate ?? item?.price ?? 0),
         tax_rate: Number(item?.tax_rate ?? item?.tax_value ?? 0)

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   AbstractControl,
@@ -29,22 +29,24 @@ import { PrintService } from 'src/app/services/print.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { environment } from 'src/environments/environment';
 import { CartService } from '../services/cart.service';
-import { canSellProduct, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
+import { canSellProduct, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, resolveInventoryLabel, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { UtilsService } from 'src/app/core/services/utils.service';
 import { buildMultiplePaymentPayload, findPaymentMethod, getDefaultPaymentValue, getPaymentDisplayLabel, isCashPayment, isPaymentMethodAlreadySelected, PaymentRow, roundMoney } from 'src/app/shared/utils/payment.utils';
 import { liteEmissionMessages, liteEmissionState } from 'src/app/core/utils/lite-invoice-emission';
+import { ProductVariantPickerComponent } from 'src/app/shared/components/product-variant-picker/product-variant-picker.component';
 
 @Component({
   selector: 'app-pos-caja',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, ProductVariantPickerComponent],
   templateUrl: './pos-caja.component.html',
   styles: [':host { display: block; height: 100%; min-height: 0; }']
 })
 export class PosCajaComponent implements OnInit, OnDestroy {
   @Input() selectedTableId = '';
   @Input() selectedTableLabel = '';
+  @ViewChild('productVariantPicker') productVariantPicker!: ProductVariantPickerComponent;
   ambiente = '';
   showPaymentModal = false;
   showCustomerModal = false;
@@ -511,6 +513,20 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.syncFavoriteProducts();
   }
 
+  /**
+   * Punto de entrada desde la grilla. El producto puede ser uno simple (se
+   * agrega directo) o un agrupador de variantes (el selector pide Color/Talla
+   * antes de resolver). La validación de stock se aplica siempre sobre el
+   * producto ya resuelto, nunca sobre el agrupador.
+   */
+  onProductCardClick(product: any): void {
+    this.productVariantPicker.open(product);
+  }
+
+  onVariantResolved(resolved: any): void {
+    this.addProduct(resolved);
+  }
+
   addProduct(product: any): void {
     if (!this.canAddProduct(product)) {
       toast.warning(this.getStockLimitMessage(product));
@@ -873,11 +889,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   getInventoryLabel(product: any): string {
-    if (!this.hasInventory(product)) {
-      return 'Sin control';
-    }
-
-    return `${toInventoryNumber(product?.stock_actual, 0)} ${getInventoryUnit(product)}`;
+    return resolveInventoryLabel(product);
   }
 
   getStockLimitMessage(product: any): string {
@@ -1019,6 +1031,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       customer: this.customer?.name || undefined,
       items: this.cartService.cart.map((item: any) => ({
         item: item.name ?? item.nombre,
+        item_code: item.codigo ?? item.item_code ?? item.name ?? item.nombre,
         qty: Number(item.quantity || 0),
         rate: Number(item.price || 0),
         discount_percentage: Number(item.discount_pct || 0),
@@ -1199,6 +1212,8 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.posSaleService.collect(name).pipe(finalize(() => this.isSubmittingPosSale = false)).subscribe({
       next: (response: any) => {
         this.activePosSaleNote = { ...this.activePosSaleNote, ...(response?.data || response || {}) };
+        // El stock se descuenta al cobrar la nota, no al crearla en borrador.
+        this.refreshProductsSilently();
         toast.success('Nota de venta cobrada.');
         this.printPosSaleNote(name);
       },
@@ -1217,6 +1232,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.posSaleService.invoice(name).pipe(finalize(() => this.isSubmittingPosSale = false)).subscribe({
       next: (response: any) => {
         this.activePosSaleNote = { ...this.activePosSaleNote, ...(response?.data || response || {}) };
+        this.refreshProductsSilently();
         const invoice = this.activePosSaleNote?.lite_invoice;
         const invoiceName = String(
           typeof invoice === 'string' ? invoice : invoice?.name
@@ -1246,6 +1262,8 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.posSaleService.cancel(name).pipe(finalize(() => this.isSubmittingPosSale = false)).subscribe({
       next: (response: any) => {
         this.activePosSaleNote = { ...this.activePosSaleNote, ...(response?.data || response || {}) };
+        // Si la nota ya estaba cobrada, anularla devuelve el stock descontado.
+        this.refreshProductsSilently();
         toast.success('Nota de venta anulada.');
       },
       error: (err: any) => toast.error(this.extractApiError(err) || 'No se pudo anular la nota de venta.')
@@ -1480,6 +1498,9 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   private refreshProductsSilently(): void {
+    // El picker cachea las variantes por producto; sin esto, volver a elegir
+    // el mismo producto seguiría mostrando el stock de antes de la venta.
+    this.productVariantPicker?.clearCache();
     this.productsService.getAll(1).subscribe({
       next: (res: any) => {
         this.products = Array.isArray(res) ? res : (res?.message?.data || []);

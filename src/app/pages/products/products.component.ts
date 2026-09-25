@@ -1,13 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
-import { catchError, finalize, map, of, switchMap } from 'rxjs';
+import { catchError, finalize, map, of, Subscription, switchMap } from 'rxjs';
 import { Product } from 'src/app/core/models/product';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { CategoryService } from 'src/app/services/category.service';
+import { InventoryService } from 'src/app/services/inventory.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { TaxesService } from 'src/app/services/taxes.service';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
@@ -21,6 +22,11 @@ import {
   toInventoryBool,
   toInventoryNumber,
 } from 'src/app/shared/utils/inventory.utils';
+import {
+  formatVariantAttributes,
+  getVariantAttributeDefinitions,
+  VariantAttributeDefinition,
+} from 'src/app/shared/utils/product-variants.utils';
 
 type StockEditMode = 'absolute' | 'delta';
 
@@ -65,6 +71,23 @@ export class ProductsComponent implements OnInit {
   totalProducts = 0;
   totalPages = 1;
 
+  // --- Variantes de producto ---
+  variantesModalVisible = false;
+  variantesParent: Product | null = null;
+  variantes: Product[] = [];
+  variantesLoading = false;
+  variantesPage = 1;
+  variantesPageSize = 20;
+  variantesTotal = 0;
+  variantesTotalPages = 1;
+  variantesFiltroAtributos: Record<string, string> = {};
+  private variantesRequestSub?: Subscription;
+
+  varianteFormVisible = false;
+  varianteEditando: Product | null = null;
+  varianteForm!: FormGroup;
+  varianteSubmitted = false;
+
   onPaginationPage(page: number): void {
     if (page === this.page) return;
     this.page = page;
@@ -84,7 +107,8 @@ export class ProductsComponent implements OnInit {
     private fb: FormBuilder,
     private frappeErrorService: FrappeErrorService,
     private alertService: AlertService,
-    private capabilities: CompanyCapabilitiesService
+    private capabilities: CompanyCapabilitiesService,
+    private inventoryService: InventoryService
   ) { }
 
   ngOnInit() {
@@ -155,6 +179,9 @@ export class ProductsComponent implements OnInit {
       next: (res: any) => {
         const message = res?.message ?? res ?? {};
         const data = Array.isArray(message?.data) ? message.data : (Array.isArray(res) ? res : []);
+        // `get_productos` ya excluye las variantes (is_variant = 1) y calcula
+        // `variant_count`/`total` sobre esa base; no se vuelve a filtrar acá
+        // para no esconder en silencio un futuro cambio de contrato.
         this.productos = Array.isArray(data) ? data : [];
         this.pageSize = Number(message?.limit ?? this.pageSize) || this.pageSize;
         const responseOffset = Number(message?.offset);
@@ -601,4 +628,327 @@ export class ProductsComponent implements OnInit {
   }
 
   trackByName = (_: number, item: Product) => item?.name || item?.codigo || item?.nombre;
+
+  // ================================================================
+  // Variantes de producto (Color/Talla, boutique)
+  // ================================================================
+
+  /** Todo producto sin variante propia puede tener variantes; el botón queda visible siempre para no exigir un flag adicional del backend. */
+  canHaveVariants(product: Partial<Product> | null | undefined): boolean {
+    return product?.is_variant !== 1 && product?.is_variant !== true;
+  }
+
+  abrirVariantes(producto: Product): void {
+    this.variantesParent = producto;
+    this.variantesModalVisible = true;
+    this.variantesPage = 1;
+    this.variantesFiltroAtributos = {};
+    this.cargarVariantes();
+  }
+
+  cerrarVariantes(): void {
+    this.variantesRequestSub?.unsubscribe();
+    this.variantesModalVisible = false;
+    this.variantesParent = null;
+    this.variantes = [];
+    this.variantesAttributeDefinitions = [];
+    this.varianteFormVisible = false;
+  }
+
+  cargarVariantes(): void {
+    if (!this.variantesParent?.name) return;
+    // Si había una consulta anterior en curso (por ejemplo, el usuario volvió
+    // a apretar "Variantes" o cambió de página antes de que respondiera),
+    // se cancela: nunca deben quedar dos peticiones al mismo endpoint
+    // corriendo a la vez ni una respuesta vieja pisando el estado actual.
+    this.variantesRequestSub?.unsubscribe();
+    this.variantesLoading = true;
+    const offset = (this.variantesPage - 1) * this.variantesPageSize;
+    this.variantesRequestSub = this.productsService.getVariantes(this.variantesParent.name, this.variantesPageSize, offset).pipe(
+      finalize(() => { this.variantesLoading = false; })
+    ).subscribe({
+      next: (res: any) => {
+        this.variantes = res.data;
+        this.variantesTotal = res.total;
+        this.variantesTotalPages = Math.max(1, Math.ceil(this.variantesTotal / this.variantesPageSize));
+        // Se calcula una sola vez por respuesta, no en cada ciclo de detección
+        // de cambios: `getVariantAttributeDefinitions` crea objetos nuevos en
+        // cada llamada, y usarla como getter en el *ngFor del filtro hacía que
+        // Angular recreara el <select> con [ngModel] en cada ciclo, lo que a
+        // su vez disparaba otro ciclo — un bucle infinito que congelaba la
+        // pestaña en cuanto había al menos una variante.
+        this.variantesAttributeDefinitions = getVariantAttributeDefinitions(this.variantes);
+        // La cuenta que muestra la tabla principal (badge y botón "Variantes")
+        // viene de `get_productos` y queda desactualizada apenas se crea o
+        // elimina una variante desde este modal. Se sincroniza acá porque
+        // `variantesTotal` siempre refleja el total real recién consultado.
+        this.syncParentVariantCount(this.variantesTotal);
+      },
+      error: (error: any) => {
+        this.variantes = [];
+        this.variantesAttributeDefinitions = [];
+        this.alertService.error(this.frappeErrorService.handle(error) || 'No se pudo consultar las variantes de este producto.');
+      }
+    });
+  }
+
+  /**
+   * Refleja el total real de variantes en el producto principal, tanto en el
+   * modal abierto como en la tabla de fondo — sin recargar el catálogo desde
+   * el servidor (eso resetearía la página/búsqueda actual del listado).
+   */
+  private syncParentVariantCount(count: number): void {
+    const parentId = this.variantesParent?.name;
+    if (!parentId) return;
+    if (this.variantesParent) this.variantesParent = { ...this.variantesParent, variant_count: count };
+    const patch = (list: Product[]) => list.map((item) => item.name === parentId ? { ...item, variant_count: count } : item);
+    this.productos = patch(this.productos);
+    this.productosFiltradosList = patch(this.productosFiltradosList);
+  }
+
+  onVariantesPage(page: number): void {
+    if (page === this.variantesPage) return;
+    this.variantesPage = page;
+    this.cargarVariantes();
+  }
+
+  onVariantesPageSize(size: number): void {
+    this.variantesPageSize = size;
+    this.variantesPage = 1;
+    this.cargarVariantes();
+  }
+
+  /**
+   * Atributos disponibles (Color, Talla...) derivados de las variantes ya
+   * cargadas, para el filtro de la lista. Se recalcula explícitamente en
+   * `cargarVariantes()`, nunca como getter leído desde el template: ver la
+   * nota en esa función.
+   */
+  variantesAttributeDefinitions: VariantAttributeDefinition[] = [];
+
+  trackByAttribute = (_: number, def: VariantAttributeDefinition) => def.attribute;
+
+  get variantesFiltradas(): Product[] {
+    const filtros = Object.entries(this.variantesFiltroAtributos).filter(([, value]) => !!value);
+    if (!filtros.length) return this.variantes;
+    return this.variantes.filter((variante) =>
+      filtros.every(([attribute, value]) =>
+        (variante.attributes || []).some((attr) => attr.attribute === attribute && attr.value === value)
+      )
+    );
+  }
+
+  onVariantesFiltroChange(attribute: string, value: string): void {
+    this.variantesFiltroAtributos = { ...this.variantesFiltroAtributos, [attribute]: value };
+  }
+
+  formatAttributes(variante: Partial<Product> | null | undefined): string {
+    return formatVariantAttributes(variante);
+  }
+
+  eliminarVariante(name: string): void {
+    if (!this.canManageProducts) {
+      this.alertService.error('No tienes permiso products.manage para eliminar variantes.');
+      return;
+    }
+
+    this.alertService.confirm('Se eliminara la variante seleccionada.', 'Confirmar').then((result) => {
+      if (!result.isConfirmed) return;
+
+      this.spinner.show();
+      this.productsService.delete(name).subscribe({
+        next: () => {
+          toast.success('Variante eliminada con exito');
+          this.cargarVariantes();
+        },
+        error: (err) => {
+          this.alertService.error(this.frappeErrorService.handle(err));
+          this.spinner.hide();
+        },
+        complete: () => this.spinner.hide()
+      });
+    });
+  }
+
+  // --- Formulario de variante ---
+
+  get vf() {
+    return this.varianteForm.controls;
+  }
+
+  get vfAttributes(): FormArray {
+    return this.varianteForm.get('attributes') as FormArray;
+  }
+
+  abrirFormVariante(variante: Product | null = null): void {
+    if (!this.canManageProducts) {
+      this.alertService.error('No tienes permiso products.manage para crear o editar variantes.');
+      return;
+    }
+
+    this.varianteEditando = variante;
+    this.varianteSubmitted = false;
+    this.resetVarianteForm();
+    this.varianteFormVisible = true;
+
+    if (variante) this.prefillVarianteForm(variante);
+  }
+
+  /**
+   * Abre "Nueva variante" precargada con los datos de una variante existente
+   * (nombre, código, precio, impuesto, atributos). Pensado para variantes muy
+   * parecidas entre sí: solo hay que ajustar el atributo que cambia (color,
+   * talla) y el código, en vez de tipear el formulario completo de nuevo.
+   */
+  duplicarVariante(variante: Product): void {
+    if (!this.canManageProducts) {
+      this.alertService.error('No tienes permiso products.manage para duplicar variantes.');
+      return;
+    }
+
+    this.varianteEditando = null;
+    this.varianteSubmitted = false;
+    this.resetVarianteForm();
+    this.varianteFormVisible = true;
+    this.prefillVarianteForm(variante);
+  }
+
+  private prefillVarianteForm(variante: Product): void {
+    this.varianteForm.patchValue({
+      item_name: variante.nombre,
+      item_code: variante.codigo,
+      standard_rate: variante.precio,
+      tax_rate: variante.tax_value ?? 0,
+      track_stock: !!variante.track_stock,
+      isactive: toInventoryBool(variante.isactive ?? true),
+    });
+
+    this.vfAttributes.clear();
+    const attrs = Array.isArray(variante.attributes) ? variante.attributes : [];
+    attrs.forEach((a) => this.addAtributoRow(a.attribute, a.value));
+    if (!this.vfAttributes.length) this.addAtributoRow();
+  }
+
+  cerrarFormVariante(): void {
+    this.varianteFormVisible = false;
+    this.varianteEditando = null;
+    this.varianteSubmitted = false;
+  }
+
+  resetVarianteForm(): void {
+    this.varianteForm = this.fb.group({
+      item_name: ['', Validators.required],
+      item_code: ['', Validators.required],
+      standard_rate: [null, [Validators.required, Validators.min(0)]],
+      tax_rate: [0, Validators.required],
+      track_stock: [true],
+      isactive: [true],
+      // Solo se usa al crear (nunca al editar): registra un movimiento de
+      // Entrada después de crear la variante, igual que si se hiciera desde
+      // Inventario, para no perder el historial de movimientos.
+      stock_inicial: [0, [Validators.min(0)]],
+      attributes: this.fb.array([]),
+    });
+    this.vfAttributes.clear();
+    // Color y Talla son los atributos habituales en boutique; quedan como
+    // punto de partida editable, no como una lista cerrada de opciones.
+    this.addAtributoRow('Color', '');
+    this.addAtributoRow('Talla', '');
+  }
+
+  addAtributoRow(attribute = '', value = ''): void {
+    this.vfAttributes.push(this.fb.group({
+      attribute: [attribute, Validators.required],
+      value: [value, Validators.required],
+    }));
+  }
+
+  removeAtributoRow(index: number): void {
+    if (this.vfAttributes.length <= 1) return;
+    this.vfAttributes.removeAt(index);
+  }
+
+  guardarVariante(): void {
+    if (!this.canManageProducts) {
+      this.alertService.error('No tienes permiso products.manage para guardar variantes.');
+      return;
+    }
+
+    this.varianteSubmitted = true;
+    if (this.varianteForm.invalid || !this.vfAttributes.length) {
+      this.varianteForm.markAllAsTouched();
+      return;
+    }
+
+    if (!this.variantesParent?.name) return;
+
+    const raw = this.varianteForm.getRawValue();
+    const payload = this.buildVariantePayload();
+    const isCreate = !this.varianteEditando;
+    // El stock inicial nunca se manda dentro del alta del Item: se registra
+    // como un movimiento de Entrada aparte (el mismo que usa Inventario), así
+    // queda el historial igual que si se hubiera cargado desde esa pantalla.
+    const stockInicial = isCreate && raw.track_stock ? Number(raw.stock_inicial || 0) : 0;
+
+    this.spinner.show();
+    const request$ = this.varianteEditando
+      ? this.productsService.updateVariante(this.varianteEditando.name, payload)
+      : this.productsService.createVariante(payload);
+
+    request$.pipe(
+      switchMap((variante: any) => {
+        if (stockInicial <= 0) return of({ variante, stockError: null });
+        const itemName = String(variante?.name || '').trim();
+        if (!itemName) {
+          return of({ variante, stockError: new Error('El backend no devolvió el nombre de la variante para registrar el stock inicial.') });
+        }
+        return this.inventoryService.createInventoryMovement({
+          item: itemName,
+          movement_type: 'Entrada',
+          quantity: stockInicial,
+          notes: 'Stock inicial al crear la variante'
+        }).pipe(
+          map(() => ({ variante, stockError: null })),
+          catchError((error: any) => of({ variante, stockError: error }))
+        );
+      }),
+      finalize(() => this.spinner.hide())
+    ).subscribe({
+      next: (result: any) => {
+        this.cerrarFormVariante();
+        this.cargarVariantes();
+        if (result.stockError) {
+          this.alertService.error(this.frappeErrorService.handle(result.stockError) || 'La variante se creó, pero no se pudo registrar el stock inicial.');
+          toast.success('Variante creada');
+        } else {
+          toast.success(this.varianteEditando
+            ? 'Variante actualizada con exito'
+            : (stockInicial > 0 ? 'Variante creada con stock inicial registrado' : 'Variante creada con exito'));
+        }
+      },
+      error: (error: any) => {
+        this.alertService.error(this.frappeErrorService.handle(error));
+      }
+    });
+  }
+
+  private buildVariantePayload(): any {
+    const raw = this.varianteForm.getRawValue();
+    return {
+      item_name: String(raw.item_name || '').trim(),
+      item_code: String(raw.item_code || '').trim(),
+      item_type: 'Producto',
+      variant_of: this.variantesParent?.name,
+      is_variant: 1,
+      attributes: (raw.attributes || [])
+        .map((a: any) => ({ attribute: String(a.attribute || '').trim(), value: String(a.value || '').trim() }))
+        .filter((a: any) => a.attribute && a.value),
+      standard_rate: Number(raw.standard_rate || 0),
+      tax_rate: Number(raw.tax_rate || 0),
+      track_stock: raw.track_stock ? 1 : 0,
+      isactive: !!raw.isactive,
+    };
+  }
+
+  trackByVarianteName = (_: number, item: Product) => item?.name;
 }

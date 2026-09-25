@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AbstractControl, FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -19,11 +19,12 @@ import { UtilsService } from '../../core/services/utils.service';
 import { Customer } from 'src/app/core/models/customer';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
 import { RouterModule } from '@angular/router';
-import { canSellProduct, canUseInventoryQuantity, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
+import { canSellProduct, canUseInventoryQuantity, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, resolveInventoryLabel, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { AdditionalFieldPayload, normalizeAdditionalFields } from 'src/app/core/models/additional-field';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { buildMultiplePaymentPayload, findPaymentMethod, getDefaultPaymentValue, isPaymentMethodAlreadySelected, PaymentRow, roundMoney } from 'src/app/shared/utils/payment.utils';
 import { LiteEmissionState } from 'src/app/core/utils/lite-invoice-emission';
+import { ProductVariantPickerComponent } from 'src/app/shared/components/product-variant-picker/product-variant-picker.component';
 
 type Payment = { name: string; codigo: string; nombre: string; description?: string; };
 type CartItem = {
@@ -35,11 +36,12 @@ type CartItem = {
 @Component({
   selector: 'app-invoicing',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, RouterModule, ButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, RouterModule, ButtonComponent, ProductVariantPickerComponent],
   templateUrl: './invoicing.component.html',
   styleUrls: ['./invoicing.component.css']
 })
 export class InvoicingComponent implements OnInit, OnDestroy {
+  @ViewChild('productVariantPicker') productVariantPicker!: ProductVariantPickerComponent;
   identificationTypes = VARIABLE_CONSTANTS.IDENTIFICATION_TYPE; // Lista de estados para el dropdown
 
   // --- Formularios ---
@@ -471,19 +473,25 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
   selectProductFromSearch(product: Product): void {
     if (!product) return;
-    this.addProductToCart(product);
+    // El producto puede tener variantes (Color/Talla); el selector decide por
+    // sí solo si debe pedir atributos o agregar el producto directamente.
+    this.productVariantPicker.open(product);
     this.productSearchTerm = '';
     this.isProductSearchOpen = false;
   }
 
+  onVariantResolved(resolved: Product): void {
+    this.addProductToCart(resolved);
+  }
+
   selectFirstProductSuggestion(): void {
-    const firstAvailable = this.filteredProductSuggestions.find(product => !this.isProductBlocked(product));
-    if (!firstAvailable) {
+    const first = this.filteredProductSuggestions[0];
+    if (!first) {
       toast.info(this.productSearchTerm.trim() ? 'No hay productos disponibles para agregar.' : 'Escribe o selecciona un producto.');
       return;
     }
 
-    this.selectProductFromSearch(firstAvailable);
+    this.selectProductFromSearch(first);
   }
 
   clearProductSearch(): void {
@@ -752,7 +760,12 @@ export class InvoicingComponent implements OnInit, OnDestroy {
             })
       } : {}),
       items: this.cartItems.map(it => ({
-        item_code: it.name || 'ADHOC',
+        // `it.name` es el identificador único del registro ya resuelto (el
+        // producto simple o la variante elegida); `it.codigo` es su código
+        // legible (item_code). Nunca se envía el producto principal aquí:
+        // el carrito solo contiene lo que el selector de variantes resolvió.
+        item: it.name || 'ADHOC',
+        item_code: it.codigo || it.name || 'ADHOC',
         item_name: it.nombre || it.description,
         qty: it.quantity,
         rate: this.round2(it.price),
@@ -788,9 +801,14 @@ export class InvoicingComponent implements OnInit, OnDestroy {
                 res?.data?.posting_date ?? res?.data?.electronic?.issue_date ?? ''
               ).trim();
 
+              // El stock se descuenta al crear el comprobante, no al
+              // autorizarlo: la autorización del SRI es un trámite legal
+              // aparte. Se refresca apenas hay un documento creado, igual
+              // que en el POS, y no solo cuando ya quedó autorizado.
+              if (this.emissionInvoiceName) this.refreshProductsAfterInvoice();
+
               if (this.emissionState === 'AUTHORIZED') {
                 toast.success('Factura autorizada por el SRI.');
-                this.refreshProductsAfterInvoice();
                 const inv = this.emissionInvoiceName;
                 this.alertService.confirm(`Factura ${inv || ''} autorizada.`, '¿Deseas imprimir el RIDE?', 'success')
                   .then(printResult => {
@@ -888,6 +906,9 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   }
 
   private refreshProductsAfterInvoice(): void {
+    // El picker cachea las variantes por producto; sin esto, volver a elegir
+    // el mismo producto seguiría mostrando el stock de antes de la venta.
+    this.productVariantPicker?.clearCache();
     this.productsService.getAll(1).subscribe({
       next: (response: any) => {
         const products = Array.isArray(response) ? response : response?.message?.data;
@@ -954,11 +975,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   }
 
   getInventoryLabel(product: Product | null | undefined): string {
-    if (!this.hasInventory(product)) {
-      return 'Sin control';
-    }
-
-    return `${toInventoryNumber(product?.stock_actual, 0)} ${getInventoryUnit(product)}`;
+    return resolveInventoryLabel(product);
   }
 
   toUpper(ev: Event) {

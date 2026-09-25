@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { NgSelectModule } from '@ng-select/ng-select';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { toast } from 'ngx-sonner';
 import { InventoryMovement, InventoryMovementPayload, InventoryMovementType, InventoryProduct, InventorySummary, LiteStockMovementPayload } from 'src/app/models/inventory';
@@ -20,10 +21,11 @@ import {
   isOutOfStockProduct,
   toInventoryNumber,
 } from 'src/app/shared/utils/inventory.utils';
+import { formatVariantAttributes } from 'src/app/shared/utils/product-variants.utils';
 
 @Component({
   selector: 'app-inventory',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, AppPaginationComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, AppPaginationComponent, NgSelectModule],
   templateUrl: './inventory.component.html',
   styleUrl: './inventory.component.css'
 })
@@ -76,6 +78,14 @@ export class InventoryComponent implements OnInit {
 
   inventoryProducts: InventoryProduct[] = [];
   productOptions: Product[] = [];
+  /**
+   * Igual que `productOptions`, con una etiqueta ya armada (nombre + contexto
+   * de variante) para el buscador de `ng-select`. Se recalcula una sola vez
+   * al cargar las opciones, nunca como getter leído desde el template: eso
+   * ya nos causó un bucle infinito de renderizado en Productos (ver
+   * `products.component.ts`).
+   */
+  productSelectOptions: Array<Product & { displayLabel: string }> = [];
   movements: InventoryMovement[] = [];
   inventorySummary: InventorySummary | null = null;
   activeTab: 'overview' | 'history' = 'overview';
@@ -219,7 +229,20 @@ export class InventoryComponent implements OnInit {
     this.spinner.show();
     if (this.isLiteMode) {
       forkJoin({
-        products: this.productsService.getAll(1),
+        // `flatten_variants`: acá se administra el stock real, que vive en
+        // las variantes, no en el producto agrupador (siempre en 0). Antes
+        // esta llamada ignoraba `search`/`onlyLowStock`/`onlyActive`: los
+        // filtros de la pantalla no hacían nada.
+        products: this.productsService.getAll(
+          this.onlyActive ? 1 : null,
+          undefined,
+          0,
+          this.search,
+          undefined,
+          undefined,
+          this.onlyLowStock,
+          true
+        ),
         summary: this.inventoryService.getStockSummary()
       }).subscribe({
         next: ({ products, summary }: any) => {
@@ -264,14 +287,19 @@ export class InventoryComponent implements OnInit {
   }
 
   cargarOpcionesProducto(): void {
-    this.productsService.getAll(1).subscribe({
+    this.productsService.getAll(1, undefined, 0, '', undefined, undefined, false, true).subscribe({
       next: (res: any) => {
         const data = Array.isArray(res) ? res : (res?.message?.data || []);
         this.productOptions = ((Array.isArray(data) ? data : []) as Product[])
           .filter((product) => this.hasInventory(product));
+        this.productSelectOptions = this.productOptions.map((product) => ({
+          ...product,
+          displayLabel: this.describeProductOption(product)
+        }));
       },
       error: () => {
         this.productOptions = [];
+        this.productSelectOptions = [];
       }
     });
   }
@@ -387,6 +415,13 @@ export class InventoryComponent implements OnInit {
       this.movementItems.removeAt(0);
     }
     this.movementItems.push(this.createMovementItem());
+  }
+
+  /** Abre el modal de movimiento con este producto ya seleccionado, para no tener que buscarlo de nuevo en el desplegable. */
+  abrirMovimientoParaProducto(product: InventoryProduct): void {
+    this.abrirMovimientoModal();
+    if (!this.showMovementModal) return; // sin permiso: abrirMovimientoModal ya mostró el aviso
+    this.movementItems.at(0).patchValue({ product: product.name });
   }
 
   cerrarMovimientoModal(): void {
@@ -635,6 +670,22 @@ export class InventoryComponent implements OnInit {
   resolveProductName(productName: string): string {
     const match = this.productOptions.find((item) => item.name === productName);
     return match?.nombre || productName;
+  }
+
+  /** "PRUEBA · Color: Azul · Talla: 28" cuando el producto es una variante; null si no lo es. */
+  describeVariantContext(product: Partial<Product> | null | undefined): string | null {
+    if (!product?.variant_of_name) return null;
+    const attrs = formatVariantAttributes(product);
+    return attrs && attrs !== '—' ? `${product.variant_of_name} · ${attrs}` : String(product.variant_of_name);
+  }
+
+  /** Etiqueta para los <option> de los selectores de producto (historial y formulario de movimiento). */
+  describeProductOption(product: Partial<Product> | null | undefined): string {
+    const context = this.describeVariantContext(product);
+    const base = context ? `${product?.nombre} (${context})` : String(product?.nombre || '');
+    // El código queda dentro del mismo texto para que la búsqueda del
+    // selector (que solo mira esta etiqueta) también encuentre por código.
+    return product?.codigo ? `${base} · ${product.codigo}` : base;
   }
 
   extractReference(movement: InventoryMovement): string {

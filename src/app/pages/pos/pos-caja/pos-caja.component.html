@@ -156,14 +156,14 @@
                             <div class="min-w-0">
                                 <div class="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6">
                                     <div *ngFor="let product of visibleProductList; trackBy: trackByProductId"
-                                        (click)="addProduct(product)"
+                                        (click)="onProductCardClick(product)"
                                         class="relative flex min-h-[142px] touch-manipulation flex-col rounded-xl border bg-white p-2.5 text-xs shadow-sm transition active:scale-[.98] sm:min-h-[154px] sm:p-3"
                                         [ngClass]="{
                                            'cursor-pointer border-slate-200 hover:border-primary/40 hover:shadow-md': canAddProduct(product),
                                            'cursor-not-allowed border-red-200 bg-red-50 opacity-70': !canAddProduct(product)
                                          }">
 
-                                        <div class="mb-1 flex h-[92px] cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-slate-100 sm:h-[104px]" (click)="addProduct(product); $event.stopPropagation()">
+                                        <div class="mb-1 flex h-[92px] cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-slate-100 sm:h-[104px]" (click)="onProductCardClick(product); $event.stopPropagation()">
                                             <img *ngIf="product.image_url" [src]="product.image_url" [alt]="product.nombre" class="pointer-events-none h-full w-full object-cover" />
                                             <span *ngIf="!product.image_url" class="pointer-events-none text-[10px] text-slate-400">Sin imagen</span>
                                         </div>
@@ -692,3 +692,8 @@
         </div>
     </div>
 </div>
+
+<app-product-variant-picker
+    #productVariantPicker
+    (resolved)="onVariantResolved($event)">
+</app-product-variant-picker>

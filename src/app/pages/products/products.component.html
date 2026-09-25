@@ -88,7 +88,12 @@
           >
             <td class="app-td">
               <div class="flex flex-col">
-                <span class="font-medium text-gray-900">{{ p.nombre }}</span>
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span class="font-medium text-gray-900">{{ p.nombre }}</span>
+                  <span *ngIf="(p.variant_count || 0) > 0" class="badge badge-blue" title="Este producto tiene variantes; el precio y stock de aquí no se usan al vender.">
+                    {{ p.variant_count }} {{ p.variant_count === 1 ? 'variante' : 'variantes' }}
+                  </span>
+                </div>
                 <span class="text-xs text-gray-500">{{ p.descripcion || '' }}</span>
               </div>
             </td>
@@ -137,7 +142,10 @@
               </div>
             </td>
             <td *ngIf="canManageProducts" class="app-td text-center">
-              <div class="inline-flex gap-2">
+              <div class="inline-flex flex-wrap justify-center gap-2">
+                <button *ngIf="canHaveVariants(p)" class="btn btn-outline" (click)="abrirVariantes(p)">
+                  {{ (p.variant_count || 0) > 0 ? 'Variantes (' + p.variant_count + ')' : 'Variantes' }}
+                </button>
                 <button class="btn btn-outline" (click)="abrirModal(p)">Editar</button>
                 <button class="btn btn-warn" (click)="eliminar(p.name)">Eliminar</button>
               </div>
@@ -209,6 +217,13 @@
             </div>
           </div>
         </section>
+
+        <div *ngIf="(productoEditando?.variant_count || 0) > 0" class="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 md:p-4">
+          Este producto tiene {{ productoEditando?.variant_count }}
+          {{ productoEditando?.variant_count === 1 ? 'variante' : 'variantes' }}. El precio y el stock que edites
+          acá abajo son solo de referencia: al vender siempre se usa el precio y el stock propios de cada variante,
+          no los de este producto principal.
+        </div>
 
         <section class="rounded-xl border border-slate-200 bg-white p-3 md:p-4">
           <p class="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Comercial y fiscal</p>
@@ -396,6 +411,211 @@
             <button type="button" class="btn btn-outline" (click)="cerrarModal()">Cancelar</button>
             <button type="submit" class="btn btn-primary">
               {{ productoEditando ? 'Guardar cambios' : 'Crear producto' }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Variantes de un producto (Color/Talla) -->
+  <div *ngIf="variantesModalVisible" class="app-modal-backdrop">
+    <div class="app-modal !max-w-3xl !rounded-2xl !border-slate-200 !bg-white !shadow-2xl">
+      <div class="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur md:px-5">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h3 class="text-base font-semibold text-slate-800 md:text-lg">
+              Variantes de {{ variantesParent?.nombre }}
+            </h3>
+            <p class="mt-0.5 text-xs text-slate-500">
+              El producto principal es solo un agrupador; la venta siempre usa una variante concreta.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+            (click)="cerrarVariantes()"
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+
+      <div class="space-y-3 px-4 py-4 text-sm md:px-5 md:py-5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap gap-2">
+            <select
+              *ngFor="let def of variantesAttributeDefinitions; trackBy: trackByAttribute"
+              class="select select-sm"
+              [ngModel]="variantesFiltroAtributos[def.attribute] || ''"
+              (ngModelChange)="onVariantesFiltroChange(def.attribute, $event)"
+            >
+              <option value="">{{ def.attribute }}: todos</option>
+              <option *ngFor="let value of def.values" [value]="value">{{ def.attribute }}: {{ value }}</option>
+            </select>
+          </div>
+
+          <button class="btn btn-primary" (click)="abrirFormVariante()">Nueva variante</button>
+        </div>
+
+        <div *ngIf="variantesLoading" class="app-card">
+          <div class="app-card-body text-center text-gray-500">Cargando variantes...</div>
+        </div>
+
+        <ng-container *ngIf="!variantesLoading">
+          <section *ngIf="variantesFiltradas.length; else emptyVariantes" class="app-table-wrap">
+            <table class="app-table text-xs">
+              <thead class="app-thead">
+                <tr>
+                  <th class="app-th">Variante</th>
+                  <th class="app-th">Atributos</th>
+                  <th class="app-th">Codigo</th>
+                  <th class="app-th text-right">Precio</th>
+                  <th class="app-th">Stock</th>
+                  <th class="app-th">Estado</th>
+                  <th class="app-th text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let v of variantesFiltradas; trackBy: trackByVarianteName" class="app-tr">
+                  <td class="app-td font-medium text-gray-900">{{ v.nombre }}</td>
+                  <td class="app-td">{{ formatAttributes(v) }}</td>
+                  <td class="app-td font-mono text-xs text-gray-600">{{ v.codigo || '—' }}</td>
+                  <td class="app-td text-right font-semibold">{{ v.precio | currency }}</td>
+                  <td class="app-td">
+                    <span *ngIf="hasInventory(v); else noStock">{{ formatStock(v) }}</span>
+                    <ng-template #noStock><span class="text-slate-400">—</span></ng-template>
+                  </td>
+                  <td class="app-td">
+                    <span class="badge" [ngClass]="v.isactive ? 'badge-green' : 'badge-red'">
+                      {{ v.isactive ? 'Activo' : 'Inactivo' }}
+                    </span>
+                  </td>
+                  <td class="app-td text-center">
+                    <div class="inline-flex gap-2">
+                      <button class="btn btn-outline" (click)="abrirFormVariante(v)">Editar</button>
+                      <button class="btn btn-outline" (click)="duplicarVariante(v)" title="Crear una variante nueva con estos mismos datos">Duplicar</button>
+                      <button class="btn btn-warn" (click)="eliminarVariante(v.name)">Eliminar</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <app-pagination
+              [page]="variantesPage"
+              [totalPages]="variantesTotalPages"
+              [totalItems]="variantesTotal"
+              [pageSize]="variantesPageSize"
+              (pageChange)="onVariantesPage($event)"
+              (pageSizeChange)="onVariantesPageSize($event)">
+            </app-pagination>
+          </section>
+
+          <ng-template #emptyVariantes>
+            <div class="app-card">
+              <div class="app-card-body text-center text-gray-500">
+                Este producto todavia no tiene variantes.
+              </div>
+            </div>
+          </ng-template>
+        </ng-container>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alta/edicion de una variante concreta -->
+  <div *ngIf="varianteFormVisible" class="app-modal-backdrop">
+    <div class="app-modal !max-w-2xl !rounded-2xl !border-slate-200 !bg-white !shadow-2xl">
+      <div class="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur md:px-5">
+        <div class="flex items-start justify-between gap-3">
+          <h3 class="text-base font-semibold text-slate-800 md:text-lg">
+            {{ varianteEditando ? 'Editar variante' : 'Nueva variante' }} de {{ variantesParent?.nombre }}
+          </h3>
+          <button
+            type="button"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+            (click)="cerrarFormVariante()"
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+
+      <form [formGroup]="varianteForm" (ngSubmit)="guardarVariante()" class="space-y-4 px-4 py-4 text-sm md:px-5 md:py-5">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <label class="mb-1 block font-medium">Nombre de la variante</label>
+            <input type="text" class="input" formControlName="item_name" placeholder="Ej: Jean clasico Azul Talla 32" />
+            <div *ngIf="varianteSubmitted && vf['item_name'].invalid" class="field-error">Nombre requerido.</div>
+          </div>
+
+          <div>
+            <label class="mb-1 block font-medium">Codigo interno</label>
+            <input type="text" class="input" formControlName="item_code" placeholder="Ej: JEAN-AZUL-32" />
+            <div *ngIf="varianteSubmitted && vf['item_code'].invalid" class="field-error">Codigo requerido.</div>
+          </div>
+
+          <div>
+            <label class="mb-1 block font-medium">Precio</label>
+            <input type="number" step="0.01" class="input no-spinner" formControlName="standard_rate" />
+            <div *ngIf="varianteSubmitted && vf['standard_rate'].invalid" class="field-error">Precio invalido.</div>
+          </div>
+
+          <div>
+            <label class="mb-1 block font-medium">Impuesto (IVA %)</label>
+            <select class="select" formControlName="tax_rate">
+              <option *ngFor="let t of taxes" [value]="t.value ?? t.rate ?? t.tax_rate">{{ t.value ?? t.rate ?? t.tax_rate ?? t.name }}</option>
+              <option *ngIf="taxes.length === 0" [value]="0">0</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4">
+          <label class="inline-flex items-center gap-2">
+            <input type="checkbox" formControlName="isactive" />
+            <span class="font-medium text-slate-700">Variante activa</span>
+          </label>
+          <label class="inline-flex items-center gap-2">
+            <input type="checkbox" formControlName="track_stock" />
+            <span class="font-medium text-slate-700">Controlar inventario</span>
+          </label>
+        </div>
+
+        <div *ngIf="!varianteEditando && vf['track_stock'].value" class="rounded-xl border border-slate-200 bg-white p-3 md:p-4">
+          <label class="mb-1 block font-medium">Stock inicial</label>
+          <input class="input no-spinner" type="number" min="0" formControlName="stock_inicial" />
+          <p class="mt-1 text-[11px] text-slate-500">
+            Se registra como un movimiento de Entrada apenas se crea la variante, igual que si se cargara desde Inventario.
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-3 md:p-4" formArrayName="attributes">
+          <div class="mb-3 flex items-center justify-between">
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Atributos (Color, Talla...)</p>
+            <button type="button" class="btn btn-outline" (click)="addAtributoRow()">Agregar atributo</button>
+          </div>
+
+          <div *ngFor="let group of vfAttributes.controls; let i = index" [formGroupName]="i" class="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
+            <div>
+              <input type="text" class="input" formControlName="attribute" placeholder="Atributo, ej: Color" />
+              <div *ngIf="varianteSubmitted && group.get('attribute')?.invalid" class="field-error">Requerido.</div>
+            </div>
+            <div>
+              <input type="text" class="input" formControlName="value" placeholder="Valor, ej: Azul" />
+              <div *ngIf="varianteSubmitted && group.get('value')?.invalid" class="field-error">Requerido.</div>
+            </div>
+            <button type="button" class="btn btn-warn" (click)="removeAtributoRow(i)" [disabled]="vfAttributes.length <= 1">Quitar</button>
+          </div>
+        </div>
+
+        <div class="sticky bottom-0 -mx-4 border-t border-slate-200 bg-white px-4 py-3 md:-mx-5 md:px-5">
+          <div class="flex justify-end gap-2">
+            <button type="button" class="btn btn-outline" (click)="cerrarFormVariante()">Cancelar</button>
+            <button type="submit" class="btn btn-primary">
+              {{ varianteEditando ? 'Guardar cambios' : 'Crear variante' }}
             </button>
           </div>
         </div>

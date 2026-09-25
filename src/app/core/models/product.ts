@@ -1,7 +1,24 @@
+export interface ProductAttributeValue {
+  attribute: string;
+  value: string;
+}
+
 export interface Product {
   name: string;
   nombre: string;
   precio: number;
+  /** 1 cuando el registro es una variante concreta; 0/undefined en el producto agrupador o en un producto simple sin variantes. */
+  is_variant?: number | boolean;
+  /** `name` del producto principal cuando este registro es una variante. */
+  variant_of?: string | null;
+  /** Cantidad de variantes activas de este producto (0 en un producto simple o en una variante). */
+  variant_count?: number;
+  /** Solo relevante cuando `variant_count > 0`: true si alguna variante activa está disponible para vender. `null` cuando no aplica (producto sin variantes). */
+  has_stock?: boolean | null;
+  /** `item_name` del producto principal. Solo viene cuando este registro es una variante devuelta con `flatten_variants=1`. */
+  variant_of_name?: string;
+  /** Combinación de atributos (Color, Talla, etc.) que identifica a la variante. */
+  attributes?: ProductAttributeValue[];
   standard_rate?: number;
   rate?: number;
   categoria: string;
