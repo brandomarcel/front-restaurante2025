@@ -179,6 +179,30 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     return this.capabilities.getPosTerminalBlockMessage();
   }
 
+  /** Sin ningún terminal configurado: se bloquea toda la pantalla, no solo la emisión. */
+  get needsPosTerminalConfiguration(): boolean {
+    return this.capabilities.needsPosTerminalConfiguration;
+  }
+
+  /** Varios terminales activos y ninguno elegido todavía: hay que mostrar el selector. */
+  get needsPosTerminalSelection(): boolean {
+    return this.capabilities.needsPosTerminalSelection;
+  }
+
+  get activePosTerminals(): any[] {
+    return this.capabilities.activePosTerminals;
+  }
+
+  onSelectPosTerminal(terminalName: string): void {
+    const terminal = this.activePosTerminals.find((item: any) => String(item?.name || '') === terminalName);
+    if (!terminal) return;
+    this.capabilities.setActivePosTerminal(terminal);
+  }
+
+  goToPosTerminalSettings(): void {
+    this.router.navigate(['/settings/lite/pos-terminals']);
+  }
+
   fiscalLocationLabel(location: any): string {
     const establishment = location?.establishment;
     const point = location?.emissionPoint;

@@ -235,10 +235,35 @@ export class CompanyCapabilitiesService {
     this.state.set({ ...this.state(), terminal: null });
   }
 
+  /** Terminales activos del negocio actual, sin importar si ya hay uno resuelto o no. */
+  get activePosTerminals(): any[] {
+    return this.posTerminals.filter((item: any) => this.isActiveRecord(item));
+  }
+
+  /** No hay ningún terminal configurado todavía: hay que crear uno antes de poder vender. */
+  get needsPosTerminalConfiguration(): boolean {
+    return this.activePosTerminals.length === 0;
+  }
+
+  /** Hay más de un terminal activo y ninguno quedó seleccionado: hace falta elegir uno antes de vender. */
+  get needsPosTerminalSelection(): boolean {
+    return this.activePosTerminals.length > 1 && !this.activePosTerminal;
+  }
+
   getPosTerminalBlockMessage(): string | null {
-    if (!this.terminalAccessRequired) return null;
-    if (!this.hasTerminalAccess) return 'No tiene un terminal POS activo asignado. Contacte al administrador.';
-    if (this.requiresTerminalSelection && !this.activePosTerminal) return 'Seleccione un terminal POS para facturar.';
+    // Sin ningún terminal configurado, no importa si el rol requiere
+    // asignación explícita o no: no hay nada que se pueda seleccionar.
+    if (this.needsPosTerminalConfiguration) {
+      return 'Para utilizar el POS debe configurar al menos un terminal POS asociado a un establecimiento y punto de emisión.';
+    }
+    if (this.terminalAccessRequired && !this.hasTerminalAccess) {
+      return 'No tiene un terminal POS activo asignado. Contacte al administrador.';
+    }
+    // Con varios terminales activos, elegir uno es obligatorio para vender,
+    // sea o no el rol el que requiere asignación explícita del backend.
+    if (this.needsPosTerminalSelection) {
+      return 'Seleccione un terminal POS para continuar.';
+    }
     return null;
   }
   /**
