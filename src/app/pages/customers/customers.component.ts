@@ -7,13 +7,14 @@ import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { CustomersService } from 'src/app/services/customers.service';
 import { AlertService } from '../../core/services/alert.service';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
+import { IconActionButtonComponent } from 'src/app/shared/components/icon-action-button/icon-action-button.component';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
 import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 @Component({
   selector: 'app-customers',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonComponent, AppPaginationComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonComponent, AppPaginationComponent, IconActionButtonComponent],
   templateUrl: './customers.component.html',
   styleUrl: './customers.component.css'
 })
@@ -183,6 +184,11 @@ export class CustomersComponent implements OnInit {
     if (this.clienteForm.invalid) return;
 
     const data = this.clienteForm.getRawValue();
+    // Refuerzo al guardar, no solo al tipear: un cliente antiguo guardado en
+    // minúscula que se edita sin retocar el nombre/dirección (por ejemplo,
+    // solo se actualiza el teléfono) también debe quedar en mayúscula.
+    data.nombre = String(data.nombre || '').toUpperCase().trim();
+    data.direccion = String(data.direccion || '').toUpperCase().trim();
 
     if (this.clienteEditando) {
       this.spinner.show();

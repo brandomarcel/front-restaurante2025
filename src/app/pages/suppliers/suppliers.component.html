@@ -147,8 +147,8 @@
 
             <td class="app-td text-center">
               <div class="inline-flex gap-2">
-                <button class="btn btn-outline" (click)="abrirModalDetalle(supplier)">Ver</button>
-                <button class="btn btn-primary" (click)="abrirModalEditar(supplier)">Editar</button>
+                <app-icon-action-button variant="view" (action)="abrirModalDetalle(supplier)"></app-icon-action-button>
+                <app-icon-action-button variant="edit" tone="primary" (action)="abrirModalEditar(supplier)"></app-icon-action-button>
               </div>
             </td>
           </tr>

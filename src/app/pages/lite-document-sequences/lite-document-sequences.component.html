@@ -106,7 +106,7 @@
           <td class="app-td font-semibold text-slate-800">{{ formatNumber(sequence.current_number) }}</td>
           <td class="app-td font-semibold text-primary">{{ nextNumber(sequence) }}</td>
           <td class="app-td"><span class="inline-flex rounded-full px-2 py-1 text-[11px] font-semibold" [ngClass]="isActive(sequence) ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'">{{ sequence.status || '—' }}</span><span *ngIf="isActive(sequence) && canEmit(sequence)" class="mt-1 block text-[10px] text-emerald-700">Puede emitir</span><span *ngIf="isActive(sequence) && !canEmit(sequence)" class="mt-1 block text-[10px] text-amber-700">No puede emitir</span></td>
-          <td class="app-td" *ngIf="canManage"><div class="flex justify-end gap-2"><button type="button" class="btn btn-outline !px-2.5 !py-1 !text-[11px]" (click)="openEdit(sequence)" [disabled]="saving">Editar</button><button type="button" class="btn btn-danger !px-2.5 !py-1 !text-[11px]" (click)="deactivate(sequence)" [disabled]="saving || !isActive(sequence)">Desactivar</button></div></td>
+          <td class="app-td" *ngIf="canManage"><div class="flex justify-end gap-2"><app-icon-action-button variant="edit" [disabled]="saving" (action)="openEdit(sequence)"></app-icon-action-button><app-icon-action-button variant="delete" tone="warn" label="Desactivar" [disabled]="saving || !isActive(sequence)" (action)="deactivate(sequence)"></app-icon-action-button></div></td>
         </tr>
       </tbody>
     </table>

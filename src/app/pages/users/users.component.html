@@ -77,8 +77,8 @@
             </td>
             <td class="app-td">
               <div class="flex justify-end gap-2">
-                <button class="btn btn-outline !px-2.5 !py-1 !text-[11px]" type="button" (click)="openEdit(user)" [disabled]="saving">Editar</button>
-                <button *ngIf="isActive(user)" class="btn btn-danger !px-2.5 !py-1 !text-[11px]" type="button" (click)="deactivate(user)" [disabled]="saving">Desactivar</button>
+                <app-icon-action-button variant="edit" [disabled]="saving" (action)="openEdit(user)"></app-icon-action-button>
+                <app-icon-action-button *ngIf="isActive(user)" variant="delete" tone="warn" label="Desactivar" [disabled]="saving" (action)="deactivate(user)"></app-icon-action-button>
               </div>
             </td>
           </tr>

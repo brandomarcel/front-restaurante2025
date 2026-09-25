@@ -7,11 +7,12 @@ import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabi
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { CompanyService } from 'src/app/services/company.service';
 import { UserService } from 'src/app/services/user.service';
+import { IconActionButtonComponent } from 'src/app/shared/components/icon-action-button/icon-action-button.component';
 
 @Component({
   selector: 'app-lite-pos-terminals',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, IconActionButtonComponent],
   templateUrl: './lite-pos-terminals.component.html'
 })
 export class LitePosTerminalsComponent implements OnInit, DoCheck {

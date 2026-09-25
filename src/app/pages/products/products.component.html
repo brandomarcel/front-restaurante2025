@@ -89,12 +89,12 @@
             <td class="app-td">
               <div class="flex flex-col">
                 <div class="flex flex-wrap items-center gap-1.5">
-                  <span class="font-medium text-gray-900">{{ p.nombre }}</span>
+                  <span class="font-medium text-gray-900">{{ p.nombre | uppercase }}</span>
                   <span *ngIf="(p.variant_count || 0) > 0" class="badge badge-blue" title="Este producto tiene variantes; el precio y stock de aquí no se usan al vender.">
                     {{ p.variant_count }} {{ p.variant_count === 1 ? 'variante' : 'variantes' }}
                   </span>
                 </div>
-                <span class="text-xs text-gray-500">{{ p.descripcion || '' }}</span>
+                <span class="text-xs text-gray-500">{{ (p.descripcion || '') | uppercase }}</span>
               </div>
             </td>
             <td class="app-td">
@@ -104,7 +104,7 @@
               </div>
             </td>
             <td class="app-td font-mono text-xs text-gray-600">{{ p.codigo || '—' }}</td>
-            <td class="app-td">{{ getNameCategory(p.categoria || p.category) }}</td>
+            <td class="app-td">{{ getNameCategory(p.categoria || p.category) | uppercase }}</td>
             <td class="app-td text-right font-semibold">{{ p.precio | currency }}</td>
             <td *ngIf="inventoryEnabled" class="app-td">
               <span class="badge" [ngClass]="hasInventory(p) ? 'badge-green' : 'badge-gray'">
@@ -146,8 +146,8 @@
                 <button *ngIf="canHaveVariants(p)" class="btn btn-outline" (click)="abrirVariantes(p)">
                   {{ (p.variant_count || 0) > 0 ? 'Variantes (' + p.variant_count + ')' : 'Variantes' }}
                 </button>
-                <button class="btn btn-outline" (click)="abrirModal(p)">Editar</button>
-                <button class="btn btn-warn" (click)="eliminar(p.name)">Eliminar</button>
+                <app-icon-action-button variant="edit" (action)="abrirModal(p)"></app-icon-action-button>
+                <app-icon-action-button variant="delete" tone="warn" (action)="eliminar(p.name)"></app-icon-action-button>
               </div>
             </td>
           </tr>
@@ -179,7 +179,7 @@
         <div class="flex items-start justify-between gap-3">
           <div>
             <h3 class="text-base font-semibold text-slate-800 md:text-lg">
-              {{ productoEditando ? 'Editar Producto' : 'Nuevo Producto' }}
+              {{ productoEditando ? 'Editar Producto' : (productModalStep === 'grouped' ? 'Nuevo Producto con variantes' : 'Nuevo Producto') }}
             </h3>
             <p class="mt-0.5 text-xs text-slate-500">
               Informacion comercial y parametros de inventario controlados por backend.
@@ -196,13 +196,46 @@
         </div>
       </div>
 
-      <form [formGroup]="productoForm" (ngSubmit)="guardarProducto()" class="space-y-4 px-4 py-4 text-sm md:px-5 md:py-5">
+      <!-- Paso previo: solo al crear. Define si el producto se vende directo o agrupa variantes. -->
+      <div *ngIf="productModalStep === 'choose'" class="space-y-4 px-4 py-6 text-sm md:px-5">
+        <p class="text-center text-xs text-slate-500">¿Qué querés crear?</p>
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <button
+            type="button"
+            class="rounded-xl border-2 border-slate-200 bg-white p-4 text-left transition hover:border-primary hover:bg-primary/5"
+            (click)="seleccionarTipoProducto('simple')"
+          >
+            <p class="text-sm font-bold text-slate-900">Producto simple</p>
+            <p class="mt-1 text-xs text-slate-500">
+              Tiene su propio precio y stock. Se vende directo, sin opciones de color, talla, etc.
+            </p>
+          </button>
+
+          <button
+            type="button"
+            class="rounded-xl border-2 border-slate-200 bg-white p-4 text-left transition hover:border-primary hover:bg-primary/5"
+            (click)="seleccionarTipoProducto('grouped')"
+          >
+            <p class="text-sm font-bold text-slate-900">Producto con variantes</p>
+            <p class="mt-1 text-xs text-slate-500">
+              Es un agrupador (ej: "Jean clásico"). El precio y el stock los define cada variante (Color, Talla), no este registro.
+            </p>
+          </button>
+        </div>
+      </div>
+
+      <form *ngIf="productModalStep !== 'choose'" [formGroup]="productoForm" (ngSubmit)="guardarProducto()" class="space-y-4 px-4 py-4 text-sm md:px-5 md:py-5">
         <section class="rounded-xl border border-slate-200 bg-slate-50/60 p-3 md:p-4">
           <p class="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Datos del producto</p>
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label class="mb-1 block font-medium">Nombre</label>
-              <input type="text" class="input" formControlName="nombre" />
+              <input
+                type="text"
+                class="input"
+                formControlName="nombre"
+                (input)="productoForm.patchValue({ nombre: ($any($event.target)?.value || '').toUpperCase() }, { emitEvent: false })"
+              />
               <div *ngIf="submitted && f['nombre'].invalid" class="field-error">Nombre requerido.</div>
             </div>
 
@@ -213,19 +246,24 @@
 
             <div class="md:col-span-2">
               <label class="mb-1 block font-medium">Descripcion</label>
-              <textarea rows="3" class="input" formControlName="descripcion" placeholder="Opcional"></textarea>
+              <textarea
+                rows="3"
+                class="input"
+                formControlName="descripcion"
+                placeholder="Opcional"
+                (input)="productoForm.patchValue({ descripcion: ($any($event.target)?.value || '').toUpperCase() }, { emitEvent: false })"
+              ></textarea>
             </div>
           </div>
         </section>
 
         <div *ngIf="(productoEditando?.variant_count || 0) > 0" class="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 md:p-4">
           Este producto tiene {{ productoEditando?.variant_count }}
-          {{ productoEditando?.variant_count === 1 ? 'variante' : 'variantes' }}. El precio y el stock que edites
-          acá abajo son solo de referencia: al vender siempre se usa el precio y el stock propios de cada variante,
-          no los de este producto principal.
+          {{ productoEditando?.variant_count === 1 ? 'variante' : 'variantes' }}. El precio y el stock quedaron
+          bloqueados acá abajo: cada variante tiene el suyo propio, que es el que se usa al vender.
         </div>
 
-        <section class="rounded-xl border border-slate-200 bg-white p-3 md:p-4">
+        <section *ngIf="productModalStep !== 'grouped'" class="rounded-xl border border-slate-200 bg-white p-3 md:p-4">
           <p class="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Comercial y fiscal</p>
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
@@ -284,14 +322,23 @@
               <span class="font-medium text-slate-700">Producto activo</span>
             </label>
 
-            <label *ngIf="inventoryEnabled" class="inline-flex items-center gap-2">
+            <label *ngIf="inventoryEnabled && productModalStep !== 'grouped' && !((productoEditando?.variant_count || 0) > 0)" class="inline-flex items-center gap-2">
               <input type="checkbox" formControlName="controlar_inventario" (change)="onInventoryToggle()" />
               <span class="font-medium text-slate-700">Controlar inventario</span>
             </label>
           </div>
         </section>
 
-        <section *ngIf="inventoryEnabled" class="rounded-xl border border-slate-200 bg-white p-3 md:p-4">
+        <!-- El producto ya tiene variantes: el stock se administra por variante, no acá. -->
+        <section *ngIf="(productoEditando?.variant_count || 0) > 0" class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center">
+          <p class="text-xs text-slate-600">
+            El stock de este producto se administra en cada una de sus {{ productoEditando?.variant_count }}
+            {{ productoEditando?.variant_count === 1 ? 'variante' : 'variantes' }}, no acá.
+          </p>
+          <button type="button" class="btn btn-primary mt-3" (click)="irAVariantesDesdeEdicion()">Ver variantes</button>
+        </section>
+
+        <section *ngIf="inventoryEnabled && productModalStep !== 'grouped' && !((productoEditando?.variant_count || 0) > 0)" class="rounded-xl border border-slate-200 bg-white p-3 md:p-4">
           <div class="mb-3 flex items-center justify-between gap-3">
             <div>
               <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Inventario</p>
@@ -410,7 +457,7 @@
           <div class="flex justify-end gap-2">
             <button type="button" class="btn btn-outline" (click)="cerrarModal()">Cancelar</button>
             <button type="submit" class="btn btn-primary">
-              {{ productoEditando ? 'Guardar cambios' : 'Crear producto' }}
+              {{ productoEditando ? 'Guardar cambios' : (productModalStep === 'grouped' ? 'Crear y agregar variantes' : 'Crear producto') }}
             </button>
           </div>
         </div>
@@ -479,7 +526,7 @@
               </thead>
               <tbody>
                 <tr *ngFor="let v of variantesFiltradas; trackBy: trackByVarianteName" class="app-tr">
-                  <td class="app-td font-medium text-gray-900">{{ v.nombre }}</td>
+                  <td class="app-td font-medium text-gray-900">{{ v.nombre | uppercase }}</td>
                   <td class="app-td">{{ formatAttributes(v) }}</td>
                   <td class="app-td font-mono text-xs text-gray-600">{{ v.codigo || '—' }}</td>
                   <td class="app-td text-right font-semibold">{{ v.precio | currency }}</td>
@@ -494,9 +541,9 @@
                   </td>
                   <td class="app-td text-center">
                     <div class="inline-flex gap-2">
-                      <button class="btn btn-outline" (click)="abrirFormVariante(v)">Editar</button>
-                      <button class="btn btn-outline" (click)="duplicarVariante(v)" title="Crear una variante nueva con estos mismos datos">Duplicar</button>
-                      <button class="btn btn-warn" (click)="eliminarVariante(v.name)">Eliminar</button>
+                      <app-icon-action-button variant="edit" (action)="abrirFormVariante(v)"></app-icon-action-button>
+                      <app-icon-action-button variant="duplicate" label="Crear una variante nueva con estos mismos datos" (action)="duplicarVariante(v)"></app-icon-action-button>
+                      <app-icon-action-button variant="delete" tone="warn" (action)="eliminarVariante(v.name)"></app-icon-action-button>
                     </div>
                   </td>
                 </tr>
@@ -548,7 +595,13 @@
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label class="mb-1 block font-medium">Nombre de la variante</label>
-            <input type="text" class="input" formControlName="item_name" placeholder="Ej: Jean clasico Azul Talla 32" />
+            <input
+              type="text"
+              class="input"
+              formControlName="item_name"
+              placeholder="Ej: Jean clasico Azul Talla 32"
+              (input)="varianteForm.patchValue({ item_name: ($any($event.target)?.value || '').toUpperCase() }, { emitEvent: false })"
+            />
             <div *ngIf="varianteSubmitted && vf['item_name'].invalid" class="field-error">Nombre requerido.</div>
           </div>
 

@@ -12,6 +12,7 @@ import { InventoryService } from 'src/app/services/inventory.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { TaxesService } from 'src/app/services/taxes.service';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
+import { IconActionButtonComponent } from 'src/app/shared/components/icon-action-button/icon-action-button.component';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
 import {
@@ -32,7 +33,7 @@ type StockEditMode = 'absolute' | 'delta';
 
 @Component({
   selector: 'app-products',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonComponent, AppPaginationComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonComponent, AppPaginationComponent, IconActionButtonComponent],
   templateUrl: './products.component.html',
   styleUrl: './products.component.css'
 })
@@ -62,6 +63,14 @@ export class ProductsComponent implements OnInit {
   submitted = false;
   productoEditando: Product | null = null;
   productoForm!: FormGroup;
+  /**
+   * 'choose': paso previo al crear, elige entre producto simple o con
+   * variantes. 'simple': formulario completo de siempre. 'grouped': igual,
+   * pero sin precio/impuesto/inventario (esos viven en cada variante). Al
+   * editar un producto existente se salta directo a 'simple', el tipo ya
+   * quedó definido por si tiene variantes o no.
+   */
+  productModalStep: 'choose' | 'simple' | 'grouped' = 'simple';
   stockEditMode: StockEditMode = 'absolute';
   selectedImageFile: File | null = null;
   imagePreview = '';
@@ -257,6 +266,9 @@ export class ProductsComponent implements OnInit {
     this.mostrarModal = true;
     this.submitted = false;
     this.productoEditando = producto;
+    // Al crear, primero preguntamos qué tipo de producto es. Al editar, el
+    // tipo ya está definido por si el producto tiene variantes o no.
+    this.productModalStep = producto ? 'simple' : 'choose';
     this.stockEditMode = 'absolute';
     this.selectedImageFile = null;
     this.imagePreview = producto?.image_url || producto?.image || '';
@@ -288,16 +300,31 @@ export class ProductsComponent implements OnInit {
     });
 
     this.syncInventoryValidators();
+
+    // El precio/impuesto de un producto que ya tiene variantes no se usa
+    // para nada al vender (cada variante tiene el suyo): se deshabilitan
+    // para que no parezca editable algo que no hace efecto.
+    if ((producto.variant_count || 0) > 0) {
+      this.f['precio'].disable();
+      this.f['tax'].disable();
+    }
   }
 
   cerrarModal() {
     this.mostrarModal = false;
     this.submitted = false;
     this.productoEditando = null;
+    this.productModalStep = 'simple';
     this.stockEditMode = 'absolute';
     this.selectedImageFile = null;
     this.imagePreview = '';
     this.resetForm();
+  }
+
+  /** El usuario elige el tipo de producto en el paso previo a crear. */
+  seleccionarTipoProducto(tipo: 'simple' | 'grouped'): void {
+    this.productModalStep = tipo;
+    this.syncInventoryValidators();
   }
 
   onProductImageSelected(event: Event): void {
@@ -341,6 +368,9 @@ export class ProductsComponent implements OnInit {
   createProduct(data: any) {
     this.spinner.show();
     const image = this.selectedImageFile;
+    // Se captura antes de guardar: cerrarModal() ya deja productModalStep en
+    // 'simple' apenas la petición resuelve.
+    const isGroupedCreation = this.productModalStep === 'grouped';
     this.productsService.create(data).pipe(
       switchMap((created: any) => {
         const itemName = String(created?.name || created?.item || '').trim();
@@ -361,6 +391,12 @@ export class ProductsComponent implements OnInit {
           toast.success('Producto creado');
         } else {
           toast.success(image ? 'Producto creado con imagen' : 'Producto creado con exito');
+        }
+        // El producto agrupador ya existe; se pasa directo a definir su
+        // primera variante en vez de mandar al usuario a buscarla aparte.
+        if (isGroupedCreation && result.product) {
+          this.abrirVariantes(result.product);
+          this.abrirFormVariante();
         }
       },
       error: (error: any) => {
@@ -494,7 +530,25 @@ export class ProductsComponent implements OnInit {
   }
 
   syncInventoryValidators() {
-    const controlsInventory = !!this.f['controlar_inventario'].value;
+    const isGrouped = this.productModalStep === 'grouped';
+
+    // Un producto agrupador no tiene precio/impuesto/categoría propios: cada
+    // variante los define por su cuenta. Se dejan sin validar y en blanco
+    // para no pedir datos que no significan nada en este registro.
+    if (isGrouped) {
+      this.f['precio'].clearValidators();
+      this.f['tax'].clearValidators();
+      this.f['categoria'].clearValidators();
+    } else {
+      this.f['precio'].setValidators([Validators.required, Validators.min(0)]);
+      this.f['tax'].setValidators([Validators.required]);
+      this.f['categoria'].setValidators(this.isLiteMode ? [] : [Validators.required]);
+    }
+    this.f['precio'].updateValueAndValidity({ emitEvent: false });
+    this.f['tax'].updateValueAndValidity({ emitEvent: false });
+    this.f['categoria'].updateValueAndValidity({ emitEvent: false });
+
+    const controlsInventory = !isGrouped && !!this.f['controlar_inventario'].value;
 
     this.f['unidad_inventario'].clearValidators();
     this.f['stock_minimo'].clearValidators();
@@ -523,8 +577,11 @@ export class ProductsComponent implements OnInit {
   buildPayload(): any {
     const raw = this.productoForm.getRawValue();
     const payload: any = {
-      nombre: raw.nombre,
-      descripcion: raw.descripcion,
+      // Refuerzo al guardar, no solo al tipear: un producto viejo en
+      // minúscula que se edita sin retocar el nombre también debe quedar
+      // en mayúscula (mismo criterio que Clientes).
+      nombre: String(raw.nombre || '').toUpperCase().trim(),
+      descripcion: String(raw.descripcion || '').toUpperCase().trim(),
       precio: Number(raw.precio || 0),
       tax: raw.tax,
       tax_value: this.resolveTaxRate(raw.tax),
@@ -636,6 +693,13 @@ export class ProductsComponent implements OnInit {
   /** Todo producto sin variante propia puede tener variantes; el botón queda visible siempre para no exigir un flag adicional del backend. */
   canHaveVariants(product: Partial<Product> | null | undefined): boolean {
     return product?.is_variant !== 1 && product?.is_variant !== true;
+  }
+
+  /** Atajo desde "Editar Producto": cierra el modal de edición (donde precio/stock no aplican) y abre directo las variantes. */
+  irAVariantesDesdeEdicion(): void {
+    const producto = this.productoEditando;
+    this.cerrarModal();
+    if (producto) this.abrirVariantes(producto);
   }
 
   abrirVariantes(producto: Product): void {
@@ -935,7 +999,7 @@ export class ProductsComponent implements OnInit {
   private buildVariantePayload(): any {
     const raw = this.varianteForm.getRawValue();
     return {
-      item_name: String(raw.item_name || '').trim(),
+      item_name: String(raw.item_name || '').toUpperCase().trim(),
       item_code: String(raw.item_code || '').trim(),
       item_type: 'Producto',
       variant_of: this.variantesParent?.name,

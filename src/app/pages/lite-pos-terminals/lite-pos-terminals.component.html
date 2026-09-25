@@ -27,7 +27,7 @@
           <td class="app-td text-slate-600"><span class="block">{{ terminalLabel(terminal) }}</span><span class="mt-0.5 block text-[10px]">{{ terminal.establishment_code || '—' }} / {{ terminal.emission_point_code || '—' }}</span></td>
           <td class="app-td"><span *ngIf="terminal.users?.length; else noUsers" class="text-slate-700">{{ terminal.users.length }} usuario(s)</span><ng-template #noUsers><span class="text-slate-400">Sin asignaciones</span></ng-template></td>
           <td class="app-td"><span class="inline-flex rounded-full px-2 py-1 text-[11px] font-semibold" [ngClass]="isActive(terminal) ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'">{{ terminal.status || '—' }}</span></td>
-          <td class="app-td" *ngIf="canManage"><div class="flex justify-end gap-2"><button type="button" class="btn btn-outline !px-2.5 !py-1 !text-[11px]" (click)="openEdit(terminal)" [disabled]="saving">Editar</button><button type="button" class="btn btn-danger !px-2.5 !py-1 !text-[11px]" (click)="deactivate(terminal)" [disabled]="saving || !isActive(terminal)">Desactivar</button></div></td>
+          <td class="app-td" *ngIf="canManage"><div class="flex justify-end gap-2"><app-icon-action-button variant="edit" [disabled]="saving" (action)="openEdit(terminal)"></app-icon-action-button><app-icon-action-button variant="delete" tone="warn" label="Desactivar" [disabled]="saving || !isActive(terminal)" (action)="deactivate(terminal)"></app-icon-action-button></div></td>
         </tr>
       </tbody>
     </table>

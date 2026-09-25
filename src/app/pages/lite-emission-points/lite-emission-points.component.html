@@ -66,8 +66,8 @@
           <td class="app-td text-center"><span *ngIf="isDefault(point)" class="inline-flex rounded-full bg-violet-50 px-2 py-1 text-[11px] font-semibold text-violet-700">Predeterminado</span><span *ngIf="!isDefault(point)" class="text-slate-400">—</span></td>
           <td class="app-td" *ngIf="canManage">
             <div class="flex justify-end gap-2">
-              <button type="button" class="btn btn-outline !px-2.5 !py-1 !text-[11px]" (click)="openEdit(point)" [disabled]="saving">Editar</button>
-              <button type="button" class="btn btn-danger !px-2.5 !py-1 !text-[11px]" (click)="deactivate(point)" [disabled]="saving || !isActive(point)">Desactivar</button>
+              <app-icon-action-button variant="edit" [disabled]="saving" (action)="openEdit(point)"></app-icon-action-button>
+              <app-icon-action-button variant="delete" tone="warn" label="Desactivar" [disabled]="saving || !isActive(point)" (action)="deactivate(point)"></app-icon-action-button>
             </div>
           </td>
         </tr>

@@ -22,6 +22,7 @@ import {
 } from 'src/app/models/supplier';
 import { SuppliersService } from 'src/app/services/suppliers.service';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
+import { IconActionButtonComponent } from 'src/app/shared/components/icon-action-button/icon-action-button.component';
 import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
 
 type SupplierModalMode = 'create' | 'edit' | 'view';
@@ -29,7 +30,7 @@ type SupplierStatusFilter = '' | '1' | '0';
 
 @Component({
   selector: 'app-suppliers',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule, ButtonComponent, AppPaginationComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgxPaginationModule, ButtonComponent, AppPaginationComponent, IconActionButtonComponent],
   templateUrl: './suppliers.component.html',
   styleUrl: './suppliers.component.css'
 })

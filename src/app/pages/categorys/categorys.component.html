@@ -49,8 +49,8 @@
         <tbody>
           <tr *ngFor="let categoria of categoriesFiltradasList; trackBy: trackByName"
             class="app-tr">
-            <td class="app-td">{{ categoria.category_name || categoria.nombre }}</td>
-            <td class="app-td">{{ categoria.description || categoria.descripcion || '—' }}</td>
+            <td class="app-td">{{ (categoria.category_name || categoria.nombre) | uppercase }}</td>
+            <td class="app-td">{{ (categoria.description || categoria.descripcion || '—') | uppercase }}</td>
             <td class="app-td">
               <span class="badge" [ngClass]="{ 'badge-green': categoria.isactive, 'badge-red': !categoria.isactive }">
                 {{ categoria.isactive ? 'Activo' : 'Inactivo' }}
@@ -58,8 +58,8 @@
             </td>
             <td *ngIf="canManageCategories" class="app-td text-center">
               <div class="inline-flex gap-2">
-                <button class="btn btn-outline" (click)="abrirModal(categoria)">Editar</button>
-                <button class="btn btn-warn" (click)="eliminar(categoria.name)">Desactivar</button>
+                <app-icon-action-button variant="edit" (action)="abrirModal(categoria)"></app-icon-action-button>
+                <app-icon-action-button variant="delete" tone="warn" label="Desactivar" (action)="eliminar(categoria.name)"></app-icon-action-button>
               </div>
             </td>
           </tr>
@@ -110,13 +110,21 @@
           <div class="grid grid-cols-1 gap-4">
             <div>
               <label class="block mb-1 font-medium">Nombre</label>
-              <input class="input" formControlName="nombre" />
+              <input
+                class="input"
+                formControlName="nombre"
+                (input)="categoriaForm.patchValue({ nombre: ($any($event.target)?.value || '').toUpperCase() }, { emitEvent: false })"
+              />
               <p *ngIf="f['nombre'].touched && f['nombre'].invalid" class="field-error">Nombre requerido.</p>
             </div>
 
             <div>
               <label class="block mb-1 font-medium">Descripción</label>
-              <input class="input" formControlName="description" />
+              <input
+                class="input"
+                formControlName="description"
+                (input)="categoriaForm.patchValue({ description: ($any($event.target)?.value || '').toUpperCase() }, { emitEvent: false })"
+              />
             </div>
           </div>
         </section>

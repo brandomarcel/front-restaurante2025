@@ -44,7 +44,7 @@
                 <tbody>
                     <tr *ngFor="let c of filteredCustomersList; trackBy: trackById"
                         class="app-tr">
-                        <td class="app-td">{{ c.nombre }}</td>
+                        <td class="app-td">{{ c.nombre | uppercase }}</td>
                         <td class="app-td">{{ c.num_identificacion }}</td>
                         <td class="app-td">{{ c.telefono || '—' }}</td>
                         <td class="app-td">{{ c.correo || '—' }}</td>
@@ -55,8 +55,8 @@
                         </td>
                         <td *ngIf="canManageCustomers" class="app-td text-center">
                             <div class="inline-flex gap-2">
-                                <button class="btn btn-outline" (click)="abrirModal(c)">Editar</button>
-                                <button class="btn btn-warn" (click)="delete(c.name)">Eliminar</button>
+                                <app-icon-action-button variant="edit" (action)="abrirModal(c)"></app-icon-action-button>
+                                <app-icon-action-button variant="delete" tone="warn" (action)="delete(c.name)"></app-icon-action-button>
                             </div>
                         </td>
                     </tr>
@@ -154,7 +154,12 @@
 
                         <div class="md:col-span-2">
                             <label class="block mb-1 font-medium">Dirección</label>
-                            <input class="input" type="text" formControlName="direccion" />
+                            <input
+                                class="input"
+                                type="text"
+                                formControlName="direccion"
+                                (input)="clienteForm.patchValue({ direccion: ($any($event.target)?.value || '').toUpperCase() }, { emitEvent: false })"
+                            />
                             <div *ngIf="submitted && f['direccion'].invalid" class="field-error">Dirección inválida.</div>
                         </div>
                     </div>

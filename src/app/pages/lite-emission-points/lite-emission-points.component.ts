@@ -7,11 +7,12 @@ import { toast } from 'ngx-sonner';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { CompanyService } from 'src/app/services/company.service';
+import { IconActionButtonComponent } from 'src/app/shared/components/icon-action-button/icon-action-button.component';
 
 @Component({
   selector: 'app-lite-emission-points',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, IconActionButtonComponent],
   templateUrl: './lite-emission-points.component.html'
 })
 export class LiteEmissionPointsComponent implements OnInit, DoCheck {

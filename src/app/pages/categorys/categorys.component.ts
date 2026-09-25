@@ -5,6 +5,7 @@ import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { CategoryService } from 'src/app/services/category.service';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
+import { IconActionButtonComponent } from 'src/app/shared/components/icon-action-button/icon-action-button.component';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
@@ -12,7 +13,7 @@ import { AppPaginationComponent } from 'src/app/shared/components/pagination/app
 
 @Component({
   selector: 'app-categorys',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonComponent, AppPaginationComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonComponent, AppPaginationComponent, IconActionButtonComponent],
   templateUrl: './categorys.component.html',
   styleUrl: './categorys.component.css'
 })
@@ -161,10 +162,13 @@ export class CategorysComponent implements OnInit {
     const formValue = this.categoriaForm.value;
 
     // CategoryService transforma estos aliases al contrato Lite.
+    // Refuerzo al guardar, no solo al tipear (mismo criterio que Clientes y
+    // Productos): una categoría vieja en minúscula que se edita sin retocar
+    // el nombre también debe quedar en mayúscula.
     const payload = {
       name: formValue.name,
-      nombre: formValue.nombre,
-      description: formValue.description,
+      nombre: String(formValue.nombre || '').toUpperCase().trim(),
+      description: String(formValue.description || '').toUpperCase().trim(),
       isactive: !!formValue.isActive,
     };
 

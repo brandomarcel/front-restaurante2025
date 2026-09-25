@@ -57,8 +57,8 @@
           <td class="app-td text-center"><span *ngIf="isMain(establishment)" class="inline-flex rounded-full bg-violet-50 px-2 py-1 text-[11px] font-semibold text-violet-700">Principal</span><span *ngIf="!isMain(establishment)" class="text-slate-400">—</span></td>
           <td class="app-td" *ngIf="canManage">
             <div class="flex justify-end gap-2">
-              <button type="button" class="btn btn-outline !px-2.5 !py-1 !text-[11px]" (click)="openEdit(establishment)" [disabled]="saving">Editar</button>
-              <button type="button" class="btn btn-danger !px-2.5 !py-1 !text-[11px]" (click)="deactivate(establishment)" [disabled]="saving || !isActive(establishment)">Desactivar</button>
+              <app-icon-action-button variant="edit" [disabled]="saving" (action)="openEdit(establishment)"></app-icon-action-button>
+              <app-icon-action-button variant="delete" tone="warn" label="Desactivar" [disabled]="saving || !isActive(establishment)" (action)="deactivate(establishment)"></app-icon-action-button>
             </div>
           </td>
         </tr>

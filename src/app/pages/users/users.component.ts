@@ -12,11 +12,12 @@ import {
   FrappeUserCandidate,
   UserService
 } from 'src/app/services/user.service';
+import { IconActionButtonComponent } from 'src/app/shared/components/icon-action-button/icon-action-button.component';
 
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, IconActionButtonComponent],
   templateUrl: './users.component.html',
 })
 export class UsersComponent implements OnInit, DoCheck {

@@ -86,6 +86,8 @@ export class NftComponent implements OnInit, OnDestroy {
   topProductsBarOptions: any = null;
   cashFlowDonutOptions: any = null;
   moneyBarsOptions: any = null;
+  invoiceStatusDonutOptions: any = null;
+  salesVsCollectedBarOptions: any = null;
 
   private destroy$ = new Subject<void>();
   private avisoCounter = 0;
@@ -240,6 +242,126 @@ export class NftComponent implements OnInit, OnDestroy {
     if (!sales) return;
     this.totalOrdersToday = sales.invoice_count;
     this.total_sales_today = sales.sales_total;
+    this.construirChartEstadoComprobantes();
+    this.construirChartFacturadoCobrado();
+  }
+
+  /**
+   * Estado de los comprobantes emitidos en el periodo: lo primero que un
+   * negocio de solo facturación necesita saber es si sus documentos se están
+   * autorizando bien o si algo se está quedando pendiente/rechazado.
+   */
+  private construirChartEstadoComprobantes(): void {
+    const sales = this.liteDashboard?.sales;
+    if (!sales) {
+      this.invoiceStatusDonutOptions = null;
+      return;
+    }
+
+    const series = [
+      Number(sales.authorized_count) || 0,
+      Number(sales.pending_count) || 0,
+      Number(sales.rejected_count) || 0,
+      Number(sales.canceled_count) || 0
+    ];
+    const total = series.reduce((acc, value) => acc + value, 0);
+
+    this.invoiceStatusDonutOptions = {
+      series,
+      chart: {
+        type: 'donut',
+        height: 330,
+        toolbar: { show: false }
+      },
+      labels: ['Autorizadas', 'Pendientes', 'Rechazadas', 'Anuladas'],
+      colors: ['#16a34a', '#0ea5e9', '#dc2626', '#94a3b8'],
+      legend: { show: true, position: 'bottom' },
+      dataLabels: {
+        enabled: true,
+        formatter: (val: number) => `${val.toFixed(0)}%`
+      },
+      stroke: { width: 0 },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '66%',
+            labels: {
+              show: true,
+              name: { show: true },
+              value: { show: true, formatter: (value: string) => value },
+              total: {
+                show: true,
+                label: 'Comprobantes',
+                formatter: () => `${total}`
+              }
+            }
+          }
+        }
+      },
+      tooltip: {
+        y: { formatter: (value: number) => `${value} comprobante(s)` }
+      },
+      noData: { text: 'Todavía no hay comprobantes en este periodo.' }
+    };
+  }
+
+  /**
+   * Compara lo facturado contra lo efectivamente cobrado: la brecha entre
+   * ambas barras es dinero ya facturado que el negocio todavía no recibió.
+   */
+  private construirChartFacturadoCobrado(): void {
+    const sales = this.liteDashboard?.sales;
+    if (!sales) {
+      this.salesVsCollectedBarOptions = null;
+      return;
+    }
+
+    const facturado = Number(sales.sales_total) || 0;
+    const cobrado = Number(sales.collected_total) || 0;
+
+    this.salesVsCollectedBarOptions = {
+      series: [
+        {
+          name: 'USD',
+          data: [facturado, cobrado]
+        }
+      ],
+      chart: {
+        type: 'bar',
+        height: 330,
+        toolbar: { show: false },
+        animations: { enabled: true, easing: 'easeinout', speed: 550 }
+      },
+      plotOptions: {
+        bar: {
+          horizontal: false,
+          columnWidth: '45%',
+          borderRadius: 6,
+          distributed: true
+        }
+      },
+      dataLabels: {
+        enabled: true,
+        formatter: (val: number) => this.formatChartCurrency(val)
+      },
+      xaxis: {
+        categories: ['Facturado', 'Cobrado'],
+        labels: { style: { colors: '#64748b' } }
+      },
+      yaxis: {
+        labels: {
+          formatter: (val: number) => this.formatChartCurrency(val),
+          style: { colors: '#334155' }
+        }
+      },
+      colors: ['#2563eb', '#16a34a'],
+      legend: { show: false },
+      grid: { borderColor: '#e2e8f0', strokeDashArray: 4 },
+      tooltip: {
+        y: { formatter: (value: number) => this.formatChartCurrency(value) }
+      },
+      noData: { text: 'Todavía no hay ventas en este periodo.' }
+    };
   }
 
   private readLiteDashboardError(error: any): string {
