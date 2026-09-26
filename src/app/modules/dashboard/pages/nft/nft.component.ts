@@ -67,7 +67,21 @@ export class NftComponent implements OnInit, OnDestroy {
   efectivoEsperadoBackend = 0;
   cashIsOpen = false;
   cashPayments: Record<string, unknown> = {};
+  cashPaymentTotals: any[] = [];
   topProducts: any[] = [];
+
+  /** 'restaurant' | 'pos' según lo que devuelva get_dashboard_metrics; null antes de cargar o para negocios de solo facturación/API que no usan este endpoint. */
+  dashboardType: 'restaurant' | 'pos' | null = null;
+  dashboardLoading = false;
+  dashboardError = '';
+  /** El usuario operativo tiene varios terminales asignados y ninguno elegido: hace falta seleccionar uno para ver métricas. */
+  dashboardNeedsTerminal = false;
+  /** Desglose de órdenes/notas por estado (Ingresada, Preparacion... o Cobrada, Facturada, "Factura directa"). */
+  ordersByStatus: Record<string, number> = {};
+  /** Desglose de ventas por tipo (Servirse, Llevar, Domicilio... o POS). */
+  salesByType: Record<string, number> = {};
+  activeOrdersCount = 0;
+  activeOrdersTotal = 0;
   today = new Date();
   certDaysLeft: number | null = null;
   businessMode: BusinessMode = 'RESTAURANTE';
@@ -93,8 +107,20 @@ export class NftComponent implements OnInit, OnDestroy {
   private avisoCounter = 0;
   private cashDataRequested = false;
   private readonly restaurantDataChanged = () => {
-    if (this.isRestaurantMode) void this.loadData();
+    // Cobrar/facturar/crear o cerrar una orden, un retiro, una apertura o un
+    // cierre mueven el efectivo y las ventas: refrescar tanto en Restaurante
+    // como en POS genérico, que ahora comparten el mismo endpoint de métricas.
+    if (this.usesUnifiedDashboard) void this.loadUnifiedDashboard();
   };
+
+  /**
+   * Restaurante y POS genérico comparten `get_dashboard_metrics`. Nunca se
+   * llama para negocios de solo facturación directa o API-only, que siguen
+   * usando el dashboard Lite basado en comprobantes.
+   */
+  get usesUnifiedDashboard(): boolean {
+    return this.capabilities.isEnabled('pos') || this.capabilities.isEnabled('restaurant');
+  }
 
   constructor(
     private ordersService: OrdersService,
@@ -145,30 +171,23 @@ export class NftComponent implements OnInit, OnDestroy {
           this.currentPlan = this.capabilities.plan;
           this.procesarEmpresa(empresa);
 
+          // Restaurante y POS genérico comparten get_dashboard_metrics; solo
+          // un negocio de facturación directa/API sin ningún POS usa el
+          // dashboard Lite basado en comprobantes.
+          if (this.usesUnifiedDashboard) {
+            await this.loadUnifiedDashboard();
+            this.generarAvisos();
+            return;
+          }
+
           if (this.isBillingDashboard || this.isApiOnlyMode) {
             this.initializeLiteDateRange();
             await this.loadLiteDashboard();
-            // POS genérico también puede tener caja habilitada
-            // (`cash_register` = billing + pos); refleja el turno igual que
-            // en Restaurante en vez de asumir que nunca aplica.
-            if (this.capabilities.isEnabled('cash_register')) {
-              await this.getDatosCierre();
-            }
             this.actualizarVisualizaciones();
             this.generarAvisos();
             return;
           }
 
-          try {
-            const dashboard = await firstValueFrom(this.ordersService.get_dashboard_metrics());
-            this.procesarDashboard(dashboard);
-          } catch (error) {
-            console.error('Error al obtener métricas:', error);
-          }
-
-          if (this.isRestaurantMode && !this.idApertura) {
-            await this.getDatosCierre();
-          }
           this.generarAvisos();
         },
         error: (err: any) => {
@@ -176,6 +195,54 @@ export class NftComponent implements OnInit, OnDestroy {
         }
       });
 
+  }
+
+  /**
+   * Carga las métricas compartidas de Restaurante y POS genérico. El
+   * terminal es obligatorio para un operativo con varios terminales
+   * asignados; para gerente/administrador es opcional (ve el agregado).
+   */
+  async loadUnifiedDashboard(): Promise<void> {
+    this.dashboardLoading = true;
+    this.dashboardError = '';
+    this.dashboardNeedsTerminal = false;
+
+    const isManagerOrAdmin = this.capabilities.hasPermission('*')
+      || this.capabilities.hasPermission('restaurant.manage')
+      || this.capabilities.hasPermission('billing.manage');
+
+    if (this.capabilities.usesPosTerminalModel && this.capabilities.needsPosTerminalSelection && !isManagerOrAdmin) {
+      this.dashboardNeedsTerminal = true;
+      this.dashboardLoading = false;
+      return;
+    }
+
+    try {
+      const dashboard = await firstValueFrom(this.ordersService.get_dashboard_metrics());
+      this.procesarDashboard(dashboard);
+    } catch (error: any) {
+      console.error('Error al obtener métricas:', error);
+      this.dashboardError = this.isTerminalRequiredError(error)
+        ? 'Selecciona un terminal POS válido para ver las métricas.'
+        : 'No se pudieron cargar las métricas del dashboard.';
+    } finally {
+      this.dashboardLoading = false;
+    }
+
+    if (this.isRestaurantMode && !this.idApertura) {
+      await this.getDatosCierre();
+    }
+  }
+
+  private isTerminalRequiredError(error: any): boolean {
+    const message = String(
+      error?.error?._server_messages
+        ?? error?.error?.message
+        ?? error?.error?.exc
+        ?? error?.message
+        ?? ''
+    ).toLowerCase();
+    return message.includes('terminal');
   }
   async getDatosCierre() {
     // Antes se omitía por completo en modo Facturador; ahora la caja también
@@ -391,9 +458,12 @@ export class NftComponent implements OnInit, OnDestroy {
       const data = payload?.dashboard && typeof payload.dashboard === 'object'
         ? payload.dashboard
         : (payload?.metrics && typeof payload.metrics === 'object' ? payload.metrics : payload);
-      if (data?.dashboard_type && String(data.dashboard_type).toLowerCase() !== 'restaurant') {
-        return;
-      }
+      // 'restaurant' trae Ingresada/Preparacion/Lista/Cerrada/Cancelada y
+      // Servirse/Llevar/Domicilio; 'pos' trae Cobrada/Facturada/"Factura
+      // directa" y POS. Ambos comparten el resto de la forma (sales, cash,
+      // top_products), así que se procesan con la misma lógica.
+      const type = String(data?.dashboard_type || '').toLowerCase();
+      this.dashboardType = type === 'pos' ? 'pos' : (type === 'restaurant' ? 'restaurant' : (this.isRestaurantMode ? 'restaurant' : null));
       const sales = data?.sales && typeof data.sales === 'object' ? data.sales : {};
       const orders = data?.orders && typeof data.orders === 'object' ? data.orders : {};
       const cash = data?.cash && typeof data.cash === 'object' ? data.cash : {};
@@ -452,6 +522,11 @@ export class NftComponent implements OnInit, OnDestroy {
             )
           }))
         : [];
+      this.ordersByStatus = this.normalizeCountMap(data?.orders_by_status);
+      this.salesByType = this.normalizeCountMap(data?.sales_by_type);
+      this.activeOrdersCount = this.dashboardNumber(data?.active_orders);
+      this.activeOrdersTotal = this.dashboardNumber(data?.active_total);
+
       // El backend ya separa efectivo de tarjeta/transferencia y devuelve el
       // valor correcto. No recalcular expected_cash con total_sales_today.
       this.cashIsOpen = cash.is_open === true || cash.is_open === 1 || `${cash.is_open ?? ''}`.trim() === '1' || `${cash.is_open ?? ''}`.toLowerCase() === 'true';
@@ -460,7 +535,14 @@ export class NftComponent implements OnInit, OnDestroy {
       this.efectivoSistema = this.dashboardNumber(cash.efectivo_sistema);
       this.efectivoEsperadoBackend = this.dashboardNumber(cash.expected_cash);
       this.cashPayments = cash.payments && typeof cash.payments === 'object' ? cash.payments : {};
-      if (!this.cashIsOpen) this.idApertura = '';
+      this.cashPaymentTotals = Array.isArray(cash.payment_totals) ? cash.payment_totals : [];
+      if (!this.cashIsOpen) {
+        this.idApertura = '';
+      } else {
+        const opening = cash.cash_opening;
+        const openingName = typeof opening === 'string' ? opening : String(opening?.name || '').trim();
+        if (openingName) this.idApertura = openingName;
+      }
       this.actualizarVisualizaciones();
     } catch (error) {
       console.error('Error procesando dashboard:', error);
@@ -470,6 +552,19 @@ export class NftComponent implements OnInit, OnDestroy {
   private dashboardNumber(value: unknown): number {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private normalizeCountMap(value: unknown): Record<string, number> {
+    if (!value || typeof value !== 'object') return {};
+    return Object.entries(value as Record<string, unknown>).reduce((result, [key, raw]) => {
+      result[key] = this.dashboardNumber(raw);
+      return result;
+    }, {} as Record<string, number>);
+  }
+
+  /** Acceso directo por clave desde la plantilla (objetos con espacios como "Factura directa"). */
+  countFor(map: Record<string, number>, key: string): number {
+    return this.dashboardNumber(map?.[key]);
   }
 
   procesarEmpresa(data: any) {

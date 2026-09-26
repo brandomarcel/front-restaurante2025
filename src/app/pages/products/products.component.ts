@@ -40,13 +40,13 @@ type StockEditMode = 'absolute' | 'delta';
 export class ProductsComponent implements OnInit {
   readonly inventoryUnitOptions = [
     { value: 'und', label: 'Unidad (und)' },
-    { value: 'kg', label: 'Kilogramo (kg)' },
-    { value: 'g', label: 'Gramo (g)' },
-    { value: 'lt', label: 'Litro (lt)' },
-    { value: 'ml', label: 'Mililitro (ml)' },
-    { value: 'porcion', label: 'Porcion' },
-    { value: 'caja', label: 'Caja' },
-    { value: 'paquete', label: 'Paquete' },
+    // { value: 'kg', label: 'Kilogramo (kg)' },
+    // { value: 'g', label: 'Gramo (g)' },
+    // { value: 'lt', label: 'Litro (lt)' },
+    // { value: 'ml', label: 'Mililitro (ml)' },
+    // { value: 'porcion', label: 'Porcion' },
+    // { value: 'caja', label: 'Caja' },
+    // { value: 'paquete', label: 'Paquete' },
   ];
 
   productos: Product[] = [];

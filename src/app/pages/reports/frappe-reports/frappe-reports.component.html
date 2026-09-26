@@ -2,37 +2,50 @@
   <section class="rounded-xl border border-border bg-card p-2.5 shadow-sm">
     <div class="flex flex-col gap-2 xl:flex-row xl:items-end xl:justify-between">
       <div class="min-w-0">
-        <div class="flex flex-wrap items-center gap-2">
-          <p class="text-[10px] font-bold uppercase tracking-wide text-primary">Reportes</p>
+        <a routerLink="/report" class="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wide text-muted-foreground transition hover:text-primary">
+          <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          Reportes
+        </a>
+        <div class="mt-0.5 flex flex-wrap items-center gap-1.5">
+          <h1 class="truncate text-base font-black text-foreground">{{ selectedReport.title }}</h1>
           <span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
             {{ rows.length }} registro(s)
           </span>
         </div>
-        <h1 class="truncate text-base font-black text-foreground">{{ selectedReport.title }}</h1>
         <p class="line-clamp-1 text-[11px] text-muted-foreground">{{ selectedReport.description }}</p>
       </div>
 
-      <div class="flex flex-wrap items-center gap-1.5">
-        <a routerLink="/report" class="btn btn-outline !px-2.5 !py-1.5 !text-[11px]">
-          ← Cambiar
-        </a>
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-1">
+          <button
+            type="button"
+            class="btn btn-ghost inline-flex h-8 items-center gap-1.5 !rounded-md !px-2.5 !text-[11px]"
+            [disabled]="loading || exporting"
+            (click)="clearFilters()">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 12a9 9 0 1 0 3-6.7" />
+              <path d="M3 4v5h5" />
+            </svg>
+            Limpiar
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary inline-flex h-8 items-center gap-1.5 !rounded-md !px-3 !text-[11px]"
+            [disabled]="loading || exporting"
+            (click)="runReport()">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+            {{ loading ? 'Consultando...' : 'Buscar' }}
+          </button>
+        </div>
+
         <button
           type="button"
-          class="btn btn-outline !px-2.5 !py-1.5 !text-[11px]"
-          [disabled]="loading || exporting"
-          (click)="clearFilters()">
-          Limpiar
-        </button>
-        <button
-          type="button"
-          class="btn btn-primary !px-2.5 !py-1.5 !text-[11px]"
-          [disabled]="loading || exporting"
-          (click)="runReport()">
-          {{ loading ? 'Consultando...' : 'Buscar' }}
-        </button>
-        <button
-          type="button"
-          class="btn btn-success !gap-1.5 !px-2.5 !py-1.5 !text-[11px]"
+          class="btn btn-success inline-flex h-9 items-center gap-1.5 !px-3 !text-[11px]"
           [disabled]="loading || exporting || !displayColumns.length"
           (click)="exportExcel()">
           <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -102,7 +115,7 @@
       </div>
     </div>
 
-    <div *ngIf="errorMessage" class="m-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
+    <div *ngIf="errorMessage" class="m-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive">
       {{ errorMessage }}
     </div>
 
@@ -110,6 +123,7 @@
       <div class="mx-auto max-w-sm rounded-xl border border-dashed border-border bg-muted/40 px-4 py-6">
         <p class="text-sm font-bold text-foreground">No hay datos para los filtros seleccionados</p>
         <p class="mt-1 text-xs text-muted-foreground">Cambia el rango de fechas o limpia los filtros para intentar de nuevo.</p>
+        <button type="button" class="btn btn-outline mt-3 !text-xs" (click)="clearFilters()">Limpiar filtros</button>
       </div>
     </div>
 

@@ -239,7 +239,7 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-1.5">
-          <button type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="cargarMovimientos()">
+          <button type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="aplicarFiltrosHistorial()">
             Refrescar
           </button>
           <button *ngIf="canManageInventory" type="button" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="abrirMovimientoModal()">
@@ -248,7 +248,7 @@
         </div>
       </div>
 
-      <div class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_220px_150px_150px_minmax(0,1fr)_auto]">
+      <div class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_220px_auto]">
         <ng-select
           class="ng-select-tailwind text-xs"
           [(ngModel)]="historyProduct"
@@ -258,32 +258,25 @@
           bindValue="name"
           placeholder="Todos los productos"
           [clearable]="true"
+          (change)="aplicarFiltrosHistorial()"
         ></ng-select>
 
-        <select class="select h-8 !w-full text-xs" [(ngModel)]="historyMovementType">
+        <select class="select h-8 !w-full text-xs" [(ngModel)]="historyMovementType" (change)="aplicarFiltrosHistorial()">
           <option value="">Todos los tipos</option>
           <option *ngFor="let type of supportedMovementTypes" [value]="type">{{ getMovementOptionLabel(type) }}</option>
         </select>
 
-        <input class="input h-8 text-xs" type="date" [(ngModel)]="historyDate" aria-label="Fecha del movimiento" />
-        <input class="input h-8 text-xs" type="search" [(ngModel)]="historyReference" placeholder="Referencia" />
-
-        <select class="select h-8 !w-full text-xs" [(ngModel)]="historyLimit">
-          <option [ngValue]="10">10 por página</option>
-          <option [ngValue]="20">20 por página</option>
-          <option [ngValue]="30">30 por página</option>
-        </select>
-
-        <div class="flex flex-wrap items-center gap-1.5">
-          <button type="button" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="aplicarFiltrosHistorial()">
-            Filtrar
-          </button>
-          <button type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="limpiarFiltrosHistorial()">
-            Limpiar
-          </button>
-        </div>
+        <button type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="limpiarFiltrosHistorial()">
+          Limpiar filtros
+        </button>
       </div>
     </section>
+
+    <div *ngIf="historyAccessDenied" class="mt-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm font-semibold text-destructive">
+      No tienes permiso para consultar el historial de movimientos de este negocio.
+    </div>
+
+    <ng-container *ngIf="!historyAccessDenied">
 
     <section class="app-table-wrap mt-3">
       <div class="hidden overflow-x-auto lg:block">
@@ -291,68 +284,38 @@
           <thead class="app-thead">
             <tr>
               <th class="app-th py-2">Fecha</th>
+              <th class="app-th py-2">Producto</th>
               <th class="app-th py-2">Tipo</th>
+              <th class="app-th py-2 text-right">Stock anterior → resultante</th>
+              <th class="app-th py-2 text-right">Variación</th>
               <th class="app-th py-2">Referencia</th>
               <th class="app-th py-2">Notas</th>
-              <th class="app-th py-2 text-center">Items</th>
-              <th class="app-th py-2 text-right">Cantidad</th>
-              <th class="app-th py-2 text-center">Detalle</th>
             </tr>
           </thead>
 
           <tbody>
-            <ng-container *ngFor="let movement of movements; trackBy: trackByMovement">
-              <tr class="app-tr">
-                <td class="app-td py-2 whitespace-nowrap">{{ (movement.creation || movement.posting_date) | date:'short' }}</td>
-                <td class="app-td py-2">
-                  <span class="badge" [ngClass]="getMovementTone(movement.movement_type)">
-                    {{ getMovementOptionLabel(movement.movement_type || 'Sin tipo') }}
-                  </span>
-                </td>
-                <td class="app-td py-2">{{ extractReference(movement) }}</td>
-                <td class="app-td py-2">
-                  <span class="line-clamp-1">{{ movement.notes || '-' }}</span>
-                </td>
-                <td class="app-td py-2 text-center">{{ movement.total_items || movement.items?.length || 0 }}</td>
-                <td class="app-td py-2 text-right font-semibold">{{ movement.total_quantity || '-' }}</td>
-                <td class="app-td py-2 text-center">
-                  <button class="btn btn-outline !px-3 !py-1 !text-[11px]" (click)="toggleMovementDetail(movement)">
-                    {{ expandedMovementName === (movement.name || movement.creation || '') ? 'Ocultar' : 'Ver' }}
-                  </button>
-                </td>
-              </tr>
-
-              <tr *ngIf="expandedMovementName === (movement.name || movement.creation || '')" class="bg-muted/40">
-                <td colspan="7" class="p-2">
-                  <div class="rounded-xl border border-border bg-card p-2">
-                    <p class="mb-1 text-[11px] font-bold uppercase text-primary">Detalle por ítem</p>
-                    <div class="app-table-wrap">
-                      <table class="app-table">
-                        <thead class="app-thead">
-                          <tr>
-                            <th class="px-2 py-1.5">Producto</th>
-                            <th class="px-2 py-1.5 text-right">Cantidad</th>
-                            <th class="px-2 py-1.5 text-right">Antes</th>
-                            <th class="px-2 py-1.5 text-right">Después</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr *ngFor="let item of movement.items || []" class="app-tr">
-                            <td class="px-2 py-1.5 font-semibold">{{ item.product_name || resolveProductName(item.product || '') }}</td>
-                            <td class="px-2 py-1.5 text-right">{{ item.quantity ?? '-' }}</td>
-                            <td class="px-2 py-1.5 text-right">{{ item.stock_before ?? '-' }}</td>
-                            <td class="px-2 py-1.5 text-right">{{ item.stock_after ?? '-' }}</td>
-                          </tr>
-                          <tr *ngIf="!(movement.items || []).length">
-                            <td colspan="4" class="px-2 py-3 text-center text-muted-foreground">Sin detalle por ítem.</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            </ng-container>
+            <tr *ngFor="let movement of movements; trackBy: trackByMovement" class="app-tr">
+              <td class="app-td py-2 whitespace-nowrap">{{ (movement.posting_date || movement.creation) | date:'short' }}</td>
+              <td class="app-td py-2">
+                <p class="font-semibold text-foreground">{{ movement.item_name || resolveProductName(movement.item || '') }}</p>
+                <p *ngIf="movement.item_code" class="text-[10px] text-muted-foreground">{{ movement.item_code }}</p>
+              </td>
+              <td class="app-td py-2">
+                <span class="badge" [ngClass]="getMovementTone(movement.movement_type)">
+                  {{ getMovementOptionLabel(movement.movement_type || 'Sin tipo') }}
+                </span>
+              </td>
+              <td class="app-td py-2 text-right whitespace-nowrap">
+                {{ movement.previous_stock ?? '-' }} → {{ movement.resulting_stock ?? '-' }}
+              </td>
+              <td class="app-td py-2 text-right font-bold" [ngClass]="movementVariationClass(movement)">
+                {{ movementVariation(movement) > 0 ? '+' : '' }}{{ movementVariation(movement) }}
+              </td>
+              <td class="app-td py-2">{{ extractReference(movement) }}</td>
+              <td class="app-td py-2">
+                <span class="line-clamp-1">{{ movement.notes || '-' }}</span>
+              </td>
+            </tr>
 
             <tr *ngIf="movements.length === 0">
               <td colspan="7" class="app-td py-8 text-center text-xs text-muted-foreground">
@@ -367,41 +330,24 @@
         <article *ngFor="let movement of movements; trackBy: trackByMovement"
           class="rounded-xl border border-border bg-card p-3 shadow-sm">
           <div class="flex items-start justify-between gap-2">
-            <div>
-              <p class="text-xs font-bold text-foreground">{{ (movement.creation || movement.posting_date) | date:'short' }}</p>
-              <p class="text-[10px] text-muted-foreground">{{ extractReference(movement) }}</p>
+            <div class="min-w-0">
+              <p class="truncate text-xs font-bold text-foreground">{{ movement.item_name || resolveProductName(movement.item || '') }}</p>
+              <p class="text-[10px] text-muted-foreground">{{ (movement.posting_date || movement.creation) | date:'short' }}</p>
             </div>
             <span class="badge shrink-0" [ngClass]="getMovementTone(movement.movement_type)">
               {{ getMovementOptionLabel(movement.movement_type || 'Sin tipo') }}
             </span>
           </div>
 
-          <div class="mt-2 grid grid-cols-3 gap-2 text-[11px] text-muted-foreground">
-            <div>
-              <span class="block text-[10px] font-bold uppercase text-primary">Items</span>
-              <span>{{ movement.total_items || movement.items?.length || 0 }}</span>
-            </div>
-            <div>
-              <span class="block text-[10px] font-bold uppercase text-primary">Cantidad</span>
-              <span>{{ movement.total_quantity || '-' }}</span>
-            </div>
-            <div>
-              <span class="block text-[10px] font-bold uppercase text-primary">Notas</span>
-              <span class="line-clamp-1">{{ movement.notes || '-' }}</span>
-            </div>
+          <div class="mt-2 flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-2.5 py-2 text-[11px]">
+            <span class="text-muted-foreground">{{ movement.previous_stock ?? '-' }} → {{ movement.resulting_stock ?? '-' }}</span>
+            <span class="font-bold" [ngClass]="movementVariationClass(movement)">
+              {{ movementVariation(movement) > 0 ? '+' : '' }}{{ movementVariation(movement) }}
+            </span>
           </div>
 
-          <button class="btn btn-outline mt-2 w-full !py-1.5 !text-[11px]" (click)="toggleMovementDetail(movement)">
-            {{ expandedMovementName === (movement.name || movement.creation || '') ? 'Ocultar detalle' : 'Ver detalle' }}
-          </button>
-
-          <div *ngIf="expandedMovementName === (movement.name || movement.creation || '')" class="mt-2 rounded-lg bg-muted/40 p-2 text-[11px]">
-            <div *ngFor="let item of movement.items || []" class="flex justify-between gap-2 border-b border-border py-1 last:border-0">
-              <span class="font-semibold">{{ item.product_name || resolveProductName(item.product || '') }}</span>
-              <span>{{ item.quantity ?? '-' }} · {{ item.stock_before ?? '-' }} → {{ item.stock_after ?? '-' }}</span>
-            </div>
-            <p *ngIf="!(movement.items || []).length" class="text-center text-muted-foreground">Sin detalle por ítem.</p>
-          </div>
+          <p class="mt-1.5 text-[11px] text-muted-foreground">{{ extractReference(movement) }}</p>
+          <p *ngIf="movement.notes" class="mt-0.5 text-[11px] text-muted-foreground">{{ movement.notes }}</p>
         </article>
 
         <div *ngIf="movements.length === 0" class="rounded-xl border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
@@ -409,15 +355,15 @@
         </div>
       </div>
 
-      <app-pagination
-        [page]="historyPage"
-        [totalPages]="historyTotalPages"
-        [totalItems]="historyTotal"
-        [pageSize]="historyLimit"
-        (pageChange)="onHistoryPage($event)"
-        (pageSizeChange)="onHistoryPageSize($event)">
-      </app-pagination>
+      <div class="flex items-center justify-center border-t border-border p-3">
+        <button *ngIf="historyHasMore" type="button" class="btn btn-outline !px-4 !py-1.5 !text-xs"
+          [disabled]="historyLoadingMore" (click)="cargarMasMovimientos()">
+          {{ historyLoadingMore ? 'Cargando...' : 'Cargar más' }}
+        </button>
+        <p *ngIf="!historyHasMore && movements.length" class="text-[11px] text-muted-foreground">No hay más movimientos para cargar.</p>
+      </div>
     </section>
+    </ng-container>
   </ng-template>
 
   <div *ngIf="showMovementModal" class="app-modal-backdrop">

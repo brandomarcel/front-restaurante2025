@@ -87,9 +87,12 @@ export class CajasService {
     if (accessError) return throwError(() => accessError);
     const business = this.activeBusinessOrError();
     if (business instanceof Error) return throwError(() => business);
+    let params = new HttpParams().set('business', business);
+    const posTerminal = this.activePosTerminalName();
+    if (posTerminal) params = params.set('pos_terminal', posTerminal);
     return this.http.get<any>(`${this.restaurantApi}.get_cash_withdrawals`, {
       context: new HttpContext().set(REQUIRE_AUTH, true),
-      params: new HttpParams().set('business', business)
+      params
     });
   }
 
@@ -99,9 +102,12 @@ export class CajasService {
     if (accessError) return throwError(() => accessError);
     const business = this.activeBusinessOrError();
     if (business instanceof Error) return throwError(() => business);
+    let params = new HttpParams().set('business', business);
+    const posTerminal = this.activePosTerminalName();
+    if (posTerminal) params = params.set('pos_terminal', posTerminal);
     return this.http.get<any>(`${this.restaurantApi}.get_dashboard_metrics`, {
       context: new HttpContext().set(REQUIRE_AUTH, true),
-      params: new HttpParams().set('business', business)
+      params
     });
   }
 

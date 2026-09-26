@@ -36,7 +36,7 @@ const routes: Routes = [
       { path: 'main', component: NftComponent, canActivate: [RoleAccessGuard], data: { allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
       // { path: 'pos', component: PosComponent },
       { path: 'pos', component: PosShellComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { featureKey: 'restaurant', requiredFeatures: ['orders'], anyPermissionKeys: ['restaurant.orders.create', 'billing.create'], liteBlocked: true } },
-      { path: 'pos-generic', component: PosCajaComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'generic_pos', requiredFeatures: ['generic_pos', 'billing'], readOnlyFeature: true, permissionKey: 'billing.create' } },
+      { path: 'pos-generic', component: PosCajaComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { featureKey: 'generic_pos', requiredFeatures: ['generic_pos', 'billing'], readOnlyFeature: true, permissionKey: 'billing.create' } },
       { path: 'pos-sale-notes', component: PosSaleNotesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'generic_pos', permissionKey: 'billing.read' } },
       { path: 'pos-sale-notes/:id', component: PosSaleNoteDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'generic_pos', permissionKey: 'billing.read' } },
       { path: 'customers', component: CustomersComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'customers', permissionKey: 'customers.read' } },

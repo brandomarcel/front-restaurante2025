@@ -53,9 +53,6 @@ export class InventoryService {
     offset?: number;
     product?: string;
     movementType?: string;
-    fromDate?: string;
-    toDate?: string;
-    reference?: string;
   }) {
     let params = new HttpParams();
 
@@ -65,11 +62,9 @@ export class InventoryService {
 
     if (filters?.limit !== undefined) params = params.set('limit', String(filters.limit));
     if (filters?.offset !== undefined) params = params.set('offset', String(filters.offset));
-    if (filters?.product) params = params.set('product', filters.product);
+    // El backend filtra por `item` (el ID del producto), no por `product`.
+    if (filters?.product) params = params.set('item', filters.product);
     if (filters?.movementType) params = params.set('movement_type', filters.movementType);
-    if (filters?.fromDate) params = params.set('from_date', filters.fromDate);
-    if (filters?.toDate) params = params.set('to_date', filters.toDate);
-    if (filters?.reference) params = params.set('reference', filters.reference);
     const url = `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_stock_movements`;
 
     const request$ = this.http.get(url, {

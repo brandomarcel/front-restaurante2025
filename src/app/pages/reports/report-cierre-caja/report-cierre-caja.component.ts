@@ -138,6 +138,43 @@ export class ReportCierreCajaComponent implements OnInit, OnDestroy {
 
   trackByRow = (index: number, row: any) => this.display(row, 'name', 'cierre', 'cash_closing') || index;
 
+  clearFilters(): void {
+    this.filters.user = '';
+    this.filters.status = '';
+    this.filters.from_date = '';
+    this.filters.to_date = '';
+    this.buscar();
+  }
+
+  get totalDiferencia(): number {
+    return this.rows.reduce((acc, row) => acc + (this.money(row, 'diferencia', 'difference') || 0), 0);
+  }
+
+  get totalRetiradoSum(): number {
+    return this.rows.reduce((acc, row) => acc + (this.money(row, 'total_retiros', 'withdrawals', 'retiros') || 0), 0);
+  }
+
+  get cierresConDiferencia(): number {
+    return this.rows.filter((row) => Math.abs(this.money(row, 'diferencia', 'difference') || 0) > 0.009).length;
+  }
+
+  diferenciaClass(value: number | null): string {
+    if (value === null || Math.abs(value) < 0.009) return 'text-foreground';
+    return value > 0 ? 'text-emerald-600' : 'text-red-600';
+  }
+
+  statusBadgeClass(status: string): string {
+    const normalized = String(status || '')
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .trim();
+    if (['confirmado', 'cerrada', 'cerrado', 'completado'].includes(normalized)) return 'badge-green';
+    if (['cancelado', 'cancelada', 'anulado', 'anulada', 'rechazado'].includes(normalized)) return 'badge-red';
+    if (['borrador', 'pendiente', 'abierta'].includes(normalized)) return 'badge-yellow';
+    return 'badge-gray';
+  }
+
   private normalizeRow(row: any): any {
     if (!Array.isArray(row)) return row || {};
     const normalized: Record<string, any> = {};

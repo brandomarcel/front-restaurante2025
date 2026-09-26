@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { CartService } from '../services/cart.service';
 import { ProductsService } from 'src/app/services/products.service';
@@ -12,17 +12,19 @@ import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { canSellProduct, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { ProductVariantPickerComponent } from 'src/app/shared/components/product-variant-picker/product-variant-picker.component';
 
 type OrderType = 'Servirse' | 'Llevar' | 'Domicilio';
 
 @Component({
   selector: 'app-pos-mesero',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ProductVariantPickerComponent],
   templateUrl: './pos-mesero.component.html',
   styles: [':host { display: block; height: 100%; min-height: 0; }']
 })
 export class PosMeseroComponent implements OnInit {
+  @ViewChild('productVariantPicker') productVariantPicker!: ProductVariantPickerComponent;
   @Input() selectedTableId = '';
   @Input() selectedTableLabel = '';
 
@@ -189,6 +191,19 @@ export class PosMeseroComponent implements OnInit {
       .map((entry) => entry.product);
   }
 
+  /**
+   * `open()` del picker decide por sí solo si el producto necesita selección
+   * de variante o resuelve directo: nunca se agrega el producto agrupador
+   * (sin precio) tal cual al carrito.
+   */
+  onProductCardClick(product: any): void {
+    this.productVariantPicker.open(product);
+  }
+
+  onVariantResolved(resolved: any): void {
+    this.addProduct(resolved);
+  }
+
   addProduct(product: any): void {
     if (!this.canAddProduct(product)) {
       toast.warning(this.getStockLimitMessage(product));
@@ -289,6 +304,8 @@ export class PosMeseroComponent implements OnInit {
         product: item.name ?? item.nombre,
         qty: item.quantity,
         rate: item.price,
+        discount_percentage: Number(item.discount_percentage || 0),
+        discount_amount: Number(item.discount_amount || 0),
         tax_rate: item.tax_value
       })),
     };

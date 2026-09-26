@@ -25,12 +25,15 @@ import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabi
 import { buildMultiplePaymentPayload, findPaymentMethod, getDefaultPaymentValue, isPaymentMethodAlreadySelected, PaymentRow, roundMoney } from 'src/app/shared/utils/payment.utils';
 import { LiteEmissionState } from 'src/app/core/utils/lite-invoice-emission';
 import { ProductVariantPickerComponent } from 'src/app/shared/components/product-variant-picker/product-variant-picker.component';
+import { clampDiscountAmount, clampDiscountPercentage, computeLineTotals } from 'src/app/shared/utils/line-discount.utils';
 
 type Payment = { name: string; codigo: string; nombre: string; description?: string; };
 type CartItem = {
   name?: string; nombre?: string; description?: string; codigo?: string;
-  quantity: number; price: number; discount_pct: number; tax?: string | null; total: number;
-  tax_value?: number
+  quantity: number; price: number; discount_percentage: number; discount_amount: number;
+  tax?: string | null; tax_value?: number;
+  // Calculados por updateCartTotals(); no se editan directamente.
+  subtotal_bruto?: number; discount_total?: number; base_imponible?: number; iva?: number; total: number;
 };
 
 @Component({
@@ -535,7 +538,8 @@ export class InvoicingComponent implements OnInit, OnDestroy {
         codigo: product.codigo,
         price,
         quantity: 1,
-        discount_pct: 0,
+        discount_percentage: 0,
+        discount_amount: 0,
         tax: product.tax ?? product.tax_id ?? null, // sigues mandando el ID al backend
         tax_value: inferredTaxValue,                 // % numérico (0 o 15)
         total: price
@@ -590,25 +594,36 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     this.cartItems.forEach(it => {
       const qty = Math.max(1, this.safeNumber(it.quantity, 1));
       const rate = Math.max(0, this.safeMoney(it.price));
-      const disc = Math.min(100, Math.max(0, this.safeNumber(it.discount_pct, 0)));
-      const lineSubtotal = qty * rate * (1 - disc / 100);
+      const result = computeLineTotals({
+        qty,
+        rate,
+        discountPercentage: it.discount_percentage,
+        discountAmount: it.discount_amount,
+        taxRate: this.getTaxPct(it) * 100
+      });
       it.quantity = qty;
       it.price = rate;
-      it.discount_pct = disc;
-      it.total = this.round2(lineSubtotal);
+      it.discount_percentage = clampDiscountPercentage(it.discount_percentage);
+      it.discount_amount = clampDiscountAmount(it.discount_amount, result.subtotalBruto - result.discountFromPercentage);
+      it.subtotal_bruto = result.subtotalBruto;
+      it.discount_total = result.totalDiscount;
+      it.base_imponible = result.baseImponible;
+      it.iva = result.iva;
+      it.total = result.total;
     });
   }
 
   // ------------------ Totales ------------------
   get subtotal(): number {
-    return this.round2(this.cartItems.reduce((acc, it) => acc + it.total, 0));
+    return this.round2(this.cartItems.reduce((acc, it) => acc + (it.base_imponible ?? 0), 0));
+  }
+
+  get totalDiscount(): number {
+    return this.round2(this.cartItems.reduce((acc, it) => acc + (it.discount_total ?? 0), 0));
   }
 
   get iva(): number {
-    return this.round2(this.cartItems.reduce((acc, it) => {
-      const pct = this.getTaxPct(it);
-      return acc + it.total * pct; // 'total' es el subtotal de la línea sin IVA
-    }, 0));
+    return this.round2(this.cartItems.reduce((acc, it) => acc + (it.iva ?? 0), 0));
   }
 
   get total(): number {
@@ -769,6 +784,8 @@ export class InvoicingComponent implements OnInit, OnDestroy {
         item_name: it.nombre || it.description,
         qty: it.quantity,
         rate: this.round2(it.price),
+        discount_percentage: Number(it.discount_percentage || 0),
+        discount_amount: Number(it.discount_amount || 0),
         tax_rate: Number.isFinite(it.tax_value as number)
           ? (it.tax_value as number)
           : (it.tax === 'IVA-15' ? 15 : 0)
@@ -805,7 +822,10 @@ export class InvoicingComponent implements OnInit, OnDestroy {
               // autorizarlo: la autorización del SRI es un trámite legal
               // aparte. Se refresca apenas hay un documento creado, igual
               // que en el POS, y no solo cuando ya quedó autorizado.
-              if (this.emissionInvoiceName) this.refreshProductsAfterInvoice();
+              if (this.emissionInvoiceName) {
+                this.refreshProductsAfterInvoice();
+                window.dispatchEvent(new CustomEvent('facturada:restaurant-data-changed'));
+              }
 
               if (this.emissionState === 'AUTHORIZED') {
                 toast.success('Factura autorizada por el SRI.');

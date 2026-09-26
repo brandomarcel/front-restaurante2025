@@ -18,14 +18,6 @@ export interface InventoryProduct extends Product {
   ultima_actualizacion_stock?: string;
 }
 
-export interface InventoryMovementItem {
-  product?: string;
-  product_name?: string;
-  quantity?: number;
-  stock_before?: number;
-  stock_after?: number;
-}
-
 export interface InventoryMovement {
   name?: string;
   creation?: string;
@@ -37,12 +29,15 @@ export interface InventoryMovement {
   reference?: string;
   business?: string;
   item?: string;
+  item_code?: string;
+  item_name?: string;
+  /** Cantidad del movimiento (Entrada/Salida). No aplica a Ajuste: ver `target_stock`/`previous_stock`/`resulting_stock`. */
   quantity?: number;
-  stock_before?: number;
-  stock_after?: number;
-  total_items?: number;
-  total_quantity?: number;
-  items?: InventoryMovementItem[];
+  /** Solo en Ajuste: stock objetivo enviado al crear el movimiento. */
+  target_stock?: number;
+  previous_stock?: number;
+  resulting_stock?: number;
+  docstatus?: number;
 }
 
 export interface InventoryMovementPayload {

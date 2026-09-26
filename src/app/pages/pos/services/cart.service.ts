@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { canSellProduct, canUseInventoryQuantity } from 'src/app/shared/utils/inventory.utils';
+import { clampDiscountAmount, clampDiscountPercentage, computeLineTotals } from 'src/app/shared/utils/line-discount.utils';
 
 @Injectable({ providedIn: 'root' })
 export class CartService {
@@ -31,12 +32,35 @@ export class CartService {
                 nombre: product?.nombre ?? product?.name,
                 price,
                 quantity: 1,
+                discount_percentage: 0,
+                discount_amount: 0,
                 tax_value: taxValue
             };
             this.recalcItem(newItem);
             this.cart.push(newItem);
             return true;
         }
+    }
+
+    /** Descuento porcentual de una línea (0-100). */
+    setDiscountPercentage(item: any, value: unknown): void {
+        item.discount_percentage = clampDiscountPercentage(value);
+        this.recalcItem(item);
+    }
+
+    /** Descuento fijo en dólares de una línea (nunca negativo ni mayor al subtotal). */
+    setDiscountAmount(item: any, value: unknown): void {
+        const qty = Number(item.quantity) || 0;
+        const price = Number(item.price) || 0;
+        const subtotalBruto = qty * price;
+        const discountFromPercentage = subtotalBruto * (Number(item.discount_percentage) || 0) / 100;
+        item.discount_amount = clampDiscountAmount(value, subtotalBruto - discountFromPercentage);
+        this.recalcItem(item);
+    }
+
+    /** Suma de los descuentos (porcentaje + fijo) de todo el carrito. Solo lectura. */
+    get totalDiscount(): number {
+        return this.round2(this.cart.reduce((acc, it) => acc + Number(it.discount_total || 0), 0));
     }
 
     increase(item: any): boolean {
@@ -93,16 +117,20 @@ export class CartService {
     }
 
     private recalcItem(item: any) {
-        const qty = Number(item.quantity);
-        const price = Number(item.price);
-        const taxRate = Number(item.tax_value) / 100;
+        const result = computeLineTotals({
+            qty: Number(item.quantity),
+            rate: Number(item.price),
+            discountPercentage: item.discount_percentage,
+            discountAmount: item.discount_amount,
+            taxRate: Number(item.tax_value)
+        });
 
-        const subtotal = this.round2(qty * price);
-        const iva = this.round2(subtotal * taxRate);
-
-        item.subtotal = subtotal;
-        item.iva = iva;
-        item.total = this.round2(subtotal + iva);
+        item.discount_percentage = clampDiscountPercentage(item.discount_percentage);
+        item.subtotal_bruto = result.subtotalBruto;
+        item.discount_total = result.totalDiscount;
+        item.subtotal = result.baseImponible;
+        item.iva = result.iva;
+        item.total = result.total;
     }
 
     private round2(n: number) {

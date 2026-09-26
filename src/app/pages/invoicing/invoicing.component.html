@@ -309,7 +309,7 @@
                     <div class="text-right">
                       <p class="mb-0.5 text-[9px] font-semibold uppercase text-muted-foreground/70">Total</p>
                       <p class="h-7 rounded-md bg-card px-2 py-1 text-xs font-bold text-foreground">
-                        ${{ (item.total * (1 + ((item.tax_value ?? (item.tax === 'IVA-15' ? 15 : 0)) / 100))) | number:'1.2-2' }}
+                        ${{ item.total | number:'1.2-2' }}
                       </p>
                     </div>
 
@@ -321,6 +321,33 @@
                       aria-label="Eliminar">
                       <fa-icon [icon]="['fas', 'trash']" class="text-[10px]"></fa-icon>
                     </button>
+                  </div>
+
+                  <!-- Descuento por línea: porcentaje y monto fijo -->
+                  <div class="mt-2 flex flex-wrap items-center gap-2 border-t border-border pt-2">
+                    <label class="flex items-center gap-1 text-[9px] font-semibold uppercase text-muted-foreground/70">
+                      Desc. %
+                      <input
+                        type="number"
+                        class="no-spinner h-6 w-14 rounded border border-border bg-card px-1 text-center text-[11px] font-normal normal-case text-foreground"
+                        min="0" max="100" step="1"
+                        [ngModelOptions]="{standalone: true}"
+                        [(ngModel)]="item.discount_percentage"
+                        (ngModelChange)="updateCartTotals()">
+                    </label>
+                    <label class="flex items-center gap-1 text-[9px] font-semibold uppercase text-muted-foreground/70">
+                      Desc. $
+                      <input
+                        type="number"
+                        class="no-spinner h-6 w-16 rounded border border-border bg-card px-1 text-center text-[11px] font-normal normal-case text-foreground"
+                        min="0" step="0.01"
+                        [ngModelOptions]="{standalone: true}"
+                        [(ngModel)]="item.discount_amount"
+                        (ngModelChange)="updateCartTotals()">
+                    </label>
+                    <span *ngIf="(item.discount_total ?? 0) > 0" class="ml-auto text-[10px] font-semibold text-emerald-600">
+                      -${{ item.discount_total | number:'1.2-2' }}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -397,6 +424,10 @@
                 <span class="text-muted-foreground">Subtotal</span>
                 <span class="font-semibold text-foreground">${{ subtotal | number:'1.2-2' }}</span>
               </div>
+              <div *ngIf="totalDiscount > 0" class="flex items-center justify-between text-emerald-600">
+                <span>Descuento</span>
+                <span class="font-semibold">-${{ totalDiscount | number:'1.2-2' }}</span>
+              </div>
               <div class="flex items-center justify-between">
                 <span class="text-muted-foreground">IVA</span>
                 <span class="font-semibold text-foreground">${{ iva | number:'1.2-2' }}</span>
@@ -430,14 +461,19 @@
             </div>
             <div class="mt-2 flex justify-between text-[11px]">
               <span class="text-muted-foreground">Pagado: <b class="text-foreground">${{ paymentRowsTotal | number:'1.2-2' }}</b></span>
-              <span [class.text-emerald-700]="paymentRemaining === 0" [class.text-amber-700]="paymentRemaining !== 0">Restante: <b>${{ paymentRemaining | number:'1.2-2' }}</b></span>
+              <span [class.text-emerald-700]="paymentRemaining === 0" [class.text-red-600]="paymentRemaining !== 0">Restante: <b>${{ paymentRemaining | number:'1.2-2' }}</b></span>
+            </div>
+            <div *ngIf="paymentRemaining !== 0" class="mt-2 rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-2 text-[11px] font-semibold text-red-600">
+              {{ paymentRemaining > 0
+                  ? ('Falta cobrar $' + (paymentRemaining | number:'1.2-2') + ' para completar el total.')
+                  : ('El pago excede el total por $' + (-paymentRemaining | number:'1.2-2') + '.') }}
             </div>
           </section>
 
           <button
             type="submit"
             class="hidden min-h-[42px] w-full items-center justify-between rounded-lg bg-primary px-3 text-xs font-bold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 md:flex"
-            [disabled]="invoiceForm.invalid || cartItems.length === 0 || !canEmitInvoice">
+            [disabled]="invoiceForm.invalid || cartItems.length === 0 || !canEmitInvoice || paymentRemaining !== 0">
             <span>{{ isGenericPos ? 'Cobrar y emitir' : 'Generar factura' }}</span>
             <span>${{ total | number:'1.2-2' }}</span>
           </button>
@@ -459,7 +495,7 @@
     <button
       type="button"
       class="min-h-[36px] rounded-lg bg-primary px-3 text-xs font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
-      [disabled]="invoiceForm.invalid || cartItems.length === 0 || !canEmitInvoice"
+      [disabled]="invoiceForm.invalid || cartItems.length === 0 || !canEmitInvoice || paymentRemaining !== 0"
       (click)="finalizeInvoice()">
       {{ isGenericPos ? 'Cobrar' : 'Generar' }}
     </button>

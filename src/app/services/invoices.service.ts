@@ -226,6 +226,11 @@ export class InvoicesService {
         item_code: itemCode,
         qty: Number(item?.qty ?? item?.quantity ?? 1),
         rate: Number(item?.rate ?? item?.price ?? 0),
+        // Siempre explícitos, aunque sean 0: el backend recalcula el total a
+        // partir de estos dos campos y nunca debe asumir un descuento
+        // implícito por la diferencia entre precio y pago.
+        discount_percentage: Number(item?.discount_percentage ?? 0),
+        discount_amount: Number(item?.discount_amount ?? 0),
         tax_rate: Number(item?.tax_rate ?? item?.tax_value ?? 0)
       };
     });

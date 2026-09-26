@@ -569,12 +569,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   decrease(item: any): void {
-    if (item.quantity > 1) {
-      item.quantity--;
-      this.recalcItem(item);
-      return;
-    }
-    this.remove(item);
+    this.cartService.decrease(item);
   }
 
   remove(item: any): void {
@@ -707,6 +702,8 @@ export class PosCajaComponent implements OnInit, OnDestroy {
         product: item.name ?? item.nombre,
         qty: item.quantity,
         rate: item.price,
+        discount_percentage: Number(item.discount_percentage || 0),
+        discount_amount: Number(item.discount_amount || 0),
         tax_rate: item.tax_value
       }))
     };
@@ -1026,6 +1023,8 @@ export class PosCajaComponent implements OnInit, OnDestroy {
         product: item.name ?? item.nombre,
         qty: item.quantity,
         rate: item.price,
+        discount_percentage: Number(item.discount_percentage || 0),
+        discount_amount: Number(item.discount_amount || 0),
         tax_rate: item.tax_value
       })),
       payments: paymentResult.payments
@@ -1058,8 +1057,8 @@ export class PosCajaComponent implements OnInit, OnDestroy {
         item_code: item.codigo ?? item.item_code ?? item.name ?? item.nombre,
         qty: Number(item.quantity || 0),
         rate: Number(item.price || 0),
-        discount_percentage: Number(item.discount_pct || 0),
-        discount_amount: 0,
+        discount_percentage: Number(item.discount_percentage || 0),
+        discount_amount: Number(item.discount_amount || 0),
         tax_rate: Number(item.tax_value || 0)
       })),
       payments: paymentResult.payments.map((row) => {
@@ -1207,6 +1206,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
 
         this.clearPage();
         this.refreshProductsSilently();
+        window.dispatchEvent(new CustomEvent('facturada:restaurant-data-changed'));
         if (state === 'AUTHORIZED') {
           toast.success('Factura autorizada por el SRI.');
         } else if (state === 'PROCESSING') {
@@ -1442,22 +1442,6 @@ export class PosCajaComponent implements OnInit, OnDestroy {
 
   private round2(n: number): number {
     return Math.round((n + Number.EPSILON) * 100) / 100;
-  }
-
-  private getTaxPercent(p: any): number {
-    const v = Number(p?.tax_value ?? p?.tax?.value ?? p?.tax ?? 0);
-    return Number.isFinite(v) ? v : 0;
-  }
-
-  private recalcItem(item: any): void {
-    const qty = this.toNumber(item.quantity);
-    const price = this.toNumber(item.price);
-    const taxRate = this.toNumber(item.tax_value) / 100;
-    const subtotal = this.round2(qty * price);
-    const iva = this.round2(subtotal * taxRate);
-    item.subtotal = subtotal;
-    item.iva = iva;
-    item.total = this.round2(subtotal + iva);
   }
 
   private normalize(txt: any = ''): string {

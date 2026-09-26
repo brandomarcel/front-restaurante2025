@@ -119,6 +119,9 @@ export class PosSaleNoteDetailPageComponent implements OnInit {
         const updated = response?.data || response || this.note;
         this.note = { ...(this.note || {}), ...(updated || {}) };
         toast.success(success);
+        // Cobrar/facturar/anular una nota mueve el efectivo y las ventas del
+        // negocio: el dashboard debe reflejarlo sin esperar a que se recargue.
+        window.dispatchEvent(new CustomEvent('facturada:restaurant-data-changed'));
         if (openInvoice) {
           const invoiceName = this.linkedInvoice(this.note) || String(response?.emission?.invoice_name || response?.invoice_name || '').trim();
           if (invoiceName) this.router.navigate(['/dashboard/invoices', invoiceName]);

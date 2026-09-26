@@ -11,7 +11,6 @@ import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { InventoryService } from 'src/app/services/inventory.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
-import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
 import { forkJoin } from 'rxjs';
 import {
   canSellProduct,
@@ -25,7 +24,7 @@ import { formatVariantAttributes } from 'src/app/shared/utils/product-variants.u
 
 @Component({
   selector: 'app-inventory',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, AppPaginationComponent, NgSelectModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgSelectModule],
   templateUrl: './inventory.component.html',
   styleUrl: './inventory.component.css'
 })
@@ -96,13 +95,14 @@ export class InventoryComponent implements OnInit {
 
   historyProduct = '';
   historyMovementType = '';
-  historyDate = '';
-  historyReference = '';
-  historyLimit = 10;
+  historyLimit = 20;
   historyOffset = 0;
-  historyTotal = 0;
+  historyLoadingMore = false;
+  /** false mientras la última página traiga exactamente `historyLimit` filas: puede haber más. */
+  historyHasMore = true;
+  /** true si el backend respondió con un error de permisos: no se vuelve a intentar solo. */
+  historyAccessDenied = false;
 
-  expandedMovementName = '';
   showMovementModal = false;
   showOptionalReferenceFields = false;
   submittedMovement = false;
@@ -175,36 +175,16 @@ export class InventoryComponent implements OnInit {
     return this.movementForm.get('movement_type')?.value as InventoryMovementType;
   }
 
-  get canGoPrevHistory(): boolean {
-    return this.historyOffset > 0;
-  }
-
-  get canGoNextHistory(): boolean {
-    return this.historyOffset + this.historyLimit < this.historyTotal;
-  }
-
   get historyRangeLabel(): string {
-    if (!this.historyTotal) {
-      return 'Sin movimientos';
-    }
-
-    const start = this.historyOffset + 1;
-    const end = Math.min(this.historyOffset + this.historyLimit, this.historyTotal);
-    return `${start}-${end} de ${this.historyTotal}`;
+    if (!this.movements.length) return 'Sin movimientos';
+    return `${this.movements.length} movimiento(s) cargado(s)`;
   }
 
-  get historyPage(): number { return Math.floor(this.historyOffset / this.historyLimit) + 1; }
-  get historyTotalPages(): number { return Math.max(1, Math.ceil(this.historyTotal / this.historyLimit)); }
-
-  onHistoryPage(page: number): void {
-    this.historyOffset = (page - 1) * this.historyLimit;
-    this.cargarMovimientos();
-  }
-
-  onHistoryPageSize(size: number): void {
-    this.historyLimit = size;
-    this.historyOffset = 0;
-    this.cargarMovimientos();
+  /** "Cargar más": suma el límite al offset y agrega al final, sin reemplazar lo ya cargado. */
+  cargarMasMovimientos(): void {
+    if (!this.historyHasMore || this.historyLoadingMore || this.historyAccessDenied) return;
+    this.historyOffset += this.historyLimit;
+    this.cargarMovimientos(true);
   }
 
   initMovementForm(): void {
@@ -304,45 +284,49 @@ export class InventoryComponent implements OnInit {
     });
   }
 
-  cargarMovimientos(): void {
-    this.spinner.show();
+  /**
+   * `append = false` (filtro nuevo, carga inicial o tras crear un movimiento)
+   * reemplaza la lista desde `offset = 0`. `append = true` ("Cargar más") la
+   * agrega al final sin tocar lo ya cargado.
+   */
+  cargarMovimientos(append = false): void {
+    if (this.historyAccessDenied) return;
+    if (append) this.historyLoadingMore = true;
+    else this.spinner.show();
+
     this.inventoryService.getInventoryMovements({
       limit: this.historyLimit,
       offset: this.historyOffset,
       product: this.historyProduct || undefined,
       movementType: this.historyMovementType || undefined,
-      fromDate: this.historyDate || undefined,
-      toDate: this.historyDate || undefined,
-      reference: this.historyReference || undefined,
     }).subscribe({
       next: (res: any) => {
         const list = this.extractList(res, ['message', 'data']);
-        this.movements = (Array.isArray(list) ? list : []).map((movement: any) => {
-          if (Array.isArray(movement?.items)) return movement as InventoryMovement;
-          return {
-            ...movement,
-            total_items: movement?.total_items ?? 1,
-            total_quantity: movement?.total_quantity ?? movement?.quantity,
-            items: movement?.item ? [{
-              product: movement.item,
-              product_name: movement.item_name,
-              quantity: movement.quantity,
-              stock_before: movement.stock_before,
-              stock_after: movement.stock_after
-            }] : []
-          } as InventoryMovement;
-        });
-        this.historyTotal = this.extractTotal(res, this.movements.length);
+        const page = (Array.isArray(list) ? list : []) as InventoryMovement[];
+        this.movements = append ? [...this.movements, ...page] : page;
+        // Si la página trae menos filas que el límite, no hay más para cargar.
+        this.historyHasMore = page.length >= this.historyLimit;
       },
       error: (error) => {
-        const mensaje = this.frappeErrorService.handle(error);
-        this.alertService.error(mensaje);
-        this.spinner.hide();
+        if (this.isPermissionError(error)) {
+          this.historyAccessDenied = true;
+          this.historyHasMore = false;
+          if (!append) this.movements = [];
+        } else {
+          const mensaje = this.frappeErrorService.handle(error);
+          this.alertService.error(mensaje);
+        }
       },
       complete: () => {
         this.spinner.hide();
+        this.historyLoadingMore = false;
       }
     });
+  }
+
+  private isPermissionError(error: any): boolean {
+    const status = Number(error?.status ?? error?.error?.status ?? 0);
+    return status === 403;
   }
 
   aplicarFiltrosInventario(): void {
@@ -356,6 +340,7 @@ export class InventoryComponent implements OnInit {
     this.cargarProductosInventario();
   }
 
+  /** Cambiar producto o tipo reinicia `offset = 0` y reemplaza la lista, nunca la acumula. */
   aplicarFiltrosHistorial(): void {
     this.historyOffset = 0;
     this.cargarMovimientos();
@@ -364,8 +349,6 @@ export class InventoryComponent implements OnInit {
   limpiarFiltrosHistorial(): void {
     this.historyProduct = '';
     this.historyMovementType = '';
-    this.historyDate = '';
-    this.historyReference = '';
     this.historyOffset = 0;
     this.cargarMovimientos();
   }
@@ -376,22 +359,6 @@ export class InventoryComponent implements OnInit {
 
   irAHistorial(): void {
     this.activeTab = 'history';
-  }
-
-  nextHistoryPage(): void {
-    if (!this.canGoNextHistory) {
-      return;
-    }
-    this.historyOffset += this.historyLimit;
-    this.cargarMovimientos();
-  }
-
-  prevHistoryPage(): void {
-    if (!this.canGoPrevHistory) {
-      return;
-    }
-    this.historyOffset = Math.max(0, this.historyOffset - this.historyLimit);
-    this.cargarMovimientos();
   }
 
   abrirMovimientoModal(): void {
@@ -470,6 +437,9 @@ export class InventoryComponent implements OnInit {
           this.cerrarMovimientoModal();
           this.cargarProductosInventario();
           this.cargarOpcionesProducto();
+          // Un movimiento nuevo siempre se ve reiniciando la paginación, no
+          // agregándolo a lo que ya estaba cargado en el offset actual.
+          this.historyOffset = 0;
           this.cargarMovimientos();
         },
         error: (error) => {
@@ -563,9 +533,25 @@ export class InventoryComponent implements OnInit {
     };
   }
 
-  toggleMovementDetail(movement: InventoryMovement): void {
-    const key = movement?.name || movement?.creation || '';
-    this.expandedMovementName = this.expandedMovementName === key ? '' : key;
+  /**
+   * La variación visual NUNCA usa `quantity` para un Ajuste (ese campo no
+   * aplica ahí, el ajuste se hace por `target_stock`): se calcula siempre
+   * como `resulting_stock - previous_stock` para que sea la diferencia real.
+   */
+  movementVariation(movement: any): number {
+    const type = movement?.movement_type;
+    if (type === 'Ajuste') {
+      return (Number(movement?.resulting_stock) || 0) - (Number(movement?.previous_stock) || 0);
+    }
+    const qty = Number(movement?.quantity) || 0;
+    return type === 'Salida' ? -qty : qty;
+  }
+
+  movementVariationClass(movement: any): string {
+    const variation = this.movementVariation(movement);
+    if (variation > 0) return 'text-emerald-600';
+    if (variation < 0) return 'text-red-600';
+    return 'text-muted-foreground';
   }
 
   hasInventory(product: Partial<Product> | null | undefined): boolean {
@@ -722,12 +708,4 @@ export class InventoryComponent implements OnInit {
     return data?.summary && typeof data.summary === 'object' ? data.summary : data;
   }
 
-  private extractTotal(res: any, fallback: number): number {
-    return Number(
-      res?.message?.total ??
-      res?.total ??
-      res?.message?.count ??
-      fallback
-    ) || fallback;
-  }
 }

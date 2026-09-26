@@ -101,12 +101,23 @@ export class OrdersService {
     }).pipe(map((response: any) => this.normalizeListResponse(response, pageSize, offset)));
   }
 
-  get_dashboard_metrics() {
+  /**
+   * Endpoint único de métricas para Restaurante y POS genérico. `pos_terminal`
+   * es opcional para gerente/administrador (ve el agregado del negocio) y
+   * obligatorio para un usuario operativo con varios terminales asignados,
+   * en cuyo caso debe resolverse antes de llamar (ver `needsPosTerminalSelection`).
+   */
+  get_dashboard_metrics(options?: { posTerminal?: string; fromDate?: string; toDate?: string }) {
     const business = this.activeBusinessOrError();
     if (business instanceof Error) return throwError(() => business);
+    let params = new HttpParams().set('business', business);
+    const posTerminal = String(options?.posTerminal || this.capabilities.activePosTerminal?.name || '').trim();
+    if (posTerminal) params = params.set('pos_terminal', posTerminal);
+    if (options?.fromDate) params = params.set('from_date', options.fromDate);
+    if (options?.toDate) params = params.set('to_date', options.toDate);
     return this.http.get(`${this.urlBase}.get_dashboard_metrics`, {
       context: new HttpContext().set(REQUIRE_AUTH, true),
-      params: new HttpParams().set('business', business)
+      params
     });
   }
 
@@ -359,6 +370,8 @@ updateOrderForInvoice(payload: any): Observable<any> {
       product: item?.product ?? item?.item,
       qty: Number(item?.qty ?? item?.quantity ?? 0),
       rate: Number(item?.rate ?? item?.price ?? 0),
+      discount_percentage: Number(item?.discount_percentage ?? 0),
+      discount_amount: Number(item?.discount_amount ?? 0),
       tax_rate: Number(item?.tax_rate ?? item?.tax_value ?? 0),
       ...(item?.notes ? { notes: String(item.notes) } : {})
     })),
@@ -384,6 +397,11 @@ updateOrderForInvoice(payload: any): Observable<any> {
       product: item?.product ?? item?.item ?? item?.productId ?? item?.name,
       qty: Number(item?.qty ?? item?.quantity ?? 1),
       rate: Number(item?.rate ?? item?.price ?? 0),
+      // Siempre explícitos, aunque sean 0: el backend recalcula el total a
+      // partir de estos dos campos y nunca debe asumir un descuento
+      // implícito por la diferencia entre precio y pago.
+      discount_percentage: Number(item?.discount_percentage ?? 0),
+      discount_amount: Number(item?.discount_amount ?? 0),
       tax_rate: Number(item?.tax_rate ?? item?.tax_value ?? 0),
       ...(item?.notes ? { notes: String(item.notes) } : {})
     })) : [];

@@ -26,7 +26,7 @@
           <span *ngIf="!isLiteMode" class="rounded-md px-2 py-0.5 text-[10px] font-semibold" [ngClass]="firmaClasses">
             Firma: {{ firmaLabel }}
           </span>
-          <span *ngIf="isRestaurantMode" class="rounded-md px-2 py-0.5 text-[10px] font-semibold"
+          <span *ngIf="capabilities.isEnabled('cash_register')" class="rounded-md px-2 py-0.5 text-[10px] font-semibold"
             [ngClass]="cajaAbierta ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'">
             Caja {{ cajaAbierta ? 'abierta' : 'sin apertura' }}
           </span>
@@ -56,6 +56,25 @@
   </section>
 
   <app-avisos [avisos]="avisos" (eliminar)="eliminarAviso($event)" class="mb-3 block"></app-avisos>
+
+  <ng-container *ngIf="usesUnifiedDashboard">
+    <div *ngIf="dashboardLoading" class="mb-3 grid grid-cols-2 gap-2 xl:grid-cols-4">
+      <div *ngFor="let i of [1,2,3,4]" class="h-20 animate-pulse rounded-xl border border-border bg-card"></div>
+    </div>
+
+    <div *ngIf="!dashboardLoading && dashboardNeedsTerminal" class="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm font-semibold text-amber-700">
+      Tienes varios terminales POS asignados. Selecciona uno en el menú de perfil para ver tus métricas.
+    </div>
+
+    <div *ngIf="!dashboardLoading && !dashboardNeedsTerminal && dashboardError" class="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm font-semibold text-red-600">
+      {{ dashboardError }}
+    </div>
+
+    <div *ngIf="!dashboardLoading && !dashboardNeedsTerminal && !dashboardError && !cashIsOpen && capabilities.isEnabled('cash_register')"
+      class="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm font-semibold text-amber-700">
+      No existe una apertura de caja activa para tu usuario{{ capabilities.activePosTerminal?.name ? ' y terminal seleccionado' : '' }}.
+    </div>
+  </ng-container>
 
   <section class="mb-4 overflow-hidden rounded-2xl border border-border bg-card shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
     <div *ngIf="hasCurrentPlan" class="grid gap-3 p-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,.8fr)]">
@@ -104,7 +123,7 @@
     </div>
   </section>
 
-  <section *ngIf="isRestaurantMode" class="mb-3 grid grid-cols-2 gap-2 xl:grid-cols-4">
+  <section *ngIf="dashboardType" class="mb-3 grid grid-cols-2 gap-2 xl:grid-cols-4">
     <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
       <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
         {{ isFacturadorMode ? 'Documentos/ventas' : 'Pedidos' }}
@@ -139,7 +158,7 @@
     </article>
   </section>
 
-  <section *ngIf="isRestaurantMode" class="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
+  <section *ngIf="dashboardType" class="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
     <article class="rounded-xl border border-border bg-card p-3 shadow-sm xl:col-span-7">
       <div class="mb-2 flex items-center justify-between gap-2">
         <div>
@@ -182,7 +201,79 @@
     </article>
   </section>
 
-  <ng-container *ngIf="isRestaurantMode; else facturadorDashboard">
+  <!-- Restaurante: estados de orden, tipos de venta y órdenes activas. -->
+  <section *ngIf="dashboardType === 'restaurant'" class="mb-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
+    <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
+      <h2 class="mb-2 text-sm font-bold text-foreground">Órdenes por estado</h2>
+      <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+        <div *ngFor="let status of ['Ingresada','Preparacion','Lista','Cerrada','Cancelada']" class="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-2 py-1.5">
+          <span class="text-muted-foreground">{{ status === 'Preparacion' ? 'Preparación' : status }}</span>
+          <span class="font-bold text-foreground">{{ countFor(ordersByStatus, status) }}</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
+      <h2 class="mb-2 text-sm font-bold text-foreground">Ventas por tipo</h2>
+      <div class="grid grid-cols-1 gap-1.5 text-[11px]">
+        <div *ngFor="let type of ['Servirse','Llevar','Domicilio']" class="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-2 py-1.5">
+          <span class="text-muted-foreground">{{ type }}</span>
+          <span class="font-bold text-foreground">{{ countFor(salesByType, type) }}</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
+      <h2 class="mb-2 text-sm font-bold text-foreground">Órdenes activas</h2>
+      <div class="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-2">
+        <span class="text-[11px] text-muted-foreground">En curso</span>
+        <span class="text-lg font-black text-primary">{{ activeOrdersCount }}</span>
+      </div>
+      <div class="mt-1.5 flex items-center justify-between rounded-lg border border-border bg-muted/40 px-2.5 py-2">
+        <span class="text-[11px] text-muted-foreground">Monto acumulado</span>
+        <span class="text-sm font-bold text-foreground">{{ activeOrdersTotal | currency:'USD':'symbol':'1.0-2' }}</span>
+      </div>
+    </article>
+  </section>
+
+  <!-- POS genérico: notas/facturas por estado y ventas del canal POS. -->
+  <section *ngIf="dashboardType === 'pos'" class="mb-3 rounded-xl border border-border bg-card p-3 shadow-sm">
+    <div class="mb-2 flex items-center justify-between gap-2">
+      <h2 class="text-sm font-bold text-foreground">Resumen POS</h2>
+      <span class="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">POS genérico</span>
+    </div>
+    <div class="grid grid-cols-2 gap-2 lg:grid-cols-4">
+      <div class="rounded-lg border border-border bg-muted/40 p-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Notas cobradas</p>
+        <p class="mt-1 text-lg font-black text-foreground">{{ countFor(ordersByStatus, 'Cobrada') }}</p>
+      </div>
+      <div class="rounded-lg border border-border bg-muted/40 p-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Notas facturadas</p>
+        <p class="mt-1 text-lg font-black text-foreground">{{ countFor(ordersByStatus, 'Facturada') }}</p>
+      </div>
+      <div class="rounded-lg border border-border bg-muted/40 p-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Factura directa</p>
+        <p class="mt-1 text-lg font-black text-foreground">{{ countFor(ordersByStatus, 'Factura directa') }}</p>
+      </div>
+      <div class="rounded-lg border border-primary/20 bg-primary/5 p-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wide text-primary">Ventas POS</p>
+        <p class="mt-1 text-lg font-black text-primary">{{ countFor(salesByType, 'POS') }}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Caja: aplica a Restaurante y a POS genérico por igual. -->
+  <section *ngIf="dashboardType && capabilities.isEnabled('cash_register') && cashPaymentTotals.length" class="mb-3 rounded-xl border border-border bg-card p-3 shadow-sm">
+    <h2 class="mb-2 text-sm font-bold text-foreground">Pagos del turno por método</h2>
+    <div class="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
+      <div *ngFor="let payment of cashPaymentTotals" class="rounded-lg border border-border bg-muted/40 px-2.5 py-2">
+        <p class="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{{ payment.payment_method || payment.method || 'Otro' }}</p>
+        <p class="mt-0.5 text-sm font-bold text-foreground">{{ (payment.amount ?? payment.total ?? 0) | currency:'USD':'symbol':'1.0-2' }}</p>
+      </div>
+    </div>
+  </section>
+
+  <ng-container *ngIf="dashboardType; else facturadorDashboard">
     <section class="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
       <article class="rounded-xl border border-border bg-card p-3 shadow-sm xl:col-span-8">
         <div class="mb-2 flex items-center justify-between gap-2">

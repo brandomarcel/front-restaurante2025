@@ -165,16 +165,27 @@
             type="button"
             class="flex flex-1 flex-col text-left disabled:cursor-not-allowed"
             [disabled]="!canAddProduct(product)"
-            (click)="addProduct(product)">
+            (click)="onProductCardClick(product)">
             <p class="line-clamp-2 min-h-[28px] text-[12px] font-bold leading-4 text-foreground">
               {{ product.nombre || product.name }}
             </p>
 
-            <p class="mt-0.5 text-base font-black leading-5 text-primary">
-              ${{ (product.precio ?? product.price ?? 0) | number:'1.2-2' }}
+            <p *ngIf="(product.variant_count || 0) > 0; else meseroSimplePrice" class="mt-0.5 text-xs font-bold leading-5 text-primary">
+              Ver variantes
             </p>
+            <ng-template #meseroSimplePrice>
+              <p class="mt-0.5 text-base font-black leading-5 text-primary">
+                ${{ (product.precio ?? product.price ?? 0) | number:'1.2-2' }}
+              </p>
+            </ng-template>
 
             <div class="mt-auto flex flex-wrap gap-1 pt-1">
+              <span
+                *ngIf="(product.variant_count || 0) > 0"
+                class="inline-flex w-fit rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary"
+                title="Este producto tiene variantes; el precio depende de la que elijas.">
+                {{ product.variant_count }} {{ product.variant_count === 1 ? 'variante' : 'variantes' }}
+              </span>
               <span
                 *ngIf="hasInventory(product)"
                 class="inline-flex w-fit rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground">
@@ -285,6 +296,27 @@
                 Quitar
               </button>
             </div>
+
+            <!-- Descuento por línea -->
+            <div class="mt-2 flex flex-wrap items-center gap-2">
+              <label class="flex items-center gap-1 text-[10px] text-muted-foreground">
+                Desc. %
+                <input type="number" min="0" max="100" step="1"
+                  [ngModel]="item.discount_percentage" [ngModelOptions]="{standalone: true}"
+                  (ngModelChange)="cartService.setDiscountPercentage(item, $event)"
+                  class="w-14 rounded border border-border bg-card px-1.5 py-0.5 text-[11px] text-foreground" />
+              </label>
+              <label class="flex items-center gap-1 text-[10px] text-muted-foreground">
+                Desc. $
+                <input type="number" min="0" step="0.01"
+                  [ngModel]="item.discount_amount" [ngModelOptions]="{standalone: true}"
+                  (ngModelChange)="cartService.setDiscountAmount(item, $event)"
+                  class="w-16 rounded border border-border bg-card px-1.5 py-0.5 text-[11px] text-foreground" />
+              </label>
+              <span *ngIf="item.discount_total > 0" class="ml-auto text-[10px] font-semibold text-emerald-600">
+                -${{ item.discount_total | number:'1.2-2' }}
+              </span>
+            </div>
           </div>
 
           <p *ngIf="cartService.cart.length === 0" class="rounded-xl border border-dashed border-border py-6 text-center text-xs text-muted-foreground">
@@ -293,6 +325,10 @@
         </div>
 
         <div class="mt-3 border-t border-border pt-3">
+          <div *ngIf="cartService.totalDiscount > 0" class="mb-1.5 flex justify-between text-[11px] font-semibold text-emerald-600">
+            <span>Descuento aplicado</span>
+            <span>-${{ cartService.totalDiscount | number:'1.2-2' }}</span>
+          </div>
           <div class="mb-2 grid grid-cols-3 gap-1.5 rounded-xl bg-muted/40 p-2 text-[11px] text-muted-foreground">
             <div>
               <span class="block text-[10px] font-bold uppercase text-muted-foreground/70">Subtotal</span>
@@ -319,4 +355,9 @@
       </div>
     </section>
   </div>
+
+  <app-product-variant-picker
+    #productVariantPicker
+    (resolved)="onVariantResolved($event)">
+  </app-product-variant-picker>
 </div>
