@@ -7,17 +7,19 @@ import { CashManagementComponent } from 'src/app/pages/cash-management/cash-mana
 import { RoleAccessGuard } from 'src/app/core/guards/role-access.guard';
 
 
+const CASH_OPERATOR_PERMISSIONS = ['restaurant.cash.manage', 'restaurant.manage', 'billing.manage', 'billing.create'];
+
 const routes: Routes = [
-  { path: 'apertura', component: AperturaCajaComponent, canActivate: [RoleAccessGuard], data: { anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage'] } },
-  { path: 'cierre', component: CloseCajaComponent, canActivate: [RoleAccessGuard], data: { anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage'] } },
-  { path: 'retiro', component: RetiroCajaComponent, canActivate: [RoleAccessGuard], data: { anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage'] } },
+  { path: 'apertura', component: AperturaCajaComponent, canActivate: [RoleAccessGuard], data: { anyPermissionKeys: CASH_OPERATOR_PERMISSIONS } },
+  { path: 'cierre', component: CloseCajaComponent, canActivate: [RoleAccessGuard], data: { anyPermissionKeys: CASH_OPERATOR_PERMISSIONS } },
+  { path: 'retiro', component: RetiroCajaComponent, canActivate: [RoleAccessGuard], data: { anyPermissionKeys: CASH_OPERATOR_PERMISSIONS } },
   {
     path: 'gestion',
     component: CashManagementComponent,
     canActivate: [RoleAccessGuard],
     data: {
-      requiredFeatures: ['restaurant', 'restaurant_pos', 'cash_register'],
-      anyPermissionKeys: ['restaurant.manage']
+      requiredFeatures: ['cash_register'],
+      anyPermissionKeys: ['restaurant.manage', 'billing.manage']
     }
   },
   { path: '', redirectTo: 'apertura', pathMatch: 'full' }

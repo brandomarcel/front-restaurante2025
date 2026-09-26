@@ -19,11 +19,13 @@ export class CajaAbiertaGuard implements CanActivate {
   ) { }
 
   canActivate(_route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<boolean | UrlTree> {
-    // La apertura pertenece a POS. Si el negocio tiene restaurante pero no
-    // contrató caja, la navegación de órdenes/POS no debe bloquearse por una
-    // validación de apertura que no aplica.
-    if (!(this.capabilities.isEnabled('restaurant_pos') && this.capabilities.isEnabled('cash_register'))
-      || !this.capabilities.hasPermission('restaurant.cash.manage')) {
+    // La apertura pertenece a POS (Restaurante o genérico). Si el negocio no
+    // contrató caja (`cash_register`), la navegación de órdenes/POS no debe
+    // bloquearse por una validación de apertura que no aplica.
+    if (!this.capabilities.isEnabled('cash_register')
+      || !(this.capabilities.hasPermission('restaurant.cash.manage')
+        || this.capabilities.hasPermission('billing.manage')
+        || this.capabilities.hasPermission('billing.create'))) {
       return of(true);
     }
     const user = this.readCurrentUser();

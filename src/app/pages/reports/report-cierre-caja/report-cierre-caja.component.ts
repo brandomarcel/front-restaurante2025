@@ -38,11 +38,10 @@ export class ReportCierreCajaComponent implements OnInit, OnDestroy {
   ) {}
 
   get canView(): boolean {
-    const features = this.capabilities.features;
-    return features.restaurant === true
-      && features.restaurant_pos === true
-      && features.cash_register === true
-      && (this.capabilities.hasPermission('*') || this.capabilities.hasPermission('restaurant.manage'));
+    return this.capabilities.isEnabled('cash_register')
+      && (this.capabilities.hasPermission('*')
+        || this.capabilities.hasPermission('restaurant.manage')
+        || this.capabilities.hasPermission('billing.manage'));
   }
 
   get canExport(): boolean {

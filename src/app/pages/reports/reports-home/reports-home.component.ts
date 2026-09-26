@@ -88,10 +88,10 @@ export class ReportsHomeComponent {
       case 'restaurant':
         return features.restaurant === true && this.hasAnyPermission('restaurant.orders.read', 'restaurant.manage');
       case 'cash':
-        return features.restaurant === true
-          && features.restaurant_pos === true
-          && features.cash_register === true
-          && (this.capabilities.hasPermission('*') || this.capabilities.hasPermission('restaurant.manage'));
+        return features.cash_register === true
+          && (this.capabilities.hasPermission('*')
+            || this.capabilities.hasPermission('restaurant.manage')
+            || this.capabilities.hasPermission('billing.manage'));
       case 'products':
         return features.products === true && this.hasAnyPermission('products.read', 'products.manage');
       case 'customers':

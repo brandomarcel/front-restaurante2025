@@ -484,14 +484,14 @@
 </div>
 
 <!-- MODAL DE PAGO (solo caja/admin) -->
-<div *ngIf="showPaymentModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog"
+<div *ngIf="showPaymentModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3" role="dialog"
     aria-modal="true">
 
-    <!-- CONTENEDOR -->
-    <div class="bg-card w-full max-w-6xl h-[92vh] rounded-xl shadow-2xl flex flex-col overflow-hidden">
+    <!-- CONTENEDOR: alto máximo acotado al viewport, nunca más alto que la pantalla -->
+    <div class="bg-card w-full max-w-6xl max-h-[92vh] rounded-xl shadow-2xl flex flex-col overflow-hidden">
 
         <!-- HEADER -->
-        <div class="flex items-center justify-between px-5 py-3 border-b bg-card">
+        <div class="flex shrink-0 items-center justify-between px-5 py-3 border-b border-border bg-card">
             <h2 class="text-lg font-semibold text-foreground">
                 {{ genericMode ? 'Finalizar venta' : 'Finalizar pedido' }}
             </h2>
@@ -501,20 +501,22 @@
             </button>
         </div>
 
-        <!-- CONTENIDO -->
-        <div class="flex flex-1 overflow-hidden">
+        <!-- CONTENIDO: se apila en pantallas chicas y todo el bloque desplaza; en
+             pantallas grandes son dos columnas, cada una con su propio scroll.
+             Así el contenido nunca queda oculto sin forma de llegar a él. -->
+        <div class="flex flex-1 min-h-0 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
 
             <!-- ================= IZQUIERDA ================= -->
-            <div class="w-1/2 border-r p-4 flex flex-col overflow-hidden">
+            <div class="border-b border-border p-4 flex flex-col lg:w-1/2 lg:overflow-hidden lg:border-b-0 lg:border-r">
 
                 <!-- Cliente -->
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs">
-                    <p class="font-semibold text-blue-900">
+                <div class="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs">
+                    <p class="font-semibold text-foreground">
                         👤 {{ customer?.nombre }}
                     </p>
 
                     <div *ngIf="customer?.nombre !== 'Consumidor Final'"
-                        class="mt-1 text-blue-700 text-[11px] space-y-0.5">
+                        class="mt-1 text-muted-foreground text-[11px] space-y-0.5">
                         <p>{{ customer?.num_identificacion }}</p>
                         <p>{{ customer?.telefono }}</p>
                         <p class="break-all">{{ customer?.correo }}</p>
@@ -524,21 +526,21 @@
                 <!-- Tipo orden (solo restaurante) -->
                 <div *ngIf="!genericMode" class="mt-3 text-xs">
                     <span class="text-muted-foreground">Tipo:</span>
-                    <span class="font-semibold ml-1">{{ orderType }}</span>
+                    <span class="font-semibold ml-1 text-foreground">{{ orderType }}</span>
 
-                    <div *ngIf="orderType === 'Domicilio'" class="mt-1 text-blue-700 text-[11px]">
+                    <div *ngIf="orderType === 'Domicilio'" class="mt-1 text-muted-foreground text-[11px]">
                         <p>📍 {{ deliveryAddress || '—' }}</p>
                         <p>📞 {{ deliveryPhone || '—' }}</p>
                     </div>
                 </div>
 
                 <!-- Detalle -->
-                <div class="mt-3 flex-1 overflow-y-auto bg-muted/40 rounded-lg border p-3 text-xs">
+                <div class="mt-3 flex-1 lg:overflow-y-auto bg-muted/40 rounded-lg border border-border p-3 text-xs">
 
-                    <div *ngFor="let item of cartService.cart" class="flex justify-between border-b py-1.5">
+                    <div *ngFor="let item of cartService.cart" class="flex justify-between border-b border-border py-1.5">
 
                         <div class="min-w-0">
-                            <p class="truncate font-medium">
+                            <p class="truncate font-medium text-foreground">
                                 {{ item.nombre }}
                             </p>
                             <p class="text-muted-foreground text-[10px]">
@@ -546,13 +548,13 @@
                             </p>
                         </div>
 
-                        <strong>
+                        <strong class="text-foreground">
                             ${{ item.total | number:'1.2-2' }}
                         </strong>
                     </div>
 
                     <!-- Totales -->
-                    <div class="pt-3 space-y-1 border-t mt-2 text-xs">
+                    <div class="pt-3 space-y-1 border-t border-border mt-2 text-xs text-foreground">
                         <div class="flex justify-between">
                             <span>Subtotal</span>
                             <span>${{ subtotal | number:'1.2-2' }}</span>
@@ -573,7 +575,7 @@
             </div>
 
             <!-- ================= DERECHA ================= -->
-            <div class="w-1/2 p-5 flex flex-col">
+            <div class="p-5 flex flex-col lg:w-1/2 lg:overflow-y-auto">
 
                 <!-- TOTAL GRANDE -->
                 <div class="text-center">
@@ -594,25 +596,25 @@
                     </div>
                     <div class="space-y-2">
                         <div *ngFor="let payment of paymentRows; let index = index" class="grid grid-cols-[1fr_82px_28px] gap-1.5">
-                            <select [(ngModel)]="payment.method" (change)="onPaymentRowMethodChange(index)" class="min-w-0 border rounded-md px-2 py-2 text-xs bg-card text-foreground">
+                            <select [(ngModel)]="payment.method" (change)="onPaymentRowMethodChange(index)" class="min-w-0 border border-border rounded-md px-2 py-2 text-xs bg-card text-foreground">
                                 <option value="">Método</option>
                                 <option *ngFor="let item of payments" [value]="item.name || item.codigo">{{ item.description || item.nombre || item.name }}</option>
                             </select>
-                            <input type="number" min="0.01" step="0.01" [(ngModel)]="payment.amount" (input)="calcularCambio()" class="w-full border rounded-md px-2 py-2 text-right text-xs bg-card text-foreground" placeholder="0.00" />
+                            <input type="number" min="0.01" step="0.01" [(ngModel)]="payment.amount" (input)="calcularCambio()" class="w-full border border-border rounded-md px-2 py-2 text-right text-xs bg-card text-foreground" placeholder="0.00" />
                             <button type="button" (click)="removePaymentRow(index)" [disabled]="paymentRows.length === 1" class="rounded-md text-lg text-red-500 disabled:opacity-30">×</button>
                         </div>
                     </div>
-                    <div class="mt-2 flex justify-between text-[11px] font-medium">
+                    <div class="mt-2 flex justify-between text-[11px] font-medium text-foreground">
                         <span>Pagado: ${{ paymentRowsTotal | number:'1.2-2' }}</span>
-                        <span [class.text-emerald-700]="paymentRemaining === 0" [class.text-amber-700]="paymentRemaining !== 0">Restante: ${{ paymentRemaining | number:'1.2-2' }}</span>
+                        <span [class.text-emerald-600]="paymentRemaining === 0" [class.text-amber-600]="paymentRemaining !== 0">Restante: ${{ paymentRemaining | number:'1.2-2' }}</span>
                     </div>
                 </div>
 
                 <!-- Efectivo -->
                 <div *ngIf="isSelectedPaymentCash" class="mt-6">
-                    
+
                     <input type="number" [(ngModel)]="amountReceived" (input)="calcularCambio()"
-                        class="w-full border rounded-md px-3 py-3 text-2xl font-semibold text-center focus:ring-2 focus:ring-primary bg-card text-foreground"
+                        class="w-full border border-border rounded-md px-3 py-3 text-2xl font-semibold text-center focus:ring-2 focus:ring-primary bg-card text-foreground"
                         placeholder="Monto recibido (opcional)" min="0" step="0.01" />
 
                     <div class="mt-4 text-center">
@@ -629,30 +631,32 @@
                 <div *ngIf="!genericMode" class="mt-6">
                     <input type="text" [(ngModel)]="alias" maxlength="20"
                         oninput="this.value = this.value.toUpperCase()"
-                        class="w-full border rounded-md px-3 py-2 text-sm text-center bg-card text-foreground" placeholder="Alias (opcional)" />
+                        class="w-full border border-border rounded-md px-3 py-2 text-sm text-center bg-card text-foreground" placeholder="Alias (opcional)" />
                 </div>
-
-                <!-- BOTONES -->
-                <div class="mt-auto grid gap-3 pt-6" [ngClass]="genericMode ? 'grid-cols-1' : 'grid-cols-2'">
-
-                    <button (click)="confirmarPago('Nota Venta')"
-                        class="bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-lg font-semibold text-sm">
-                        {{ genericMode ? 'Guardar Nota de Venta' : 'Nota de Venta' }}
-                    </button>
-
-                    <button (click)="confirmarPago('Factura')" [disabled]="!canEmitInvoice"
-                        class="bg-primary hover:bg-primary/90 text-white py-3 rounded-lg font-semibold text-sm disabled:cursor-not-allowed disabled:opacity-50">
-                        {{ genericMode ? 'Cobrar y Facturar' : 'Facturar' }}
-                    </button>
-
-                </div>
-                <p *ngIf="invoicePlanBlockMessage"
-                    class="mt-3 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-[11px] font-semibold text-orange-700">
-                    {{ invoicePlanBlockMessage }}
-                </p>
 
             </div>
 
+        </div>
+
+        <!-- FOOTER fijo: las acciones nunca dependen del scroll, siempre visibles -->
+        <div class="shrink-0 border-t border-border bg-card p-4">
+            <div class="grid gap-3" [ngClass]="genericMode ? 'grid-cols-1' : 'grid-cols-2'">
+
+                <button (click)="confirmarPago('Nota Venta')"
+                    class="bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-lg font-semibold text-sm">
+                    {{ genericMode ? 'Guardar Nota de Venta' : 'Nota de Venta' }}
+                </button>
+
+                <button (click)="confirmarPago('Factura')" [disabled]="!canEmitInvoice"
+                    class="bg-primary hover:bg-primary/90 text-white py-3 rounded-lg font-semibold text-sm disabled:cursor-not-allowed disabled:opacity-50">
+                    {{ genericMode ? 'Cobrar y Facturar' : 'Facturar' }}
+                </button>
+
+            </div>
+            <p *ngIf="invoicePlanBlockMessage"
+                class="mt-3 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-[11px] font-semibold text-orange-600">
+                {{ invoicePlanBlockMessage }}
+            </p>
         </div>
 
     </div>

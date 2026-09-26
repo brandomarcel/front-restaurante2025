@@ -148,7 +148,7 @@
               <label *ngIf="!isLiteMode" class="inline-flex items-center cursor-pointer relative">
                 <input type="checkbox" class="sr-only peer" formControlName="ambiente" (change)="cambiarAmbiente()"
                   [disabled]="isSaving || isLoadingCompany || isLiteMode" />
-                <div class="w-11 h-6 bg-gray-300 rounded-full peer-checked:bg-green-600 transition-colors"></div>
+                <div class="w-11 h-6 bg-muted rounded-full peer-checked:bg-green-600 transition-colors"></div>
                 <div
                   class="absolute w-5 h-5 bg-card rounded-full transform translate-x-1 top-0.5 left-0.5 peer-checked:translate-x-5 transition-transform">
                 </div>
@@ -478,7 +478,7 @@
 
                 <div class="mb-3 rounded-xl bg-primary/5 p-3 ring-1 ring-primary/10">
                   <p class="text-[10px] font-bold uppercase tracking-wide text-primary">Nombre del plan</p>
-                  <p class="mt-1 text-base font-black text-slate-950">{{ planName }}</p>
+                  <p class="mt-1 text-base font-black text-foreground">{{ planName }}</p>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2 text-[11px]">

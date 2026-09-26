@@ -24,7 +24,10 @@ const routes: Routes = [
   path: 'caja',
   component: LayoutComponent,
   canActivate: [RoleAccessGuard],
-  data: { requiredFeatures: ['restaurant', 'restaurant_pos', 'cash_register'] },
+  // La caja aplica a Restaurante POS y a POS genérico por igual: el backend
+  // habilita `cash_register` cuando el negocio tiene `billing` + `pos`, sin
+  // exigir el modo restaurante.
+  data: { requiredFeatures: ['cash_register'] },
   loadChildren: () => import('../caja/caja.module').then((m) => m.CajaModule),
 },
 

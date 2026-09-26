@@ -307,11 +307,12 @@ export class CloseCajaComponent implements OnInit {
   }
 
   get canOperateCash(): boolean {
-    return this.capabilities.isEnabled('restaurant_pos')
-      && this.capabilities.isEnabled('cash_register')
+    return this.capabilities.isEnabled('cash_register')
       && (this.capabilities.hasPermission('*')
         || this.capabilities.hasPermission('restaurant.cash.manage')
-        || this.capabilities.hasPermission('restaurant.manage'));
+        || this.capabilities.hasPermission('restaurant.manage')
+        || this.capabilities.hasPermission('billing.manage')
+        || this.capabilities.hasPermission('billing.create'));
   }
 
   get canSave(): boolean {

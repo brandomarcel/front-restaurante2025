@@ -28,6 +28,7 @@ export class AperturaCajaComponent implements OnInit {
   saving = false;
   cashMetrics: any | null = null;
   loadingMetrics = false;
+  selectedTerminalId = '';
   private loadingCounter = 0;
 
   constructor(private cajasService: CajasService,
@@ -39,8 +40,36 @@ export class AperturaCajaComponent implements OnInit {
   ngOnInit(): void {
     const user = this.getCurrentUser();
     this.apertura.usuario = user?.email || '';
+    this.selectedTerminalId = this.capabilities.activePosTerminal?.name || '';
 
     this.verificarCajaAbierta();
+  }
+
+  /** El modelo de terminales solo aplica cuando el negocio los usa (`pos_terminal`). */
+  get usesPosTerminalModel(): boolean {
+    return this.capabilities.usesPosTerminalModel;
+  }
+
+  get availableTerminals(): any[] {
+    return this.capabilities.activePosTerminals;
+  }
+
+  /** Ningún terminal configurado: hay que crear uno antes de poder operar caja. */
+  get needsTerminalConfiguration(): boolean {
+    return this.usesPosTerminalModel && this.availableTerminals.length === 0;
+  }
+
+  /** Varios terminales activos y ninguno elegido todavía: hace falta seleccionar uno. */
+  get needsTerminalSelection(): boolean {
+    return this.usesPosTerminalModel
+      && this.availableTerminals.length > 1
+      && !this.selectedTerminalId;
+  }
+
+  onTerminalChange(terminalId: string): void {
+    this.selectedTerminalId = terminalId;
+    const terminal = this.availableTerminals.find((item) => String(item?.name || '') === terminalId);
+    if (terminal) this.capabilities.setActivePosTerminal(terminal);
   }
 
   private getCurrentUser(): { email?: string } | null {
@@ -120,7 +149,8 @@ export class AperturaCajaComponent implements OnInit {
 
     const data = {
       opening_amount: Number(this.apertura.monto_apertura),
-      notes: String(this.apertura.observacion || '').trim()
+      notes: String(this.apertura.observacion || '').trim(),
+      ...(this.selectedTerminalId ? { pos_terminal: this.selectedTerminalId } : {})
     };
 
     this.saving = true;
@@ -156,6 +186,8 @@ export class AperturaCajaComponent implements OnInit {
 
   get canSubmit(): boolean {
     return !this.cajaActiva
+      && !this.needsTerminalConfiguration
+      && !this.needsTerminalSelection
       && Number(this.apertura.monto_apertura) > 0
       && !this.loadingStatus
       && !this.saving;

@@ -42,7 +42,24 @@
     Verificando estado de caja...
   </div>
 
-  <form *ngIf="!cajaActiva && !loadingStatus" class="rounded-xl border border-primary/15 bg-card p-4 shadow-sm space-y-4">
+  <div *ngIf="!cajaActiva && !loadingStatus && needsTerminalConfiguration"
+    class="rounded-lg border border-red-300 bg-red-50 p-3 text-sm font-medium text-red-700">
+    Debe configurar al menos un terminal POS antes de utilizar Caja.
+  </div>
+
+  <form *ngIf="!cajaActiva && !loadingStatus && !needsTerminalConfiguration" class="rounded-xl border border-primary/15 bg-card p-4 shadow-sm space-y-4">
+    <div *ngIf="usesPosTerminalModel && availableTerminals.length > 1">
+      <label class="mb-1 block text-xs font-semibold text-muted-foreground" for="pos_terminal">Terminal POS</label>
+      <select id="pos_terminal" name="pos_terminal" class="input" [ngModel]="selectedTerminalId"
+        (ngModelChange)="onTerminalChange($event)" [disabled]="saving || loadingStatus">
+        <option value="">Selecciona un terminal</option>
+        <option *ngFor="let terminal of availableTerminals" [value]="terminal.name">
+          {{ terminal.terminal_name || terminal.name }}
+        </option>
+      </select>
+      <p *ngIf="needsTerminalSelection" class="mt-1 text-[11px] text-red-600">Selecciona un terminal para continuar.</p>
+    </div>
+
     <div>
       <label class="mb-1 block text-xs font-semibold text-muted-foreground" for="monto_apertura">Monto de apertura</label>
       <input type="number" id="monto_apertura" name="monto_apertura" [(ngModel)]="apertura.monto_apertura"

@@ -148,6 +148,12 @@ export class NftComponent implements OnInit, OnDestroy {
           if (this.isBillingDashboard || this.isApiOnlyMode) {
             this.initializeLiteDateRange();
             await this.loadLiteDashboard();
+            // POS genérico también puede tener caja habilitada
+            // (`cash_register` = billing + pos); refleja el turno igual que
+            // en Restaurante en vez de asumir que nunca aplica.
+            if (this.capabilities.isEnabled('cash_register')) {
+              await this.getDatosCierre();
+            }
             this.actualizarVisualizaciones();
             this.generarAvisos();
             return;
@@ -172,7 +178,9 @@ export class NftComponent implements OnInit, OnDestroy {
 
   }
   async getDatosCierre() {
-    if (this.cashDataRequested || this.isFacturadorMode) return;
+    // Antes se omitía por completo en modo Facturador; ahora la caja también
+    // aplica a POS genérico cuando `cash_register` está habilitado.
+    if (this.cashDataRequested || (this.isFacturadorMode && !this.capabilities.isEnabled('cash_register'))) return;
     this.cashDataRequested = true;
 
     try {
@@ -771,6 +779,9 @@ export class NftComponent implements OnInit, OnDestroy {
     if (this.isFacturadorMode) {
       return this.filterAllowedActions([
         { label: 'Punto de venta', detail: 'Notas de venta, cobro y facturación', route: '/dashboard/pos-generic', tone: 'bg-slate-900 text-white', feature: 'generic_pos', permission: 'billing.create' },
+        // La caja no depende del modo restaurante: un negocio de POS genérico
+        // con `cash_register` habilitado (billing + pos) también abre/cierra turno.
+        { label: this.cajaAbierta ? 'Cerrar caja' : 'Abrir caja', detail: 'Control del turno', route: this.cajaAbierta ? '/caja/cierre' : '/caja/apertura', tone: 'bg-emerald-600 text-white', feature: 'cash_register', permission: 'billing.create' },
         { label: 'Emitir factura', detail: 'Factura directa al SRI', route: '/dashboard/invoicing', tone: 'bg-primary text-white', feature: 'direct_invoice', permission: 'billing.create', requiresEmission: true },
         { label: 'Ver facturas', detail: 'Historial y reenvíos', route: '/dashboard/invoices', tone: 'bg-violet-600 text-white', feature: 'direct_invoice', permission: 'billing.read' },
         { label: 'Clientes', detail: 'Datos fiscales', route: '/dashboard/customers', tone: 'bg-slate-900 text-white', feature: 'customers', permission: 'customers.read' },
@@ -783,7 +794,7 @@ export class NftComponent implements OnInit, OnDestroy {
       { label: 'Abrir POS', detail: 'Venta y orden rápida', route: '/dashboard/pos', tone: 'bg-primary text-white', feature: 'restaurant_pos', permission: 'billing.create' },
       { label: 'Órdenes', detail: 'Seguimiento del día', route: '/dashboard/orders', tone: 'bg-slate-900 text-white', feature: 'orders', permission: 'restaurant.orders.read' },
       { label: 'Tiempo real', detail: 'Cocina y atención', route: '/dashboard/orders-realtime', tone: 'bg-sky-600 text-white', feature: 'kitchen', permission: 'restaurant.orders.read' },
-      { label: this.cajaAbierta ? 'Cerrar caja' : 'Abrir caja', detail: 'Control del turno', route: this.cajaAbierta ? '/caja/cierre' : '/caja/apertura', tone: 'bg-emerald-600 text-white', feature: 'cash_register', requiredFeatures: ['restaurant_pos', 'cash_register'], permission: 'restaurant.cash.manage' }
+      { label: this.cajaAbierta ? 'Cerrar caja' : 'Abrir caja', detail: 'Control del turno', route: this.cajaAbierta ? '/caja/cierre' : '/caja/apertura', tone: 'bg-emerald-600 text-white', feature: 'cash_register', permission: 'restaurant.cash.manage' }
     ];
     // Facturación no pertenece al POS: puede coexistir con Restaurante y se
     // muestra sin depender de restaurant_pos, mesas, cocina o caja.

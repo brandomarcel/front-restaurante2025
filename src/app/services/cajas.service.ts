@@ -34,9 +34,12 @@ export class CajasService {
     if (accessError) return throwError(() => accessError);
     const business = this.activeBusinessOrError();
     if (business instanceof Error) return throwError(() => business);
+    let params = new HttpParams().set('business', business);
+    const posTerminal = this.activePosTerminalName();
+    if (posTerminal) params = params.set('pos_terminal', posTerminal);
     return this.http.get<any>(`${this.restaurantApi}.get_current_cash_opening`, {
       context: new HttpContext().set(REQUIRE_AUTH, true),
-      params: new HttpParams().set('business', business)
+      params
     }).pipe(map((response: any) => this.normalizeCurrentOpening(response)));
   }
 
@@ -104,11 +107,12 @@ export class CajasService {
 
   /** Historial administrativo de aperturas, retiros y cierres del negocio. */
   getCashRegisterHistory() {
-    const features = this.capabilities.features;
-    if (!(features.restaurant === true && features.restaurant_pos === true && features.cash_register === true)) {
+    if (!this.capabilities.isEnabled('cash_register')) {
       return throwError(() => new Error('La gestión de cajas no está habilitada para este negocio.'));
     }
-    if (!this.capabilities.hasPermission('*') && !this.capabilities.hasPermission('restaurant.manage')) {
+    if (!this.capabilities.hasPermission('*')
+      && !this.capabilities.hasPermission('restaurant.manage')
+      && !this.capabilities.hasPermission('billing.manage')) {
       return throwError(() => new Error('Solo un gerente o administrador puede consultar toda la gestión de caja'));
     }
     const business = this.activeBusinessOrError();
@@ -197,6 +201,12 @@ export class CajasService {
     return throwError(() => new Error('El reporte de cierres debe consumirse desde el reporte nuevo de restaurante.'));
   }
 
+  /** Terminal POS activo del negocio, cuando el modelo de terminales aplica. */
+  private activePosTerminalName(): string {
+    if (!this.capabilities.usesPosTerminalModel) return '';
+    return String(this.capabilities.activePosTerminal?.name || '').trim();
+  }
+
   private activeBusinessOrError(): string | Error {
     const business = this.capabilities.activeBusinessId || localStorage.getItem('active_business') || localStorage.getItem('businessId');
     return business ? business : new Error('Selecciona un negocio para operar caja.');
@@ -207,7 +217,12 @@ export class CajasService {
     if (accessError) return throwError(() => accessError);
     const business = this.activeBusinessOrError();
     if (business instanceof Error) return throwError(() => business);
-    const payload = { ...(data || {}), business };
+    const posTerminal = this.activePosTerminalName();
+    const payload = {
+      ...(data || {}),
+      business,
+      ...(posTerminal && !(data && data.pos_terminal) ? { pos_terminal: posTerminal } : {})
+    };
     return this.http.post<any>(`${this.restaurantApi}.${method}`, payload, {
       context: new HttpContext().set(REQUIRE_AUTH, true)
     }).pipe(
@@ -219,26 +234,31 @@ export class CajasService {
     );
   }
 
-  /** Caja solo está disponible con la capacidad POS/caja y el permiso del negocio. */
+  /**
+   * Caja solo depende de `cash_register` (Restaurante POS o POS genérico,
+   * indistintamente) y del permiso del negocio.
+   */
   private cashAccessError(): Error | null {
-    const featureEnabled = this.capabilities.isEnabled('restaurant_pos')
-      && this.capabilities.isEnabled('cash_register');
-    if (!featureEnabled) return new Error('La función pos no está habilitada para este negocio.');
+    if (!this.capabilities.isEnabled('cash_register')) {
+      return new Error('La caja no está habilitada para este negocio.');
+    }
     if (!this.capabilities.hasPermission('*')
       && !this.capabilities.hasPermission('restaurant.cash.manage')
-      && !this.capabilities.hasPermission('restaurant.manage')) {
+      && !this.capabilities.hasPermission('restaurant.manage')
+      && !this.capabilities.hasPermission('billing.manage')
+      && !this.capabilities.hasPermission('billing.create')) {
       return new Error('El rol del usuario no permite realizar esta operación.');
     }
     return null;
   }
 
   private cashClosingsReportAccessError(): Error | null {
-    const features = this.capabilities.features;
-    const featureEnabled = features.restaurant === true
-      && features.restaurant_pos === true
-      && features.cash_register === true;
-    if (!featureEnabled) return new Error('Este reporte no está habilitado para este negocio.');
-    if (!this.capabilities.hasPermission('*') && !this.capabilities.hasPermission('restaurant.manage')) {
+    if (!this.capabilities.isEnabled('cash_register')) {
+      return new Error('Este reporte no está habilitado para este negocio.');
+    }
+    if (!this.capabilities.hasPermission('*')
+      && !this.capabilities.hasPermission('restaurant.manage')
+      && !this.capabilities.hasPermission('billing.manage')) {
       return new Error('No tienes permiso para consultar este reporte.');
     }
     return null;

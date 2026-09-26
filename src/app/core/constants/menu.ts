@@ -82,25 +82,35 @@ export class Menu {
     },
 
     {
-      group: 'Restaurante',
+      // La caja depende únicamente de `cash_register` (habilitada por el
+      // backend cuando `billing` + `pos` están activos, sea Restaurante POS
+      // o POS genérico). No se anida bajo el grupo Restaurante ni se
+      // condiciona a `restaurant`/`restaurant_pos`: un negocio de solo
+      // facturación con POS genérico también debe ver "Mi Caja".
+      group: 'Caja',
       separator: false,
-      featureKey: 'restaurant',
       items: [
         {
           icon: 'assets/icons/tablericons/cash-banknote.svg',
           label: 'Mi Caja',
           route: '/caja',
           featureKey: 'cash_register',
-          requiredFeatures: ['restaurant_pos', 'cash_register'],
-          anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage'],
+          anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage', 'billing.manage', 'billing.create'],
           children: [
-            { label: 'Apertura', route: '/caja/apertura', anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage'] },
-            { label: 'Retiros', route: '/caja/retiro', anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage'] },
-            { label: 'Cierre', route: '/caja/cierre', anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage'] },
-            { label: 'Gestión de Cajas', route: '/caja/gestion', permissionKey: 'restaurant.manage' },
-            
+            { label: 'Apertura', route: '/caja/apertura', anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage', 'billing.manage', 'billing.create'] },
+            { label: 'Retiros', route: '/caja/retiro', anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage', 'billing.manage', 'billing.create'] },
+            { label: 'Cierre', route: '/caja/cierre', anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage', 'billing.manage', 'billing.create'] },
+            { label: 'Gestión de Cajas', route: '/caja/gestion', anyPermissionKeys: ['restaurant.manage', 'billing.manage'] },
           ],
         },
+      ],
+    },
+
+    {
+      group: 'Restaurante',
+      separator: false,
+      featureKey: 'restaurant',
+      items: [
         {
           icon: 'assets/icons/tablericons/shopping-bag.svg',
           label: 'Lista Órdenes',
