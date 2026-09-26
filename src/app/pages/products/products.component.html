@@ -4,7 +4,7 @@
       <div>
         <h2 class="text-xl font-bold">Productos</h2>
         <p class="text-xs text-primary-foreground/80">
-          {{ inventoryEnabled ? 'Catálogo comercial con control de inventario conectado al backend.' : 'Catálogo comercial para facturación de productos y servicios.' }}
+          {{ inventoryEnabled ? 'Catálogo comercial con control de inventario.' : 'Catálogo comercial para facturación de productos y servicios.' }}
         </p>
       </div>
 
@@ -46,8 +46,12 @@
 
       <div class="flex flex-wrap items-center gap-3">
         <label class="inline-flex items-center gap-2 text-xs font-medium text-foreground/80">
-          <input type="checkbox" [(ngModel)]="soloActivos" (ngModelChange)="actualizarProductosFiltrados()" />
-          Solo activos
+          Estado
+          <select class="select !h-8 !w-auto !text-xs" [(ngModel)]="estadoFiltro" (ngModelChange)="actualizarProductosFiltrados()"
+            title="El catálogo solo permite consultar activos o inactivos por separado, no ambos a la vez.">
+            <option value="Activo">Activos</option>
+            <option value="Inactivo">Inactivos</option>
+          </select>
         </label>
 
         <label *ngIf="inventoryEnabled" class="inline-flex items-center gap-2 text-xs font-medium text-foreground/80">
@@ -146,6 +150,9 @@
                 <button *ngIf="canHaveVariants(p)" class="btn btn-outline" (click)="abrirVariantes(p)">
                   {{ (p.variant_count || 0) > 0 ? 'Variantes (' + p.variant_count + ')' : 'Variantes' }}
                 </button>
+                <!-- <button *ngIf="!p.isactive" type="button" class="btn btn-success !px-2.5 !py-1 !text-[11px]" (click)="toggleActivo(p)">
+                  Activar
+                </button> -->
                 <app-icon-action-button variant="edit" (action)="abrirModal(p)"></app-icon-action-button>
                 <app-icon-action-button variant="delete" tone="warn" (action)="eliminar(p.name)"></app-icon-action-button>
               </div>

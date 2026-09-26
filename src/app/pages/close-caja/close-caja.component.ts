@@ -26,7 +26,6 @@ export class CloseCajaComponent implements OnInit {
     observaciones: ''
   };
 
-  detallePorMetodo: any = {};
   paymentTotals: Array<{ payment_method: string; payment_code: string; amount: number }> = [];
   paymentMethodsForCount: Array<{ payment_method: string; payment_code: string; amount: number }> = [];
   paymentCounts: Record<string, number> = {};
@@ -84,7 +83,6 @@ export class CloseCajaComponent implements OnInit {
     this.cierre.efectivo_real = 0;
     this.cierre.diferencia = 0;
     this.cierre.observaciones = '';
-    this.detallePorMetodo = {};
     this.paymentTotals = [];
     this.paymentMethodsForCount = [];
     this.paymentCounts = {};
@@ -146,10 +144,6 @@ export class CloseCajaComponent implements OnInit {
           return result;
         }, {} as Record<string, number>);
         this.cierre.efectivo_real = this.paymentCounts['01'] || 0;
-        this.detallePorMetodo = this.paymentTotals.reduce((result, payment) => {
-          result[payment.payment_code] = payment.amount;
-          return result;
-        }, {} as Record<string, number>);
         this.calcularDiferencia();
         this.loadDashboardMetrics();
       },
@@ -163,13 +157,6 @@ export class CloseCajaComponent implements OnInit {
 
   cleanCaja(): void {
     this.resetCajaValores();
-  }
-
-  onEfectivoRealChange(valor: number) {
-    const parsed = Number(valor);
-    this.cierre.efectivo_real = Number.isFinite(parsed) ? parsed : 0;
-    this.paymentCounts['01'] = this.cierre.efectivo_real;
-    this.calcularDiferencia();
   }
 
   onPaymentCountChange(code: string, value: number): void {
@@ -221,10 +208,6 @@ export class CloseCajaComponent implements OnInit {
           this.paymentTotals = this.normalizePaymentTotals({ payment_totals: rows });
           this.paymentMethodsForCount = this.buildPaymentMethodsForCount();
           this.ventasEfectivo = this.paymentAmount('01');
-          this.detallePorMetodo = this.paymentTotals.reduce((result, payment) => {
-            result[payment.payment_code] = payment.amount;
-            return result;
-          }, {} as Record<string, number>);
         }
         this.calcularDiferencia();
       },
@@ -267,10 +250,6 @@ export class CloseCajaComponent implements OnInit {
     });
   }
 
-  objectKeys(obj: any): string[] {
-    return Object.keys(obj || {});
-  }
-
   get totalEsperado(): number {
     if (this.backendExpectedCash !== null) return this.backendExpectedCash;
     return (Number(this.cierre.monto_apertura) || 0)
@@ -303,6 +282,17 @@ export class CloseCajaComponent implements OnInit {
 
   paymentCount(code: string): number {
     return this.toNumber(this.paymentCounts[code]);
+  }
+
+  /** Diferencia de ESTE método: lo contado menos lo que el sistema registró como vendido. */
+  paymentDifference(code: string): number {
+    return Math.round((this.paymentCount(code) - this.paymentAmount(code)) * 100) / 100;
+  }
+
+  paymentDifferenceClass(code: string): string {
+    const diff = this.paymentDifference(code);
+    if (Math.abs(diff) < 0.009) return 'text-muted-foreground';
+    return diff > 0 ? 'text-emerald-600' : 'text-red-600';
   }
 
   trackPayment(_index: number, payment: { payment_code: string }): string {

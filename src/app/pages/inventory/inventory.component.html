@@ -80,12 +80,11 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-1.5">
-          <button type="button"
-            class="rounded-full border px-2.5 py-1 text-[11px] font-semibold transition"
-            [ngClass]="onlyActive ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card text-muted-foreground'"
-            (click)="onlyActive = !onlyActive; aplicarFiltrosInventario()">
-            Activos
-          </button>
+          <select class="select !h-8 !w-auto !text-[11px]" [(ngModel)]="estadoFiltro" (ngModelChange)="aplicarFiltrosInventario()"
+            title="El catálogo solo permite consultar activos o inactivos por separado, no ambos a la vez.">
+            <option value="Activo">Activos</option>
+            <option value="Inactivo">Inactivos</option>
+          </select>
           <button type="button"
             class="rounded-full border px-2.5 py-1 text-[11px] font-semibold transition"
             [ngClass]="onlyLowStock ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-border bg-card text-muted-foreground'"

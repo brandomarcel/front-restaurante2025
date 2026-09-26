@@ -91,7 +91,12 @@ export class InventoryComponent implements OnInit {
 
   search = '';
   onlyLowStock = false;
-  onlyActive = true;
+  /**
+   * `get_productos` no tiene un modo "todos": siempre hay que pedir
+   * explícitamente `isactive=1` o `isactive=0`. Selector de dos estados en
+   * vez de un checkbox "solo activos" que sugería que desmarcado traía todo.
+   */
+  estadoFiltro: 'Activo' | 'Inactivo' = 'Activo';
 
   historyProduct = '';
   historyMovementType = '';
@@ -210,11 +215,10 @@ export class InventoryComponent implements OnInit {
     if (this.isLiteMode) {
       forkJoin({
         // `flatten_variants`: acá se administra el stock real, que vive en
-        // las variantes, no en el producto agrupador (siempre en 0). Antes
-        // esta llamada ignoraba `search`/`onlyLowStock`/`onlyActive`: los
-        // filtros de la pantalla no hacían nada.
+        // las variantes, no en el producto agrupador (siempre en 0).
+        // `isactive` siempre explícito: el backend no tiene un modo "todos".
         products: this.productsService.getAll(
-          this.onlyActive ? 1 : null,
+          this.estadoFiltro === 'Activo' ? 1 : 0,
           undefined,
           0,
           this.search,
@@ -248,7 +252,7 @@ export class InventoryComponent implements OnInit {
     this.inventoryService.getInventoryProducts({
       search: this.search || undefined,
       onlyLowStock: this.onlyLowStock,
-      onlyActive: this.onlyActive,
+      onlyActive: this.estadoFiltro === 'Activo',
     }).subscribe({
       next: (res: any) => {
         const data = this.extractList(res, ['message', 'data']);
@@ -336,7 +340,7 @@ export class InventoryComponent implements OnInit {
   limpiarFiltrosInventario(): void {
     this.search = '';
     this.onlyLowStock = false;
-    this.onlyActive = true;
+    this.estadoFiltro = 'Activo';
     this.cargarProductosInventario();
   }
 

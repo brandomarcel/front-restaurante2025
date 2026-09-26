@@ -56,7 +56,13 @@ export class ProductsComponent implements OnInit {
 
   private _searchTerm = '';
   categoriaFiltro = '';
-  soloActivos = false;
+  /**
+   * `get_productos` no tiene un modo "todos": siempre hay que pedir
+   * explícitamente `isactive=1` o `isactive=0`, nunca omitirlo esperando que
+   * traiga ambos. Por eso es un selector de dos estados, no un checkbox de
+   * "solo activos" que sugiere que desmarcado trae todo.
+   */
+  estadoFiltro: 'Activo' | 'Inactivo' = 'Activo';
   soloBajoStock = false;
 
   mostrarModal = false;
@@ -182,8 +188,10 @@ export class ProductsComponent implements OnInit {
   cargarProductos() {
     this.spinner.show();
     const offset = (this.page - 1) * this.pageSize;
-    const activeFilter = this.soloActivos ? 1 : null;
-    const statusFilter = this.soloActivos ? 'Activo' : undefined;
+    // Siempre explícito: el backend no tiene un modo que devuelva activos e
+    // inactivos juntos, así que nunca se omite `isactive`.
+    const activeFilter = this.estadoFiltro === 'Activo' ? 1 : 0;
+    const statusFilter = this.estadoFiltro;
     this.productsService.getAll(activeFilter, this.pageSize, offset, this._searchTerm, statusFilter, this.categoriaFiltro, this.soloBajoStock).subscribe({
       next: (res: any) => {
         const message = res?.message ?? res ?? {};
@@ -251,7 +259,7 @@ export class ProductsComponent implements OnInit {
   limpiarFiltros() {
     this._searchTerm = '';
     this.categoriaFiltro = '';
-    this.soloActivos = false;
+    this.estadoFiltro = 'Activo';
     this.soloBajoStock = false;
     this.page = 1;
     this.actualizarProductosFiltrados();
@@ -448,6 +456,45 @@ export class ProductsComponent implements OnInit {
       this.productos = [...this.productos, product];
     }
     this.actualizarProductosFiltrados();
+  }
+
+  /**
+   * Reactivar/desactivar directo desde la lista, sin abrir el formulario
+   * completo. "Eliminar" en este catálogo es un borrado lógico (deja el
+   * producto en `isactive = 0` para no romper facturas/órdenes históricas),
+   * así que necesita una forma igual de directa para revertirlo.
+   */
+  toggleActivo(producto: Product): void {
+    if (!this.canManageProducts) {
+      this.alertService.error('No tienes permiso products.manage para cambiar el estado del producto.');
+      return;
+    }
+
+    const nextActive = !producto.isactive;
+    const mensaje = nextActive
+      ? `Se activará "${producto.nombre}" y volverá a estar disponible para la venta.`
+      : `Se desactivará "${producto.nombre}" y dejará de estar disponible para la venta.`;
+
+    this.alertService.confirm(mensaje, nextActive ? 'Activar producto' : 'Desactivar producto').then((result) => {
+      if (!result.isConfirmed) return;
+
+      this.spinner.show();
+      this.productsService.update(producto.name, { ...producto, isactive: nextActive }).subscribe({
+        next: () => {
+          toast.success(nextActive ? 'Producto activado' : 'Producto desactivado');
+          // El filtro de estado es excluyente (Activo o Inactivo, nunca
+          // "todos"): recargar desde el backend para que el producto
+          // desaparezca de la vista actual si ya no corresponde a ella.
+          // `cargarProductos()` controla su propio spinner, no se apaga acá.
+          this.cargarProductos();
+        },
+        error: (err) => {
+          const mensajeError = this.frappeErrorService.handle(err);
+          this.alertService.error(mensajeError);
+          this.spinner.hide();
+        }
+      });
+    });
   }
 
   eliminar(id: string) {
