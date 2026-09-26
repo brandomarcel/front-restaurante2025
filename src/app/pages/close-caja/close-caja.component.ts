@@ -290,7 +290,10 @@ export class CloseCajaComponent implements OnInit {
       { payment_method: 'Tarjeta de credito/debito', payment_code: '19', amount: 0 },
       { payment_method: 'Transferencia', payment_code: '20', amount: 0 }
     ];
-    const values = [...defaults, ...this.paymentTotals];
+    // Los reales del backend van primero: solo se completan con los valores
+    // fijos en 0 los métodos (Efectivo/Tarjeta/Transferencia) que el backend
+    // no haya devuelto para este turno, nunca al revés.
+    const values = [...this.paymentTotals, ...defaults];
     const byCode = new Map<string, { payment_method: string; payment_code: string; amount: number }>();
     values.forEach((payment) => {
       if (!byCode.has(payment.payment_code)) byCode.set(payment.payment_code, payment);
