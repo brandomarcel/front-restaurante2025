@@ -1,16 +1,16 @@
 <div class="app-container space-y-3">
   <section
-    class="rounded-xl border border-border bg-white px-3 py-2 shadow-sm">
+    class="rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
     <div class="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
-          <h2 class="text-base font-bold leading-tight text-slate-900">{{ viewMode === 'cocina' ? 'Cocina · KDS' : 'Órdenes en vivo' }}</h2>
+          <h2 class="text-base font-bold leading-tight text-foreground">{{ viewMode === 'cocina' ? 'Cocina · KDS' : 'Órdenes en vivo' }}</h2>
           <span
             class="rounded-full px-2 py-0.5 text-[11px] font-bold"
             [ngClass]="viewMode === 'cocina' ? 'bg-amber-50 text-amber-700' : 'bg-primary/10 text-primary'">
             {{ modeLabel }}
           </span>
-          <span *ngIf="total$ | async as total" class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+          <span *ngIf="total$ | async as total" class="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
             {{ total }} registros
           </span>
           <span *ngIf="newCount > 0" class="rounded-full bg-emerald-500 px-2 py-0.5 text-[11px] font-bold text-white">
@@ -30,7 +30,7 @@
           *ngIf="canSwitchView"
           type="button"
           class="min-h-[30px] rounded-md border px-2.5 text-[11px] font-semibold transition"
-          [ngClass]="viewMode === 'normal' ? 'border-primary bg-primary text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'"
+          [ngClass]="viewMode === 'normal' ? 'border-primary bg-primary text-white' : 'border-border bg-card text-muted-foreground hover:bg-muted/40'"
           (click)="setViewMode('normal')">
           Caja
         </button>
@@ -39,14 +39,14 @@
           *ngIf="canSwitchView"
           type="button"
           class="min-h-[30px] rounded-md border px-2.5 text-[11px] font-semibold transition"
-          [ngClass]="viewMode === 'cocina' ? 'border-amber-500 bg-amber-500 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'"
+          [ngClass]="viewMode === 'cocina' ? 'border-amber-500 bg-amber-500 text-white' : 'border-border bg-card text-muted-foreground hover:bg-muted/40'"
           (click)="setViewMode('cocina')">
           Cocina
         </button>
 
         <button
           type="button"
-          class="min-h-[30px] rounded-md border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-50"
+          class="min-h-[30px] rounded-md border border-border bg-card px-2.5 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted/40"
           (click)="refreshRealtime()">
           Recargar
         </button>
@@ -54,7 +54,7 @@
     </div>
   </section>
 
-  <section class="rounded-xl border border-border bg-white p-2 shadow-sm">
+  <section class="rounded-xl border border-border bg-card p-2 shadow-sm">
     <div class="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
       <div class="flex w-full flex-col gap-2 sm:flex-row xl:max-w-[760px]">
         <div class="relative min-w-0 flex-1">
@@ -82,13 +82,13 @@
           {{ kitchenOnlyUrgentLabel }}
         </button>
 
-        <button class="min-h-[30px] rounded-md border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-50" type="button" (click)="search = ''; statusFilter = viewMode === 'cocina' ? 'ACTIVAS' : 'ALL'; kitchenFilter = 'ALL'; kitchenOnlyUrgent = false;">
+        <button class="min-h-[30px] rounded-md border border-border bg-card px-2.5 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted/40" type="button" (click)="search = ''; statusFilter = viewMode === 'cocina' ? 'ACTIVAS' : 'ALL'; kitchenFilter = 'ALL'; kitchenOnlyUrgent = false;">
           Limpiar
         </button>
       </div>
     </div>
 
-    <div class="mt-2 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2 text-[11px]">
+    <div class="mt-2 flex flex-wrap items-center gap-1.5 border-t border-border pt-2 text-[11px]">
       <span class="badge badge-red">Ingresadas: {{ countIngresadas }}</span>
       <span class="badge badge-yellow">Preparación: {{ countPreparacion }}</span>
       <span class="badge badge-green">Cerradas: {{ countCerradas }}</span>
@@ -124,7 +124,7 @@
   <ng-template #kitchenView>
     <ng-container *ngIf="kitchenAccessChecked && kitchenAccessGranted; else kitchenAccessState">
     <section class="grid grid-cols-2 gap-2 sm:grid-cols-5">
-      <button type="button" (click)="setKitchenFilter('ALL')" class="rounded-xl border px-3 py-2 text-left transition" [ngClass]="kitchenFilter === 'ALL' ? 'border-slate-400 bg-slate-900 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'">
+      <button type="button" (click)="setKitchenFilter('ALL')" class="rounded-xl border px-3 py-2 text-left transition" [ngClass]="kitchenFilter === 'ALL' ? 'border-slate-400 bg-slate-900 text-white shadow-sm' : 'border-border bg-card text-foreground/80 hover:border-border'">
         <span class="block text-[10px] font-bold uppercase opacity-70">Activos</span>
         <strong class="mt-0.5 block text-xl leading-none">{{ kitchenActivasCount }}</strong>
       </button>
@@ -140,9 +140,9 @@
         <span class="block text-[10px] font-bold uppercase opacity-75">Listos</span>
         <strong class="mt-0.5 block text-xl leading-none">{{ kitchenReadyCount }}</strong>
       </button>
-      <article class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-left">
-        <span class="block text-[10px] font-bold uppercase text-slate-500">Tiempo promedio</span>
-        <strong class="mt-0.5 block text-xl leading-none text-slate-800">{{ kitchenAverageMinutes }}<span class="ml-1 text-xs font-semibold text-slate-500">min</span></strong>
+      <article class="rounded-xl border border-border bg-card px-3 py-2 text-left">
+        <span class="block text-[10px] font-bold uppercase text-muted-foreground">Tiempo promedio</span>
+        <strong class="mt-0.5 block text-xl leading-none text-foreground">{{ kitchenAverageMinutes }}<span class="ml-1 text-xs font-semibold text-muted-foreground">min</span></strong>
       </article>
     </section>
 
@@ -151,16 +151,16 @@
       <button type="button" class="ml-2 font-bold underline" (click)="refreshRealtime()">Reintentar</button>
     </section>
 
-    <section *ngIf="kitchenLoading" class="grid min-h-[280px] place-items-center rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+    <section *ngIf="kitchenLoading" class="grid min-h-[280px] place-items-center rounded-xl border border-border bg-card p-8 shadow-sm">
       <div class="text-center">
-        <div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-primary"></div>
-        <p class="mt-3 text-sm font-bold text-slate-700">Cargando pedidos de cocina…</p>
-        <p class="mt-1 text-xs text-slate-500">Estamos sincronizando la cola del negocio.</p>
+        <div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary"></div>
+        <p class="mt-3 text-sm font-bold text-foreground/80">Cargando pedidos de cocina…</p>
+        <p class="mt-1 text-xs text-muted-foreground">Estamos sincronizando la cola del negocio.</p>
       </div>
     </section>
 
     <div *ngIf="!kitchenLoading" class="grid grid-cols-1 gap-3 lg:grid-cols-3">
-      <section class="flex min-h-[320px] flex-col rounded-xl border border-rose-200 bg-white p-2.5 shadow-sm lg:h-[calc(100dvh-245px)]">
+      <section class="flex min-h-[320px] flex-col rounded-xl border border-rose-200 bg-card p-2.5 shadow-sm lg:h-[calc(100dvh-245px)]">
         <div class="mb-2 flex items-center justify-between rounded-lg bg-rose-50 px-2 py-1.5">
           <div><h3 class="text-sm font-semibold text-rose-800">Nuevos</h3><p class="text-[10px] text-rose-600">Requieren atención</p></div>
           <span class="badge badge-red">{{ kitchenIngresadas.length }}</span>
@@ -187,7 +187,7 @@
         </div>
       </section>
 
-      <section class="flex min-h-[320px] flex-col rounded-xl border border-amber-200 bg-white p-2.5 shadow-sm lg:h-[calc(100dvh-245px)]">
+      <section class="flex min-h-[320px] flex-col rounded-xl border border-amber-200 bg-card p-2.5 shadow-sm lg:h-[calc(100dvh-245px)]">
         <div class="mb-2 flex items-center justify-between rounded-lg bg-amber-50 px-2 py-1.5">
           <div><h3 class="text-sm font-semibold text-amber-800">En preparación</h3><p class="text-[10px] text-amber-700">En proceso</p></div>
           <span class="badge badge-yellow">{{ kitchenPreparacionSafe.length }}</span>
@@ -214,7 +214,7 @@
         </div>
       </section>
 
-      <section class="flex min-h-[320px] flex-col rounded-xl border border-emerald-200 bg-white p-2.5 shadow-sm lg:h-[calc(100dvh-245px)]">
+      <section class="flex min-h-[320px] flex-col rounded-xl border border-emerald-200 bg-card p-2.5 shadow-sm lg:h-[calc(100dvh-245px)]">
         <div class="mb-2 flex items-center justify-between rounded-lg bg-emerald-50 px-2 py-1.5">
           <div><h3 class="text-sm font-semibold text-emerald-800">Listos</h3><p class="text-[10px] text-emerald-700">Para entregar</p></div>
           <span class="badge badge-green">{{ kitchenCerradas.length }}</span>
@@ -245,10 +245,10 @@
   </ng-template>
 
   <ng-template #kitchenAccessState>
-    <section *ngIf="!kitchenAccessChecked" class="grid min-h-[280px] place-items-center rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+    <section *ngIf="!kitchenAccessChecked" class="grid min-h-[280px] place-items-center rounded-xl border border-border bg-card p-8 shadow-sm">
       <div class="text-center">
-        <div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-primary"></div>
-        <p class="mt-3 text-sm font-bold text-slate-700">Validando acceso a Cocina…</p>
+        <div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary"></div>
+        <p class="mt-3 text-sm font-bold text-foreground/80">Validando acceso a Cocina…</p>
       </div>
     </section>
     <section *ngIf="kitchenAccessChecked && !kitchenAccessGranted" class="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center">
@@ -259,7 +259,7 @@
 
   <ng-template #emptyState>
     <div class="app-card">
-      <div class="app-card-body text-center text-gray-500">
+      <div class="app-card-body text-center text-muted-foreground">
         No hay ordenes para mostrar con los filtros actuales.
       </div>
     </div>
@@ -279,17 +279,17 @@
 </app-order-modal>
 
 <div *ngIf="showPrintModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3" role="dialog" aria-modal="true">
-  <div class="relative w-full max-w-md rounded-xl border border-slate-200 bg-white p-4 shadow-2xl" (click)="$event.stopPropagation()">
+  <div class="relative w-full max-w-md rounded-xl border border-border bg-card p-4 shadow-2xl" (click)="$event.stopPropagation()">
     <button
-      class="absolute right-3 top-3 h-8 w-8 rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+      class="absolute right-3 top-3 h-8 w-8 rounded-md border border-border text-muted-foreground hover:bg-muted/40 hover:text-foreground/80"
       (click)="closePrintModal()"
       aria-label="Cerrar">
       ×
     </button>
 
     <div class="mb-3 pr-8">
-      <h3 class="text-base font-bold text-slate-900">Impresión</h3>
-      <p class="mt-0.5 text-xs text-slate-500">Orden: <span class="font-semibold text-slate-700">{{ pendingPrintOrderId }}</span></p>
+      <h3 class="text-base font-bold text-foreground">Impresión</h3>
+      <p class="mt-0.5 text-xs text-muted-foreground">Orden: <span class="font-semibold text-foreground/80">{{ pendingPrintOrderId }}</span></p>
     </div>
 
     <div class="grid grid-cols-3 gap-2">
@@ -313,7 +313,7 @@
     </div>
 
     <div class="pt-3 text-center">
-      <button class="text-xs font-semibold text-slate-500 underline hover:text-slate-700" (click)="closePrintModal()">Cerrar</button>
+      <button class="text-xs font-semibold text-muted-foreground underline hover:text-foreground/80" (click)="closePrintModal()">Cerrar</button>
     </div>
   </div>
 </div>

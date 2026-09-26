@@ -5,20 +5,20 @@
       <!-- <section class="flex items-center justify-between gap-3 rounded-xl border border-primary/15 bg-gradient-to-r from-primary/10 via-white to-white px-3 py-2.5 shadow-sm">
         <div>
           <p class="text-[10px] font-bold uppercase tracking-wide text-primary">{{ isGenericPos ? 'POS genérico' : 'Facturación directa' }}</p>
-          <h1 class="text-base font-black text-slate-900">{{ isGenericPos ? 'Punto de venta' : 'Nueva factura' }}</h1>
-          <p class="text-[10px] text-slate-500">{{ isGenericPos ? 'Selecciona cliente, productos, pagos y cobra desde tu terminal.' : 'Emite una factura electrónica con los datos actuales.' }}</p>
+          <h1 class="text-base font-black text-foreground">{{ isGenericPos ? 'Punto de venta' : 'Nueva factura' }}</h1>
+          <p class="text-[10px] text-muted-foreground">{{ isGenericPos ? 'Selecciona cliente, productos, pagos y cobra desde tu terminal.' : 'Emite una factura electrónica con los datos actuales.' }}</p>
         </div>
         <span *ngIf="isGenericPos" class="hidden rounded-full bg-slate-900 px-2.5 py-1 text-[10px] font-bold text-white sm:inline-flex">Venta rápida</span>
       </section> -->
 
-      <section *ngIf="currentFiscalLocation || posTerminalBlockMessage" class="rounded-xl border px-3 py-2.5 text-[11px]" [ngClass]="posTerminalBlockMessage ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-white text-slate-600'">
+      <section *ngIf="currentFiscalLocation || posTerminalBlockMessage" class="rounded-xl border px-3 py-2.5 text-[11px]" [ngClass]="posTerminalBlockMessage ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-border bg-card text-muted-foreground'">
         <div class="grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
           <span *ngIf="selectedPosTerminal" class="min-w-0 truncate"><b>Terminal:</b> {{ posTerminalLabel(selectedPosTerminal) }} <em *ngIf="terminalAssignmentLabel" class="not-italic text-primary">({{ terminalAssignmentLabel }})</em></span>
           <span *ngIf="currentFiscalLocation?.establishment" class="min-w-0 truncate"><b>Establecimiento:</b> {{ fiscalEstablishmentLabel(currentFiscalLocation) }}</span>
           <span *ngIf="currentFiscalLocation?.emissionPoint" class="min-w-0 truncate"><b>Punto de emisión:</b> {{ fiscalEmissionPointLabel(currentFiscalLocation) }}</span>
           <span *ngIf="currentFiscalLocation?.environment" class="min-w-0 truncate"><b>Ambiente:</b> {{ currentFiscalLocation.environment }}</span>
         </div>
-        <p *ngIf="!selectedPosTerminal && !posTerminalBlockMessage" class="mt-1 text-[10px] text-slate-500">Se usará la configuración general del establecimiento y punto de emisión.</p>
+        <p *ngIf="!selectedPosTerminal && !posTerminalBlockMessage" class="mt-1 text-[10px] text-muted-foreground">Se usará la configuración general del establecimiento y punto de emisión.</p>
         <p *ngIf="posTerminalBlockMessage" class="mt-1 font-semibold">{{ posTerminalBlockMessage }}</p>
       </section>
 
@@ -57,11 +57,11 @@
 
       <div class="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
         <main class="min-w-0 space-y-3">
-          <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
             <div class="mb-2 flex items-center justify-between gap-2">
               <div>
                 <h3 class="text-xs font-semibold text-primary">Cliente</h3>
-                <p class="text-[10px] text-slate-500">Busca por nombre, cédula, RUC, teléfono o correo.</p>
+                <p class="text-[10px] text-muted-foreground">Busca por nombre, cédula, RUC, teléfono o correo.</p>
               </div>
               <app-button type="button" tone="info" impact="bold" size="small" shape="rounded" (buttonClick)="openCustomerModalFromSearch()">
                 <fa-icon [icon]="['fas','user-plus']" class="mr-1"></fa-icon>
@@ -81,14 +81,14 @@
                   (blur)="closeCustomerSearchSoon()"
                   (keyup.enter)="selectFirstCustomerSuggestion()"
                   placeholder="Nombre, cédula, RUC, teléfono o correo"
-                  class="min-h-[32px] w-full rounded-md border border-slate-200 bg-white px-2.5 text-[11px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  class="min-h-[32px] w-full rounded-md border border-border bg-card px-2.5 text-[11px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                   [ngClass]="{
                     'border-red-400': invoiceForm.get('selectedCustomer')?.invalid && invoiceForm.get('selectedCustomer')?.touched
                   }" />
 
                 <div *ngIf="isCustomerSearchOpen"
-                  class="absolute left-0 right-0 top-full z-30 mt-1 max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
-                  <div *ngIf="customerSearchLoading" class="px-2.5 py-1.5 text-[11px] text-slate-500">
+                  class="absolute left-0 right-0 top-full z-30 mt-1 max-h-56 overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
+                  <div *ngIf="customerSearchLoading" class="px-2.5 py-1.5 text-[11px] text-muted-foreground">
                     Buscando clientes...
                   </div>
 
@@ -96,20 +96,20 @@
                     *ngFor="let c of customers; trackBy: trackByCustomerId"
                     type="button"
                     (mousedown)="selectCustomer(c)"
-                    class="flex w-full items-start gap-2 border-b border-slate-100 px-2.5 py-1.5 text-left text-[11px] hover:bg-primary/5">
+                    class="flex w-full items-start gap-2 border-b border-border px-2.5 py-1.5 text-left text-[11px] hover:bg-primary/5">
                     <span class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-primary/10 text-[10px] font-bold text-primary">
                       {{ c?.nombre?.charAt(0) || 'C' }}
                     </span>
                     <span class="min-w-0">
-                      <span class="block truncate font-semibold text-slate-800">{{ c?.nombre }}</span>
-                      <span class="block truncate text-[10px] text-slate-500">
+                      <span class="block truncate font-semibold text-foreground">{{ c?.nombre }}</span>
+                      <span class="block truncate text-[10px] text-muted-foreground">
                         {{ c?.num_identificacion }} · {{ c?.telefono || c?.correo || 'Sin contacto' }}
                       </span>
                     </span>
                   </button>
 
                   <div *ngIf="!customerSearchLoading && customers.length === 0"
-                    class="px-2.5 py-1.5 text-[11px] text-slate-500">
+                    class="px-2.5 py-1.5 text-[11px] text-muted-foreground">
                     Sin coincidencias.
                     <button type="button" (mousedown)="openCustomerModalFromSearch()" class="ml-1 font-semibold text-primary">
                       Crear cliente
@@ -138,7 +138,7 @@
                   *ngIf="selectedCustomer"
                   type="button"
                   (click)="clearSelectedCustomer()"
-                  class="min-h-[36px] rounded-md border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-600 sm:min-h-[32px] sm:px-3">
+                  class="min-h-[36px] rounded-md border border-border bg-card px-2.5 text-[11px] font-semibold text-muted-foreground sm:min-h-[32px] sm:px-3">
                   Cambiar
                 </button>
               </div>
@@ -150,18 +150,18 @@
             </div>
 
             <div *ngIf="selectedCustomer"
-              class="mt-2 grid grid-cols-1 gap-1.5 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[11px] text-slate-700 sm:grid-cols-3">
-              <p class="truncate"><span class="text-slate-500">ID:</span> {{ selectedCustomer.num_identificacion || '—' }}</p>
-              <p class="truncate"><span class="text-slate-500">Email:</span> {{ selectedCustomer.correo || '—' }}</p>
-              <p class="truncate"><span class="text-slate-500">Tel:</span> {{ selectedCustomer.telefono || '—' }}</p>
+              class="mt-2 grid grid-cols-1 gap-1.5 rounded-lg border border-border bg-muted/40 p-2.5 text-[11px] text-foreground/80 sm:grid-cols-3">
+              <p class="truncate"><span class="text-muted-foreground">ID:</span> {{ selectedCustomer.num_identificacion || '—' }}</p>
+              <p class="truncate"><span class="text-muted-foreground">Email:</span> {{ selectedCustomer.correo || '—' }}</p>
+              <p class="truncate"><span class="text-muted-foreground">Tel:</span> {{ selectedCustomer.telefono || '—' }}</p>
             </div>
           </section>
 
-          <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
             <div class="mb-2 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h3 class="text-xs font-semibold text-primary">{{ isGenericPos ? 'Venta actual' : 'Detalle de factura' }}</h3>
-                <p class="text-[10px] text-slate-500">
+                <p class="text-[10px] text-muted-foreground">
                   Agrega productos desde el catálogo.
                 </p>
               </div>
@@ -180,20 +180,20 @@
                         (blur)="closeProductSearchSoon()"
                         (keyup.enter)="selectFirstProductSuggestion()"
                         placeholder="Buscar producto por nombre o código"
-                        class="min-h-[34px] w-full rounded-lg border border-slate-200 bg-white px-3 pr-9 text-[11px] outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                        class="min-h-[34px] w-full rounded-lg border border-border bg-card px-3 pr-9 text-[11px] outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" />
 
                       <button
                         *ngIf="productSearchTerm"
                         type="button"
                         (mousedown)="clearProductSearch()"
-                        class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+                        class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground/70 hover:bg-muted hover:text-foreground/80">
                         ✕
                       </button>
 
                       <div
                         *ngIf="isProductSearchOpen"
-                        class="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-                        <p class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                        class="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-xl border border-border bg-card p-1.5 shadow-xl">
+                        <p class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
                           {{ productSearchHelpText }}
                         </p>
 
@@ -203,22 +203,22 @@
                           (mousedown)="selectProductFromSearch(product)"
                           class="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg px-2 py-1.5 text-left transition hover:bg-primary/5">
                           <span class="min-w-0">
-                            <span class="mr-2 inline-flex h-8 w-8 overflow-hidden rounded-md bg-slate-100 align-middle">
+                            <span class="mr-2 inline-flex h-8 w-8 overflow-hidden rounded-md bg-muted align-middle">
                               <img *ngIf="product.image_url" [src]="product.image_url" [alt]="product.nombre" class="h-full w-full object-cover" />
-                              <span *ngIf="!product.image_url" class="m-auto text-[8px] text-slate-400">—</span>
+                              <span *ngIf="!product.image_url" class="m-auto text-[8px] text-muted-foreground/70">—</span>
                             </span>
-                            <span class="block truncate text-[11px] font-bold text-slate-900">{{ product.nombre }}</span>
-                            <span class="block truncate text-[10px] text-slate-500">
+                            <span class="block truncate text-[11px] font-bold text-foreground">{{ product.nombre }}</span>
+                            <span class="block truncate text-[10px] text-muted-foreground">
                               {{ product.codigo || 'Sin código' }}
                               <ng-container *ngIf="hasInventory(product)"> · Stock {{ getInventoryLabel(product) }}</ng-container>
                             </span>
                           </span>
 
                           <span class="flex flex-wrap items-center justify-end gap-1">
-                            <span class="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                            <span class="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold text-foreground/80">
                               {{ getProductPriceLabel(product) }}
                             </span>
-                            <span class="rounded-md bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
+                            <span class="rounded-md bg-muted/40 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
                               {{ getProductTaxLabel(product) }}
                             </span>
                             <span *ngIf="isOutOfStock(product)" class="badge badge-red">Agotado</span>
@@ -228,7 +228,7 @@
 
                         <div
                           *ngIf="productSearchTerm.trim() && filteredProductSuggestions.length === 0"
-                          class="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-2 py-3 text-center text-[11px] text-slate-500">
+                          class="rounded-lg border border-dashed border-border bg-muted/40 px-2 py-3 text-center text-[11px] text-muted-foreground">
                           No encontré productos con ese texto.
                         </div>
                       </div>
@@ -249,18 +249,18 @@
             <div *ngIf="cartItems.length > 0; else emptyCart" class="space-y-1.5">
               <div
                 *ngFor="let item of cartItems; let i = index; trackBy: trackByIndex"
-                class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 transition">
+                class="rounded-lg border border-border bg-muted/40 px-2.5 py-2 transition">
                 <div class="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
                   <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-1.5">
-                      <p class="truncate text-xs font-semibold leading-4 text-slate-900">
+                      <p class="truncate text-xs font-semibold leading-4 text-foreground">
                         {{ item.nombre || item.description }}
                       </p>
-                      <span class="rounded bg-white px-1.5 py-0.5 text-[9px] font-semibold text-slate-500">
+                      <span class="rounded bg-card px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
                         IVA {{ item.tax_value ?? (item.tax === 'IVA-15' ? 15 : 0) }}%
                       </span>
                     </div>
-                    <p class="truncate text-[10px] text-slate-500">
+                    <p class="truncate text-[10px] text-muted-foreground">
                       <span *ngIf="item.codigo">{{ item.codigo }}</span>
                       <span *ngIf="hasCartInventory(item)">{{ item.codigo ? ' · ' : '' }}Stock {{ getCartStockLabel(item) }}</span>
                     </p>
@@ -268,17 +268,17 @@
 
                   <div class="grid grid-cols-2 items-end gap-2 sm:grid-cols-[auto_auto_auto_auto]">
                     <div>
-                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-slate-400">Cant</p>
-                      <div class="inline-flex overflow-hidden rounded-md border border-slate-200 bg-white">
+                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-muted-foreground/70">Cant</p>
+                      <div class="inline-flex overflow-hidden rounded-md border border-border bg-card">
                         <button
                           type="button"
-                          class="h-7 w-7 text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          class="h-7 w-7 text-muted-foreground hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50"
                           (click)="decrementQty(i)">
                           -
                         </button>
                         <input
                           type="number"
-                          class="no-spinner h-7 w-12 border-x border-slate-200 text-center text-[11px]"
+                          class="no-spinner h-7 w-12 border-x border-border text-center text-[11px] bg-card text-foreground"
                           min="1"
                           step="1"
                           [ngModelOptions]="{standalone: true}"
@@ -286,7 +286,7 @@
                           (ngModelChange)="onCartQuantityChange(i)">
                         <button
                           type="button"
-                          class="h-7 w-7 text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          class="h-7 w-7 text-muted-foreground hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50"
                           [disabled]="!canIncreaseCartItem(i)"
                           (click)="incrementQty(i)">
                           +
@@ -295,10 +295,10 @@
                     </div>
 
                     <div>
-                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-slate-400">Precio</p>
+                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-muted-foreground/70">Precio</p>
                       <input
                         type="number"
-                        class="no-spinner h-7 w-20 rounded-md border-slate-200 bg-white text-center text-[11px]"
+                        class="no-spinner h-7 w-20 rounded-md border-border bg-card text-center text-[11px]"
                         min="0"
                         step="0.01"
                         [ngModelOptions]="{standalone: true}"
@@ -307,8 +307,8 @@
                     </div>
 
                     <div class="text-right">
-                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-slate-400">Total</p>
-                      <p class="h-7 rounded-md bg-white px-2 py-1 text-xs font-bold text-slate-900">
+                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-muted-foreground/70">Total</p>
+                      <p class="h-7 rounded-md bg-card px-2 py-1 text-xs font-bold text-foreground">
                         ${{ (item.total * (1 + ((item.tax_value ?? (item.tax === 'IVA-15' ? 15 : 0)) / 100))) | number:'1.2-2' }}
                       </p>
                     </div>
@@ -316,7 +316,7 @@
                     <button
                       type="button"
                       (click)="removeProductFromCart(i)"
-                      class="h-8 w-full self-end rounded-md border border-red-200 bg-white text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-7 sm:w-7"
+                      class="h-8 w-full self-end rounded-md border border-red-200 bg-card text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-7 sm:w-7"
                       title="Eliminar"
                       aria-label="Eliminar">
                       <fa-icon [icon]="['fas', 'trash']" class="text-[10px]"></fa-icon>
@@ -327,17 +327,17 @@
             </div>
 
             <ng-template #emptyCart>
-              <div class="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-[11px] text-slate-500">
+              <div class="rounded-lg border border-dashed border-border bg-muted/40 p-6 text-center text-[11px] text-muted-foreground">
                 No hay ítems en la factura.
               </div>
             </ng-template>
           </section>
 
-          <section *ngIf="canUseAdditionalFields" class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <section *ngIf="canUseAdditionalFields" class="rounded-xl border border-border bg-card p-3 shadow-sm">
             <div class="mb-2 flex items-center justify-between gap-3">
               <div>
                 <h3 class="text-xs font-semibold text-primary">Información adicional</h3>
-                <p class="text-[10px] text-slate-500">Datos que se incluirán en la factura electrónica.</p>
+                <p class="text-[10px] text-muted-foreground">Datos que se incluirán en la factura electrónica.</p>
               </div>
               <app-button type="button" tone="info" impact="bold" size="small" shape="rounded" (buttonClick)="addAdditionalField()">
                 Agregar
@@ -348,16 +348,16 @@
               <div
                 *ngFor="let field of additionalFields.controls; let i = index"
                 [formGroupName]="i"
-                class="grid grid-cols-1 items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 sm:grid-cols-[1fr_1fr_auto]">
+                class="grid grid-cols-1 items-start gap-2 rounded-lg border border-border bg-muted/40 p-2 sm:grid-cols-[1fr_1fr_auto]">
                 <div>
-                  <label class="mb-0.5 block text-[10px] font-semibold text-slate-500">Nombre</label>
+                  <label class="mb-0.5 block text-[10px] font-semibold text-muted-foreground">Nombre</label>
                   <input type="text" class="input !h-8 !text-[11px]" formControlName="field_name" maxlength="300" placeholder="Ej. correo" />
                   <small *ngIf="field.get('field_name')?.invalid && field.get('field_name')?.touched" class="text-[10px] text-red-500">
                     Ingresa el nombre.
                   </small>
                 </div>
                 <div>
-                  <label class="mb-0.5 block text-[10px] font-semibold text-slate-500">Valor</label>
+                  <label class="mb-0.5 block text-[10px] font-semibold text-muted-foreground">Valor</label>
                   <input type="text" class="input !h-8 !text-[11px]" formControlName="field_value" maxlength="300" placeholder="Valor del campo" />
                   <small *ngIf="field.get('field_value')?.invalid && field.get('field_value')?.touched" class="text-[10px] text-red-500">
                     Ingresa el valor.
@@ -365,7 +365,7 @@
                 </div>
                 <button
                   type="button"
-                  class="mt-4 h-8 rounded-md border border-red-200 bg-white px-2 text-red-500 transition hover:bg-red-50 sm:mt-[18px]"
+                  class="mt-4 h-8 rounded-md border border-red-200 bg-card px-2 text-red-500 transition hover:bg-red-50 sm:mt-[18px]"
                   (click)="removeAdditionalField(i)"
                   [attr.aria-label]="'Eliminar campo adicional ' + (i + 1)"
                   title="Eliminar campo">
@@ -374,45 +374,45 @@
               </div>
             </div>
 
-            <p *ngIf="additionalFields.length === 0" class="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[11px] text-slate-500">
+            <p *ngIf="additionalFields.length === 0" class="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground">
               No hay campos adicionales. El sistema puede agregar campos configurados por el administrador al emitir.
             </p>
           </section>
         </main>
 
         <aside class="space-y-3 xl:sticky xl:top-3 xl:self-start">
-          <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
             <div class="flex items-start justify-between gap-3">
               <div>
                 <p class="text-[10px] font-semibold uppercase tracking-wide text-primary">Resumen</p>
-                <p class="mt-1 text-2xl font-bold leading-none text-slate-900">${{ total | number:'1.2-2' }}</p>
+                <p class="mt-1 text-2xl font-bold leading-none text-foreground">${{ total | number:'1.2-2' }}</p>
               </div>
-              <span class="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-semibold text-slate-600">
+              <span class="rounded-md border border-border bg-muted/40 px-2 py-1 text-[10px] font-semibold text-muted-foreground">
                 {{ cartItems.length }} ítems
               </span>
             </div>
 
-            <div class="mt-3 space-y-1 rounded-lg border border-slate-200 bg-slate-50 p-2 text-[11px]">
+            <div class="mt-3 space-y-1 rounded-lg border border-border bg-muted/40 p-2 text-[11px]">
               <div class="flex items-center justify-between">
-                <span class="text-slate-500">Subtotal</span>
-                <span class="font-semibold text-slate-900">${{ subtotal | number:'1.2-2' }}</span>
+                <span class="text-muted-foreground">Subtotal</span>
+                <span class="font-semibold text-foreground">${{ subtotal | number:'1.2-2' }}</span>
               </div>
               <div class="flex items-center justify-between">
-                <span class="text-slate-500">IVA</span>
-                <span class="font-semibold text-slate-900">${{ iva | number:'1.2-2' }}</span>
+                <span class="text-muted-foreground">IVA</span>
+                <span class="font-semibold text-foreground">${{ iva | number:'1.2-2' }}</span>
               </div>
-              <div class="flex items-center justify-between border-t border-slate-200 pt-1.5">
-                <span class="font-semibold text-slate-500">Total</span>
+              <div class="flex items-center justify-between border-t border-border pt-1.5">
+                <span class="font-semibold text-muted-foreground">Total</span>
                 <span class="font-bold text-primary">${{ total | number:'1.2-2' }}</span>
               </div>
             </div>
           </section>
 
-          <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
             <div class="mb-2 flex items-start justify-between gap-2">
               <div>
                 <label class="block text-[10px] font-semibold uppercase tracking-wide text-primary">Métodos de pago</label>
-                <p class="mt-0.5 text-[11px] text-slate-500">Puedes dividir el cobro; no se permite repetir un método.</p>
+                <p class="mt-0.5 text-[11px] text-muted-foreground">Puedes dividir el cobro; no se permite repetir un método.</p>
               </div>
               <button type="button" class="rounded-md border border-primary/20 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/5"
                 (click)="addPaymentRow()">+ Agregar</button>
@@ -429,7 +429,7 @@
               </div>
             </div>
             <div class="mt-2 flex justify-between text-[11px]">
-              <span class="text-slate-500">Pagado: <b class="text-slate-800">${{ paymentRowsTotal | number:'1.2-2' }}</b></span>
+              <span class="text-muted-foreground">Pagado: <b class="text-foreground">${{ paymentRowsTotal | number:'1.2-2' }}</b></span>
               <span [class.text-emerald-700]="paymentRemaining === 0" [class.text-amber-700]="paymentRemaining !== 0">Restante: <b>${{ paymentRemaining | number:'1.2-2' }}</b></span>
             </div>
           </section>
@@ -450,11 +450,11 @@
   </form>
 </div>
 
-<div class="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white p-2 shadow-sm md:hidden" *ngIf="cartItems.length > 0">
+<div class="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card p-2 shadow-sm md:hidden" *ngIf="cartItems.length > 0">
   <div class="flex items-center justify-between gap-2">
     <div>
-      <p class="text-[10px] text-slate-500">Total</p>
-      <p class="text-base font-bold text-slate-900">${{ total | number:'1.2-2' }}</p>
+      <p class="text-[10px] text-muted-foreground">Total</p>
+      <p class="text-base font-bold text-foreground">${{ total | number:'1.2-2' }}</p>
     </div>
     <button
       type="button"
@@ -467,13 +467,13 @@
 </div>
 
 <div *ngIf="showCustomerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-  <div class="relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-4 text-xs shadow-xl">
-    <button class="absolute right-4 top-3 text-xl font-light text-gray-400 hover:text-gray-700" (click)="closeCustomerModal()" aria-label="Cerrar">×</button>
-    <h3 class="mb-4 text-sm font-semibold text-gray-800">Nuevo cliente</h3>
+  <div class="relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-xl bg-card p-4 text-xs shadow-xl">
+    <button class="absolute right-4 top-3 text-xl font-light text-muted-foreground/70 hover:text-foreground/80" (click)="closeCustomerModal()" aria-label="Cerrar">×</button>
+    <h3 class="mb-4 text-sm font-semibold text-foreground">Nuevo cliente</h3>
 
     <form [formGroup]="customerForm" (ngSubmit)="saveCustomer()" class="space-y-3">
       <div>
-        <label class="block text-[11px] font-semibold text-gray-700">Tipo de identificación</label>
+        <label class="block text-[11px] font-semibold text-foreground/80">Tipo de identificación</label>
         <select class="select !mt-1 !h-8 !text-[11px]" formControlName="tipo_identificacion">
           <option *ngFor="let item of identificationTypes" [value]="item.value">{{ item.label }}</option>
         </select>
@@ -484,12 +484,12 @@
       </div>
 
       <div>
-        <label class="block text-[11px] font-semibold text-gray-700">Identificación</label>
+        <label class="block text-[11px] font-semibold text-foreground/80">Identificación</label>
         <input
           [attr.maxlength]="getMaxLength()"
           type="text"
           formControlName="num_identificacion"
-          class="mt-1 h-8 w-full rounded-md border border-slate-200 px-2.5 text-[11px] text-gray-900"
+          class="mt-1 h-8 w-full rounded-md border border-border px-2.5 text-[11px] text-foreground bg-card text-foreground"
           inputmode="numeric"
           autocomplete="off" />
         <div *ngIf="customerForm.get('num_identificacion')?.invalid && submittedCustomerForm" class="mt-1 text-[11px] text-red-500">
@@ -500,11 +500,11 @@
       </div>
 
       <div>
-        <label class="block text-[11px] font-semibold text-gray-700">Nombre / Razón social</label>
+        <label class="block text-[11px] font-semibold text-foreground/80">Nombre / Razón social</label>
         <input
           type="text"
           formControlName="nombre"
-          class="mt-1 h-8 w-full rounded-md border border-slate-200 px-2.5 text-[11px] text-gray-900"
+          class="mt-1 h-8 w-full rounded-md border border-border px-2.5 text-[11px] text-foreground bg-card text-foreground"
           oninput="this.value = this.value.toUpperCase()" />
         <div *ngIf="customerForm.get('nombre')?.invalid && submittedCustomerForm" class="mt-1 text-[11px] text-red-500">
           Campo requerido.
@@ -512,8 +512,8 @@
       </div>
 
       <div>
-        <label class="block text-[11px] font-semibold text-gray-700">Email</label>
-        <input type="email" formControlName="correo" class="mt-1 h-8 w-full rounded-md border border-slate-200 px-2.5 text-[11px] text-gray-900" />
+        <label class="block text-[11px] font-semibold text-foreground/80">Email</label>
+        <input type="email" formControlName="correo" class="mt-1 h-8 w-full rounded-md border border-border px-2.5 text-[11px] text-foreground bg-card text-foreground" />
         <div *ngIf="customerForm.get('correo')?.invalid && submittedCustomerForm" class="mt-1 text-[11px] text-red-500">
           Email inválido.
         </div>
@@ -521,15 +521,15 @@
 
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <label class="block text-[11px] font-semibold text-gray-700">Teléfono</label>
-          <input maxlength="10" type="text" formControlName="telefono" class="mt-1 h-8 w-full rounded-md border border-slate-200 px-2.5 text-[11px] text-gray-900" />
+          <label class="block text-[11px] font-semibold text-foreground/80">Teléfono</label>
+          <input maxlength="10" type="text" formControlName="telefono" class="mt-1 h-8 w-full rounded-md border border-border px-2.5 text-[11px] text-foreground bg-card text-foreground" />
           <div *ngIf="customerForm.get('telefono')?.invalid && submittedCustomerForm" class="mt-1 text-[11px] text-red-500">
             Teléfono inválido.
           </div>
         </div>
         <div>
-          <label class="block text-[11px] font-semibold text-gray-700">Dirección</label>
-          <input type="text" formControlName="direccion" class="mt-1 h-8 w-full rounded-md border border-slate-200 px-2.5 text-[11px] text-gray-900" />
+          <label class="block text-[11px] font-semibold text-foreground/80">Dirección</label>
+          <input type="text" formControlName="direccion" class="mt-1 h-8 w-full rounded-md border border-border px-2.5 text-[11px] text-foreground bg-card text-foreground" />
           <div *ngIf="customerForm.get('direccion')?.invalid && submittedCustomerForm" class="mt-1 text-[11px] text-red-500">
             Dirección inválida.
           </div>

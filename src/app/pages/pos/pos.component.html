@@ -10,7 +10,7 @@
                     <div class="mb-1 flex items-center justify-between gap-2">
                         <span class="font-semibold text-primary">Cliente</span>
                         <button type="button" (click)="showCustomerModal = true"
-                            class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+                            class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-muted-foreground transition hover:bg-muted/40"
                             title="Nuevo cliente" aria-label="Nuevo cliente">
                             <fa-icon icon="user-plus"></fa-icon>
                         </button>
@@ -21,7 +21,7 @@
                         </span>
                         <input type="text" maxlength="13" appOnlyNumbers [(ngModel)]="identificationCustomer"
                             placeholder="Cédula o RUC"
-                            class="h-9 min-w-[130px] flex-1 rounded-md border border-slate-200 px-2.5 text-xs outline-none focus:border-primary md:max-w-[220px]"
+                            class="h-9 min-w-[130px] flex-1 rounded-md border border-border px-2.5 text-xs outline-none focus:border-primary md:max-w-[220px] bg-card text-foreground"
                             [disabled]="!!customer" aria-label="Número de identificación del cliente" />
                         <button type="button" (click)="findByIdentificationCustomer()"
                             class="inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary text-white transition hover:bg-primary/90"
@@ -46,7 +46,7 @@
                     <div *ngIf="roleName==='Mesero'" class="space-y-2">
                         <h2 class="text-lg sm:text-xl font-semibold text-primary">Toma de pedido (Mesero)</h2>
                         <input type="text" [(ngModel)]="alias" oninput="this.value = this.value.toUpperCase()" maxlength="20"
-                            class="w-full border rounded px-3 py-2 text-sm"
+                            class="w-full border rounded px-3 py-2 text-sm bg-card text-foreground"
                             placeholder="Alias / nombre para la mesa o entrega" />
                     </div>
 
@@ -59,10 +59,10 @@
                     <div class="flex items-stretch gap-2">
                         <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()"
                             placeholder="Buscar por nombre o descripción…"
-                            class="flex-1 min-w-0 rounded px-3 sm:px-4 py-2 text-sm" aria-label="Buscar productos" />
+                            class="flex-1 min-w-0 rounded px-3 sm:px-4 py-2 text-sm bg-card text-foreground" aria-label="Buscar productos" />
 
                         <button (click)="searchTerm=''; applyFilters()"
-                            class="bg-gray-200 text-gray-800 text-sm px-3 py-2 rounded hover:bg-gray-300 transition"
+                            class="bg-muted text-foreground text-sm px-3 py-2 rounded hover:bg-gray-300 transition"
                             title="Limpiar búsqueda" aria-label="Limpiar búsqueda">
                             Limpiar
                         </button>
@@ -90,9 +90,9 @@
                   'hover:bg-muted': canAddProduct(product),
                   'border-red-500 bg-red-50 opacity-70 pointer-events-none': !canAddProduct(product)
                 }">
-                            <div class="mb-2 flex h-[82px] w-full items-center justify-center overflow-hidden rounded-md bg-slate-100">
+                            <div class="mb-2 flex h-[82px] w-full items-center justify-center overflow-hidden rounded-md bg-muted">
                                 <img *ngIf="product.image_url" [src]="product.image_url" [alt]="product.nombre" class="h-full w-full object-cover" />
-                                <span *ngIf="!product.image_url" class="text-[10px] text-slate-400">Sin imagen</span>
+                                <span *ngIf="!product.image_url" class="text-[10px] text-muted-foreground/70">Sin imagen</span>
                             </div>
                             <h3 class="font-semibold text-foreground leading-snug">
                                 {{ product.nombre }}
@@ -105,10 +105,10 @@
                             <p *ngIf="!isOutOfStock(product) && isLowStock(product)" class="text-amber-600 text-[10px] italic mb-1">
                                 (Bajo stock)
                             </p>
-                            <p *ngIf="hasInventory(product)" class="text-slate-500 text-[10px] italic mb-1">
+                            <p *ngIf="hasInventory(product)" class="text-muted-foreground text-[10px] italic mb-1">
                                 (Stock {{ getInventoryLabel(product) }})
                             </p>
-                            <p *ngIf="hasInventory(product) && getCartQuantityForProduct(product)" class="text-slate-500 text-[10px] italic mb-1">
+                            <p *ngIf="hasInventory(product) && getCartQuantityForProduct(product)" class="text-muted-foreground text-[10px] italic mb-1">
                                 (En venta {{ getCartQuantityForProduct(product) }})
                             </p>
 
@@ -125,7 +125,7 @@
                         </div>
 
                         <tr *ngIf="filteredProductList.length === 0">
-                            <td colspan="6" class="text-center py-6 text-gray-500 italic">
+                            <td colspan="6" class="text-center py-6 text-muted-foreground italic">
                                 No hay ítems para mostrar.
                             </td>
                         </tr>
@@ -138,7 +138,7 @@
 
                 <div *ngIf="roleName!=='Mesero' && (currentFiscalLocation || posTerminalBlockMessage)"
                     class="mb-2 rounded-lg border px-2.5 py-2 text-[10px]"
-                    [ngClass]="posTerminalBlockMessage ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-slate-50 text-slate-600'">
+                    [ngClass]="posTerminalBlockMessage ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-border bg-muted/40 text-muted-foreground'">
                     <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <span class="font-semibold uppercase tracking-wide text-primary">Ubicación de emisión</span>
                         <span *ngIf="currentFiscalLocation" class="rounded-md bg-primary/10 px-1.5 py-0.5 font-semibold text-primary">{{ fiscalLocationLabel(currentFiscalLocation) }}</span>
@@ -153,22 +153,22 @@
 
                 <!-- Tipo de Orden (visible para todos) -->
                 <div class="mt-2" *ngIf="permissions.canSeeTypeOrder">
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">Tipo de orden</label>
+                    <label class="block text-xs font-semibold text-foreground/80 mb-1">Tipo de orden</label>
                     <div class="inline-flex rounded-md border overflow-hidden w-full sm:w-auto">
                         <button type="button" class="px-3 py-2 text-[13px] sm:text-xs flex-1 sm:flex-none min-h-[44px]"
-                            [ngClass]="orderType === 'Servirse' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                            [ngClass]="orderType === 'Servirse' ? 'bg-primary text-white' : 'bg-card text-foreground/80 hover:bg-muted/40'"
                             (click)="setOrderType('Servirse')">
                             🍽️ Servirse
                         </button>
                         <button type="button"
                             class="px-3 py-2 text-[13px] sm:text-xs border-l flex-1 sm:flex-none min-h-[44px]"
-                            [ngClass]="orderType === 'Llevar' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                            [ngClass]="orderType === 'Llevar' ? 'bg-primary text-white' : 'bg-card text-foreground/80 hover:bg-muted/40'"
                             (click)="setOrderType('Llevar')">
                             🥡 Llevar
                         </button>
                         <button type="button"
                             class="px-3 py-2 text-[13px] sm:text-xs border-l flex-1 sm:flex-none min-h-[44px]"
-                            [ngClass]="orderType === 'Domicilio' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                            [ngClass]="orderType === 'Domicilio' ? 'bg-primary text-white' : 'bg-card text-foreground/80 hover:bg-muted/40'"
                             (click)="setOrderType('Domicilio')">
                             🛵 Domicilio
                         </button>
@@ -177,10 +177,10 @@
                     <!-- Campos condicionales para Domicilio -->
                     <div *ngIf="orderType === 'Domicilio'" class="mt-2 space-y-2">
                         <input type="text" [(ngModel)]="deliveryAddress" maxlength="120"
-                            class="w-full border rounded px-3 py-2 text-[13px] sm:text-xs"
+                            class="w-full border rounded px-3 py-2 text-[13px] sm:text-xs bg-card text-foreground"
                             placeholder="Dirección de entrega" />
                         <input type="text" [(ngModel)]="deliveryPhone" maxlength="10"
-                            class="w-full border rounded px-3 py-2 text-[13px] sm:text-xs"
+                            class="w-full border rounded px-3 py-2 text-[13px] sm:text-xs bg-card text-foreground"
                             placeholder="Teléfono de contacto" />
                     </div>
                 </div>
@@ -200,13 +200,13 @@
 
                             <div class="flex items-center gap-2">
                                 <button (click)="decrease(item)"
-                                    class="w-8 h-8 rounded-full border text-foreground hover:bg-gray-100 flex items-center justify-center"
+                                    class="w-8 h-8 rounded-full border text-foreground hover:bg-muted flex items-center justify-center"
                                     title="Disminuir cantidad" aria-label="Disminuir cantidad">
                                     <fa-icon icon="minus"></fa-icon>
                                 </button>
                                 <span class="w-6 text-center font-semibold">{{ item.quantity }}</span>
                                 <button (click)="increase(item)" [disabled]="!canIncreaseItem(item)"
-                                    class="w-8 h-8 rounded-full border text-foreground hover:bg-gray-100 flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-40"
+                                    class="w-8 h-8 rounded-full border text-foreground hover:bg-muted flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-40"
                                     title="Aumentar cantidad" aria-label="Aumentar cantidad">
                                     <fa-icon icon="plus"></fa-icon>
                                 </button>
@@ -259,7 +259,7 @@
 <div *ngIf="showCustomerModal && roleName!=='Mesero' && permissions.canSelectCustomer"
     class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-3" role="dialog" aria-modal="true">
     <div
-        class="bg-white w-full max-w-md rounded shadow-lg p-4 text-[13px] sm:text-xs relative max-h-[90dvh] overflow-y-auto">
+        class="bg-card w-full max-w-md rounded shadow-lg p-4 text-[13px] sm:text-xs relative max-h-[90dvh] overflow-y-auto">
         <button class="absolute top-2 right-3 text-lg" (click)="showCustomerModal = false"
             aria-label="Cerrar">×</button>
         <h3 class="text-base font-semibold mb-2">Nuevo Cliente</h3>
@@ -268,7 +268,7 @@
             <!-- Tipo -->
             <div>
                 <label class="block text-sm font-medium">Tipo de Identificación</label>
-                <select formControlName="tipo_identificacion" class="w-full border rounded px-3 py-2 text-sm">
+                <select formControlName="tipo_identificacion" class="w-full border rounded px-3 py-2 text-sm bg-card text-foreground">
                     <option *ngFor="let item of identificationTypes" [value]="item.value">{{ item.label }}</option>
                     
                 </select>
@@ -281,7 +281,7 @@
             <div>
                 <label class="block text-sm font-medium">Identificación</label>
                 <input [attr.maxlength]="getMaxLength()" type="text" formControlName="num_identificacion"
-                    class="w-full border rounded px-3 py-2 text-sm" />
+                    class="w-full border rounded px-3 py-2 text-sm bg-card text-foreground" />
                 <div *ngIf="f['num_identificacion'].invalid && submitted" class="text-red-500 text-sm">Campo requerido.
                 </div>
 
@@ -297,7 +297,7 @@
             <!-- Nombre / Razón Social -->
             <div>
                 <label class="block text-sm font-medium">Nombre / Razón Social</label>
-                <input type="text" formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm"
+                <input type="text" formControlName="nombre" class="w-full border rounded px-3 py-2 text-sm bg-card text-foreground"
                     oninput="this.value = this.value.toUpperCase()" />
                 <div *ngIf="f['nombre'].invalid && submitted" class="text-red-500 text-sm">Campo requerido.</div>
             </div>
@@ -305,7 +305,7 @@
             <!-- Email -->
             <div>
                 <label class="block text-sm font-medium">Email</label>
-                <input type="email" formControlName="correo" class="w-full border rounded px-3 py-2 text-sm" />
+                <input type="email" formControlName="correo" class="w-full border rounded px-3 py-2 text-sm bg-card text-foreground" />
                 <div *ngIf="f['correo'].invalid && submitted" class="text-red-500 text-sm">Email inválido.</div>
             </div>
 
@@ -313,14 +313,14 @@
             <div>
                 <label class="block text-sm font-medium">Teléfono</label>
                 <input maxlength="10" type="text" formControlName="telefono"
-                    class="w-full border rounded px-3 py-2 text-sm" />
+                    class="w-full border rounded px-3 py-2 text-sm bg-card text-foreground" />
                 <div *ngIf="f['telefono'].invalid && submitted" class="text-red-500 text-sm">Teléfono inválido.</div>
             </div>
 
             <!-- Dirección -->
             <div>
                 <label class="block text-sm font-medium">Dirección</label>
-                <input type="text" formControlName="direccion" class="w-full border rounded px-3 py-2 text-sm" />
+                <input type="text" formControlName="direccion" class="w-full border rounded px-3 py-2 text-sm bg-card text-foreground" />
                 <div *ngIf="f['direccion'].invalid && submitted" class="text-red-500 text-sm">Dirección inválida.</div>
             </div>
 
@@ -342,18 +342,18 @@
 
     <!-- contenedor -->
     <div class="relative mx-auto w-full h-dvh md:h-auto md:max-h-[90dvh] max-w-5xl
-              md:rounded-lg bg-white shadow-2xl
+              md:rounded-lg bg-card shadow-2xl
               md:top-1/2 md:-translate-y-1/2
               md:px-6 md:py-6
               flex flex-col
               p-safe">
         <!-- Header -->
-        <div class="sticky top-0 z-10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b">
+        <div class="sticky top-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 border-b">
             <div class="px-4 py-3 md:px-0 md:py-0 md:border-none flex items-center justify-center">
-                <h2 class="text-lg md:text-2xl font-bold text-gray-800">Finalizar Pedido</h2>
+                <h2 class="text-lg md:text-2xl font-bold text-foreground">Finalizar Pedido</h2>
             </div>
             <button
-                class="absolute right-3 top-2 md:right-4 md:top-4 text-2xl md:text-3xl font-light text-gray-500 hover:text-gray-700"
+                class="absolute right-3 top-2 md:right-4 md:top-4 text-2xl md:text-3xl font-light text-muted-foreground hover:text-foreground/80"
                 (click)="showPaymentModal = false" [attr.aria-label]="'Cerrar modal'">
                 ×
             </button>
@@ -367,14 +367,14 @@
                     <div class="bg-blue-50 rounded-lg p-3 md:p-4 shadow-sm text-sm border border-blue-200">
                         <h4 class="font-bold text-blue-800">👤 {{ customer?.nombre }}</h4>
                         <div *ngIf="customer?.nombre !== 'Consumidor Final'" class="mt-1 space-y-0.5">
-                            <p class="font-medium text-gray-800">{{ customer?.num_identificacion }}</p>
+                            <p class="font-medium text-foreground">{{ customer?.num_identificacion }}</p>
                             <p class="text-blue-600 text-xs">{{ customer?.telefono }}</p>
                             <p class="text-blue-600 text-xs break-all">{{ customer?.correo }}</p>
                         </div>
                     </div>
 
                     <div class="mt-2 text-xs">
-                        <span class="text-gray-600">Tipo de orden:</span>
+                        <span class="text-muted-foreground">Tipo de orden:</span>
                         <span class="font-semibold">{{ orderType }}</span>
                         <div *ngIf="orderType === 'Domicilio' && (deliveryAddress || deliveryPhone)"
                             class="mt-1 space-y-0.5 text-blue-700">
@@ -383,30 +383,30 @@
                         </div>
                     </div>
 
-                    <div class="bg-gray-50 rounded-md p-3 md:p-4 border max-h-[55vh] md:max-h-[60vh] overflow-y-auto">
-                        <h3 class="text-base md:text-lg font-semibold text-gray-700 mb-2">🧾 Detalle del Pedido</h3>
+                    <div class="bg-muted/40 rounded-md p-3 md:p-4 border max-h-[55vh] md:max-h-[60vh] overflow-y-auto">
+                        <h3 class="text-base md:text-lg font-semibold text-foreground/80 mb-2">🧾 Detalle del Pedido</h3>
 
                         <div *ngIf="cart.length > 0; else noItems" class="space-y-3 text-xs">
                             <div *ngFor="let item of cart;"
-                                class="flex justify-between items-center border-b border-gray-200 pb-2">
+                                class="flex justify-between items-center border-b border-border pb-2">
                                 <div class="min-w-0">
-                                    <p class="font-medium text-gray-800 truncate">
+                                    <p class="font-medium text-foreground truncate">
                                         {{ item.nombre || item.name }}
                                         {{ (item.descripcion || item.description) ? '(' + (item.descripcion ||
                                         item.description) + ')' : '' }}
                                     </p>
-                                    <p class="text-gray-600 text-[11px]">x{{ item.quantity }} • ${{ item.price | number:
+                                    <p class="text-muted-foreground text-[11px]">x{{ item.quantity }} • ${{ item.price | number:
                                         '1.2-2' }}</p>
                                 </div>
-                                <p class="font-semibold text-gray-800">${{ item.total | number: '1.2-2' }}</p>
+                                <p class="font-semibold text-foreground">${{ item.total | number: '1.2-2' }}</p>
                             </div>
                         </div>
 
                         <ng-template #noItems>
-                            <p class="text-gray-500 text-sm italic">No hay productos en el carrito.</p>
+                            <p class="text-muted-foreground text-sm italic">No hay productos en el carrito.</p>
                         </ng-template>
 
-                        <div class="pt-4 text-sm space-y-2 text-gray-700">
+                        <div class="pt-4 text-sm space-y-2 text-foreground/80">
                             <div class="flex justify-between">
                                 <span>Subtotal:</span><span class="font-medium">${{ subtotal | number:'1.2-2' }}</span>
                             </div>
@@ -422,18 +422,18 @@
 
                 <!-- Columna derecha -->
                 <div class="space-y-4 md:space-y-6 flex flex-col">
-                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <div class="rounded-xl border border-border bg-muted/40 p-3">
                         <div class="mb-2 flex items-center justify-between gap-2">
-                            <div><p class="text-sm font-bold text-slate-800">Métodos de pago</p><p class="text-[11px] text-slate-500">Combina pagos sin repetir el método.</p></div>
-                            <button type="button" (click)="addPaymentRow()" class="rounded-md border border-primary/20 bg-white px-2 py-1 text-xs font-semibold text-primary">+ Agregar</button>
+                            <div><p class="text-sm font-bold text-foreground">Métodos de pago</p><p class="text-[11px] text-muted-foreground">Combina pagos sin repetir el método.</p></div>
+                            <button type="button" (click)="addPaymentRow()" class="rounded-md border border-primary/20 bg-card px-2 py-1 text-xs font-semibold text-primary">+ Agregar</button>
                         </div>
                         <div class="space-y-2">
                             <div *ngFor="let payment of paymentRows; let index = index" class="grid grid-cols-[1fr_88px_30px] gap-1.5">
-                                <select [(ngModel)]="payment.method" (change)="onPaymentRowMethodChange(index)" class="min-w-0 border border-gray-300 rounded-md px-2 py-2 text-xs">
+                                <select [(ngModel)]="payment.method" (change)="onPaymentRowMethodChange(index)" class="min-w-0 border border-border rounded-md px-2 py-2 text-xs bg-card text-foreground">
                                     <option value="">Método</option>
                                     <option [value]="item.name || item.codigo" *ngFor="let item of payments">{{ item.description || item.nombre || item.name }}</option>
                                 </select>
-                                <input type="number" min="0.01" step="0.01" [(ngModel)]="payment.amount" (input)="calcularCambio()" class="border border-gray-300 rounded-md px-2 py-2 text-right text-xs" placeholder="0.00" />
+                                <input type="number" min="0.01" step="0.01" [(ngModel)]="payment.amount" (input)="calcularCambio()" class="border border-border rounded-md px-2 py-2 text-right text-xs bg-card text-foreground" placeholder="0.00" />
                                 <button type="button" (click)="removePaymentRow(index)" [disabled]="paymentRows.length === 1" class="rounded-md text-lg text-red-500 disabled:opacity-30">×</button>
                             </div>
                         </div>
@@ -441,7 +441,7 @@
                     </div>
 
                     <div class="text-center">
-                        <p class="text-base md:text-lg text-gray-600">Total a Pagar</p>
+                        <p class="text-base md:text-lg text-muted-foreground">Total a Pagar</p>
                         <p class="text-4xl md:text-5xl font-bold text-emerald-500">${{ total | number: '1.2-2' }}</p>
                     </div>
 
@@ -451,11 +451,11 @@
                             
                             <input id="amount-received" type="number" [(ngModel)]="amountReceived"
                                 (input)="calcularCambio()" inputmode="decimal"
-                                class="w-full border border-gray-300 rounded-md px-3 md:px-4 py-3 text-xl font-semibold text-center text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
+                                class="w-full border border-border rounded-md px-3 md:px-4 py-3 text-xl font-semibold text-center text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground"
                                 placeholder="Monto recibido (opcional)" min="0" step="0.01" />
                         </div>
                         <div class="text-center">
-                            <p class="text-base md:text-lg text-gray-600">Cambio a entregar</p>
+                            <p class="text-base md:text-lg text-muted-foreground">Cambio a entregar</p>
                             <p class="text-4xl md:text-5xl font-bold" [class.text-red-500]="change < 0"
                                 [class.text-emerald-500]="change >= 0">
                                 ${{ change | number:'1.2-2' }}
@@ -466,7 +466,7 @@
                     <div>
                         <label for="alias-input" class="sr-only">Alias para la entrega</label>
                         <input id="alias-input" type="text" oninput="this.value = this.value.toUpperCase()" [(ngModel)]="alias" maxlength="20"
-                            class="w-full border border-gray-300 rounded-md px-3 md:px-4 py-3 text-xl font-semibold text-center text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
+                            class="w-full border border-border rounded-md px-3 md:px-4 py-3 text-xl font-semibold text-center text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground"
                             placeholder="Nombre/alias para la entrega (Opcional)" />
                     </div>
                 </div>
@@ -475,7 +475,7 @@
 
         <!-- Footer -->
         <footer class="w-full">
-            <div class="sticky bottom-0 z-10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-t">
+            <div class="sticky bottom-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 border-t">
                 <div class="px-4 py-3 md:px-0 md:py-4 flex flex-col md:flex-row md:justify-end gap-2 md:gap-4">
                     <app-button type="button" (click)="confirmarPago('Nota Venta')" full impact="bold" tone="warning"
                         shape="rounded" size="large">
@@ -499,14 +499,14 @@
 <div *ngIf="showPrintModal"
      class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-3"
      role="dialog" aria-modal="true">
-  <div class="bg-white w-full max-w-md rounded shadow-lg p-5 sm:p-6 text-center relative"
+  <div class="bg-card w-full max-w-md rounded shadow-lg p-5 sm:p-6 text-center relative"
        (click)="$event.stopPropagation()">
     <button class="absolute top-2 right-3 text-lg" (click)="closePrintModal()" aria-label="Cerrar">×</button>
 
     <h3 class="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
       {{ roleName==='Mesero' ? '¿Enviar a cocina?' : '¿Qué deseas imprimir?' }}
     </h3>
-    <p class="text-gray-600 text-sm mb-5 sm:mb-6">
+    <p class="text-muted-foreground text-sm mb-5 sm:mb-6">
       {{ roleName==='Mesero' ? 'Selecciona cómo enviar la comanda.' : 'Selecciona una opción para continuar.' }}
     </p>
 
@@ -527,7 +527,7 @@
     </div>
 
     <div class="pt-5 sm:pt-6">
-      <button class="text-gray-500 text-sm underline min-h[40px]" (click)="closePrintModal()">Cancelar</button>
+      <button class="text-muted-foreground text-sm underline min-h[40px]" (click)="closePrintModal()">Cancelar</button>
     </div>
   </div>
 </div>

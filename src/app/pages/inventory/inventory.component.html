@@ -1,9 +1,9 @@
 <div *ngIf="inventoryEnabled; else inventoryUnavailable" class="app-container space-y-3">
-  <section class="rounded-xl border border-border bg-white px-3 py-2 shadow-sm">
+  <section class="rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
     <div class="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
-          <h2 class="text-base font-bold leading-tight text-slate-900">Inventario</h2>
+          <h2 class="text-base font-bold leading-tight text-foreground">Inventario</h2>
           <span class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
             {{ controlledProductsCount }} productos
           </span>
@@ -53,9 +53,9 @@
     </article>
   </section>
 
-  <section class="rounded-xl border border-border bg-white p-2 shadow-sm">
+  <section class="rounded-xl border border-border bg-card p-2 shadow-sm">
     <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-      <div class="flex rounded-lg bg-slate-100 p-1">
+      <div class="flex rounded-lg bg-muted p-1">
         <button
           *ngFor="let tab of inventoryTabs"
           type="button"
@@ -82,13 +82,13 @@
         <div class="flex flex-wrap items-center gap-1.5">
           <button type="button"
             class="rounded-full border px-2.5 py-1 text-[11px] font-semibold transition"
-            [ngClass]="onlyActive ? 'border-primary bg-primary/10 text-primary' : 'border-slate-200 bg-white text-slate-600'"
+            [ngClass]="onlyActive ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card text-muted-foreground'"
             (click)="onlyActive = !onlyActive; aplicarFiltrosInventario()">
             Activos
           </button>
           <button type="button"
             class="rounded-full border px-2.5 py-1 text-[11px] font-semibold transition"
-            [ngClass]="onlyLowStock ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-slate-200 bg-white text-slate-600'"
+            [ngClass]="onlyLowStock ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-border bg-card text-muted-foreground'"
             (click)="onlyLowStock = !onlyLowStock; aplicarFiltrosInventario()">
             Bajo stock
           </button>
@@ -125,7 +125,7 @@
             <tr *ngFor="let product of inventoryProducts; trackBy: trackByProduct" class="app-tr">
               <td class="app-td py-2">
                 <div class="max-w-[360px] leading-tight">
-                  <p class="truncate font-semibold text-slate-900">{{ product.nombre }}</p>
+                  <p class="truncate font-semibold text-foreground">{{ product.nombre }}</p>
                   <p *ngIf="describeVariantContext(product) as context; else plainDescription" class="truncate text-[10px] text-primary">
                     Variante de {{ context }}
                   </p>
@@ -140,7 +140,7 @@
                   {{ canSell(product) ? 'Disponible' : 'Agotado' }}
                 </span>
               </td>
-              <td class="app-td py-2 text-right font-bold text-slate-900">{{ formatStock(product) }}</td>
+              <td class="app-td py-2 text-right font-bold text-foreground">{{ formatStock(product) }}</td>
               <td class="app-td py-2 text-right">{{ hasInventory(product) ? (product.stock_minimo || 0) : '-' }}</td>
               <td class="app-td py-2 text-right">{{ product.precio | number:'1.2-2' }}</td>
               <td class="app-td py-2">{{ hasInventory(product) ? getInventoryUnit(product) : '-' }}</td>
@@ -171,10 +171,10 @@
 
       <div class="grid gap-2 p-2 lg:hidden">
         <article *ngFor="let product of inventoryProducts; trackBy: trackByProduct"
-          class="rounded-xl border border-border bg-white p-3 shadow-sm">
+          class="rounded-xl border border-border bg-card p-3 shadow-sm">
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
-              <p class="truncate text-sm font-bold text-slate-900">{{ product.nombre }}</p>
+              <p class="truncate text-sm font-bold text-foreground">{{ product.nombre }}</p>
               <p *ngIf="describeVariantContext(product) as context; else plainCode" class="truncate text-[10px] text-primary">
                 Variante de {{ context }}
               </p>
@@ -187,10 +187,10 @@
             </span>
           </div>
 
-          <div class="mt-2 grid grid-cols-4 gap-2 text-[11px] text-slate-600">
+          <div class="mt-2 grid grid-cols-4 gap-2 text-[11px] text-muted-foreground">
             <div>
               <span class="block text-[10px] font-bold uppercase text-primary">Stock</span>
-              <span class="font-bold text-slate-900">{{ formatStock(product) }}</span>
+              <span class="font-bold text-foreground">{{ formatStock(product) }}</span>
             </div>
             <div>
               <span class="block text-[10px] font-bold uppercase text-primary">Mínimo</span>
@@ -222,7 +222,7 @@
         <span>
           Atención: {{ lowStockCount }} bajo stock y {{ outOfStockCount }} agotado(s).
         </span>
-        <button type="button" class="rounded-full bg-white px-3 py-1 font-bold text-amber-700 shadow-sm"
+        <button type="button" class="rounded-full bg-card px-3 py-1 font-bold text-amber-700 shadow-sm"
           (click)="onlyLowStock = true; aplicarFiltrosInventario()">
           Ver alertas
         </button>
@@ -231,10 +231,10 @@
   </ng-container>
 
   <ng-template #historyTab>
-    <section class="rounded-xl border border-border bg-white p-2 shadow-sm">
+    <section class="rounded-xl border border-border bg-card p-2 shadow-sm">
       <div class="mb-2 flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
         <div>
-          <h3 class="text-sm font-bold text-slate-900">Historial de movimientos</h3>
+          <h3 class="text-sm font-bold text-foreground">Historial de movimientos</h3>
           <p class="text-[11px] text-muted-foreground">{{ historyRangeLabel }}</p>
         </div>
 
@@ -322,9 +322,9 @@
                 </td>
               </tr>
 
-              <tr *ngIf="expandedMovementName === (movement.name || movement.creation || '')" class="bg-slate-50">
+              <tr *ngIf="expandedMovementName === (movement.name || movement.creation || '')" class="bg-muted/40">
                 <td colspan="7" class="p-2">
-                  <div class="rounded-xl border border-border bg-white p-2">
+                  <div class="rounded-xl border border-border bg-card p-2">
                     <p class="mb-1 text-[11px] font-bold uppercase text-primary">Detalle por ítem</p>
                     <div class="app-table-wrap">
                       <table class="app-table">
@@ -344,7 +344,7 @@
                             <td class="px-2 py-1.5 text-right">{{ item.stock_after ?? '-' }}</td>
                           </tr>
                           <tr *ngIf="!(movement.items || []).length">
-                            <td colspan="4" class="px-2 py-3 text-center text-slate-500">Sin detalle por ítem.</td>
+                            <td colspan="4" class="px-2 py-3 text-center text-muted-foreground">Sin detalle por ítem.</td>
                           </tr>
                         </tbody>
                       </table>
@@ -365,10 +365,10 @@
 
       <div class="grid gap-2 p-2 lg:hidden">
         <article *ngFor="let movement of movements; trackBy: trackByMovement"
-          class="rounded-xl border border-border bg-white p-3 shadow-sm">
+          class="rounded-xl border border-border bg-card p-3 shadow-sm">
           <div class="flex items-start justify-between gap-2">
             <div>
-              <p class="text-xs font-bold text-slate-900">{{ (movement.creation || movement.posting_date) | date:'short' }}</p>
+              <p class="text-xs font-bold text-foreground">{{ (movement.creation || movement.posting_date) | date:'short' }}</p>
               <p class="text-[10px] text-muted-foreground">{{ extractReference(movement) }}</p>
             </div>
             <span class="badge shrink-0" [ngClass]="getMovementTone(movement.movement_type)">
@@ -376,7 +376,7 @@
             </span>
           </div>
 
-          <div class="mt-2 grid grid-cols-3 gap-2 text-[11px] text-slate-600">
+          <div class="mt-2 grid grid-cols-3 gap-2 text-[11px] text-muted-foreground">
             <div>
               <span class="block text-[10px] font-bold uppercase text-primary">Items</span>
               <span>{{ movement.total_items || movement.items?.length || 0 }}</span>
@@ -395,8 +395,8 @@
             {{ expandedMovementName === (movement.name || movement.creation || '') ? 'Ocultar detalle' : 'Ver detalle' }}
           </button>
 
-          <div *ngIf="expandedMovementName === (movement.name || movement.creation || '')" class="mt-2 rounded-lg bg-slate-50 p-2 text-[11px]">
-            <div *ngFor="let item of movement.items || []" class="flex justify-between gap-2 border-b border-slate-200 py-1 last:border-0">
+          <div *ngIf="expandedMovementName === (movement.name || movement.creation || '')" class="mt-2 rounded-lg bg-muted/40 p-2 text-[11px]">
+            <div *ngFor="let item of movement.items || []" class="flex justify-between gap-2 border-b border-border py-1 last:border-0">
               <span class="font-semibold">{{ item.product_name || resolveProductName(item.product || '') }}</span>
               <span>{{ item.quantity ?? '-' }} · {{ item.stock_before ?? '-' }} → {{ item.stock_after ?? '-' }}</span>
             </div>
@@ -421,16 +421,16 @@
   </ng-template>
 
   <div *ngIf="showMovementModal" class="app-modal-backdrop">
-    <div class="app-modal !max-w-4xl overflow-hidden !rounded-xl !border-slate-200 !bg-white !shadow-2xl">
-      <div class="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-2 backdrop-blur">
+    <div class="app-modal !max-w-4xl overflow-hidden !rounded-xl !border-border !bg-card !shadow-2xl">
+      <div class="sticky top-0 z-10 border-b border-border bg-card/95 px-4 py-2 backdrop-blur">
         <div class="flex items-center justify-between gap-3">
           <div>
-            <h3 class="text-sm font-bold text-slate-900">Nuevo movimiento</h3>
+            <h3 class="text-sm font-bold text-foreground">Nuevo movimiento</h3>
             <p class="text-[11px] text-muted-foreground">Entrada, salida, ajuste o consumo interno.</p>
           </div>
           <button
             type="button"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground/80"
             (click)="cerrarMovimientoModal()"
             aria-label="Cerrar modal"
           >
@@ -440,29 +440,29 @@
       </div>
 
       <form [formGroup]="movementForm" (ngSubmit)="guardarMovimiento()" class="space-y-3 px-4 py-3 text-xs">
-        <section class="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+        <section class="rounded-xl border border-border bg-muted/40/60 p-3">
           <div class="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <div>
-              <label class="mb-1 block font-semibold text-slate-700">Tipo de movimiento</label>
+              <label class="mb-1 block font-semibold text-foreground/80">Tipo de movimiento</label>
               <select class="select h-8 text-xs" formControlName="movement_type">
                 <option *ngFor="let type of supportedMovementTypes" [value]="type">{{ getMovementOptionLabel(type) }}</option>
               </select>
-              <p class="mt-1 text-[11px] text-slate-500">{{ getMovementOptionDescription(currentMovementType) }}</p>
+              <p class="mt-1 text-[11px] text-muted-foreground">{{ getMovementOptionDescription(currentMovementType) }}</p>
             </div>
 
-            <div class="rounded-lg border border-slate-200 bg-white p-2 text-[11px] text-slate-600">
+            <div class="rounded-lg border border-border bg-card p-2 text-[11px] text-muted-foreground">
               {{ getMovementHint() }}
             </div>
 
             <div class="md:col-span-2">
-              <label class="mb-1 block font-semibold text-slate-700">Motivo o detalle</label>
+              <label class="mb-1 block font-semibold text-foreground/80">Motivo o detalle</label>
               <textarea rows="2" class="input text-xs" formControlName="notes" placeholder="Ej: ingreso por compra, merma, corrección de conteo"></textarea>
             </div>
 
-            <div *ngIf="!isLiteMode" class="md:col-span-2 rounded-lg border border-dashed border-slate-300 bg-white p-2">
+            <div *ngIf="!isLiteMode" class="md:col-span-2 rounded-lg border border-dashed border-border bg-card p-2">
               <button
                 type="button"
-                class="flex w-full items-center justify-between text-left text-xs font-bold text-slate-700"
+                class="flex w-full items-center justify-between text-left text-xs font-bold text-foreground/80"
                 (click)="showOptionalReferenceFields = !showOptionalReferenceFields"
               >
                 <span>Referencia opcional</span>
@@ -473,12 +473,12 @@
 
               <div *ngIf="showOptionalReferenceFields" class="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
                 <div>
-                  <label class="mb-1 block font-semibold text-slate-700">Tipo de referencia</label>
+                  <label class="mb-1 block font-semibold text-foreground/80">Tipo de referencia</label>
                   <input class="input h-8 text-xs" type="text" formControlName="reference_doctype" placeholder="Ej: Orden, Compra, Ajuste" />
                 </div>
 
                 <div>
-                  <label class="mb-1 block font-semibold text-slate-700">Número de referencia</label>
+                  <label class="mb-1 block font-semibold text-foreground/80">Número de referencia</label>
                   <input class="input h-8 text-xs" type="text" formControlName="reference_name" placeholder="Opcional" />
                 </div>
               </div>
@@ -486,7 +486,7 @@
           </div>
         </section>
 
-        <section class="rounded-xl border border-slate-200 bg-white p-3">
+        <section class="rounded-xl border border-border bg-card p-3">
           <div class="mb-2 flex items-center justify-between">
             <p class="text-[11px] font-bold uppercase tracking-wide text-primary">Items</p>
             <button *ngIf="!isLiteMode" type="button" class="btn btn-outline !px-3 !py-1 !text-[11px]" (click)="agregarFilaMovimiento()">+ Fila</button>
@@ -496,10 +496,10 @@
             <div
               *ngFor="let itemGroup of movementItems.controls; let i = index"
               [formGroupName]="i"
-              class="grid grid-cols-1 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 md:grid-cols-[minmax(0,1fr)_140px_80px]"
+              class="grid grid-cols-1 gap-2 rounded-lg border border-border bg-muted/40 p-2 md:grid-cols-[minmax(0,1fr)_140px_80px]"
             >
               <div>
-                <label class="mb-1 block font-semibold text-slate-700">Producto</label>
+                <label class="mb-1 block font-semibold text-foreground/80">Producto</label>
                 <ng-select
                   class="ng-select-tailwind text-xs"
                   formControlName="product"
@@ -512,13 +512,13 @@
               </div>
 
               <div *ngIf="!isLiteMode || currentMovementType !== 'Ajuste'">
-                <label class="mb-1 block font-semibold text-slate-700">Cantidad</label>
+                <label class="mb-1 block font-semibold text-foreground/80">Cantidad</label>
                 <input class="input no-spinner h-8 text-xs" type="number" step="1" formControlName="quantity" />
                 <div *ngIf="submittedMovement && itemGroup.get('quantity')?.invalid" class="field-error">Cantidad requerida.</div>
               </div>
 
               <div *ngIf="isLiteMode && currentMovementType === 'Ajuste'">
-                <label class="mb-1 block font-semibold text-slate-700">Stock objetivo</label>
+                <label class="mb-1 block font-semibold text-foreground/80">Stock objetivo</label>
                 <input class="input no-spinner h-8 text-xs" type="number" min="0" step="1" formControlName="target_stock" />
                 <div *ngIf="submittedMovement && itemGroup.get('target_stock')?.invalid" class="field-error">Stock objetivo requerido.</div>
               </div>
@@ -530,7 +530,7 @@
           </div>
         </section>
 
-        <div class="sticky bottom-0 -mx-4 border-t border-slate-200 bg-white px-4 py-2">
+        <div class="sticky bottom-0 -mx-4 border-t border-border bg-card px-4 py-2">
           <div class="flex justify-end gap-2">
             <button type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="cerrarMovimientoModal()">Cancelar</button>
             <button type="submit" class="btn btn-primary !px-3 !py-1.5 !text-[11px]">Guardar movimiento</button>

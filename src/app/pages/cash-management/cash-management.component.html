@@ -6,7 +6,7 @@
         <h1 class="mt-1 text-2xl font-black">Gestión de Cajas</h1>
         <p class="mt-1 text-sm text-primary-foreground/80">Auditoría de aperturas, retiros y cierres del negocio seleccionado.</p>
       </div>
-      <button type="button" class="rounded-lg bg-white/15 px-3 py-2 text-xs font-bold transition hover:bg-white/25 disabled:opacity-60"
+      <button type="button" class="rounded-lg bg-card/15 px-3 py-2 text-xs font-bold transition hover:bg-card/25 disabled:opacity-60"
         [disabled]="loading" (click)="loadHistory()">Actualizar</button>
     </div>
   </section>
@@ -25,7 +25,7 @@
       <article class="metric-card"><span>Diferencia acumulada</span><strong>{{ moneySummary('accumulated_difference', 'diferencia_acumulada', 'total_difference') | currency }}</strong></article>
     </section>
 
-    <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <section class="rounded-xl border border-border bg-card p-4 shadow-sm">
       <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
         <label class="field"><span>Usuario</span><input [(ngModel)]="filters.user" placeholder="Correo o usuario" /></label>
         <label class="field"><span>Estado</span><select [(ngModel)]="filters.status"><option value="">Todos</option><option value="Borrador">Borrador</option><option value="Confirmado">Confirmado</option><option value="Abierta">Abierta</option><option value="Cerrada">Cerrada</option></select></label>
@@ -35,15 +35,15 @@
       <button type="button" class="mt-3 text-xs font-bold text-primary hover:underline" (click)="clearFilters()">Limpiar filtros</button>
     </section>
 
-    <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <nav class="flex border-b border-slate-200 bg-slate-50 p-2" aria-label="Pestañas de gestión de caja">
+    <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <nav class="flex border-b border-border bg-muted/40 p-2" aria-label="Pestañas de gestión de caja">
         <button type="button" class="tab-button" [class.tab-active]="activeTab === 'openings'" (click)="activeTab = 'openings'">Aperturas <b>{{ visibleOpenings.length }}</b></button>
         <button type="button" class="tab-button" [class.tab-active]="activeTab === 'withdrawals'" (click)="activeTab = 'withdrawals'">Retiros <b>{{ visibleWithdrawals.length }}</b></button>
         <button type="button" class="tab-button" [class.tab-active]="activeTab === 'closings'" (click)="activeTab = 'closings'">Cierres <b>{{ visibleClosings.length }}</b></button>
         <button type="button" class="tab-button" [class.tab-active]="activeTab === 'summary'" (click)="activeTab = 'summary'">Resumen</button>
       </nav>
 
-      <div *ngIf="loading" class="p-8 text-center text-sm text-slate-500">Cargando historial de caja…</div>
+      <div *ngIf="loading" class="p-8 text-center text-sm text-muted-foreground">Cargando historial de caja…</div>
       <div *ngIf="!loading && error" class="p-8 text-center text-sm font-medium text-red-700">{{ error }}</div>
 
       <div *ngIf="!loading && !error && activeTab === 'openings'" class="table-wrap">

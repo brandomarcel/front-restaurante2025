@@ -1,8 +1,8 @@
-<div *ngIf="resolvingMeseroEntry" class="flex min-h-[60vh] items-center justify-center bg-slate-50 px-4">
-  <div class="rounded-2xl border border-slate-200 bg-white px-6 py-5 text-center shadow-sm">
+<div *ngIf="resolvingMeseroEntry" class="flex min-h-[60vh] items-center justify-center bg-muted/40 px-4">
+  <div class="rounded-2xl border border-border bg-card px-6 py-5 text-center shadow-sm">
     <div class="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600"></div>
-    <p class="mt-3 text-sm font-bold text-slate-800">Preparando tu espacio de trabajo…</p>
-    <p class="mt-1 text-xs text-slate-500">Estamos revisando si tu salón tiene mesas configuradas.</p>
+    <p class="mt-3 text-sm font-bold text-foreground">Preparando tu espacio de trabajo…</p>
+    <p class="mt-1 text-xs text-muted-foreground">Estamos revisando si tu salón tiene mesas configuradas.</p>
   </div>
 </div>
 <app-pos-mesero *ngIf="posReady && roleName === 'Mesero'" [selectedTableId]="selectedTableId" [selectedTableLabel]="selectedTableLabel"></app-pos-mesero>

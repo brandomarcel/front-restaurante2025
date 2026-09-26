@@ -16,7 +16,7 @@
           tabindex="0"
           [ngClass]="{
             'bg-primary/10 text-primary shadow-sm ring-1 ring-primary/10': item.active || item.expanded,
-            'text-muted-foreground hover:bg-slate-50 hover:text-foreground': !(item.active || item.expanded),
+            'text-muted-foreground hover:bg-muted/40 hover:text-foreground': !(item.active || item.expanded),
             'justify-center px-0': !mobile && !menuService.showSideBar
           }"
           class="group relative flex min-h-[34px] items-center gap-2 rounded-lg px-2.5 py-1.5 transition-all duration-200"

@@ -117,6 +117,7 @@
 /* Tema base (variables) */
 @layer base {
   :root {
+    color-scheme: light;
     --background: #FFFFFF;
     --foreground: #0C1420;
     --card: #F1F5F9;
@@ -131,6 +132,7 @@
   }
 
   .dark {
+    color-scheme: dark;
     --background: #0A0A0A;
     --foreground: #F2F2F2;
     --card: #121212;
@@ -230,46 +232,48 @@ select {
          indeterminate:border-primary indeterminate:bg-primary focus:ring-2 focus:ring-primary;
 }
 
-/* NG-SELECT estilos */
+/* NG-SELECT estilos (theme-aware: usa los tokens de color, no valores fijos, para que se vea bien en claro y oscuro) */
 .ng-select-tailwind .ng-select-container {
-  @apply bg-white border border-slate-300 rounded-md px-2 py-1 h-auto min-h-[2.5rem] shadow-none;
+  @apply bg-card border border-border rounded-md px-2 py-1 h-auto min-h-[2.5rem] shadow-none text-foreground;
   font-size: 0.875rem; /* text-xs */
   line-height: 1.25rem;
 }
-.ng-select-tailwind:hover .ng-select-container { @apply border-slate-400; }
-.ng-select-tailwind:focus-within .ng-select-container { @apply border-slate-500 ring-1 ring-slate-200; }
+.ng-select-tailwind:hover .ng-select-container { @apply border-muted-foreground/50; }
+.ng-select-tailwind:focus-within .ng-select-container { @apply border-primary ring-1 ring-primary/20; }
 
 .ng-select-tailwind .ng-value,
 .ng-select-tailwind .ng-placeholder {
   font-size: 0.875rem;
   line-height: 1.25rem;
 }
-.ng-select-tailwind .ng-placeholder { @apply text-slate-400; }
+.ng-select-tailwind .ng-placeholder { @apply text-muted-foreground; }
 
 .ng-select-tailwind .ng-input input {
   padding: 0 !important;
   margin: 0 !important;
   font-size: 0.875rem;
   line-height: 1.25rem;
+  color: var(--foreground) !important;
+  background: transparent !important;
 }
 .ng-select-tailwind .ng-arrow-wrapper { padding-right: 0.5rem; }
 .ng-select-tailwind .ng-clear-wrapper { @apply pr-1; }
 
 .ng-select-tailwind .ng-dropdown-panel {
-  @apply mt-1 border bg-white border-slate-200 rounded-md shadow-lg overflow-hidden;
+  @apply mt-1 border bg-card border-border rounded-md shadow-lg overflow-hidden text-foreground;
   z-index: 1000;
 }
 .ng-select-tailwind .ng-dropdown-panel .ng-dropdown-panel-items .ng-option { @apply px-3 py-2 text-xs; }
 .ng-select-tailwind .ng-dropdown-panel .ng-option:hover,
-.ng-select-tailwind .ng-dropdown-panel .ng-option-marked { @apply bg-slate-50; }
-.ng-select-tailwind .ng-dropdown-panel .ng-option-selected { @apply bg-slate-100 font-medium; }
+.ng-select-tailwind .ng-dropdown-panel .ng-option-marked { @apply bg-primary/10; }
+.ng-select-tailwind .ng-dropdown-panel .ng-option-selected { @apply bg-primary/15 font-medium; }
 
 .ng-select-tailwind.ng-select-multiple .ng-value {
-  @apply bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 text-xs;
+  @apply bg-muted border border-border rounded px-1.5 py-0.5 text-xs text-foreground;
 }
-.ng-select-tailwind.ng-select-multiple .ng-value-icon { @apply ml-1 rounded hover:bg-slate-200; }
-.ng-select-tailwind.ng-select-disabled .ng-select-container { @apply bg-slate-100 text-slate-400 cursor-not-allowed; }
-.has-error .ng-select-tailwind .ng-select-container { @apply border-red-300 ring-2 ring-red-100; }
+.ng-select-tailwind.ng-select-multiple .ng-value-icon { @apply ml-1 rounded hover:bg-muted-foreground/20; }
+.ng-select-tailwind.ng-select-disabled .ng-select-container { @apply bg-muted text-muted-foreground cursor-not-allowed; }
+.has-error .ng-select-tailwind .ng-select-container { @apply border-destructive ring-2 ring-destructive/20; }
 
 /* Table compact */
 @layer components {
@@ -372,7 +376,7 @@ select {
   .table-compact .qty-input { @apply w-14 text-center; }
   .table-compact .price-input { @apply w-24 text-center; }
   .table-compact .disc-input { @apply w-16 text-center; }
-    .input { @apply block w-full h-9 rounded-md border border-slate-300 bg-white px-3 text-[13px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20; }
+    .input { @apply block w-full h-9 rounded-md border border-border bg-card text-foreground px-3 text-[13px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20; }
   .field-error { @apply block mt-1 text-[11px] text-red-600; }
 }
 
@@ -397,16 +401,16 @@ select {
 
   /* Toolbar / filtros */
   .toolbar { @apply mb-4 flex flex-col md:flex-row gap-3 md:items-center md:justify-between; }
-  .input  { @apply w-full md:w-80 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30; }
-  .select { @apply w-full md:w-60 rounded-md border border-gray-300 bg-white px-3 py-2 pr-9 text-xs text-foreground transition-colors duration-150 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20; }
+  .input  { @apply w-full md:w-80 rounded-md border border-border bg-card text-foreground px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30; }
+  .select { @apply w-full md:w-60 rounded-md border border-border bg-card px-3 py-2 pr-9 text-xs text-foreground transition-colors duration-150 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20; }
 
   /* Botones */
   .btn { @apply inline-flex items-center justify-center rounded-md px-3.5 py-2 text-xs font-semibold transition; }
   .btn:disabled { @apply opacity-50 cursor-not-allowed; }
   .btn-primary { @apply bg-primary text-primary-foreground hover:opacity-90; }
   .btn-success { @apply bg-green-500 text-primary-foreground hover:opacity-90; }
-  .btn-ghost   { @apply bg-gray-100 text-gray-800 hover:bg-gray-200; }
-  .btn-outline { @apply border border-gray-300 text-gray-800 bg-white hover:bg-gray-50; }
+  .btn-ghost   { @apply bg-muted text-foreground hover:bg-muted-foreground/20; }
+  .btn-outline { @apply border border-border text-foreground bg-card hover:bg-muted; }
   .btn-warn    { @apply bg-amber-300 text-black hover:bg-amber-600; }
   .btn-danger    { @apply bg-red-400 text-black hover:bg-amber-600; }
 
@@ -419,36 +423,36 @@ select {
   .badge-blue   { @apply bg-blue-100 text-blue-800; }
 
   /* Cards */
-  .app-card { @apply bg-white rounded-xl shadow-sm border border-gray-200; }
+  .app-card { @apply bg-card rounded-xl shadow-sm border border-border text-foreground; }
   .app-card-body { @apply p-4 md:p-6; }
 
   /* Tablas */
   .app-table-wrap {
-    @apply overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm;
+    @apply overflow-auto rounded-xl border border-border bg-card shadow-sm;
     scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 transparent;
+    scrollbar-color: var(--muted-foreground) transparent;
   }
   .app-table-wrap::-webkit-scrollbar { width: 8px; height: 8px; }
-  .app-table-wrap::-webkit-scrollbar-thumb { @apply rounded-full bg-slate-300; }
+  .app-table-wrap::-webkit-scrollbar-thumb { @apply rounded-full bg-muted-foreground/40; }
   .app-table-wrap::-webkit-scrollbar-track { @apply bg-transparent; }
   .app-table {
-    @apply min-w-full border-separate border-spacing-0 bg-white text-xs text-slate-700;
+    @apply min-w-full border-separate border-spacing-0 bg-card text-xs text-foreground;
   }
   .app-thead,
   .app-table thead {
-    @apply sticky top-0 z-10 bg-slate-50;
+    @apply sticky top-0 z-10 bg-muted/50;
   }
   .app-th,
   .app-table th {
-    @apply whitespace-nowrap border-b border-slate-200 px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-slate-500;
+    @apply whitespace-nowrap border-b border-border px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-muted-foreground;
   }
   .app-td,
   .app-table td {
-    @apply border-b border-slate-100 px-3 py-2 align-middle text-slate-700;
+    @apply border-b border-border/60 px-3 py-2 align-middle text-foreground;
   }
   .app-tr,
   .app-table tbody tr {
-    @apply transition-colors hover:bg-slate-50;
+    @apply transition-colors hover:bg-muted/40;
   }
   .app-table tbody tr:last-child td {
     @apply border-b-0;
@@ -474,14 +478,14 @@ select {
 .pager-btn {
   @apply inline-flex items-center justify-center rounded-md
          px-3.5 py-2 text-xs font-semibold transition
-         bg-gray-100 text-gray-800 hover:bg-gray-200
+         bg-muted text-foreground hover:bg-muted-foreground/20
          px-3 py-1; /* extra tamaño compacto que tenías */
 }
 
   /* Modal */
   .app-modal-backdrop { @apply fixed inset-0 bg-black/30 flex items-center justify-center z-[220]; }
 .app-modal {
-  @apply bg-white rounded-xl shadow-sm border border-gray-200
+  @apply bg-card rounded-xl shadow-sm border border-border text-foreground
          w-full max-w-2xl max-h-[90vh] overflow-y-auto relative;
 }
 
@@ -545,13 +549,13 @@ select {
   /* Modal algo más angosto */
   .density-compact .app-modal { @apply max-w-xl; }
 }
-/* company.component.css */
-/* company.component.css */
-.input { @apply w-full h-10 rounded border border-gray-300 px-3 outline-none focus:border-indigo-500; }
-.btn { @apply inline-flex items-center justify-center rounded px-3 py-2; }
-.btn-primary { @apply bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60; }
-.btn-outline { @apply border border-gray-300 hover:bg-gray-50; }
-.btn-ghost { @apply hover:bg-gray-100; }
+/* Nota: acá había una redefinición duplicada y sin @layer de .input/.btn/
+   .btn-primary/.btn-outline/.btn-ghost (con azul índigo fijo, ajeno a la
+   paleta de la app). Al no estar dentro de @layer, le ganaba por cascada a
+   las versiones correctas de arriba en TODA la app, sin importar el orden
+   del archivo, y usaba colores fijos que no respetaban el tema oscuro.
+   Se quita: las clases ya están bien definidas más arriba, con los tokens
+   del tema. */
 
 /* texto del archivo: que no salte */
 .file-name { @apply text-gray-600 truncate max-w-full; }

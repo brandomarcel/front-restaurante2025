@@ -1,4 +1,4 @@
-<header class="mb-3 rounded-xl border border-border bg-white px-3 py-2 shadow-sm">
+<header class="mb-3 rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
     <div class="app-container flex items-center justify-between gap-3">
         <div class="flex items-center gap-3">
             <button class="btn btn-ghost px-2 py-1" (click)="goBack()" aria-label="Volver a Notas de Crédito">
@@ -8,7 +8,7 @@
 
             <div>
                 <div class="flex items-center gap-3">
-                    <h1 class="text-base font-bold leading-tight text-slate-900 sm:text-lg">
+                    <h1 class="text-base font-bold leading-tight text-foreground sm:text-lg">
                         Nota de Crédito <span class="text-muted-foreground">#{{ invoice?.sri?.number || '—' }}</span>
                     </h1>
                     <span class="badge" [ngClass]="statusBadge">
@@ -47,7 +47,7 @@
     </div>
 </header>
 
-<div *ngIf="loading" class="app-container rounded-xl border border-border bg-white p-4 text-center text-xs text-muted-foreground shadow-sm">Cargando nota de crédito…</div>
+<div *ngIf="loading" class="app-container rounded-xl border border-border bg-card p-4 text-center text-xs text-muted-foreground shadow-sm">Cargando nota de crédito…</div>
 <div *ngIf="error && !loading" class="app-container rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">{{ error }}</div>
 
 <!-- CONTENIDO: 2 columnas -->
@@ -58,10 +58,10 @@
     <section class="grid grid-cols-1 gap-3 md:grid-cols-3">
         <div class="app-card p-3">
             <div class="mb-4 flex items-center justify-between">
-                <h3 class="text-sm font-bold text-slate-900">🧾 Información general</h3>
+                <h3 class="text-sm font-bold text-foreground">🧾 Información general</h3>
                 <span class="badge" [ngClass]="statusBadge">{{ sriStatus }}</span>
             </div>
-            <ul class="grid gap-y-2 text-sm text-gray-700">
+            <ul class="grid gap-y-2 text-sm text-foreground/80">
                 <li><strong>ID:</strong> {{ invoice?.name || '—' }}</li>
                 <li><strong>N° nota:</strong> {{ invoice?.document_number || invoice?.sri?.number || '—' }}</li>
                 <li><strong>Fecha emisión:</strong> {{ invoice?.posting_date || invoice?.createdAt || '—' }}</li>
@@ -74,12 +74,12 @@
         <!-- Información del Cliente -->
         <div class="app-card p-3">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-sm font-bold text-slate-900">👤 Información del Cliente</h3>
+                <h3 class="text-sm font-bold text-foreground">👤 Información del Cliente</h3>
                 <!-- <span *ngIf="invoice?.customer?.fullName" class="badge badge-outline">
           {{ invoice?.customer?.fullName }}
         </span> -->
             </div>
-            <ul class="text-sm text-gray-700 grid sm:grid-cols-2 gap-y-2 gap-x-6">
+            <ul class="text-sm text-foreground/80 grid sm:grid-cols-2 gap-y-2 gap-x-6">
                 <li><strong>Nombre:</strong> {{ invoice?.customer?.fullName || '—' }}</li>
                 <li><strong>Cédula/RUC:</strong> {{ invoice?.customer?.num_identificacion || '—' }}</li>
                 <li><strong>Email:</strong> {{ invoice?.customer?.correo || '—' }}</li>
@@ -91,12 +91,12 @@
         <!-- Información del SRI -->
         <div class="app-card p-3">
             <div class="flex items-center justify-between mb-4">
-            <h3 class="text-sm font-bold text-slate-900">📤 Información del SRI</h3>
+            <h3 class="text-sm font-bold text-foreground">📤 Información del SRI</h3>
                 <span class="badge" [ngClass]="statusBadge">
                     {{ sriStatus }}
                 </span>
             </div>
-            <ul class="text-sm text-gray-700 grid sm:grid-cols-2 gap-y-2 gap-x-6">
+            <ul class="text-sm text-foreground/80 grid sm:grid-cols-2 gap-y-2 gap-x-6">
                 <li><strong>Estado FacturADA:</strong> {{ sriStatus }}</li>
                 <li><strong>Estado proveedor:</strong> {{ providerStatus }}</li>
                 <li *ngIf="providerCode"><strong>Código SRI:</strong> {{ providerCode }}</li>
@@ -132,8 +132,8 @@
 
     <section *ngIf="relatedInvoice || relatedDocumentNumber || relatedAccessKey || creditNoteReason">
         <div class="app-card p-3">
-            <h3 class="mb-2 text-sm font-bold text-slate-900">Factura relacionada</h3>
-            <div class="grid gap-3 text-sm text-gray-700 sm:grid-cols-2">
+            <h3 class="mb-2 text-sm font-bold text-foreground">Factura relacionada</h3>
+            <div class="grid gap-3 text-sm text-foreground/80 sm:grid-cols-2">
                 <div *ngIf="relatedInvoice"><strong>ID factura:</strong> {{ relatedInvoice }}</div>
                 <div *ngIf="relatedDocumentNumber"><strong>Número:</strong> {{ relatedDocumentNumber }}</div>
                 <div *ngIf="invoice?.related_issue_date"><strong>Fecha de emisión:</strong> {{ invoice.related_issue_date }}</div>
@@ -150,32 +150,32 @@
     <!-- FILA 2: Resumen (compacto) -->
     <section>
         <div class="app-card p-3">
-            <h3 class="text-sm font-bold text-slate-900 mb-2">🧾 Resumen de la Nota de Crédito</h3>
-            <div class="text-sm text-gray-700" *ngIf="creditNoteReason">
+            <h3 class="text-sm font-bold text-foreground mb-2">🧾 Resumen de la Nota de Crédito</h3>
+            <div class="text-sm text-foreground/80" *ngIf="creditNoteReason">
                 <strong>Motivo:</strong> {{ creditNoteReason }}
             </div>
             <div class="grid sm:grid-cols-3 gap-4">
                 <div class="mt-2">
                     <div class="text-sm text-muted-foreground">Subtotal</div>
-                    <div class="font-medium text-gray-900">
+                    <div class="font-medium text-foreground">
                         {{ invoice?.subtotal | currency:'USD':'symbol':'1.2-2' }}
                     </div>
                 </div>
                 <div>
                     <div class="text-sm text-muted-foreground">Descuento</div>
-                    <div class="font-medium text-gray-900">
+                    <div class="font-medium text-foreground">
                         {{ (invoice?.totals?.total_discount ?? invoice?.total_discount ?? 0) | currency:'USD':'symbol':'1.2-2' }}
                     </div>
                 </div>
                 <div>
                     <div class="text-sm text-muted-foreground">Base imponible</div>
-                    <div class="font-medium text-gray-900">
+                    <div class="font-medium text-foreground">
                         {{ (invoice?.totals?.total_without_tax ?? invoice?.taxable_amount ?? invoice?.subtotal ?? 0) | currency:'USD':'symbol':'1.2-2' }}
                     </div>
                 </div>
                 <div>
                     <div class="text-sm text-muted-foreground">IVA</div>
-                    <div class="font-medium text-gray-900">
+                    <div class="font-medium text-foreground">
                         {{ invoice?.iva | currency:'USD':'symbol':'1.2-2' }}
                     </div>
                 </div>
@@ -193,9 +193,9 @@
         <div class="app-card p-3">
             <h3 class="mb-2 text-[11px] font-bold uppercase tracking-wide text-primary">Información adicional</h3>
             <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                <div *ngFor="let field of invoice.additional_fields" class="rounded-lg bg-slate-50 px-3 py-2">
+                <div *ngFor="let field of invoice.additional_fields" class="rounded-lg bg-muted/40 px-3 py-2">
                     <div class="text-[10px] font-semibold uppercase text-muted-foreground">{{ field.field_name }}</div>
-                    <div class="text-sm text-slate-900">{{ field.field_value }}</div>
+                    <div class="text-sm text-foreground">{{ field.field_value }}</div>
                 </div>
             </div>
         </div>
@@ -205,7 +205,7 @@
     <section>
         <div class="app-card p-3">
             <div class="mb-2 flex items-center justify-between">
-                <h3 class="text-sm font-bold text-slate-900">📦 Productos de la Nota</h3>
+                <h3 class="text-sm font-bold text-foreground">📦 Productos de la Nota</h3>
             </div>
 
             <div class="app-table-wrap max-h-[60vh]">
@@ -261,7 +261,7 @@
 
 <!-- Barra de acciones móvil (fija en el pie de la página) -->
 <div *ngIf="invoice && !loading"
-    class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t px-4 py-2 flex gap-2 text-center text-flex align-items-center justify-center">
+    class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-card border-t px-4 py-2 flex gap-2 text-center text-flex align-items-center justify-center">
     <button *ngIf="capabilities.hasPermission('billing.read')" class="btn btn-primary" (click)="getFacturaPdf()" [disabled]="documentLoading"> <fa-icon
             [icon]="['fas','download']" class="mr-1"></fa-icon>Nota de Crédito</button>
     <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read')" class="btn btn-outline" (click)="downloadXml()" [disabled]="documentLoading">XML</button>

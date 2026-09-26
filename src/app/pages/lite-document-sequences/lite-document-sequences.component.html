@@ -6,20 +6,20 @@
         <h1 class="mt-1 text-lg font-bold md:text-xl">3. Secuencias de documentos</h1>
         <p class="mt-1 text-xs text-primary-foreground/80">{{ activeBusinessName }} · {{ activeBusinessId || 'Sin negocio seleccionado' }}</p>
       </div>
-      <div class="flex items-center gap-2"><span class="rounded-full bg-white/20 px-3 py-1 text-[11px] font-semibold">Paso 3 de 3</span><button type="button" class="btn bg-white !px-3 !py-2 !text-xs !text-primary hover:!bg-slate-100" (click)="openCreate()" [disabled]="!canManage || loading || !selectedEstablishmentId || !selectedEmissionPointId">+ Nueva secuencia</button></div>
+      <div class="flex items-center gap-2"><span class="rounded-full bg-card/20 px-3 py-1 text-[11px] font-semibold">Paso 3 de 3</span><button type="button" class="btn bg-card !px-3 !py-2 !text-xs !text-primary hover:!bg-muted" (click)="openCreate()" [disabled]="!canManage || loading || !selectedEstablishmentId || !selectedEmissionPointId">+ Nueva secuencia</button></div>
     </div>
   </section>
 
   <section class="grid gap-3 md:grid-cols-3">
     <div class="rounded-xl border border-indigo-100 bg-indigo-50/70 p-4"><p class="text-xs font-bold text-indigo-900">¿Qué configura?</p><p class="mt-1 text-xs leading-5 text-indigo-800">Indica desde qué número comenzará cada tipo de comprobante y ambiente.</p></div>
-    <div class="rounded-xl border border-slate-200 bg-white p-4"><p class="text-xs font-bold text-slate-800">Ejemplo</p><p class="mt-1 text-xs leading-5 text-slate-600">Si el último usado es <b>25</b>, el próximo será <b>000000026</b>.</p></div>
+    <div class="rounded-xl border border-border bg-card p-4"><p class="text-xs font-bold text-foreground">Ejemplo</p><p class="mt-1 text-xs leading-5 text-muted-foreground">Si el último usado es <b>25</b>, el próximo será <b>000000026</b>.</p></div>
     <div class="rounded-xl border border-amber-200 bg-amber-50 p-4"><p class="text-xs font-bold text-amber-900">Importante</p><p class="mt-1 text-xs leading-5 text-amber-800">Pruebas y Producción tienen consecutivos independientes.</p></div>
   </section>
 
-  <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:p-4">
+  <section class="rounded-xl border border-border bg-card p-3 shadow-sm md:p-4">
     <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
       <div>
-        <label class="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">1. Establecimiento</label>
+        <label class="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">1. Establecimiento</label>
         <select class="select" [value]="selectedEstablishmentId" (change)="onEstablishmentChange($any($event.target).value)">
           <option value="">Seleccione un establecimiento</option>
           <option *ngFor="let establishment of activeEstablishments" [value]="establishment.name">
@@ -28,7 +28,7 @@
         </select>
       </div>
       <div>
-        <label class="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">2. Punto de emisión</label>
+        <label class="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">2. Punto de emisión</label>
         <select class="select" [value]="selectedEmissionPointId" (change)="onEmissionPointChange($any($event.target).value)" [disabled]="!selectedEstablishmentId">
           <option value="">Seleccione un punto de emisión</option>
           <option *ngFor="let point of activeEmissionPoints" [value]="point.name">
@@ -37,9 +37,9 @@
         </select>
       </div>
     </div>
-    <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
-      <p class="text-xs font-semibold text-slate-700">Configurando: {{ selectedEstablishmentLabel }} · {{ selectedEmissionPointLabel }}</p>
-      <div class="flex flex-wrap items-center gap-2"><select class="select !w-auto" [(ngModel)]="documentFilter"><option value="all">Todos los documentos</option><option value="Factura">Facturas</option><option value="Nota de Credito">Notas de crédito</option></select><select class="select !w-auto" [(ngModel)]="environmentFilter"><option value="all">Todos los ambientes</option><option value="Pruebas">Pruebas</option><option value="Produccion">Producción</option></select><p class="text-[11px] text-slate-500">{{ canManage ? 'Puede administrar' : 'Modo lectura' }}</p></div>
+    <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
+      <p class="text-xs font-semibold text-foreground/80">Configurando: {{ selectedEstablishmentLabel }} · {{ selectedEmissionPointLabel }}</p>
+      <div class="flex flex-wrap items-center gap-2"><select class="select !w-auto" [(ngModel)]="documentFilter"><option value="all">Todos los documentos</option><option value="Factura">Facturas</option><option value="Nota de Credito">Notas de crédito</option></select><select class="select !w-auto" [(ngModel)]="environmentFilter"><option value="all">Todos los ambientes</option><option value="Pruebas">Pruebas</option><option value="Produccion">Producción</option></select><p class="text-[11px] text-muted-foreground">{{ canManage ? 'Puede administrar' : 'Modo lectura' }}</p></div>
     </div>
   </section>
 
@@ -57,31 +57,31 @@
 
   <section *ngIf="selectedEstablishmentId && selectedEmissionPointId && !loading" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
     <article *ngFor="let item of sequenceMatrix" class="rounded-xl border p-3 shadow-sm"
-      [ngClass]="sequenceState(sequenceFor(item.documentType, item.environment)) === 'ready' ? 'border-emerald-200 bg-emerald-50/60' : (sequenceState(sequenceFor(item.documentType, item.environment)) === 'blocked' ? 'border-amber-200 bg-amber-50/70' : 'border-slate-200 bg-white')">
+      [ngClass]="sequenceState(sequenceFor(item.documentType, item.environment)) === 'ready' ? 'border-emerald-200 bg-emerald-50/60' : (sequenceState(sequenceFor(item.documentType, item.environment)) === 'blocked' ? 'border-amber-200 bg-amber-50/70' : 'border-border bg-card')">
       <div class="flex items-start justify-between gap-2">
         <div>
-          <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">{{ item.documentType }}</p>
-          <p class="mt-1 text-sm font-bold text-slate-800">{{ item.environment }}</p>
+          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{{ item.documentType }}</p>
+          <p class="mt-1 text-sm font-bold text-foreground">{{ item.environment }}</p>
         </div>
         <span class="rounded-full px-2 py-1 text-[10px] font-semibold"
-          [ngClass]="sequenceState(sequenceFor(item.documentType, item.environment)) === 'ready' ? 'bg-emerald-100 text-emerald-700' : (sequenceState(sequenceFor(item.documentType, item.environment)) === 'blocked' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600')">
+          [ngClass]="sequenceState(sequenceFor(item.documentType, item.environment)) === 'ready' ? 'bg-emerald-100 text-emerald-700' : (sequenceState(sequenceFor(item.documentType, item.environment)) === 'blocked' ? 'bg-amber-100 text-amber-800' : 'bg-muted text-muted-foreground')">
           {{ sequenceStateLabel(sequenceFor(item.documentType, item.environment)) }}
         </span>
       </div>
       <ng-container *ngIf="sequenceFor(item.documentType, item.environment) as sequence; else missingSequence">
-        <p class="mt-4 text-[11px] text-slate-500">Último utilizado</p>
-        <p class="font-mono text-lg font-bold text-slate-800">{{ formatNumber(sequence.current_number) }}</p>
-        <p class="mt-1 text-[11px] text-slate-600">Siguiente: <span class="font-mono font-semibold">{{ nextNumber(sequence) }}</span></p>
+        <p class="mt-4 text-[11px] text-muted-foreground">Último utilizado</p>
+        <p class="font-mono text-lg font-bold text-foreground">{{ formatNumber(sequence.current_number) }}</p>
+        <p class="mt-1 text-[11px] text-muted-foreground">Siguiente: <span class="font-mono font-semibold">{{ nextNumber(sequence) }}</span></p>
       </ng-container>
       <ng-template #missingSequence>
-        <p class="mt-4 text-xs leading-5 text-slate-500">Aún no existe una secuencia para esta combinación.</p>
+        <p class="mt-4 text-xs leading-5 text-muted-foreground">Aún no existe una secuencia para esta combinación.</p>
         <button *ngIf="canManage" type="button" class="btn btn-outline mt-3 !px-2.5 !py-1.5 !text-[11px]" (click)="openCreate(item.documentType, item.environment)">Crear secuencia</button>
       </ng-template>
     </article>
   </section>
 
   <section *ngIf="error && !loading" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">{{ error }}</section>
-  <section *ngIf="loading" class="app-card p-8 text-center text-sm text-slate-500">Cargando secuencias…</section>
+  <section *ngIf="loading" class="app-card p-8 text-center text-sm text-muted-foreground">Cargando secuencias…</section>
 
   <section *ngIf="!loading && visibleSequences.length" class="app-table-wrap">
     <table class="app-table text-xs">
@@ -99,13 +99,13 @@
       <tbody>
         <tr *ngFor="let sequence of visibleSequences; trackBy: trackBy" class="app-tr">
           <td class="app-td">
-            <span class="font-semibold text-slate-800">{{ sequence.document_type || '—' }}</span>
+            <span class="font-semibold text-foreground">{{ sequence.document_type || '—' }}</span>
           </td>
-          <td class="app-td"><span class="inline-flex rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700">{{ sequence.environment || '—' }}</span></td>
-          <td class="app-td text-slate-600"><span class="block">{{ sequence.establishment_code || selectedEstablishment?.establishment_code || '—' }} · {{ sequence.establishment_name || selectedEstablishment?.establishment_name || '—' }}</span><span class="mt-0.5 block text-[11px]">{{ sequence.emission_point_code || selectedEmissionPoint?.emission_point_code || '—' }} · {{ sequence.emission_point_name || selectedEmissionPoint?.emission_point_name || '—' }}</span></td>
-          <td class="app-td font-semibold text-slate-800">{{ formatNumber(sequence.current_number) }}</td>
+          <td class="app-td"><span class="inline-flex rounded-full bg-muted px-2 py-1 text-[11px] font-semibold text-foreground/80">{{ sequence.environment || '—' }}</span></td>
+          <td class="app-td text-muted-foreground"><span class="block">{{ sequence.establishment_code || selectedEstablishment?.establishment_code || '—' }} · {{ sequence.establishment_name || selectedEstablishment?.establishment_name || '—' }}</span><span class="mt-0.5 block text-[11px]">{{ sequence.emission_point_code || selectedEmissionPoint?.emission_point_code || '—' }} · {{ sequence.emission_point_name || selectedEmissionPoint?.emission_point_name || '—' }}</span></td>
+          <td class="app-td font-semibold text-foreground">{{ formatNumber(sequence.current_number) }}</td>
           <td class="app-td font-semibold text-primary">{{ nextNumber(sequence) }}</td>
-          <td class="app-td"><span class="inline-flex rounded-full px-2 py-1 text-[11px] font-semibold" [ngClass]="isActive(sequence) ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'">{{ sequence.status || '—' }}</span><span *ngIf="isActive(sequence) && canEmit(sequence)" class="mt-1 block text-[10px] text-emerald-700">Puede emitir</span><span *ngIf="isActive(sequence) && !canEmit(sequence)" class="mt-1 block text-[10px] text-amber-700">No puede emitir</span></td>
+          <td class="app-td"><span class="inline-flex rounded-full px-2 py-1 text-[11px] font-semibold" [ngClass]="isActive(sequence) ? 'bg-emerald-50 text-emerald-700' : 'bg-muted text-muted-foreground'">{{ sequence.status || '—' }}</span><span *ngIf="isActive(sequence) && canEmit(sequence)" class="mt-1 block text-[10px] text-emerald-700">Puede emitir</span><span *ngIf="isActive(sequence) && !canEmit(sequence)" class="mt-1 block text-[10px] text-amber-700">No puede emitir</span></td>
           <td class="app-td" *ngIf="canManage"><div class="flex justify-end gap-2"><app-icon-action-button variant="edit" [disabled]="saving" (action)="openEdit(sequence)"></app-icon-action-button><app-icon-action-button variant="delete" tone="warn" label="Desactivar" [disabled]="saving || !isActive(sequence)" (action)="deactivate(sequence)"></app-icon-action-button></div></td>
         </tr>
       </tbody>
@@ -114,25 +114,25 @@
 
   <section *ngIf="!loading && selectedEstablishmentId && selectedEmissionPointId && !visibleSequences.length && !error" class="app-card p-8 text-center">
     <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-xl text-indigo-600">＋</div>
-    <h2 class="mt-3 text-sm font-semibold text-slate-800">No hay secuencias para este filtro</h2>
-    <p class="mt-1 text-xs text-slate-500">Crea una secuencia para Factura o Nota de Crédito en el ambiente correspondiente.</p>
+    <h2 class="mt-3 text-sm font-semibold text-foreground">No hay secuencias para este filtro</h2>
+    <p class="mt-1 text-xs text-muted-foreground">Crea una secuencia para Factura o Nota de Crédito en el ambiente correspondiente.</p>
     <button *ngIf="canManage && !sequences.length" type="button" class="btn btn-primary mt-4" (click)="openCreate()">Crear la primera secuencia</button>
   </section>
 
   <div *ngIf="modalOpen" class="app-modal-backdrop">
-    <section class="app-modal !max-w-2xl overflow-hidden !rounded-2xl !border-slate-200 !bg-white !shadow-2xl" role="dialog" aria-modal="true">
-      <header class="border-b border-slate-200 px-4 py-3 md:px-5"><div class="flex items-start justify-between gap-3"><div><h2 class="text-base font-bold text-slate-800">{{ editing ? 'Editar secuencia' : 'Crear secuencia' }}</h2><p class="mt-0.5 text-xs text-slate-500">{{ editing ? 'El establecimiento, punto, documento y ambiente no se pueden cambiar.' : 'La secuencia queda asociada al punto de emisión seleccionado.' }}</p></div><button type="button" class="btn btn-ghost !px-2" (click)="closeModal()" aria-label="Cerrar">×</button></div></header>
+    <section class="app-modal !max-w-2xl overflow-hidden !rounded-2xl !border-border !bg-card !shadow-2xl" role="dialog" aria-modal="true">
+      <header class="border-b border-border px-4 py-3 md:px-5"><div class="flex items-start justify-between gap-3"><div><h2 class="text-base font-bold text-foreground">{{ editing ? 'Editar secuencia' : 'Crear secuencia' }}</h2><p class="mt-0.5 text-xs text-muted-foreground">{{ editing ? 'El establecimiento, punto, documento y ambiente no se pueden cambiar.' : 'La secuencia queda asociada al punto de emisión seleccionado.' }}</p></div><button type="button" class="btn btn-ghost !px-2" (click)="closeModal()" aria-label="Cerrar">×</button></div></header>
       <form [formGroup]="form" (ngSubmit)="save()" class="space-y-4 p-4 md:p-5">
         <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div><label class="mb-1 block text-xs font-semibold text-slate-700">Establecimiento</label><select class="select" formControlName="establishment"><option *ngFor="let establishment of activeEstablishments" [value]="establishment.name">{{ establishment.establishment_code }} - {{ establishment.establishment_name || establishment.name }}</option></select></div>
-          <div><label class="mb-1 block text-xs font-semibold text-slate-700">Punto de emisión</label><select class="select" formControlName="emission_point"><option *ngFor="let point of activeEmissionPoints" [value]="point.name">{{ point.emission_point_code }} - {{ point.emission_point_name || point.name }}</option></select></div>
-          <div><label class="mb-1 block text-xs font-semibold text-slate-700">Tipo de documento</label><select class="select" formControlName="document_type"><option *ngFor="let type of documentTypes" [value]="type">{{ type }}</option></select></div>
-          <div><label class="mb-1 block text-xs font-semibold text-slate-700">Ambiente</label><select class="select" formControlName="environment"><option *ngFor="let environment of environments" [value]="environment">{{ environment }}</option></select></div>
-          <div><label class="mb-1 block text-xs font-semibold text-slate-700">Estado</label><select class="select" formControlName="status"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select></div>
-          <div><label class="mb-1 block text-xs font-semibold text-slate-700">Último número utilizado</label><input class="input" type="number" min="0" max="999999999" step="1" formControlName="current_number" /><p class="mt-1 text-[11px] text-slate-500">Se mostrará con nueve dígitos. No puede disminuirse al editar.</p><p *ngIf="submitted && form.get('current_number')?.invalid" class="field-error">Ingrese un número entero entre 0 y 999999999.</p><p *ngIf="consecutiveError" class="field-error">{{ consecutiveError }}</p></div>
+          <div><label class="mb-1 block text-xs font-semibold text-foreground/80">Establecimiento</label><select class="select" formControlName="establishment"><option *ngFor="let establishment of activeEstablishments" [value]="establishment.name">{{ establishment.establishment_code }} - {{ establishment.establishment_name || establishment.name }}</option></select></div>
+          <div><label class="mb-1 block text-xs font-semibold text-foreground/80">Punto de emisión</label><select class="select" formControlName="emission_point"><option *ngFor="let point of activeEmissionPoints" [value]="point.name">{{ point.emission_point_code }} - {{ point.emission_point_name || point.name }}</option></select></div>
+          <div><label class="mb-1 block text-xs font-semibold text-foreground/80">Tipo de documento</label><select class="select" formControlName="document_type"><option *ngFor="let type of documentTypes" [value]="type">{{ type }}</option></select></div>
+          <div><label class="mb-1 block text-xs font-semibold text-foreground/80">Ambiente</label><select class="select" formControlName="environment"><option *ngFor="let environment of environments" [value]="environment">{{ environment }}</option></select></div>
+          <div><label class="mb-1 block text-xs font-semibold text-foreground/80">Estado</label><select class="select" formControlName="status"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select></div>
+          <div><label class="mb-1 block text-xs font-semibold text-foreground/80">Último número utilizado</label><input class="input" type="number" min="0" max="999999999" step="1" formControlName="current_number" /><p class="mt-1 text-[11px] text-muted-foreground">Se mostrará con nueve dígitos. No puede disminuirse al editar.</p><p *ngIf="submitted && form.get('current_number')?.invalid" class="field-error">Ingrese un número entero entre 0 y 999999999.</p><p *ngIf="consecutiveError" class="field-error">{{ consecutiveError }}</p></div>
         </div>
         <div class="rounded-xl border border-sky-100 bg-sky-50 p-3 text-[11px] text-sky-800">Siguiente comprobante: <b>{{ formatNumber((form.get('current_number')?.value || 0) + 1) }}</b>. El backend controla el consecutivo oficial y evita duplicados.</div>
-        <footer class="flex justify-end gap-2 border-t border-slate-200 pt-3"><button type="button" class="btn btn-outline" (click)="closeModal()" [disabled]="saving">Cancelar</button><button type="submit" class="btn btn-primary" [disabled]="saving">{{ saving ? 'Guardando…' : 'Guardar secuencia' }}</button></footer>
+        <footer class="flex justify-end gap-2 border-t border-border pt-3"><button type="button" class="btn btn-outline" (click)="closeModal()" [disabled]="saving">Cancelar</button><button type="submit" class="btn btn-primary" [disabled]="saving">{{ saving ? 'Guardando…' : 'Guardar secuencia' }}</button></footer>
       </form>
     </section>
   </div>

@@ -1,6 +1,6 @@
 <!-- Spinner global -->
-<ngx-spinner bdColor="rgba(0,0,0,0.75)" size="large" color="#001c71" type="ball-scale-multiple" [fullScreen]="true">
-    <p style="color:#f5ae1c">Cargando...</p>
+<ngx-spinner bdColor="rgba(0, 0, 0, 0.8)" size="large" color="#001c71" type="ball-scale-multiple" [fullScreen]="true">
+    <p class="text-sm font-semibold text-white">Creando tu cuenta...</p>
 </ngx-spinner>
 <div class="register-page">
     <header class="register-topbar">
@@ -75,7 +75,7 @@
                             <label class="block mb-1 font-medium">Contraseña</label>
                             <div class="relative">
                                 <input autocomplete="new-password" [type]="showPass ? 'text':'password'" class="input pr-20" formControlName="password" />
-                                <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-100"
+                                <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted"
                                     (click)="showPass=!showPass">
                                     {{ showPass ? 'Ocultar' : 'Mostrar' }}
                                 </button>
@@ -146,10 +146,10 @@
                     <!-- PASO 3 -->
                     <div *ngIf="step===3" class="form-step space-y-3">
                         <h3 class="section-title">Revisión</h3>
-                        <p class="text-sm text-slate-600">
+                        <p class="text-sm text-muted-foreground">
                             Crearemos tu empresa como Facturación Simple y te llevaremos al asistente para completar el perfil tributario.
                         </p>
-                        <div class="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-slate-700">
+                        <div class="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-foreground/80">
                             Después del registro podrás configurar los datos tributarios, logo, certificado, establecimiento, punto de emisión y secuencias.
                         </div>
                     </div>

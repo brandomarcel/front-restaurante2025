@@ -1,12 +1,12 @@
 <div class="app-modal-backdrop p-3" (click)="close.emit()">
   <div class="app-modal max-w-4xl overflow-hidden !rounded-xl" (click)="$event.stopPropagation()">
-    <button class="app-modal-close text-gray-400 hover:text-gray-600" (click)="close.emit()">×</button>
+    <button class="app-modal-close text-muted-foreground/70 hover:text-muted-foreground" (click)="close.emit()">×</button>
 
     <div class="space-y-3 p-3 sm:p-4">
-      <header class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3 pr-8">
+      <header class="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-3 pr-8">
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-2">
-            <h2 class="truncate text-base font-black text-gray-900">Orden {{ order.alias || order.name }}</h2>
+            <h2 class="truncate text-base font-black text-foreground">Orden {{ order.alias || order.name }}</h2>
             <span class="badge" [ngClass]="badgeClass">{{ normalizedStatus }}</span>
             <span class="badge badge-gray">{{ order.type || 'Nota Venta' }}</span>
           </div>
@@ -27,26 +27,26 @@
       <section class="grid gap-2 rounded-xl border border-primary/10 bg-primary/5 p-2 text-xs md:grid-cols-4">
         <div class="md:col-span-2">
           <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Cliente</p>
-          <p class="truncate font-bold text-gray-900">{{ customerName }}</p>
+          <p class="truncate font-bold text-foreground">{{ customerName }}</p>
         </div>
         <div>
           <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Identificación</p>
-          <p class="font-semibold text-gray-900">{{ order.customer.num_identificacion || '-' }}</p>
+          <p class="font-semibold text-foreground">{{ order.customer.num_identificacion || '-' }}</p>
         </div>
         <div>
           <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Teléfono</p>
-          <p class="font-semibold text-gray-900">{{ order.customer.telefono || '-' }}</p>
+          <p class="font-semibold text-foreground">{{ order.customer.telefono || '-' }}</p>
         </div>
         <div *ngIf="!kitchenMode" class="md:col-span-2">
           <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Correo</p>
-          <p class="truncate font-semibold text-gray-900">{{ order.customer.correo || '-' }}</p>
+          <p class="truncate font-semibold text-foreground">{{ order.customer.correo || '-' }}</p>
         </div>
       </section>
 
       <section>
         <div class="mb-1.5 flex items-center justify-between">
           <h3 class="text-xs font-bold uppercase tracking-wide text-primary">Items</h3>
-          <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">{{ order.items.length }} ítem(s)</span>
+          <span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">{{ order.items.length }} ítem(s)</span>
         </div>
 
         <div class="app-table-wrap max-h-[42vh]">
@@ -61,13 +61,13 @@
             </thead>
             <tbody>
               <tr *ngFor="let it of order.items" class="app-tr">
-                <td class="p-2 font-semibold text-gray-900">{{ getItemName(it) }}</td>
-                <td class="p-2 text-right font-bold text-gray-700">{{ getItemQty(it) }}</td>
-                <td *ngIf="!kitchenMode" class="p-2 text-right text-gray-700">{{ (it?.price ?? 0) | currency:'USD':'symbol':'1.2-2' }}</td>
-                <td *ngIf="!kitchenMode" class="p-2 text-right font-bold text-gray-900">{{ getItemTotal(it) | currency:'USD':'symbol':'1.2-2' }}</td>
+                <td class="p-2 font-semibold text-foreground">{{ getItemName(it) }}</td>
+                <td class="p-2 text-right font-bold text-foreground/80">{{ getItemQty(it) }}</td>
+                <td *ngIf="!kitchenMode" class="p-2 text-right text-foreground/80">{{ (it?.price ?? 0) | currency:'USD':'symbol':'1.2-2' }}</td>
+                <td *ngIf="!kitchenMode" class="p-2 text-right font-bold text-foreground">{{ getItemTotal(it) | currency:'USD':'symbol':'1.2-2' }}</td>
               </tr>
               <tr *ngIf="order.items.length === 0">
-                <td class="p-3 text-center text-gray-500" [attr.colspan]="kitchenMode ? 2 : 4">Sin items</td>
+                <td class="p-3 text-center text-muted-foreground" [attr.colspan]="kitchenMode ? 2 : 4">Sin items</td>
               </tr>
             </tbody>
           </table>
@@ -75,18 +75,18 @@
       </section>
 
       <section *ngIf="!kitchenMode" class="grid gap-2 md:grid-cols-2">
-        <div class="rounded-xl border border-gray-200 p-2 text-xs">
+        <div class="rounded-xl border border-border p-2 text-xs">
           <p class="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Totales</p>
           <div class="space-y-1">
             <div class="flex justify-between"><span>Subtotal</span><span class="font-semibold">{{ order.subtotal | currency:'USD':'symbol':'1.2-2' }}</span></div>
             <div class="flex justify-between"><span>IVA</span><span class="font-semibold">{{ order.iva | currency:'USD':'symbol':'1.2-2' }}</span></div>
-            <div class="flex justify-between border-t border-slate-100 pt-1 text-sm font-black"><span>Total</span><span>{{ order.total | currency:'USD':'symbol':'1.2-2' }}</span></div>
+            <div class="flex justify-between border-t border-border pt-1 text-sm font-black"><span>Total</span><span>{{ order.total | currency:'USD':'symbol':'1.2-2' }}</span></div>
           </div>
         </div>
 
-        <div class="rounded-xl border border-gray-200 p-2 text-xs">
+        <div class="rounded-xl border border-border p-2 text-xs">
           <p class="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Facturación electrónica</p>
-          <div class="space-y-1 text-gray-700">
+          <div class="space-y-1 text-foreground/80">
             <p><span class="mr-2 font-semibold">Estado:</span><span class="badge" [ngClass]="sriBadgeClass">{{ order.sri.status || 'Sin factura' }}</span></p>
             <p *ngIf="order.sri.number"><span class="font-semibold">Número:</span> {{ order.sri.number }}</p>
             <p *ngIf="order.sri.invoice"><span class="font-semibold">Factura:</span> {{ order.sri.invoice }}</p>
@@ -96,7 +96,7 @@
         </div>
       </section>
 
-      <footer class="flex flex-wrap justify-end gap-1.5 border-t border-slate-100 pt-3">
+      <footer class="flex flex-wrap justify-end gap-1.5 border-t border-border pt-3">
         <button type="button" (click)="close.emit()" class="btn btn-outline !px-3 !py-1.5 !text-[11px]">Cerrar</button>
 
         <button

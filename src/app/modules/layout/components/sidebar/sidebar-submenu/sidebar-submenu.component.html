@@ -18,7 +18,7 @@
             [routerLink]="sub.route"
             routerLinkActive="text-primary"
             [routerLinkActiveOptions]="{ exact: true }"
-            class="hover:bg-slate-50 inline-block w-full rounded-md px-3 py-1.5 text-[11px]">
+            class="hover:bg-muted/40 inline-block w-full rounded-md px-3 py-1.5 text-[11px]">
             {{ sub.label }}
           </a>
           @if(menuService.isActive(sub.route)){

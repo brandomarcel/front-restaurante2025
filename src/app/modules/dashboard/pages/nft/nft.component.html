@@ -1,9 +1,9 @@
-<div class="min-h-full bg-slate-100/70 p-3 lg:p-4">
+<div class="min-h-full bg-muted/70 p-3 lg:p-4">
   <section class="mb-3 overflow-hidden rounded-xl bg-gradient-to-r px-3 py-3 text-white shadow-sm lg:px-4" [ngClass]="heroClasses">
     <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
       <div class="min-w-0">
         <div class="mb-2 flex min-w-0 items-center gap-2.5">
-          <div class="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-white/15 ring-1 ring-white/25">
+          <div class="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-card/15 ring-1 ring-white/25">
             <img *ngIf="capabilities.activeBusiness?.logo" [src]="capabilities.activeBusiness?.logo" alt="Logo de la empresa" class="h-full w-full object-contain p-1" />
             <span *ngIf="!capabilities.activeBusiness?.logo" class="text-sm font-black text-white">
               {{ (companyData?.name || capabilities.activeBusiness?.business_name || capabilities.activeBusiness?.name || 'E').slice(0, 1) | uppercase }}
@@ -17,10 +17,10 @@
           </div>
         </div>
         <div class="mb-1.5 flex flex-wrap items-center gap-1.5">
-          <span class="rounded-md bg-white/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">
+          <span class="rounded-md bg-card/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">
             {{ modeLabel }}
           </span>
-          <span class="rounded-md bg-white/15 px-2 py-0.5 text-[10px] font-semibold">
+          <span class="rounded-md bg-card/15 px-2 py-0.5 text-[10px] font-semibold">
             {{ today | date:'dd/MM/yyyy' }}
           </span>
           <span *ngIf="!isLiteMode" class="rounded-md px-2 py-0.5 text-[10px] font-semibold" [ngClass]="firmaClasses">
@@ -40,10 +40,10 @@
         </p>
       </div>
 
-      <div *ngIf="hasCurrentPlan" class="min-w-0 rounded-xl border border-white/15 bg-white/10 px-3 py-2.5 backdrop-blur-sm sm:min-w-[230px]">
+      <div *ngIf="hasCurrentPlan" class="min-w-0 rounded-xl border border-white/15 bg-card/10 px-3 py-2.5 backdrop-blur-sm sm:min-w-[230px]">
         <div class="flex items-center justify-between gap-3">
           <p class="text-[9px] font-bold uppercase tracking-[.14em] text-white/65">Plan activo</p>
-          <span class="rounded-full bg-white/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+          <span class="rounded-full bg-card/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
             {{ planStatus }}
           </span>
         </div>
@@ -57,7 +57,7 @@
 
   <app-avisos [avisos]="avisos" (eliminar)="eliminarAviso($event)" class="mb-3 block"></app-avisos>
 
-  <section class="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+  <section class="mb-4 overflow-hidden rounded-2xl border border-border bg-card shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
     <div *ngIf="hasCurrentPlan" class="grid gap-3 p-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,.8fr)]">
       <div class="rounded-xl border border-violet-100 bg-gradient-to-br from-violet-50/80 to-white p-4">
         <div class="flex items-end justify-between gap-3">
@@ -65,10 +65,10 @@
             <p class="text-[10px] font-bold uppercase tracking-[.12em] text-violet-700">Consumo de comprobantes</p>
             <p class="mt-1 text-2xl font-black leading-none text-slate-950">
               {{ planUnlimitedVouchers ? 'Ilimitado' : planUsedVouchers }}
-              <span *ngIf="!planUnlimitedVouchers" class="text-xs font-semibold text-slate-500"> usados</span>
+              <span *ngIf="!planUnlimitedVouchers" class="text-xs font-semibold text-muted-foreground"> usados</span>
             </p>
           </div>
-          <span *ngIf="!planUnlimitedVouchers" class="rounded-lg bg-white px-2.5 py-1.5 text-sm font-black text-violet-700 shadow-sm ring-1 ring-violet-100">
+          <span *ngIf="!planUnlimitedVouchers" class="rounded-lg bg-card px-2.5 py-1.5 text-sm font-black text-violet-700 shadow-sm ring-1 ring-violet-100">
             {{ apiPlanUsagePercent | number:'1.0-0' }}%
           </span>
         </div>
@@ -76,60 +76,60 @@
           <div class="h-full rounded-full bg-gradient-to-r from-violet-500 to-primary transition-all duration-500" [style.width.%]="apiPlanUsagePercent"></div>
         </div>
         <div class="mt-2 flex items-center justify-between gap-2 text-[11px]">
-          <span class="text-slate-500">{{ planVoucherUsageLabel }}</span>
+          <span class="text-muted-foreground">{{ planVoucherUsageLabel }}</span>
           <span *ngIf="planUnlimitedVouchers" class="font-semibold text-violet-700">Uso ilimitado incluido</span>
         </div>
       </div>
 
       <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-1">
-        <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-          <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Disponibles</p>
-          <p class="mt-0.5 text-base font-black text-slate-900">{{ planRemainingLabel }}</p>
+        <div class="rounded-xl border border-border bg-muted/40 px-3 py-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Disponibles</p>
+          <p class="mt-0.5 text-base font-black text-foreground">{{ planRemainingLabel }}</p>
         </div>
-        <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-          <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Vigencia restante</p>
-          <p class="mt-0.5 text-base font-black text-slate-900">{{ planDaysToExpire === null ? '—' : (planDaysToExpire + ' días') }}</p>
+        <div class="rounded-xl border border-border bg-muted/40 px-3 py-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Vigencia restante</p>
+          <p class="mt-0.5 text-base font-black text-foreground">{{ planDaysToExpire === null ? '—' : (planDaysToExpire + ' días') }}</p>
         </div>
-        <div *ngIf="shouldShowPlanAutoRenew" class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-          <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Renovación automática</p>
-          <p class="mt-0.5 text-base font-black text-slate-900">{{ planAutoRenewLabel }}</p>
+        <div *ngIf="shouldShowPlanAutoRenew" class="rounded-xl border border-border bg-muted/40 px-3 py-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Renovación automática</p>
+          <p class="mt-0.5 text-base font-black text-foreground">{{ planAutoRenewLabel }}</p>
         </div>
       </div>
     </div>
     <div *ngIf="planIsInactive || planExpiringSoon" class="mx-4 mb-4 rounded-xl px-3 py-2 text-[11px] font-semibold" [ngClass]="planIsInactive ? 'bg-orange-50 text-orange-700' : 'bg-amber-50 text-amber-700'">
       {{ planIsInactive ? 'El plan no está activo.' : ('El plan vence en ' + planDaysToExpire + ' día(s).') }}
     </div>
-    <div *ngIf="!hasCurrentPlan" class="px-4 py-4 text-xs font-semibold text-slate-600">
+    <div *ngIf="!hasCurrentPlan" class="px-4 py-4 text-xs font-semibold text-muted-foreground">
       Asigna un plan para habilitar la emisión de comprobantes.
     </div>
   </section>
 
   <section *ngIf="isRestaurantMode" class="mb-3 grid grid-cols-2 gap-2 xl:grid-cols-4">
-    <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+    <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
+      <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
         {{ isFacturadorMode ? 'Documentos/ventas' : 'Pedidos' }}
       </p>
-      <p class="mt-1 text-xl font-black text-slate-900">{{ totalOrdersToday }}</p>
-      <p class="text-[10px] text-slate-500">{{ isFacturadorMode ? 'actividad registrada hoy' : ritmoTurnoLabel }}</p>
+      <p class="mt-1 text-xl font-black text-foreground">{{ totalOrdersToday }}</p>
+      <p class="text-[10px] text-muted-foreground">{{ isFacturadorMode ? 'actividad registrada hoy' : ritmoTurnoLabel }}</p>
     </article>
 
-    <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Ventas</p>
+    <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
+      <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Ventas</p>
       <p class="mt-1 text-xl font-black text-primary">{{ total_sales_today | currency:'USD':'symbol':'1.0-0' }}</p>
-      <p class="text-[10px] text-slate-500">total del día</p>
+      <p class="text-[10px] text-muted-foreground">total del día</p>
     </article>
 
-    <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Ticket promedio</p>
-      <p class="mt-1 text-xl font-black text-slate-900">{{ ticketPromedio | currency:'USD':'symbol':'1.0-2' }}</p>
+    <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
+      <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Ticket promedio</p>
+      <p class="mt-1 text-xl font-black text-foreground">{{ ticketPromedio | currency:'USD':'symbol':'1.0-2' }}</p>
       <p class="text-[10px]" [ngClass]="ticketPromedioClasses">{{ ticketPromedioLabel }}</p>
     </article>
 
-    <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+    <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
+      <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
         {{ isFacturadorMode ? 'Estado firma' : 'Caja esperada' }}
       </p>
-      <p class="mt-1 text-xl font-black text-slate-900">
+      <p class="mt-1 text-xl font-black text-foreground">
         <ng-container *ngIf="isFacturadorMode; else restaurantExpectedCash">{{ firmaLabel }}</ng-container>
         <ng-template #restaurantExpectedCash>{{ efectivoEsperado | currency:'USD':'symbol':'1.0-0' }}</ng-template>
       </p>
@@ -140,11 +140,11 @@
   </section>
 
   <section *ngIf="isRestaurantMode" class="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
-    <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-7">
+    <article class="rounded-xl border border-border bg-card p-3 shadow-sm xl:col-span-7">
       <div class="mb-2 flex items-center justify-between gap-2">
         <div>
-          <h2 class="text-sm font-bold text-slate-900">{{ isFacturadorMode ? 'Panorama de facturación' : 'Panorama del turno' }}</h2>
-          <p class="text-[10px] text-slate-500">Lectura rápida para decidir qué hacer ahora.</p>
+          <h2 class="text-sm font-bold text-foreground">{{ isFacturadorMode ? 'Panorama de facturación' : 'Panorama del turno' }}</h2>
+          <p class="text-[10px] text-muted-foreground">Lectura rápida para decidir qué hacer ahora.</p>
         </div>
         <span class="rounded-md px-2 py-1 text-[10px] font-bold" [ngClass]="estadoTurnoClasses">
           {{ estadoTurnoLabel }}
@@ -152,30 +152,30 @@
       </div>
 
       <div class="grid gap-2 md:grid-cols-3">
-        <div class="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
-          <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Ventas de hoy</p>
-          <p class="mt-1 text-[11px] font-semibold text-slate-800">{{ resumenVentasClaro }}</p>
+        <div class="rounded-lg border border-border bg-muted/40 p-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Ventas de hoy</p>
+          <p class="mt-1 text-[11px] font-semibold text-foreground">{{ resumenVentasClaro }}</p>
         </div>
-        <div class="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
-          <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+        <div class="rounded-lg border border-border bg-muted/40 p-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
             {{ isFacturadorMode ? 'Firma / SRI' : 'Situación de caja' }}
           </p>
-          <p class="mt-1 text-[11px] font-semibold text-slate-800">{{ resumenCajaClaro }}</p>
+          <p class="mt-1 text-[11px] font-semibold text-foreground">{{ resumenCajaClaro }}</p>
         </div>
-        <div class="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
-          <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+        <div class="rounded-lg border border-border bg-muted/40 p-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
             {{ isFacturadorMode ? 'Producto facturado' : 'Producto destacado' }}
           </p>
-          <p class="mt-1 text-[11px] font-semibold text-slate-800">{{ resumenProductosClaro }}</p>
+          <p class="mt-1 text-[11px] font-semibold text-foreground">{{ resumenProductosClaro }}</p>
         </div>
       </div>
     </article>
 
-    <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-5">
-      <h2 class="text-sm font-bold text-slate-900">Qué revisar ahora</h2>
-      <p class="mb-2 text-[10px] text-slate-500">{{ isFacturadorMode ? 'Prioridades de emisión y configuración.' : 'Prioridades del responsable de turno.' }}</p>
+    <article class="rounded-xl border border-border bg-card p-3 shadow-sm xl:col-span-5">
+      <h2 class="text-sm font-bold text-foreground">Qué revisar ahora</h2>
+      <p class="mb-2 text-[10px] text-muted-foreground">{{ isFacturadorMode ? 'Prioridades de emisión y configuración.' : 'Prioridades del responsable de turno.' }}</p>
       <ul class="grid gap-1.5">
-        <li *ngFor="let accion of accionesSugeridas" class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-[11px] font-medium text-slate-700">
+        <li *ngFor="let accion of accionesSugeridas" class="rounded-lg border border-border bg-muted/40 px-2.5 py-2 text-[11px] font-medium text-foreground/80">
           {{ accion }}
         </li>
       </ul>
@@ -184,11 +184,11 @@
 
   <ng-container *ngIf="isRestaurantMode; else facturadorDashboard">
     <section class="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
-      <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-8">
+      <article class="rounded-xl border border-border bg-card p-3 shadow-sm xl:col-span-8">
         <div class="mb-2 flex items-center justify-between gap-2">
           <div>
-            <h2 class="text-sm font-bold text-slate-900">Top productos vendidos</h2>
-            <p class="text-[10px] text-slate-500">Ranking por unidades del día.</p>
+            <h2 class="text-sm font-bold text-foreground">Top productos vendidos</h2>
+            <p class="text-[10px] text-muted-foreground">Ranking por unidades del día.</p>
           </div>
           <span class="rounded-md bg-slate-900 px-2 py-1 text-[10px] font-bold text-white">{{ topProductName }}</span>
         </div>
@@ -206,9 +206,9 @@
         </apx-chart>
       </article>
 
-      <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-4">
-        <h2 class="text-sm font-bold text-slate-900">Flujo de caja</h2>
-        <p class="mb-2 text-[10px] text-slate-500">Apertura, ventas y retiros.</p>
+      <article class="rounded-xl border border-border bg-card p-3 shadow-sm xl:col-span-4">
+        <h2 class="text-sm font-bold text-foreground">Flujo de caja</h2>
+        <p class="mb-2 text-[10px] text-muted-foreground">Apertura, ventas y retiros.</p>
         <apx-chart
           *ngIf="cashFlowDonutOptions?.chart"
           [series]="cashFlowDonutOptions.series"
@@ -226,9 +226,9 @@
     </section>
 
     <section class="grid grid-cols-1 gap-3 xl:grid-cols-12">
-      <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-8">
-        <h2 class="text-sm font-bold text-slate-900">Comparativo monetario</h2>
-        <p class="mb-2 text-[10px] text-slate-500">Ventas, retiros, efectivo actual, esperado y diferencia.</p>
+      <article class="rounded-xl border border-border bg-card p-3 shadow-sm xl:col-span-8">
+        <h2 class="text-sm font-bold text-foreground">Comparativo monetario</h2>
+        <p class="mb-2 text-[10px] text-muted-foreground">Ventas, retiros, efectivo actual, esperado y diferencia.</p>
         <apx-chart
           *ngIf="moneyBarsOptions?.chart"
           [series]="moneyBarsOptions.series"
@@ -243,30 +243,30 @@
         </apx-chart>
       </article>
 
-      <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-4">
-        <h2 class="text-sm font-bold text-slate-900">Rendimiento comercial</h2>
-        <p class="mb-2 text-[10px] text-slate-500">Ritmo de venta y mix de productos.</p>
+      <article class="rounded-xl border border-border bg-card p-3 shadow-sm xl:col-span-4">
+        <h2 class="text-sm font-bold text-foreground">Rendimiento comercial</h2>
+        <p class="mb-2 text-[10px] text-muted-foreground">Ritmo de venta y mix de productos.</p>
         <div class="grid gap-2">
-          <div class="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+          <div class="rounded-lg border border-border bg-muted/40 p-2.5">
             <div class="flex items-start justify-between gap-2">
               <div>
-                <p class="text-[10px] uppercase tracking-wide text-slate-500">Ritmo</p>
-                <p class="text-base font-black text-slate-900">{{ ordersPerHour | number:'1.0-1' }} pedidos/h</p>
+                <p class="text-[10px] uppercase tracking-wide text-muted-foreground">Ritmo</p>
+                <p class="text-base font-black text-foreground">{{ ordersPerHour | number:'1.0-1' }} pedidos/h</p>
               </div>
               <span class="rounded-md px-2 py-1 text-[10px] font-bold" [ngClass]="ritmoTurnoClasses">{{ ritmoTurnoLabel }}</span>
             </div>
           </div>
-          <div class="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+          <div class="rounded-lg border border-border bg-muted/40 p-2.5">
             <div class="flex items-start justify-between gap-2">
               <div>
-                <p class="text-[10px] uppercase tracking-wide text-slate-500">Mix</p>
-                <p class="text-base font-black text-slate-900">{{ mixVentasLabel }}</p>
+                <p class="text-[10px] uppercase tracking-wide text-muted-foreground">Mix</p>
+                <p class="text-base font-black text-foreground">{{ mixVentasLabel }}</p>
               </div>
               <span class="rounded-md px-2 py-1 text-[10px] font-bold" [ngClass]="mixVentasClasses">
                 {{ topProductShareInTop | number:'1.0-1' }}%
               </span>
             </div>
-            <p class="mt-1 text-[10px] text-slate-500">{{ mixVentasDetalle }}</p>
+            <p class="mt-1 text-[10px] text-muted-foreground">{{ mixVentasDetalle }}</p>
           </div>
         </div>
       </article>
@@ -275,23 +275,23 @@
 
   <ng-template #facturadorDashboard>
     <ng-container *ngIf="isApiOnlyMode; else billingDashboard">
-      <section class="mb-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <section class="mb-3 rounded-xl border border-border bg-card p-3 shadow-sm">
         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p class="text-[10px] font-bold uppercase tracking-wide text-primary">FacturADA API</p>
-            <h2 class="text-base font-black text-slate-900">Centro de integración</h2>
-            <p class="mt-0.5 text-xs text-slate-600">Consulta el uso de comprobantes y la configuración que utilizarán tus sistemas externos.</p>
+            <h2 class="text-base font-black text-foreground">Centro de integración</h2>
+            <p class="mt-0.5 text-xs text-muted-foreground">Consulta el uso de comprobantes y la configuración que utilizarán tus sistemas externos.</p>
           </div>
           <div class="grid grid-cols-2 gap-2 sm:flex sm:items-end">
-            <label class="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+            <label class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
               Desde
               <input type="date" [(ngModel)]="liteFromDate" (change)="onLiteDateChange()"
-                class="mt-1 block rounded-md border border-slate-200 px-2 py-1.5 text-xs font-medium text-slate-700 outline-none focus:border-primary" />
+                class="mt-1 block rounded-md border border-border px-2 py-1.5 text-xs font-medium text-foreground/80 outline-none focus:border-primary bg-card text-foreground" />
             </label>
-            <label class="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+            <label class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
               Hasta
               <input type="date" [(ngModel)]="liteToDate" (change)="onLiteDateChange()"
-                class="mt-1 block rounded-md border border-slate-200 px-2 py-1.5 text-xs font-medium text-slate-700 outline-none focus:border-primary" />
+                class="mt-1 block rounded-md border border-border px-2 py-1.5 text-xs font-medium text-foreground/80 outline-none focus:border-primary bg-card text-foreground" />
             </label>
             <button type="button" (click)="loadLiteDashboard()" [disabled]="liteDashboardLoading"
               class="col-span-2 rounded-md bg-primary px-3 py-2 text-xs font-bold text-white transition hover:opacity-90 disabled:cursor-wait disabled:opacity-60 sm:col-span-1">
@@ -301,7 +301,7 @@
         </div>
       </section>
 
-      <div *ngIf="liteDashboardLoading" class="mb-3 rounded-xl border border-slate-200 bg-white p-6 text-center text-xs font-semibold text-slate-500 shadow-sm">
+      <div *ngIf="liteDashboardLoading" class="mb-3 rounded-xl border border-border bg-card p-6 text-center text-xs font-semibold text-muted-foreground shadow-sm">
         Cargando información de API…
       </div>
       <div *ngIf="liteDashboardError && !liteDashboardLoading" class="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
@@ -309,10 +309,10 @@
       </div>
 
       <section class="mb-3 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
-        <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-          <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Facturas del periodo</p>
-          <p class="mt-1 text-xl font-black text-slate-900">{{ liteSales?.invoice_count || 0 }}</p>
-          <p class="text-[10px] text-slate-500">Documentos recibidos</p>
+        <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Facturas del periodo</p>
+          <p class="mt-1 text-xl font-black text-foreground">{{ liteSales?.invoice_count || 0 }}</p>
+          <p class="text-[10px] text-muted-foreground">Documentos recibidos</p>
         </article>
         <article class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 shadow-sm">
           <p class="text-[10px] font-bold uppercase tracking-wide text-emerald-700">Autorizadas</p>
@@ -342,23 +342,23 @@
       </section>
 
       <section class="mb-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
           <div class="mb-2 flex items-center justify-between gap-2">
-            <div><h2 class="text-sm font-bold text-slate-900">Estado de integración</h2><p class="text-[10px] text-slate-500">Datos que deben coincidir en tus solicitudes.</p></div>
+            <div><h2 class="text-sm font-bold text-foreground">Estado de integración</h2><p class="text-[10px] text-muted-foreground">Datos que deben coincidir en tus solicitudes.</p></div>
             <span class="rounded-full px-2 py-1 text-[10px] font-bold" [ngClass]="apiSetupStatusClasses">{{ apiSetupStatusLabel }}</span>
           </div>
           <div class="grid gap-1.5 text-[11px]">
-            <div class="flex justify-between rounded-lg bg-slate-50 px-2.5 py-2"><span>API</span><b class="text-emerald-700">Activa</b></div>
-            <div class="flex justify-between rounded-lg bg-slate-50 px-2.5 py-2"><span>RUC tributario</span><b>{{ apiRucLabel }}</b></div>
-            <div class="flex justify-between rounded-lg bg-slate-50 px-2.5 py-2"><span>Ambiente</span><b>{{ apiEnvironmentLabel }}</b></div>
-            <div class="flex justify-between rounded-lg bg-slate-50 px-2.5 py-2"><span>Secuencia factura</span><b>{{ apiSequenceLabel }}</b></div>
+            <div class="flex justify-between rounded-lg bg-muted/40 px-2.5 py-2"><span>API</span><b class="text-emerald-700">Activa</b></div>
+            <div class="flex justify-between rounded-lg bg-muted/40 px-2.5 py-2"><span>RUC tributario</span><b>{{ apiRucLabel }}</b></div>
+            <div class="flex justify-between rounded-lg bg-muted/40 px-2.5 py-2"><span>Ambiente</span><b>{{ apiEnvironmentLabel }}</b></div>
+            <div class="flex justify-between rounded-lg bg-muted/40 px-2.5 py-2"><span>Secuencia factura</span><b>{{ apiSequenceLabel }}</b></div>
           </div>
           <p *ngIf="apiSetupMissing.length" class="mt-2 rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] font-semibold text-amber-800">Pendiente: {{ apiSetupMissing.join(', ') }}</p>
         </article>
-        <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-          <h2 class="text-sm font-bold text-slate-900">Uso del plan</h2>
-          <p class="mb-2 text-[10px] text-slate-500">{{ planName }} · {{ planVigenciaLabel }}</p>
-          <div class="h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-primary" [style.width.%]="apiPlanUsagePercent"></div></div>
+        <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
+          <h2 class="text-sm font-bold text-foreground">Uso del plan</h2>
+          <p class="mb-2 text-[10px] text-muted-foreground">{{ planName }} · {{ planVigenciaLabel }}</p>
+          <div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full bg-primary" [style.width.%]="apiPlanUsagePercent"></div></div>
           <div class="mt-2 flex justify-between text-[11px]"><span>{{ planUsedVouchers }} usados</span><b>{{ planRemainingLabel }} restantes</b></div>
           <div class="mt-3 flex flex-wrap gap-2">
             <a *ngIf="capabilities.apiConfiguration?.enabled === true" routerLink="/settings/lite/api" class="rounded-md bg-slate-900 px-3 py-2 text-[10px] font-bold text-white">Integración API</a>
@@ -368,16 +368,16 @@
         </article>
       </section>
 
-      <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-        <div class="mb-2 flex items-center justify-between gap-2"><div><h2 class="text-sm font-bold text-slate-900">Últimos comprobantes</h2><p class="text-[10px] text-slate-500">Actividad generada por tus integraciones.</p></div><span class="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-500">{{ liteDashboardPeriodLabel }}</span></div>
-        <div *ngIf="!liteDashboard?.recent_invoices?.length" class="rounded-lg border border-dashed border-slate-200 p-5 text-center text-xs text-slate-500">No hay comprobantes para el periodo seleccionado.</div>
-        <div *ngIf="liteDashboard?.recent_invoices?.length" class="overflow-x-auto"><table class="w-full min-w-[620px] text-left text-[11px]"><thead class="border-b border-slate-200 text-[10px] uppercase tracking-wide text-slate-500"><tr><th class="px-2 py-2">Documento</th><th class="px-2 py-2">Fecha</th><th class="px-2 py-2">Cliente</th><th class="px-2 py-2">Estado</th><th class="px-2 py-2 text-right">Total</th></tr></thead><tbody><tr *ngFor="let invoice of liteDashboard?.recent_invoices" class="border-b border-slate-100 last:border-0"><td class="px-2 py-2 font-bold text-primary">{{ liteInvoiceName(invoice) }}</td><td class="px-2 py-2">{{ formatLiteInvoiceDate(invoice.date || invoice.posting_date || invoice.issue_date) }}</td><td class="px-2 py-2">{{ liteInvoiceCustomer(invoice) }}</td><td class="px-2 py-2"><span class="rounded-md bg-slate-100 px-2 py-1 font-semibold">{{ liteInvoiceStatus(invoice) }}</span></td><td class="px-2 py-2 text-right font-black">{{ liteInvoiceTotal(invoice) | currency:'USD':'symbol':'1.2-2' }}</td></tr></tbody></table></div>
+      <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
+        <div class="mb-2 flex items-center justify-between gap-2"><div><h2 class="text-sm font-bold text-foreground">Últimos comprobantes</h2><p class="text-[10px] text-muted-foreground">Actividad generada por tus integraciones.</p></div><span class="rounded-md bg-muted px-2 py-1 text-[10px] font-semibold text-muted-foreground">{{ liteDashboardPeriodLabel }}</span></div>
+        <div *ngIf="!liteDashboard?.recent_invoices?.length" class="rounded-lg border border-dashed border-border p-5 text-center text-xs text-muted-foreground">No hay comprobantes para el periodo seleccionado.</div>
+        <div *ngIf="liteDashboard?.recent_invoices?.length" class="overflow-x-auto"><table class="w-full min-w-[620px] text-left text-[11px]"><thead class="border-b border-border text-[10px] uppercase tracking-wide text-muted-foreground"><tr><th class="px-2 py-2">Documento</th><th class="px-2 py-2">Fecha</th><th class="px-2 py-2">Cliente</th><th class="px-2 py-2">Estado</th><th class="px-2 py-2 text-right">Total</th></tr></thead><tbody><tr *ngFor="let invoice of liteDashboard?.recent_invoices" class="border-b border-border last:border-0"><td class="px-2 py-2 font-bold text-primary">{{ liteInvoiceName(invoice) }}</td><td class="px-2 py-2">{{ formatLiteInvoiceDate(invoice.date || invoice.posting_date || invoice.issue_date) }}</td><td class="px-2 py-2">{{ liteInvoiceCustomer(invoice) }}</td><td class="px-2 py-2"><span class="rounded-md bg-muted px-2 py-1 font-semibold">{{ liteInvoiceStatus(invoice) }}</span></td><td class="px-2 py-2 text-right font-black">{{ liteInvoiceTotal(invoice) | currency:'USD':'symbol':'1.2-2' }}</td></tr></tbody></table></div>
       </section>
     </ng-container>
 
     <ng-template #billingDashboard>
     <ng-container *ngIf="isBillingDashboard; else facturadorStandardDashboard">
-      <div *ngIf="liteDashboardLoading" class="mb-3 flex items-center gap-2 px-1 text-xs font-semibold text-slate-500">
+      <div *ngIf="liteDashboardLoading" class="mb-3 flex items-center gap-2 px-1 text-xs font-semibold text-muted-foreground">
         <span class="h-2.5 w-2.5 animate-pulse rounded-full bg-primary"></span>
         Cargando información…
       </div>
@@ -388,15 +388,15 @@
 
       <ng-container *ngIf="liteDashboard && !liteDashboardLoading">
         <section class="mb-3 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
-          <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Total vendido</p>
+          <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
+            <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Total vendido</p>
             <p class="mt-1 text-lg font-black text-primary">{{ liteSales?.sales_total | currency:'USD':'symbol':'1.2-2' }}</p>
-            <p class="text-[10px] text-slate-500">{{ liteSales?.invoice_count || 0 }} facturas</p>
+            <p class="text-[10px] text-muted-foreground">{{ liteSales?.invoice_count || 0 }} facturas</p>
           </article>
-          <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Total cobrado</p>
+          <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
+            <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Total cobrado</p>
             <p class="mt-1 text-lg font-black text-emerald-600">{{ liteSales?.collected_total | currency:'USD':'symbol':'1.2-2' }}</p>
-            <p class="text-[10px] text-slate-500">Pagos registrados</p>
+            <p class="text-[10px] text-muted-foreground">Pagos registrados</p>
           </article>
           <article class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 shadow-sm">
             <p class="text-[10px] font-bold uppercase tracking-wide text-emerald-700">Autorizadas</p>
@@ -421,9 +421,9 @@
         </section>
 
         <!-- <section class="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
-          <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-6">
-            <h2 class="text-sm font-bold text-slate-900">Estado de comprobantes</h2>
-            <p class="mb-2 text-[10px] text-slate-500">¿Se están autorizando bien tus facturas?</p>
+          <article class="rounded-xl border border-border bg-card p-3 shadow-sm xl:col-span-6">
+            <h2 class="text-sm font-bold text-foreground">Estado de comprobantes</h2>
+            <p class="mb-2 text-[10px] text-muted-foreground">¿Se están autorizando bien tus facturas?</p>
             <apx-chart
               *ngIf="invoiceStatusDonutOptions?.chart"
               [series]="invoiceStatusDonutOptions.series"
@@ -439,9 +439,9 @@
             </apx-chart>
           </article>
 
-          <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-6">
-            <h2 class="text-sm font-bold text-slate-900">Facturado vs. cobrado</h2>
-            <p class="mb-2 text-[10px] text-slate-500">La diferencia es dinero facturado que todavía no cobraste.</p>
+          <article class="rounded-xl border border-border bg-card p-3 shadow-sm xl:col-span-6">
+            <h2 class="text-sm font-bold text-foreground">Facturado vs. cobrado</h2>
+            <p class="mb-2 text-[10px] text-muted-foreground">La diferencia es dinero facturado que todavía no cobraste.</p>
             <apx-chart
               *ngIf="salesVsCollectedBarOptions?.chart"
               [series]="salesVsCollectedBarOptions.series"
@@ -461,7 +461,7 @@
 
         <section *ngIf="!litePlan || litePlanIsInactive || litePlanExpiringSoon || (!litePlanUnlimited && (litePlan?.remaining_authorized_documents || 0) <= 0)"
           class="mb-3 rounded-xl border p-3 text-xs font-semibold"
-          [ngClass]="!litePlan ? 'border-slate-200 bg-slate-50 text-slate-700' : 'border-amber-200 bg-amber-50 text-amber-800'">
+          [ngClass]="!litePlan ? 'border-border bg-muted/40 text-foreground/80' : 'border-amber-200 bg-amber-50 text-amber-800'">
           <ng-container *ngIf="!litePlan; else litePlanWarning">
             Sin plan asignado. La emisión de comprobantes no está disponible.
           </ng-container>
@@ -479,34 +479,34 @@
             <a *ngIf="isFeatureEnabled('inventory')" routerLink="/dashboard/inventory" class="rounded-md bg-rose-600 px-2.5 py-1.5 text-[10px] font-bold text-white">Revisar inventario</a>
           </div>
           <div *ngIf="liteDashboard.inventory.out_of_stock_items.length" class="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-            <div *ngFor="let item of liteDashboard.inventory.out_of_stock_items" class="rounded-lg border border-rose-200 bg-white px-2.5 py-2 text-[11px] text-slate-700">
-              <p class="font-bold text-slate-900">{{ item.item_name || item.item_code || item.name }}</p>
+            <div *ngFor="let item of liteDashboard.inventory.out_of_stock_items" class="rounded-lg border border-rose-200 bg-card px-2.5 py-2 text-[11px] text-foreground/80">
+              <p class="font-bold text-foreground">{{ item.item_name || item.item_code || item.name }}</p>
               <p class="text-rose-700">Sin stock · {{ item.current_stock || 0 }}</p>
             </div>
           </div>
         </section>
 
-        <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
           <div class="mb-2 flex items-center justify-between gap-2">
             <div>
-              <h2 class="text-sm font-bold text-slate-900">Últimas facturas</h2>
-              <p class="text-[10px] text-slate-500">Documentos del periodo seleccionado.</p>
+              <h2 class="text-sm font-bold text-foreground">Últimas facturas</h2>
+              <p class="text-[10px] text-muted-foreground">Documentos del periodo seleccionado.</p>
             </div>
-            <span *ngIf="liteHasNoData" class="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-500">Sin movimiento</span>
+            <span *ngIf="liteHasNoData" class="rounded-md bg-muted px-2 py-1 text-[10px] font-semibold text-muted-foreground">Sin movimiento</span>
           </div>
-          <div *ngIf="liteHasNoData" class="rounded-lg border border-dashed border-slate-200 p-5 text-center text-xs text-slate-500">No hay datos para los filtros seleccionados.</div>
+          <div *ngIf="liteHasNoData" class="rounded-lg border border-dashed border-border p-5 text-center text-xs text-muted-foreground">No hay datos para los filtros seleccionados.</div>
           <div *ngIf="!liteHasNoData" class="overflow-x-auto">
             <table class="w-full min-w-[620px] text-left text-[11px]">
-              <thead class="border-b border-slate-200 text-[10px] uppercase tracking-wide text-slate-500">
+              <thead class="border-b border-border text-[10px] uppercase tracking-wide text-muted-foreground">
                 <tr><th class="px-2 py-2">Factura</th><th class="px-2 py-2">Fecha</th><th class="px-2 py-2">Cliente</th><th class="px-2 py-2">Estado</th><th class="px-2 py-2 text-right">Total</th></tr>
               </thead>
               <tbody>
-                <tr *ngFor="let invoice of liteDashboard.recent_invoices" class="border-b border-slate-100 last:border-0">
+                <tr *ngFor="let invoice of liteDashboard.recent_invoices" class="border-b border-border last:border-0">
                   <td class="px-2 py-2 font-bold text-primary">{{ liteInvoiceName(invoice) }}</td>
-                  <td class="px-2 py-2 text-slate-600">{{ formatLiteInvoiceDate(invoice.date || invoice.posting_date || invoice.issue_date || invoice.fecha_emision) }}</td>
-                  <td class="max-w-[180px] truncate px-2 py-2 text-slate-700">{{ liteInvoiceCustomer(invoice) }}</td>
-                  <td class="px-2 py-2"><span class="rounded-md bg-slate-100 px-2 py-1 font-semibold text-slate-700">{{ liteInvoiceStatus(invoice) }}</span></td>
-                  <td class="px-2 py-2 text-right font-black text-slate-900">{{ liteInvoiceTotal(invoice) | currency:'USD':'symbol':'1.2-2' }}</td>
+                  <td class="px-2 py-2 text-muted-foreground">{{ formatLiteInvoiceDate(invoice.date || invoice.posting_date || invoice.issue_date || invoice.fecha_emision) }}</td>
+                  <td class="max-w-[180px] truncate px-2 py-2 text-foreground/80">{{ liteInvoiceCustomer(invoice) }}</td>
+                  <td class="px-2 py-2"><span class="rounded-md bg-muted px-2 py-1 font-semibold text-foreground/80">{{ liteInvoiceStatus(invoice) }}</span></td>
+                  <td class="px-2 py-2 text-right font-black text-foreground">{{ liteInvoiceTotal(invoice) | currency:'USD':'symbol':'1.2-2' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -517,11 +517,11 @@
 
     <ng-template #facturadorStandardDashboard>
     <section class="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
-      <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-8">
+      <article class="rounded-xl border border-border bg-card p-3 shadow-sm xl:col-span-8">
         <div class="mb-2 flex items-center justify-between gap-2">
           <div>
-            <h2 class="text-sm font-bold text-slate-900">Productos/servicios facturados</h2>
-            <p class="text-[10px] text-slate-500">Ranking de lo que más se está emitiendo hoy.</p>
+            <h2 class="text-sm font-bold text-foreground">Productos/servicios facturados</h2>
+            <p class="text-[10px] text-muted-foreground">Ranking de lo que más se está emitiendo hoy.</p>
           </div>
           <a routerLink="/dashboard/invoicing" class="rounded-md bg-primary px-2.5 py-1.5 text-[10px] font-bold text-white">
             Nueva factura
@@ -541,11 +541,11 @@
         </apx-chart>
       </article>
 
-      <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-4">
-        <h2 class="text-sm font-bold text-slate-900">Centro de emisión</h2>
-        <p class="mb-2 text-[10px] text-slate-500">Accesos pensados para una empresa facturadora.</p>
+      <article class="rounded-xl border border-border bg-card p-3 shadow-sm xl:col-span-4">
+        <h2 class="text-sm font-bold text-foreground">Centro de emisión</h2>
+        <p class="mb-2 text-[10px] text-muted-foreground">Accesos pensados para una empresa facturadora.</p>
         <div class="grid gap-2">
-          <a *ngIf="isFeatureEnabled('generic_pos')" routerLink="/dashboard/pos-generic" class="rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-slate-700 transition hover:bg-slate-100">
+          <a *ngIf="isFeatureEnabled('generic_pos')" routerLink="/dashboard/pos-generic" class="rounded-lg border border-border bg-muted/40 p-2.5 text-foreground/80 transition hover:bg-muted">
             <p class="text-xs font-black">Punto de venta</p>
             <p class="text-[10px]">Venta rápida con cliente, productos, pagos y terminal.</p>
           </a>
@@ -566,9 +566,9 @@
     </section>
 
     <section class="grid grid-cols-1 gap-3 xl:grid-cols-12">
-      <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-8">
-        <h2 class="text-sm font-bold text-slate-900">Resumen monetario</h2>
-        <p class="mb-2 text-[10px] text-slate-500">Ventas del día y movimiento registrado.</p>
+      <article class="rounded-xl border border-border bg-card p-3 shadow-sm xl:col-span-8">
+        <h2 class="text-sm font-bold text-foreground">Resumen monetario</h2>
+        <p class="mb-2 text-[10px] text-muted-foreground">Ventas del día y movimiento registrado.</p>
         <apx-chart
           *ngIf="moneyBarsOptions?.chart"
           [series]="moneyBarsOptions.series"
@@ -583,25 +583,25 @@
         </apx-chart>
       </article>
 
-      <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-4">
-        <h2 class="text-sm font-bold text-slate-900">Salud de facturación</h2>
-        <p class="mb-2 text-[10px] text-slate-500">Lo mínimo que debe estar bien para emitir sin fricción.</p>
+      <article class="rounded-xl border border-border bg-card p-3 shadow-sm xl:col-span-4">
+        <h2 class="text-sm font-bold text-foreground">Salud de facturación</h2>
+        <p class="mb-2 text-[10px] text-muted-foreground">Lo mínimo que debe estar bien para emitir sin fricción.</p>
         <div class="grid gap-2 text-[11px]">
-          <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+          <div class="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-2.5 py-2">
             <span>Firma electrónica</span>
             <span class="rounded-md px-2 py-0.5 font-bold" [ngClass]="firmaClasses">{{ firmaLabel }}</span>
           </div>
-          <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+          <div class="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-2.5 py-2">
             <span>Ventas hoy</span>
-            <span class="font-black text-slate-900">{{ total_sales_today | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="font-black text-foreground">{{ total_sales_today | currency:'USD':'symbol':'1.0-0' }}</span>
           </div>
-          <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+          <div class="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-2.5 py-2">
             <span>Ticket promedio</span>
-            <span class="font-black text-slate-900">{{ ticketPromedio | currency:'USD':'symbol':'1.0-2' }}</span>
+            <span class="font-black text-foreground">{{ ticketPromedio | currency:'USD':'symbol':'1.0-2' }}</span>
           </div>
-          <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+          <div class="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-2.5 py-2">
             <span>Producto líder</span>
-            <span class="max-w-[150px] truncate font-black text-slate-900">{{ topProductName }}</span>
+            <span class="max-w-[150px] truncate font-black text-foreground">{{ topProductName }}</span>
           </div>
         </div>
       </article>

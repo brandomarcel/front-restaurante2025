@@ -1,20 +1,20 @@
 <ng-container *ngIf="loading; else loadedState">
-  <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-    <p class="text-xs font-semibold text-slate-700">Cargando orden...</p>
-    <p class="mt-1 text-[11px] text-slate-500">Preparando información de la orden.</p>
+  <section class="rounded-xl border border-border bg-card p-4 shadow-sm">
+    <p class="text-xs font-semibold text-foreground/80">Cargando orden...</p>
+    <p class="mt-1 text-[11px] text-muted-foreground">Preparando información de la orden.</p>
   </section>
 </ng-container>
 
 <ng-template #loadedState>
   <ng-container *ngIf="!error; else errorState">
     <div class="h-full min-h-0 space-y-3 pb-24 md:pb-3">
-      <section class="rounded-xl border border-primary/15 bg-white p-3 shadow-sm">
+      <section class="rounded-xl border border-primary/15 bg-card p-3 shadow-sm">
         <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div class="min-w-0">
             <div class="mb-1.5 flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
-                class="min-h-[30px] rounded-md border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                class="min-h-[30px] rounded-md border border-border bg-card px-2.5 text-[11px] font-semibold text-foreground/80 transition hover:bg-muted/40"
                 (click)="goBack()">
                 ← Volver
               </button>
@@ -27,34 +27,34 @@
                 {{ orderStatusLabel }}
               </span>
 
-              <span class="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-semibold text-slate-600">
+              <span class="rounded-md border border-border bg-muted/40 px-2 py-1 text-[10px] font-semibold text-muted-foreground">
                 SRI: {{ sriStatus || 'Sin factura' }}
               </span>
             </div>
 
             <div class="flex flex-wrap items-end gap-2">
-              <h2 class="truncate text-base font-bold leading-5 text-slate-900">
+              <h2 class="truncate text-base font-bold leading-5 text-foreground">
                 Orden {{ order?.name || '-' }}
               </h2>
-              <span class="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+              <span class="rounded-md bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
                 Alias: {{ order?.alias || 'Sin alias' }}
               </span>
             </div>
 
-            <p class="mt-1 text-[11px] text-slate-500">{{ order?.createdAt | ecuadorTime }}</p>
+            <p class="mt-1 text-[11px] text-muted-foreground">{{ order?.createdAt | ecuadorTime }}</p>
           </div>
 
           <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:min-w-[420px]">
-            <div class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
-              <p class="text-[10px] text-slate-500">Items</p>
-              <p class="text-sm font-bold text-slate-900">{{ orderItems.length }}</p>
+            <div class="rounded-lg border border-border bg-muted/40 px-2.5 py-2">
+              <p class="text-[10px] text-muted-foreground">Items</p>
+              <p class="text-sm font-bold text-foreground">{{ orderItems.length }}</p>
             </div>
-            <div class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
-              <p class="text-[10px] text-slate-500">Subcuentas</p>
-              <p class="text-sm font-bold text-slate-900">{{ orderSplits.length }}</p>
+            <div class="rounded-lg border border-border bg-muted/40 px-2.5 py-2">
+              <p class="text-[10px] text-muted-foreground">Subcuentas</p>
+              <p class="text-sm font-bold text-foreground">{{ orderSplits.length }}</p>
             </div>
-            <div class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
-              <p class="text-[10px] text-slate-500">Pendiente</p>
+            <div class="rounded-lg border border-border bg-muted/40 px-2.5 py-2">
+              <p class="text-[10px] text-muted-foreground">Pendiente</p>
               <p class="text-sm font-bold" [ngClass]="pendingOrderToSplit > 0 ? 'text-amber-700' : 'text-emerald-700'">
                 ${{ pendingOrderToSplit | number:'1.2-2' }}
               </p>
@@ -70,7 +70,7 @@
       <section
         *ngIf="order"
         class="rounded-lg border px-3 py-2 text-[11px]"
-        [ngClass]="!canEditOrder ? 'border-slate-200 bg-slate-50 text-slate-600' : 'border-primary/25 bg-primary/5 text-primary'">
+        [ngClass]="!canEditOrder ? 'border-border bg-muted/40 text-muted-foreground' : 'border-primary/25 bg-primary/5 text-primary'">
         <ng-container *ngIf="canEditOrder; else blockedState">
           Puedes editar cliente, productos, cantidades y precios antes de guardar los cambios.
         </ng-container>
@@ -89,10 +89,10 @@
 
       <div class="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
         <main class="min-w-0 space-y-3">
-          <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
             <div class="mb-2 flex items-center justify-between gap-2">
               <h3 class="text-xs font-semibold text-primary">Cliente</h3>
-              <span class="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+              <span class="rounded-md bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                 Información fiscal
               </span>
             </div>
@@ -109,57 +109,57 @@
               [ngModelOptions]="{standalone: true}">
               <ng-template ng-option-tmp let-item="item">
                 <div class="flex min-w-0 flex-col">
-                  <span class="truncate font-semibold text-slate-800">{{ item.nombre }}</span>
-                  <span class="text-[10px] text-slate-500">{{ item.num_identificacion || item.identification_number || 'Sin identificación' }}</span>
+                  <span class="truncate font-semibold text-foreground">{{ item.nombre }}</span>
+                  <span class="text-[10px] text-muted-foreground">{{ item.num_identificacion || item.identification_number || 'Sin identificación' }}</span>
                 </div>
               </ng-template>
             </ng-select>
 
-            <div class="grid grid-cols-1 gap-1.5 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[11px] text-slate-700 sm:grid-cols-2 lg:grid-cols-3">
-              <p class="truncate"><span class="text-slate-500">Nombre:</span> {{ order?.customer?.customer_name || order?.customer?.nombre || order?.nombre_cliente || '-' }}</p>
-              <p class="truncate"><span class="text-slate-500">Identificación:</span> {{ order?.customer?.identification_number || order?.customer?.num_identificacion || order?.identificacion_cliente || '-' }}</p>
-              <p class="truncate"><span class="text-slate-500">Tipo:</span> {{ order?.customer?.identification_type || order?.customer?.tipo_identificacion || order?.tipo_identificacion_cliente || '-' }}</p>
-              <p class="truncate"><span class="text-slate-500">Tel:</span> {{ order?.customer?.phone || order?.customer?.telefono || order?.telefono_cliente || '-' }}</p>
-              <p class="truncate sm:col-span-2"><span class="text-slate-500">Email:</span> {{ order?.customer?.email || order?.customer?.correo || order?.correo_cliente || '-' }}</p>
-              <p class="truncate sm:col-span-2 lg:col-span-3"><span class="text-slate-500">Dirección:</span> {{ order?.customer?.address || order?.customer?.direccion || order?.direccion_cliente || '-' }}</p>
+            <div class="grid grid-cols-1 gap-1.5 rounded-lg border border-border bg-muted/40 p-2.5 text-[11px] text-foreground/80 sm:grid-cols-2 lg:grid-cols-3">
+              <p class="truncate"><span class="text-muted-foreground">Nombre:</span> {{ order?.customer?.customer_name || order?.customer?.nombre || order?.nombre_cliente || '-' }}</p>
+              <p class="truncate"><span class="text-muted-foreground">Identificación:</span> {{ order?.customer?.identification_number || order?.customer?.num_identificacion || order?.identificacion_cliente || '-' }}</p>
+              <p class="truncate"><span class="text-muted-foreground">Tipo:</span> {{ order?.customer?.identification_type || order?.customer?.tipo_identificacion || order?.tipo_identificacion_cliente || '-' }}</p>
+              <p class="truncate"><span class="text-muted-foreground">Tel:</span> {{ order?.customer?.phone || order?.customer?.telefono || order?.telefono_cliente || '-' }}</p>
+              <p class="truncate sm:col-span-2"><span class="text-muted-foreground">Email:</span> {{ order?.customer?.email || order?.customer?.correo || order?.correo_cliente || '-' }}</p>
+              <p class="truncate sm:col-span-2 lg:col-span-3"><span class="text-muted-foreground">Dirección:</span> {{ order?.customer?.address || order?.customer?.direccion || order?.direccion_cliente || '-' }}</p>
             </div>
           </section>
 
-          <section *ngIf="canEditOrder" class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <section *ngIf="canEditOrder" class="rounded-xl border border-border bg-card p-3 shadow-sm">
             <div class="mb-2 flex items-center justify-between gap-2">
               <div>
                 <h3 class="text-xs font-semibold text-primary">Formas de pago</h3>
-                <p class="text-[10px] text-slate-500">La suma debe coincidir con el total de la orden.</p>
+                <p class="text-[10px] text-muted-foreground">La suma debe coincidir con el total de la orden.</p>
               </div>
-              <button type="button" class="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700" (click)="addOrderPayment()">
+              <button type="button" class="rounded-md border border-border bg-card px-2 py-1 text-[11px] font-semibold text-foreground/80" (click)="addOrderPayment()">
                 + Pago
               </button>
             </div>
 
             <div class="space-y-1.5">
-              <div *ngFor="let payment of orderPayments; let i = index" class="grid grid-cols-[minmax(0,1fr)_92px_auto] items-end gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
+              <div *ngFor="let payment of orderPayments; let i = index" class="grid grid-cols-[minmax(0,1fr)_92px_auto] items-end gap-2 rounded-lg border border-border bg-muted/40 p-2">
                 <label class="min-w-0">
-                  <span class="mb-1 block text-[9px] font-semibold uppercase text-slate-400">Método</span>
-                  <select class="h-8 w-full rounded-md border border-slate-200 bg-white px-2 text-[11px]" [(ngModel)]="payment.payment_method" [ngModelOptions]="{standalone: true}" (ngModelChange)="onOrderPaymentMethodChange(payment, i)">
+                  <span class="mb-1 block text-[9px] font-semibold uppercase text-muted-foreground/70">Método</span>
+                  <select class="h-8 w-full rounded-md border border-border bg-card px-2 text-[11px]" [(ngModel)]="payment.payment_method" [ngModelOptions]="{standalone: true}" (ngModelChange)="onOrderPaymentMethodChange(payment, i)">
                     <option value="">Seleccionar</option>
                     <option *ngFor="let method of paymentMethods" [value]="method.name" [disabled]="isOrderPaymentMethodUsed(method.name, i)">{{ method.description || method.nombre || method.name }}</option>
                   </select>
                 </label>
                 <label>
-                  <span class="mb-1 block text-[9px] font-semibold uppercase text-slate-400">Monto</span>
-                  <input type="number" min="0" step="0.01" class="h-8 w-full rounded-md border border-slate-200 bg-white px-2 text-right text-[11px]" [(ngModel)]="payment.amount" [ngModelOptions]="{standalone: true}" />
+                  <span class="mb-1 block text-[9px] font-semibold uppercase text-muted-foreground/70">Monto</span>
+                  <input type="number" min="0" step="0.01" class="h-8 w-full rounded-md border border-border bg-card px-2 text-right text-[11px]" [(ngModel)]="payment.amount" [ngModelOptions]="{standalone: true}" />
                 </label>
-                <button type="button" class="h-8 rounded-md border border-red-200 bg-white px-2 text-[11px] font-semibold text-red-600" (click)="removeOrderPayment(i)">Quitar</button>
+                <button type="button" class="h-8 rounded-md border border-red-200 bg-card px-2 text-[11px] font-semibold text-red-600" (click)="removeOrderPayment(i)">Quitar</button>
               </div>
               <p *ngIf="!orderPayments.length" class="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">Agrega al menos una forma de pago.</p>
             </div>
           </section>
 
-          <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
             <div class="mb-2 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h3 class="text-xs font-semibold text-primary">Ítems de la orden</h3>
-                <p class="text-[10px] text-slate-500">Edita rápido cantidades y precios como en caja.</p>
+                <p class="text-[10px] text-muted-foreground">Edita rápido cantidades y precios como en caja.</p>
               </div>
 
               <div *ngIf="canEditOrder" class="min-w-0 lg:w-[360px]">
@@ -174,13 +174,13 @@
                   (change)="addProductToOrder($event)">
                   <ng-template ng-option-tmp let-item="item">
                     <div class="flex items-center justify-between gap-3">
-                      <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-md bg-slate-100">
+                      <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
                         <img *ngIf="item.image_url" [src]="item.image_url" [alt]="item.nombre" class="h-full w-full object-cover" />
-                        <span *ngIf="!item.image_url" class="text-[9px] text-slate-400">—</span>
+                        <span *ngIf="!item.image_url" class="text-[9px] text-muted-foreground/70">—</span>
                       </div>
                       <div class="min-w-0">
-                        <div class="truncate font-semibold text-slate-800">{{ item.nombre }}</div>
-                        <div class="text-[10px] text-slate-500">
+                        <div class="truncate font-semibold text-foreground">{{ item.nombre }}</div>
+                        <div class="text-[10px] text-muted-foreground">
                           {{ item.codigo || 'Sin código' }}
                           <span *ngIf="hasInventory(item)"> · Stock {{ getInventoryLabel(item) }}</span>
                         </div>
@@ -198,33 +198,33 @@
             <div *ngIf="orderItems.length > 0; else emptyItems" class="space-y-1.5">
               <div
                 *ngFor="let item of orderItems; let i = index; trackBy: trackByIndex"
-                class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 transition"
+                class="rounded-lg border border-border bg-muted/40 px-2.5 py-2 transition"
                 [ngClass]="{'opacity-70': !canEditOrder}">
                 <div class="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
                   <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-1.5">
-                      <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-md bg-white">
+                      <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-md bg-card">
                         <img *ngIf="productImage(item.productId)" [src]="productImage(item.productId)" [alt]="item.productName || item.description" class="h-full w-full object-cover" />
-                        <span *ngIf="!productImage(item.productId)" class="text-[9px] text-slate-400">—</span>
+                        <span *ngIf="!productImage(item.productId)" class="text-[9px] text-muted-foreground/70">—</span>
                       </div>
-                      <p class="truncate text-xs font-semibold leading-4 text-slate-900">
+                      <p class="truncate text-xs font-semibold leading-4 text-foreground">
                         {{ item.productName || item.description }}
                       </p>
-                      <span class="rounded bg-white px-1.5 py-0.5 text-[9px] font-semibold text-slate-500">
+                      <span class="rounded bg-card px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
                         IVA {{ item.tax_value ?? (item.tax === 'IVA-15' ? 15 : 0) }}%
                       </span>
                     </div>
-                    <p class="truncate text-[10px] text-slate-500" *ngIf="item.productId">{{ item.productId }}</p>
+                    <p class="truncate text-[10px] text-muted-foreground" *ngIf="item.productId">{{ item.productId }}</p>
                   </div>
 
                   <div class="grid grid-cols-[auto_auto_auto] items-end gap-2 sm:grid-cols-[auto_auto_auto_auto]">
                     <div>
-                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-slate-400">Cant</p>
-                      <div *ngIf="!isReadOnlyView; else readOnlyQty" class="inline-flex overflow-hidden rounded-md border border-slate-200 bg-white">
-                        <button type="button" class="h-7 w-7 text-slate-600 hover:bg-slate-50" (click)="decrementOrderQty(i)" [disabled]="!canEditOrder">-</button>
+                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-muted-foreground/70">Cant</p>
+                      <div *ngIf="!isReadOnlyView; else readOnlyQty" class="inline-flex overflow-hidden rounded-md border border-border bg-card">
+                        <button type="button" class="h-7 w-7 text-muted-foreground hover:bg-muted/40" (click)="decrementOrderQty(i)" [disabled]="!canEditOrder">-</button>
                         <input
                           type="number"
-                          class="no-spinner h-7 w-12 border-x border-slate-200 text-center text-[11px]"
+                          class="no-spinner h-7 w-12 border-x border-border text-center text-[11px] bg-card text-foreground"
                           min="1"
                           step="1"
                           [ngModelOptions]="{standalone: true}"
@@ -232,19 +232,19 @@
                           (ngModelChange)="recalculateOrder()"
                           [readOnly]="!canEditOrder"
                           [attr.tabindex]="!canEditOrder ? -1 : 0">
-                        <button type="button" class="h-7 w-7 text-slate-600 hover:bg-slate-50" (click)="incrementOrderQty(i)" [disabled]="!canEditOrder">+</button>
+                        <button type="button" class="h-7 w-7 text-muted-foreground hover:bg-muted/40" (click)="incrementOrderQty(i)" [disabled]="!canEditOrder">+</button>
                       </div>
                       <ng-template #readOnlyQty>
-                        <span class="inline-flex h-7 min-w-12 items-center justify-center rounded-md border border-slate-200 bg-white px-2 text-[11px] font-semibold">{{ item.quantity }}</span>
+                        <span class="inline-flex h-7 min-w-12 items-center justify-center rounded-md border border-border bg-card px-2 text-[11px] font-semibold">{{ item.quantity }}</span>
                       </ng-template>
                     </div>
 
                     <div>
-                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-slate-400">Precio</p>
+                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-muted-foreground/70">Precio</p>
                       <input
                         *ngIf="!isReadOnlyView; else readOnlyPrice"
                         type="number"
-                        class="no-spinner h-7 w-20 rounded-md border-slate-200 bg-white text-center text-[11px]"
+                        class="no-spinner h-7 w-20 rounded-md border-border bg-card text-center text-[11px]"
                         min="0"
                         step="0.01"
                         [ngModelOptions]="{standalone: true}"
@@ -253,15 +253,15 @@
                         [readOnly]="!canEditOrder"
                         [attr.tabindex]="!canEditOrder ? -1 : 0">
                       <ng-template #readOnlyPrice>
-                        <span class="inline-flex h-7 min-w-20 items-center justify-center rounded-md border border-slate-200 bg-white px-2 text-[11px] font-semibold">
+                        <span class="inline-flex h-7 min-w-20 items-center justify-center rounded-md border border-border bg-card px-2 text-[11px] font-semibold">
                           ${{ item.price | number:'1.2-2' }}
                         </span>
                       </ng-template>
                     </div>
 
                     <div class="text-right">
-                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-slate-400">Total</p>
-                      <p class="h-7 rounded-md bg-white px-2 py-1 text-xs font-bold text-slate-900">
+                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-muted-foreground/70">Total</p>
+                      <p class="h-7 rounded-md bg-card px-2 py-1 text-xs font-bold text-foreground">
                         ${{ ((item.total ?? 0) + (item.iva ?? 0)) | number:'1.2-2' }}
                       </p>
                     </div>
@@ -270,7 +270,7 @@
                       *ngIf="!isReadOnlyView"
                       type="button"
                       (click)="removeProductFromOrder(i)"
-                      class="h-7 w-7 self-end rounded-md border border-red-200 bg-white text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      class="h-7 w-7 self-end rounded-md border border-red-200 bg-card text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                       title="Eliminar"
                       aria-label="Eliminar"
                       [disabled]="!canEditOrder">
@@ -282,13 +282,13 @@
             </div>
 
             <ng-template #emptyItems>
-              <div class="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-[11px] text-slate-500">
+              <div class="rounded-lg border border-dashed border-border bg-muted/40 p-6 text-center text-[11px] text-muted-foreground">
                 No hay ítems en la orden.
               </div>
             </ng-template>
           </section>
 
-          <section *ngIf="supportsSplits" class="rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
+          <section *ngIf="supportsSplits" class="rounded-xl border border-border bg-card p-2.5 shadow-sm">
             <app-order-splits-table
               [splits]="orderSplits"
               [orderGrandTotal]="orderTotal"
@@ -305,28 +305,28 @@
         </main>
 
         <aside class="space-y-3 xl:sticky xl:top-3 xl:self-start">
-          <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
             <div class="flex items-start justify-between gap-3">
               <div>
                 <p class="text-[10px] font-semibold uppercase tracking-wide text-primary">Resumen</p>
-                <p class="mt-1 text-2xl font-bold leading-none text-slate-900">${{ orderTotal | number:'1.2-2' }}</p>
+                <p class="mt-1 text-2xl font-bold leading-none text-foreground">${{ orderTotal | number:'1.2-2' }}</p>
               </div>
-              <span *ngIf="supportsSplits" class="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-semibold text-slate-600">
+              <span *ngIf="supportsSplits" class="rounded-md border border-border bg-muted/40 px-2 py-1 text-[10px] font-semibold text-muted-foreground">
                 {{ orderSplits.length }} subcuentas
               </span>
             </div>
 
-            <div class="mt-3 space-y-1 rounded-lg border border-slate-200 bg-slate-50 p-2 text-[11px]">
+            <div class="mt-3 space-y-1 rounded-lg border border-border bg-muted/40 p-2 text-[11px]">
               <div class="flex items-center justify-between">
-                <span class="text-slate-500">Subtotal</span>
-                <span class="font-semibold text-slate-900">${{ orderSubtotal | number:'1.2-2' }}</span>
+                <span class="text-muted-foreground">Subtotal</span>
+                <span class="font-semibold text-foreground">${{ orderSubtotal | number:'1.2-2' }}</span>
               </div>
               <div class="flex items-center justify-between">
-                <span class="text-slate-500">IVA</span>
-                <span class="font-semibold text-slate-900">${{ orderIva | number:'1.2-2' }}</span>
+                <span class="text-muted-foreground">IVA</span>
+                <span class="font-semibold text-foreground">${{ orderIva | number:'1.2-2' }}</span>
               </div>
-              <div *ngIf="supportsSplits" class="flex items-center justify-between border-t border-slate-200 pt-1.5">
-                <span class="text-slate-500">Pendiente por dividir</span>
+              <div *ngIf="supportsSplits" class="flex items-center justify-between border-t border-border pt-1.5">
+                <span class="text-muted-foreground">Pendiente por dividir</span>
                 <span class="font-semibold" [ngClass]="pendingOrderToSplit > 0 ? 'text-amber-700' : 'text-emerald-700'">
                   ${{ pendingOrderToSplit | number:'1.2-2' }}
                 </span>
@@ -338,7 +338,7 @@
             </p>
           </section>
 
-          <section *ngIf="currentFiscalLocation || posTerminalBlockMessage" class="rounded-xl border px-3 py-2 text-[11px]" [ngClass]="posTerminalBlockMessage ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-white text-slate-600'">
+          <section *ngIf="currentFiscalLocation || posTerminalBlockMessage" class="rounded-xl border px-3 py-2 text-[11px]" [ngClass]="posTerminalBlockMessage ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-border bg-card text-muted-foreground'">
             <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
               <span class="font-bold uppercase tracking-wide text-primary">Ubicación de emisión</span>
               <span *ngIf="currentFiscalLocation?.establishment"><b>Establecimiento:</b> {{ currentFiscalLocation.establishment.establishment_code || '—' }}</span>
@@ -348,7 +348,7 @@
             <p *ngIf="posTerminalBlockMessage" class="mt-1 font-semibold">{{ posTerminalBlockMessage }}</p>
           </section>
 
-          <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
             <h3 class="text-xs font-semibold text-primary">Acciones</h3>
 
             <p *ngIf="canEditOrder && hasUnsavedInvoiceChanges" class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
@@ -450,7 +450,7 @@
               </app-button>
             </div>
 
-            <p *ngIf="createInvoiceBlockedReason" class="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-[11px] text-slate-600">
+            <p *ngIf="createInvoiceBlockedReason" class="mt-2 rounded-lg border border-border bg-muted/40 px-2 py-1.5 text-[11px] text-muted-foreground">
               {{ createInvoiceBlockedReason }}
             </p>
 
@@ -459,7 +459,7 @@
             </p>
           </section>
 
-          <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
             <p class="text-[10px] font-semibold uppercase tracking-wide text-primary">Impresión</p>
             <div class="mt-2 grid grid-cols-1 gap-2">
               <app-button type="button" tone="warning" impact="bold" size="small" shape="rounded" (buttonClick)="getComandaPdf()" full>
@@ -481,11 +481,11 @@
         </aside>
       </div>
 
-      <div class="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white p-2 shadow-sm md:hidden" *ngIf="orderItems.length > 0">
+      <div class="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card p-2 shadow-sm md:hidden" *ngIf="orderItems.length > 0">
         <div class="flex items-center justify-between gap-2">
           <div>
-            <p class="text-[10px] text-slate-500">Total</p>
-            <p class="text-base font-bold text-slate-900">${{ orderTotal | number:'1.2-2' }}</p>
+            <p class="text-[10px] text-muted-foreground">Total</p>
+            <p class="text-base font-bold text-foreground">${{ orderTotal | number:'1.2-2' }}</p>
           </div>
           <div class="flex items-center gap-1.5">
             <app-button
@@ -515,7 +515,7 @@
     <div class="mt-3">
       <button
         type="button"
-        class="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700"
+        class="rounded-lg border border-red-300 bg-card px-3 py-1.5 text-xs font-semibold text-red-700"
         (click)="goBack()">
         Volver
       </button>
@@ -538,9 +538,9 @@
 </app-split-order-dialog>
 
 <div *ngIf="showCustomerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-  <div class="relative w-full max-w-md rounded-lg bg-white p-4 text-xs shadow-xl">
-    <button class="absolute right-4 top-3 text-xl font-light text-gray-400 hover:text-gray-700" (click)="closeCustomerModal()" aria-label="Cerrar">x</button>
-    <h3 class="mb-4 text-sm font-semibold text-gray-800">Cambiar cliente</h3>
+  <div class="relative w-full max-w-md rounded-lg bg-card p-4 text-xs shadow-xl">
+    <button class="absolute right-4 top-3 text-xl font-light text-muted-foreground/70 hover:text-foreground/80" (click)="closeCustomerModal()" aria-label="Cerrar">x</button>
+    <h3 class="mb-4 text-sm font-semibold text-foreground">Cambiar cliente</h3>
 
     <form [formGroup]="customerForm" (ngSubmit)="saveCustomerForOrder()" class="space-y-3">
       <div class="flex justify-end gap-2 pt-2">

@@ -1,16 +1,16 @@
 <ngx-spinner
-  bdColor="rgba(15, 23, 42, 0.75)"
+  bdColor="rgba(0, 0, 0, 0.8)"
   size="large"
-  color="#6d4bd8"
+  color="#001c71"
   type="ball-scale-multiple"
   [fullScreen]="true">
-  <p class="text-sm font-semibold text-amber-300">Ingresando...</p>
+  <p class="text-sm font-semibold text-white">Ingresando...</p>
 </ngx-spinner>
 
 <form class="space-y-4" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
   <div class="space-y-1 text-center pb-2">
-    <h2 class="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">Inicia sesión</h2>
-    <p class="text-xs text-slate-500 dark:text-slate-400">Ingresa tus credenciales para acceder</p>
+    <h2 class="text-2xl font-black tracking-tight text-foreground">Inicia sesión</h2>
+    <p class="text-xs text-muted-foreground">Ingresa tus credenciales para acceder</p>
   </div>
 
   <div class="space-y-3 text-left">
@@ -52,7 +52,7 @@
           [attr.aria-invalid]="submitted && f['password'].errors ? true : null" />
         <button
           type="button"
-          class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+          class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground/70 transition hover:bg-muted hover:text-foreground/80"
           (click)="togglePasswordTextType()"
           aria-label="Mostrar u ocultar contraseña">
           <svg-icon
@@ -79,8 +79,8 @@
 
   <div *ngIf="needsBusinessSelection" class="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3 text-left">
     <div>
-      <p class="text-sm font-bold text-slate-900">Selecciona tu empresa</p>
-      <p class="text-[11px] text-slate-500">Debes elegir una empresa para continuar.</p>
+      <p class="text-sm font-bold text-foreground">Selecciona tu empresa</p>
+      <p class="text-[11px] text-muted-foreground">Debes elegir una empresa para continuar.</p>
     </div>
     <select class="login-input" [(ngModel)]="selectedBusinessId" [ngModelOptions]="{standalone: true}" required>
       <option value="">Selecciona una empresa</option>
@@ -109,7 +109,7 @@
       </span>
     </app-button>
 
-    <div class="flex items-center justify-center gap-1 text-xs text-slate-500">
+    <div class="flex items-center justify-center gap-1 text-xs text-muted-foreground">
       <span>¿No tienes una cuenta?</span>
       <a routerLink="/register-company" class="font-bold text-primary transition hover:text-primary/80">Regístrate</a>
     </div>

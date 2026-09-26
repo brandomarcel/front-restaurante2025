@@ -1,4 +1,4 @@
-<div class="flex h-[100dvh] w-full overflow-hidden bg-slate-100/70">
+<div class="flex h-[100dvh] w-full overflow-hidden bg-muted/70">
   <app-sidebar *ngIf="!menuService.isPosMode"></app-sidebar>
 
   <div class="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-card">
@@ -7,7 +7,7 @@
     <main
       id="main-content"
       class="flex-1 min-h-0"
-      [ngClass]="menuService.isPosMode ? 'overflow-hidden bg-slate-100' : 'overflow-y-auto bg-card'"
+      [ngClass]="menuService.isPosMode ? 'overflow-hidden bg-muted' : 'overflow-y-auto bg-card'"
     >
       <div
         [ngClass]="

@@ -11,7 +11,7 @@
 }
 
 .register-topbar {
-  @apply sticky top-0 z-20 border-b border-black/5 bg-white/90 backdrop-blur;
+  @apply sticky top-0 z-20 border-b border-border bg-card/90 backdrop-blur;
 }
 
 .register-topbar-inner {
@@ -23,7 +23,7 @@
 }
 
 .register-card {
-  @apply rounded-2xl border border-black/5 bg-white shadow-xl;
+  @apply rounded-2xl border border-border bg-card shadow-xl;
 }
 
 .register-card-body {
@@ -43,7 +43,7 @@
 }
 
 .step-progress-track {
-  @apply mb-3 h-1.5 rounded-full bg-slate-200;
+  @apply mb-3 h-1.5 rounded-full bg-muted;
 }
 
 .step-progress-fill {
@@ -55,11 +55,11 @@
 }
 
 .stepper-item {
-  @apply flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-slate-500;
+  @apply flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 text-muted-foreground;
 }
 
 .stepper-dot {
-  @apply inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[11px] font-semibold text-slate-700;
+  @apply inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-foreground/80;
 }
 
 .stepper-text {
@@ -67,7 +67,7 @@
 }
 
 .stepper-item.is-active {
-  @apply border-primary/40 bg-primary/5 text-slate-900;
+  @apply border-primary/40 bg-primary/5 text-foreground;
 }
 
 .stepper-item.is-active .stepper-dot {
@@ -75,7 +75,7 @@
 }
 
 .stepper-item.is-done {
-  @apply border-emerald-300 bg-emerald-50 text-slate-900;
+  @apply border-emerald-500/40 bg-emerald-500/10 text-foreground;
 }
 
 .stepper-item.is-done .stepper-dot {
@@ -83,15 +83,15 @@
 }
 
 .form-step {
-  @apply rounded-xl border border-slate-200 bg-slate-50/40 p-4;
+  @apply rounded-xl border border-border bg-muted/30 p-4;
 }
 
 .section-title {
-  @apply text-sm font-semibold text-slate-700;
+  @apply text-sm font-semibold text-foreground/80;
 }
 
 .actions-bar {
-  @apply mt-2 flex items-center justify-between border-t border-slate-200 pt-4;
+  @apply mt-2 flex items-center justify-between border-t border-border pt-4;
 }
 
 .actions-right {
@@ -111,11 +111,11 @@
 }
 
 .btn-outline {
-  @apply border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+  @apply border-border bg-card text-foreground/80 hover:bg-muted;
 }
 
 .btn-light {
-  @apply border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+  @apply border-border bg-card text-foreground/80 hover:bg-muted;
 }
 
 @media (max-width: 640px) {

@@ -1,13 +1,13 @@
 <div class="app-container density-compact space-y-3 pb-6">
-  <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+  <section class="rounded-2xl border border-border bg-card p-4 shadow-sm">
     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <div>
         <p class="text-[10px] font-black uppercase tracking-[.14em] text-primary">Reportes · Caja</p>
-        <h1 class="mt-1 text-xl font-black text-slate-900">FacturADA Restaurant Cash Closings</h1>
-        <p class="mt-1 text-xs text-slate-500">Cierres oficiales del negocio activo, consultados directamente desde Frappe.</p>
+        <h1 class="mt-1 text-xl font-black text-foreground">FacturADA Restaurant Cash Closings</h1>
+        <p class="mt-1 text-xs text-muted-foreground">Cierres oficiales del negocio activo, consultados directamente desde Frappe.</p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
-        <span class="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700">
+        <span class="rounded-full bg-muted px-3 py-1.5 text-xs font-bold text-foreground/80">
           Negocio: {{ businessId || '—' }}
         </span>
         <a routerLink="/report" class="btn btn-outline !px-3 !py-2 !text-xs">← Reportes</a>
@@ -22,11 +22,11 @@
 
     <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
       <label class="block">
-        <span class="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">Usuario</span>
+        <span class="mb-1 block text-[10px] font-black uppercase tracking-wide text-muted-foreground">Usuario</span>
         <input class="input !h-9 w-full" type="text" [(ngModel)]="filters.user" placeholder="Todos los usuarios" />
       </label>
       <label class="block">
-        <span class="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">Estado</span>
+        <span class="mb-1 block text-[10px] font-black uppercase tracking-wide text-muted-foreground">Estado</span>
         <select class="input !h-9 w-full" [(ngModel)]="filters.status">
           <option value="">Todos</option>
           <option value="Borrador">Borrador</option>
@@ -34,11 +34,11 @@
         </select>
       </label>
       <label class="block">
-        <span class="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">Fecha desde</span>
+        <span class="mb-1 block text-[10px] font-black uppercase tracking-wide text-muted-foreground">Fecha desde</span>
         <input class="input !h-9 w-full" type="date" [(ngModel)]="filters.from_date" />
       </label>
       <label class="block">
-        <span class="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">Fecha hasta</span>
+        <span class="mb-1 block text-[10px] font-black uppercase tracking-wide text-muted-foreground">Fecha hasta</span>
         <input class="input !h-9 w-full" type="date" [(ngModel)]="filters.to_date" />
       </label>
     </div>
@@ -48,18 +48,18 @@
     {{ errorMessage }}
   </div>
 
-  <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+  <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div class="flex items-center justify-between border-b border-border px-4 py-3">
       <div>
-        <h2 class="text-sm font-black text-slate-900">Cierres de caja</h2>
-        <p class="text-xs text-slate-500">{{ rows.length }} resultado(s) · los totales provienen del backend.</p>
+        <h2 class="text-sm font-black text-foreground">Cierres de caja</h2>
+        <p class="text-xs text-muted-foreground">{{ rows.length }} resultado(s) · los totales provienen del backend.</p>
       </div>
       <span *ngIf="loading" class="text-xs font-semibold text-primary">Cargando…</span>
     </div>
 
     <div *ngIf="!loading && !errorMessage && rows.length === 0" class="px-4 py-12 text-center">
-      <p class="text-sm font-bold text-slate-800">No existen cierres de caja para los filtros seleccionados</p>
-      <p class="mt-1 text-xs text-slate-500">Prueba con otro usuario, estado o rango de fechas.</p>
+      <p class="text-sm font-bold text-foreground">No existen cierres de caja para los filtros seleccionados</p>
+      <p class="mt-1 text-xs text-muted-foreground">Prueba con otro usuario, estado o rango de fechas.</p>
     </div>
 
     <div *ngIf="rows.length" class="app-table-wrap max-h-[70vh]">

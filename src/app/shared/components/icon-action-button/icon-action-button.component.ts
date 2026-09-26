@@ -38,14 +38,20 @@ export class IconActionButtonComponent {
     }
   }
 
+  /**
+   * Solo usa tokens de tema (`bg-card`, `text-destructive`, etc.), nunca el
+   * prefijo `dark:` de Tailwind: el switch claro/oscuro cambia una clase
+   * `.dark` en `<html>`, y `dark:` en este proyecto solo responde al tema
+   * del sistema operativo, no a ese switch.
+   */
   get toneClasses(): string {
     if (this.variant === 'delete') {
-      return 'border-red-300 bg-red-50 text-red-600 hover:border-red-400 hover:bg-red-100';
+      return 'border-destructive/30 bg-destructive/10 text-destructive hover:border-destructive/50 hover:bg-destructive/20';
     }
     if (this.tone === 'primary') {
       return 'border-primary bg-primary text-primary-foreground hover:bg-primary/90';
     }
-    return 'border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-100';
+    return 'border-border bg-card text-foreground/80 hover:border-muted-foreground/40 hover:bg-muted';
   }
 
   onClick(): void {

@@ -1,6 +1,6 @@
 <nav
   [ngClass]="menuService.showSideBar ? 'w-[218px] 2xl:w-[238px] min-w-[218px] 2xl:min-w-[238px]' : 'w-[62px] min-w-[62px]'"
-  class="hidden h-full min-h-0 flex-col justify-between overflow-x-hidden border-r border-slate-200 bg-background pt-2 transition-[width] duration-300 motion-reduce:transition-none xl:flex"
+  class="hidden h-full min-h-0 flex-col justify-between overflow-x-hidden border-r border-border bg-card pt-2 transition-[width] duration-300 motion-reduce:transition-none xl:flex"
   role="navigation"
   aria-label="Sidebar"
 >
@@ -30,7 +30,7 @@
       <button
         type="button"
         (click)="toggleSidebar()"
-        class="text-muted-foreground/50 hover:bg-slate-100 hover:text-muted-foreground flex h-8 w-8 items-center justify-center rounded-md p-1.5 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
+        class="text-muted-foreground/50 hover:bg-muted hover:text-muted-foreground flex h-8 w-8 items-center justify-center rounded-md p-1.5 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
         [ngClass]="{ 'rotate-180': !menuService.showSideBar }"
         [attr.aria-expanded]="menuService.showSideBar ? 'true' : 'false'"
         [attr.aria-controls]="'sidebar-menu'"
@@ -41,7 +41,7 @@
 
     <div
       id="sidebar-menu"
-      class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400"
+      class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 scrollbar-thin scrollbar-thumb-muted-foreground/40 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/60"
     >
       <app-sidebar-menu></app-sidebar-menu>
     </div>
@@ -71,7 +71,7 @@
     aria-label="Cerrar menu lateral"
   ></button>
 
-  <nav id="sidebar-mobile-menu" class="bg-background absolute inset-y-0 left-0 flex w-[260px] max-w-[85vw] flex-col pt-2 shadow-2xl">
+  <nav id="sidebar-mobile-menu" class="bg-card absolute inset-y-0 left-0 flex w-[260px] max-w-[85vw] flex-col pt-2 shadow-2xl">
     <div class="mx-3 mb-1.5 flex h-8 items-center justify-between shrink-0">
       <div class="flex items-center">
         <div class="bg-primary flex h-8 w-8 items-center justify-center rounded-md p-1.5">
@@ -95,7 +95,7 @@
       </button>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
+    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 scrollbar-thin scrollbar-thumb-muted-foreground/40 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/60">
       <app-sidebar-menu [mobile]="true"></app-sidebar-menu>
     </div>
 
