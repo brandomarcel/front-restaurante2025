@@ -7,6 +7,7 @@ import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabi
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { CompanyService } from 'src/app/services/company.service';
 import { UserService } from 'src/app/services/user.service';
+import { InventoryService } from 'src/app/services/inventory.service';
 import { IconActionButtonComponent } from 'src/app/shared/components/icon-action-button/icon-action-button.component';
 
 @Component({
@@ -36,6 +37,7 @@ export class LitePosTerminalsComponent implements OnInit, DoCheck {
     private readonly companyService: CompanyService,
     private readonly userService: UserService,
     private readonly capabilities: CompanyCapabilitiesService,
+    private readonly inventoryService: InventoryService,
     private readonly frappeError: FrappeErrorService
   ) {}
 
@@ -44,9 +46,33 @@ export class LitePosTerminalsComponent implements OnInit, DoCheck {
       terminal_name: ['', Validators.required],
       establishment: ['', Validators.required],
       emission_point: ['', Validators.required],
+      warehouse: [''],
       status: ['Activo', Validators.required]
     });
     this.loadForBusiness();
+    this.loadWarehousesIfNeeded();
+  }
+
+  /**
+   * El campo bodega debe poder asignarse ANTES de activar "Por Bodega": esa
+   * activación exige que todo terminal ya tenga bodega, así que el selector
+   * no puede depender de `isWarehouseMode` (nunca sería true a tiempo). Basta
+   * con que el negocio tenga inventario habilitado y al menos una bodega creada.
+   */
+  get showWarehouseField(): boolean {
+    return this.capabilities.isEnabled('inventory') && this.warehouseOptions.length > 0;
+  }
+
+  get warehouseOptions(): any[] {
+    return this.capabilities.activeWarehouses;
+  }
+
+  private loadWarehousesIfNeeded(): void {
+    if (!this.capabilities.isEnabled('inventory') || !this.activeBusinessId) return;
+    this.inventoryService.getInventoryConfiguration().subscribe({
+      next: (response: any) => this.capabilities.setInventoryConfiguration(response),
+      error: () => undefined
+    });
   }
 
   ngDoCheck(): void {
@@ -108,7 +134,7 @@ export class LitePosTerminalsComponent implements OnInit, DoCheck {
     this.editing = null;
     this.submitted = false;
     this.selectedUserIds = [];
-    this.form.reset({ terminal_name: '', establishment: '', emission_point: '', status: 'Activo' });
+    this.form.reset({ terminal_name: '', establishment: '', emission_point: '', warehouse: '', status: 'Activo' });
     this.modalOpen = true;
   }
 
@@ -121,6 +147,7 @@ export class LitePosTerminalsComponent implements OnInit, DoCheck {
       terminal_name: terminal.terminal_name || '',
       establishment: terminal.establishment || '',
       emission_point: terminal.emission_point || '',
+      warehouse: terminal.warehouse || '',
       status: terminal.status || 'Activo'
     });
     this.modalOpen = true;
@@ -133,6 +160,7 @@ export class LitePosTerminalsComponent implements OnInit, DoCheck {
           terminal_name: this.editing.terminal_name || '',
           establishment: this.editing.establishment || '',
           emission_point: this.editing.emission_point || '',
+          warehouse: this.editing.warehouse || '',
           status: this.editing.status || 'Activo'
         });
       },
@@ -171,6 +199,9 @@ export class LitePosTerminalsComponent implements OnInit, DoCheck {
       status: value.status === 'Inactivo' ? 'Inactivo' : 'Activo',
       users: this.selectedUserIds.map((businessUser) => ({ business_user: businessUser }))
     };
+    // Siempre explícito (null para desvincular): omitir la clave al limpiar
+    // el select no le indica al backend que debe quitar la bodega ya asignada.
+    if (this.showWarehouseField) payload.warehouse = String(value.warehouse || '').trim() || null;
     if (this.editing?.name) payload.name = this.editing.name;
 
     this.saving = true;

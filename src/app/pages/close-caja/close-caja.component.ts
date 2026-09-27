@@ -7,6 +7,7 @@ import { AlertService } from 'src/app/core/services/alert.service';
 import { finalize } from 'rxjs';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { CajaAbiertaGuard } from 'src/app/core/guards/caja-abierta.guard';
 
 @Component({
   selector: 'app-close-caja',
@@ -41,7 +42,8 @@ export class CloseCajaComponent implements OnInit {
     private cajasService: CajasService,
     private alertService: AlertService,
     private spinner: NgxSpinnerService,
-    public capabilities: CompanyCapabilitiesService
+    public capabilities: CompanyCapabilitiesService,
+    private cajaAbiertaGuard: CajaAbiertaGuard
   ) { }
 
   ngOnInit(): void {
@@ -241,6 +243,9 @@ export class CloseCajaComponent implements OnInit {
         this.alertService.success('Cierre guardado correctamente');
         const body = response?.message ?? response ?? {};
         this.lastClose = body?.data ?? response?.data ?? body;
+        // Igual que al abrir: sin esto el guard podría dejar entrar al POS
+        // hasta 15s más con la caja ya cerrada.
+        this.cajaAbiertaGuard.invalidateCache();
         this.cleanCaja();
       },
       error: (error) => {

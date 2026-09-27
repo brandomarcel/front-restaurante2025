@@ -202,11 +202,14 @@ export class ProfileMenuComponent implements OnInit, DoCheck {
       this.selectedTerminalId = String(this.capabilities.activePosTerminal?.name || '').trim();
       return;
     }
-    // Actualiza el modelo inmediatamente; la selección también queda
-    // persistida por negocio en CompanyCapabilitiesService para sobrevivir a
-    // cambios de contexto y navegación.
     this.selectedTerminalId = terminalId;
     this.isOpen = false;
+    // En modo "Por Bodega" cada terminal apunta a una bodega distinta, y las
+    // pantallas de productos/inventario ya cargaron su stock filtrado por la
+    // bodega del terminal anterior. Igual que al cambiar de negocio, la forma
+    // segura de que todo (stock, ubicación fiscal, carrito) quede consistente
+    // con el nuevo terminal es recargar la pantalla actual.
+    window.location.reload();
   }
 
   changeBusiness(value: string): void {

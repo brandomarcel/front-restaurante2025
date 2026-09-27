@@ -120,15 +120,28 @@
                             <span class="truncate"><span class="text-primary">ID:</span> {{ customer?.num_identificacion || '—' }}</span>
                         </div>
                     </div>
+                    <div *ngIf="isRetailPos" class="mb-2 flex flex-shrink-0 items-center gap-2">
+                        <app-barcode-scan-input [wide]="true"></app-barcode-scan-input>
+                    </div>
+
                     <div class="mb-2 flex flex-shrink-0 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                         <div class="flex flex-shrink-0 items-center gap-2">
                             <h2 class="text-sm font-semibold text-primary">Productos</h2>
+                            <app-barcode-scan-input *ngIf="!isRetailPos"></app-barcode-scan-input>
+                            <button type="button" (click)="productSearchModal?.open()" title="Búsqueda avanzada (Ctrl+K)"
+                                class="rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-[10px] font-semibold text-primary transition hover:bg-primary/10">
+                                🔍 Buscar
+                            </button>
+                            <button type="button" (click)="toggleShortcutsHelp()" title="Atajos de teclado"
+                                class="rounded-md border border-border bg-card px-2 py-1 text-[10px] font-semibold text-muted-foreground transition hover:bg-muted/40">
+                                ⌨ Atajos
+                            </button>
                         </div>
 
                         <div class="flex min-w-0 flex-1 gap-1.5 lg:max-w-md">
                             <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()"
-                                placeholder="Buscar producto..."
-                                class="min-h-[32px] w-full rounded-md border border-border px-2.5 text-[11px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-card text-foreground" />
+                                [placeholder]="isRetailPos ? 'Filtrar por nombre o código...' : 'Buscar producto...'"
+                                class="min-h-[32px] w-full rounded-md border border-border px-2.5 text-[11px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-card text-foreground "  />
 
                             <button type="button" (click)="searchTerm=''; applyFilters()"
                                 class="min-h-[32px] rounded-md border border-border bg-card px-2.5 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted/40">
@@ -153,14 +166,14 @@
                         </div>
 
                         <button type="button" (click)="onCategorySelected('')"
-                            class="min-h-[29px] whitespace-nowrap rounded-md border px-2.5 text-[11px] font-semibold transition"
-                            [ngClass]="selectedCategory === '' ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground hover:bg-primary/5 hover:text-primary'">
+                            class="min-h-[29px] whitespace-nowrap border px-2.5 text-[11px] font-semibold transition"
+                            [ngClass]="[isRetailPos ? 'rounded-full' : 'rounded-md', selectedCategory === '' ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground hover:bg-primary/5 hover:text-primary']">
                             Todas
                         </button>
 
                         <button type="button" *ngFor="let category of categories" (click)="onCategorySelected(category.name)"
-                            class="min-h-[29px] whitespace-nowrap rounded-md border px-2.5 text-[11px] font-semibold transition"
-                            [ngClass]="selectedCategory === category.name ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground hover:bg-primary/5 hover:text-primary'">
+                            class="min-h-[29px] whitespace-nowrap border px-2.5 text-[11px] font-semibold transition"
+                            [ngClass]="[isRetailPos ? 'rounded-full' : 'rounded-md', selectedCategory === category.name ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground hover:bg-primary/5 hover:text-primary']">
                             {{ category.nombre }}
                         </button>
                     </div>
@@ -168,16 +181,86 @@
                     <div class="flex-1 min-h-0 overflow-y-auto rounded-md bg-muted/40 p-2 pr-1">
                         <div class="grid grid-cols-1 gap-3 pb-4">
                             <div class="min-w-0">
-                                <div class="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6">
+                                <!-- Retail: tarjeta con la foto como protagonista (nombre y precio superpuestos), en vez de imagen+texto apilado. -->
+                                <div *ngIf="isRetailPos; else defaultProductGrid" class="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
                                     <div *ngFor="let product of visibleProductList; trackBy: trackByProductId"
                                         (click)="onProductCardClick(product)"
-                                        class="relative flex min-h-[142px] touch-manipulation flex-col rounded-xl border bg-card p-2.5 text-xs shadow-sm transition active:scale-[.98] sm:min-h-[154px] sm:p-3"
+                                        class="group relative flex touch-manipulation flex-col overflow-hidden rounded-lg border bg-card shadow-sm transition active:scale-[.98]"
+                                        [ngClass]="canAddProduct(product) ? 'cursor-pointer border-border hover:border-primary/50' : 'cursor-not-allowed border-red-200 opacity-70'">
+
+                                        <div class="relative aspect-square w-full overflow-hidden bg-muted">
+                                            <img *ngIf="product.image_url" [src]="product.image_url" [alt]="product.nombre" class="pointer-events-none h-full w-full object-cover" />
+                                            <div *ngIf="!product.image_url" class="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground/70">Sin imagen</div>
+
+                                            <span *ngIf="isOutOfStock(product)" class="pointer-events-none absolute left-1 top-1 rounded bg-red-500/90 px-1 py-0.5 text-[8px] font-bold text-white">
+                                                AGOTADO
+                                            </span>
+
+                                            <button type="button"
+                                                class="absolute right-1 top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/45 text-[10px] backdrop-blur transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
+                                                [ngClass]="isFavorite(product) ? 'text-amber-400' : 'text-white/85'"
+                                                [attr.aria-label]="isFavorite(product) ? 'Quitar de favoritos' : 'Agregar a favoritos'"
+                                                [attr.title]="isFavorite(product) ? 'Quitar de favoritos' : 'Agregar a favoritos'"
+                                                [disabled]="!canAddProduct(product) && !isFavorite(product)"
+                                                (click)="toggleFavorite(product); $event.stopPropagation()">
+                                                ★
+                                            </button>
+
+                                            <div class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-1.5 pb-1 pt-4">
+                                                <p class="line-clamp-1 text-[10px] font-bold leading-tight text-white">{{ product.nombre }}</p>
+                                                <ng-container *ngIf="(product.variant_count || 0) > 0; else retailTilePrice">
+                                                    <p class="text-[10px] font-black leading-tight text-white/95">Ver variantes</p>
+                                                </ng-container>
+                                                <ng-template #retailTilePrice>
+                                                    <p class="text-[11px] font-black leading-tight text-white">${{ product.precio | number:'1.2-2' }}</p>
+                                                </ng-template>
+                                            </div>
+                                        </div>
+
+                                        <!-- El stock queda FUERA de la foto a propósito: sobre una imagen nunca hay contraste garantizado. -->
+                                        <div class="flex items-center justify-between gap-1 px-1.5 py-1">
+                                            <span *ngIf="hasInventory(product); else retailNoStockControl" class="truncate text-[9px] font-semibold"
+                                                [ngClass]="isOutOfStock(product) ? 'text-destructive' : (isLowStock(product) ? 'text-amber-600' : 'text-emerald-600')">
+                                                {{ isOutOfStock(product) ? 'Sin stock' : (isLowStock(product) ? 'Quedan ' + getInventoryLabel(product) : 'Stock ' + getInventoryLabel(product)) }}
+                                            </span>
+                                            <ng-template #retailNoStockControl><span></span></ng-template>
+                                            <span *ngIf="getCartQuantityForProduct(product)" class="rounded-full bg-primary/15 px-1 py-0.5 text-[9px] font-bold text-primary">
+                                                {{ getCartQuantityForProduct(product) }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div *ngIf="visibleProductList.length === 0"
+                                        class="col-span-full rounded-lg border border-dashed border-border bg-card p-6 text-center text-xs text-muted-foreground">
+                                        <ng-container *ngIf="productView === 'favorites'; else noRetailProductsForFilter">
+                                            <p class="font-semibold text-foreground/80">Todavía no hay favoritos en esta vista.</p>
+                                            <p class="mt-1">Marca productos con la estrella para tenerlos aquí como accesos rápidos.</p>
+                                            <button type="button" (click)="setProductView('all')"
+                                                class="mt-3 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-semibold text-primary">
+                                                Ver productos
+                                            </button>
+                                        </ng-container>
+                                        <ng-template #noRetailProductsForFilter>
+                                            No hay productos para este filtro.
+                                        </ng-template>
+                                    </div>
+                                </div>
+
+                                <ng-template #defaultProductGrid>
+                                <div class="grid gap-2 grid-cols-2 md:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6">
+                                    <div *ngFor="let product of visibleProductList; trackBy: trackByProductId"
+                                        (click)="onProductCardClick(product)"
+                                        class="relative flex touch-manipulation flex-col rounded-xl border bg-card p-2.5 text-xs shadow-sm transition active:scale-[.98] sm:p-3"
                                         [ngClass]="{
                                            'cursor-pointer border-border hover:border-primary/40 hover:shadow-md': canAddProduct(product),
-                                           'cursor-not-allowed border-red-200 bg-red-50 opacity-70': !canAddProduct(product)
+                                           'cursor-not-allowed border-red-200 bg-red-50 opacity-70': !canAddProduct(product),
+                                           'min-h-[142px] sm:min-h-[154px]': !isRetailPos,
+                                           'min-h-[176px] sm:min-h-[192px]': isRetailPos
                                          }">
 
-                                        <div class="mb-1 flex h-[92px] cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-muted sm:h-[104px]" (click)="onProductCardClick(product); $event.stopPropagation()">
+                                        <div class="mb-1 flex cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-muted"
+                                            [ngClass]="isRetailPos ? 'h-[122px] sm:h-[138px]' : 'h-[92px] sm:h-[104px]'"
+                                            (click)="onProductCardClick(product); $event.stopPropagation()">
                                             <img *ngIf="product.image_url" [src]="product.image_url" [alt]="product.nombre" class="pointer-events-none h-full w-full object-cover" />
                                             <span *ngIf="!product.image_url" class="pointer-events-none text-[10px] text-muted-foreground/70">Sin imagen</span>
                                         </div>
@@ -206,8 +289,12 @@
                                             {{ product.nombre }}
                                         </p>
 
-                                        <p class="mt-0.5 truncate text-[10px] text-muted-foreground">
+                                        <!-- General/Restaurante: la descripción cae al código como respaldo. Retail: nunca mostrar el código acá, es un dato interno, no algo para reconocer el producto. -->
+                                        <p *ngIf="!isRetailPos" class="mt-0.5 truncate text-[10px] text-muted-foreground">
                                             {{ product.descripcion || product.codigo || 'Sin descripcion' }}
+                                        </p>
+                                        <p *ngIf="isRetailPos && product.descripcion" class="mt-0.5 truncate text-[10px] text-muted-foreground">
+                                            {{ product.descripcion }}
                                         </p>
 
                                         <div class="mt-auto pt-1">
@@ -219,13 +306,24 @@
                                                     <p class="text-base font-bold leading-none text-foreground">
                                                         ${{ product.precio | number:'1.2-2' }}
                                                     </p>
-                                                    <span class="text-[10px] font-semibold text-muted-foreground">
+                                                    <span *ngIf="!isRetailPos" class="text-[10px] font-semibold text-muted-foreground">
                                                         {{ product.tax_value }}% IVA
                                                     </span>
                                                 </ng-template>
                                             </div>
 
-                                            <div class="mt-1 flex flex-wrap gap-1">
+                                            <!-- Retail: un solo indicador de stock en texto (Stock N / Quedan N / Sin stock), sin apilar badges. -->
+                                            <div *ngIf="isRetailPos" class="mt-1 flex items-center justify-between gap-1">
+                                                <span *ngIf="hasInventory(product)" class="text-[10px] font-semibold"
+                                                    [ngClass]="isOutOfStock(product) ? 'text-destructive' : (isLowStock(product) ? 'text-amber-600' : 'text-emerald-600')">
+                                                    {{ isOutOfStock(product) ? 'Sin stock' : (isLowStock(product) ? 'Quedan ' + getInventoryLabel(product) : 'Stock ' + getInventoryLabel(product)) }}
+                                                </span>
+                                                <span *ngIf="getCartQuantityForProduct(product)" class="text-[10px] font-semibold text-primary">
+                                                    En venta {{ getCartQuantityForProduct(product) }}
+                                                </span>
+                                            </div>
+
+                                            <div *ngIf="!isRetailPos" class="mt-1 flex flex-wrap gap-1">
                                                 <span *ngIf="(product.variant_count || 0) > 0" class="badge badge-blue"
                                                     title="Este producto tiene variantes; el precio depende de la que elijas.">
                                                     {{ product.variant_count }} {{ product.variant_count === 1 ? 'variante' : 'variantes' }}
@@ -258,6 +356,7 @@
                                         </ng-template>
                                     </div>
                                 </div>
+                                </ng-template>
                             </div>
                         </div>
                     </div>
@@ -334,11 +433,15 @@
                         <div *ngFor="let item of cartService.cart"
                             class="rounded-md border border-border bg-muted/40 px-2 py-1.5">
                             <div class="flex items-start justify-between gap-2">
+                                <div *ngIf="isRetailPos" class="h-8 w-8 flex-shrink-0 overflow-hidden rounded bg-muted">
+                                    <img *ngIf="item.image_url" [src]="item.image_url" [alt]="item.nombre || item.name" class="h-full w-full object-cover" />
+                                </div>
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate text-[11px] font-semibold leading-4 text-foreground">
                                         {{ item.nombre || item.name }}
                                     </p>
-                                    <p *ngIf="item.descripcion" class="truncate text-[9px] leading-3 text-muted-foreground">{{ item.descripcion }}</p>
+                                    <p *ngIf="isRetailPos && cartLineAttributes(item) as attrs" class="truncate text-[9px] leading-3 text-primary">{{ attrs }}</p>
+                                    <p *ngIf="!isRetailPos && item.descripcion" class="truncate text-[9px] leading-3 text-muted-foreground">{{ item.descripcion }}</p>
                                 </div>
                                 <strong class="flex-shrink-0 text-right text-[11px] leading-4 text-foreground">
                                     ${{ item.total | number:'1.2-2' }}
@@ -530,7 +633,7 @@
                 {{ genericMode ? 'Finalizar venta' : 'Finalizar pedido' }}
             </h2>
 
-            <button class="text-2xl text-muted-foreground hover:text-foreground/80" (click)="showPaymentModal = false">
+            <button class="text-2xl text-muted-foreground hover:text-foreground/80" (click)="showPaymentModal = false; refocusScanner()">
                 ×
             </button>
         </div>
@@ -785,7 +888,47 @@
     </div>
 </div>
 
+<!-- Ayuda de atajos de teclado: solo informativa, no cambia ningún flujo. -->
+<div *ngIf="showShortcutsHelp" class="app-modal-backdrop" (click)="showShortcutsHelp = false; refocusScanner()">
+    <div class="app-modal !max-w-lg !rounded-2xl !shadow-2xl" (click)="$event.stopPropagation()">
+        <div class="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
+            <div>
+                <h3 class="text-sm font-bold text-foreground">Atajos de teclado</h3>
+               
+            </div>
+            <button type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted" (click)="showShortcutsHelp = false; refocusScanner()" aria-label="Cerrar">×</button>
+        </div>
+        <div class="grid grid-cols-1 gap-4 px-4 py-4 text-xs sm:grid-cols-2">
+            <div>
+                <p class="mb-1.5 font-bold uppercase tracking-wide text-muted-foreground">Venta</p>
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between gap-2"><kbd class="rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono">F3</kbd><span>Buscar producto</span></div>
+                    <div class="flex items-center justify-between gap-2"><kbd class="rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono">Ctrl + K</kbd><span>Buscar producto</span></div>
+                    <div class="flex items-center justify-between gap-2"><kbd class="rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono">F10</kbd><span>{{ genericMode ? 'Cobrar y emitir' : 'Cobrar' }}</span></div>
+                    <div class="flex items-center justify-between gap-2"><kbd class="rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono">Esc</kbd><span>Cerrar ventana actual</span></div>
+                </div>
+            </div>
+            <div>
+                <p class="mb-1.5 font-bold uppercase tracking-wide text-muted-foreground">Variantes </p>
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between gap-2"><kbd class="rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono">◄ ►</kbd><span>Cambiar opción</span></div>
+                    <div class="flex items-center justify-between gap-2"><kbd class="rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono">Tab</kbd><span>Moverse entre atributos</span></div>
+                    <div class="flex items-center justify-between gap-2"><kbd class="rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono">Enter</kbd><span>Agregar al carrito</span></div>
+                    <div class="flex items-center justify-between gap-2"><kbd class="rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono">Esc</kbd><span>Cerrar selección</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <app-product-variant-picker
     #productVariantPicker
-    (resolved)="onVariantResolved($event)">
+    (resolved)="onVariantResolved($event)"
+    (cancelled)="refocusScanner()">
 </app-product-variant-picker>
+
+<app-product-search-modal
+    [products]="productsFlat"
+    (productSelected)="onProductCardClick($event)"
+    (closed)="refocusScanner()">
+</app-product-search-modal>

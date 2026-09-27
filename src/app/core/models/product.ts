@@ -25,6 +25,9 @@ export interface Product {
   category?: string;
   codigo: string;
   item_code?: string;
+  /** Único por negocio. `codigo_barras` es el alias en español del mismo valor. */
+  barcode?: string | null;
+  codigo_barras?: string | null;
   item_name?: string;
   tipo?: string;
   unidad?: string;

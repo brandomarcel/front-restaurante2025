@@ -22,12 +22,18 @@ export interface InventoryMovement {
   name?: string;
   creation?: string;
   posting_date?: string;
+  /** Fecha y hora reales del registro (backend). Preferir sobre `posting_date`/`creation`, que solo traen fecha o son de auditoría genérica. */
+  movement_datetime?: string;
+  created_at?: string;
+  updated_at?: string;
   movement_type?: InventoryMovementType | string;
   notes?: string;
   reference_doctype?: string;
   reference_name?: string;
   reference?: string;
   business?: string;
+  /** Solo presente en negocios con inventario "Por Bodega": bodega a la que pertenece este movimiento puntual. */
+  warehouse?: string;
   item?: string;
   item_code?: string;
   item_name?: string;

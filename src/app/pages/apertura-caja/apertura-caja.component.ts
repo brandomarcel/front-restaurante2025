@@ -7,6 +7,7 @@ import { AlertService } from 'src/app/core/services/alert.service';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { finalize } from 'rxjs';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { CajaAbiertaGuard } from 'src/app/core/guards/caja-abierta.guard';
 
 @Component({
   selector: 'app-apertura-caja',
@@ -34,7 +35,8 @@ export class AperturaCajaComponent implements OnInit {
   constructor(private cajasService: CajasService,
     private alertService: AlertService,
     private spinner: NgxSpinnerService,
-    public capabilities: CompanyCapabilitiesService
+    public capabilities: CompanyCapabilitiesService,
+    private cajaAbiertaGuard: CajaAbiertaGuard
   ) { }
 
   ngOnInit(): void {
@@ -164,6 +166,10 @@ export class AperturaCajaComponent implements OnInit {
     ).subscribe({
       next: () => {
         this.alertService.success('Caja abierta correctamente');
+        // Sin esto, `CajaAbiertaGuard` puede seguir devolviendo "sin apertura"
+        // hasta 15s (si el usuario intentó entrar al POS antes de abrir),
+        // rebotándolo del POS justo después de abrir caja.
+        this.cajaAbiertaGuard.invalidateCache();
         this.verificarCajaAbierta();
       },
       error: (error) => {

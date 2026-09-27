@@ -18,6 +18,17 @@ export class CajaAbiertaGuard implements CanActivate {
     private capabilities: CompanyCapabilitiesService
   ) { }
 
+  /**
+   * Se llama justo después de abrir o cerrar una caja. Sin esto, un cajero
+   * que intentó entrar al POS antes de abrir turno queda con un "no tiene
+   * apertura" cacheado hasta 15s: abre la caja y la siguiente navegación
+   * igual lo rebota, aunque ya sí puede vender. Limpiar todo el caché es
+   * seguro (es solo un booleano de 15s por usuario) y evita ese hueco.
+   */
+  invalidateCache(): void {
+    this.cacheByUser = {};
+  }
+
   canActivate(_route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<boolean | UrlTree> {
     // La apertura pertenece a POS (Restaurante o genérico). Si el negocio no
     // contrató caja (`cash_register`), la navegación de órdenes/POS no debe

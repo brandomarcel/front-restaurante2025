@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { NgxSpinnerService } from 'ngx-spinner';
@@ -24,7 +25,7 @@ import { formatVariantAttributes } from 'src/app/shared/utils/product-variants.u
 
 @Component({
   selector: 'app-inventory',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgSelectModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgSelectModule, RouterLink],
   templateUrl: './inventory.component.html',
   styleUrl: './inventory.component.css'
 })
@@ -108,10 +109,36 @@ export class InventoryComponent implements OnInit {
   /** true si el backend respondió con un error de permisos: no se vuelve a intentar solo. */
   historyAccessDenied = false;
 
+  /**
+   * Vista alterna del historial: en vez de una fila por movimiento (un
+   * traslado siempre deja una Salida en origen + una Entrada en destino para
+   * el mismo producto), agrupa ambas en una sola fila "Origen → Destino" para
+   * que se entienda de un vistazo. Solo tiene sentido en modo Por Bodega.
+   */
+  soloTraslados = false;
+  traslados: Array<{
+    reference_name?: string;
+    item?: string;
+    item_name?: string;
+    quantity: number;
+    timestamp?: string | null;
+    source_warehouse?: string;
+    target_warehouse?: string;
+  }> = [];
+  loadingTraslados = false;
+
   showMovementModal = false;
   showOptionalReferenceFields = false;
   submittedMovement = false;
   movementForm!: FormGroup;
+
+  /**
+   * Bodega activa elegida en ESTA pantalla, independiente de la del terminal
+   * POS: un administrador debe poder revisar cualquier bodega, no solo la de
+   * su terminal. Se persiste por negocio en localStorage. `null` en modo
+   * Simple (no aplica) o mientras no haya ninguna elegida en modo Por Bodega.
+   */
+  selectedWarehouseId = '';
 
   constructor(
     private inventoryService: InventoryService,
@@ -126,9 +153,83 @@ export class InventoryComponent implements OnInit {
   ngOnInit(): void {
     this.initMovementForm();
     if (!this.inventoryEnabled) return;
+    // El modo/lista de bodegas no siempre llegó ya al estado compartido (solo
+    // se carga en las pantallas de configuración); Inventario lo consulta de
+    // entrada para poder resolver la bodega activa antes de pedir datos.
+    this.inventoryService.getInventoryConfiguration().subscribe({
+      next: (response) => {
+        this.capabilities.setInventoryConfiguration(response);
+        this.startLoadingInventoryData();
+      },
+      error: () => this.startLoadingInventoryData()
+    });
+  }
+
+  private startLoadingInventoryData(): void {
+    this.resolveSelectedWarehouse();
+    if (!this.canLoadInventory) return;
     this.cargarProductosInventario();
     this.cargarOpcionesProducto();
     this.cargarMovimientos();
+  }
+
+  get isWarehouseMode(): boolean {
+    return this.capabilities.isWarehouseMode;
+  }
+
+  get warehouseOptions(): any[] {
+    return this.capabilities.activeWarehouses;
+  }
+
+  /** En modo Por Bodega no se carga nada (ni se permite registrar movimientos) sin una bodega elegida. */
+  get canLoadInventory(): boolean {
+    return !this.isWarehouseMode || !!this.selectedWarehouseId;
+  }
+
+  /**
+   * Prioridad: 1) selección persistida (si sigue siendo una bodega activa),
+   * 2) la bodega del terminal POS del operador, 3) la predeterminada del
+   * negocio. Si nada aplica, queda vacío y la pantalla bloquea la carga.
+   */
+  private resolveSelectedWarehouse(): void {
+    if (!this.isWarehouseMode) {
+      this.selectedWarehouseId = '';
+      return;
+    }
+    const persisted = localStorage.getItem(this.warehouseStorageKey());
+    const options = this.warehouseOptions;
+    if (persisted && options.some((item: any) => String(item?.name || '') === persisted)) {
+      this.selectedWarehouseId = persisted;
+      return;
+    }
+    const terminalWarehouse = String(this.capabilities.activePosTerminal?.warehouse || '').trim();
+    if (terminalWarehouse && options.some((item: any) => String(item?.name || '') === terminalWarehouse)) {
+      this.selectedWarehouseId = terminalWarehouse;
+      return;
+    }
+    this.selectedWarehouseId = String(this.capabilities.defaultWarehouse?.name || '');
+  }
+
+  onWarehouseChange(warehouseId: string): void {
+    this.selectedWarehouseId = warehouseId;
+    const business = this.capabilities.activeBusinessId;
+    if (business) {
+      if (warehouseId) localStorage.setItem(this.warehouseStorageKey(), warehouseId);
+      else localStorage.removeItem(this.warehouseStorageKey());
+    }
+    if (!this.canLoadInventory) {
+      this.inventoryProducts = [];
+      this.inventorySummary = null;
+      this.movements = [];
+      return;
+    }
+    this.cargarProductosInventario();
+    this.historyOffset = 0;
+    this.cargarMovimientos();
+  }
+
+  private warehouseStorageKey(): string {
+    return `inventory_active_warehouse:${this.capabilities.activeBusinessId || ''}`;
   }
 
   get movementItems(): FormArray {
@@ -158,6 +259,11 @@ export class InventoryComponent implements OnInit {
 
   get canManageInventory(): boolean {
     return this.inventoryEnabled && this.capabilities.hasPermission('inventory.manage');
+  }
+
+  /** Visible solo en modo Por Bodega, con permiso de inventario, con al menos 2 bodegas. */
+  get canTransferStock(): boolean {
+    return this.isWarehouseMode && this.canManageInventory && this.warehouseOptions.length >= 2;
   }
 
   get isLiteMode(): boolean {
@@ -210,68 +316,58 @@ export class InventoryComponent implements OnInit {
     });
   }
 
+  /**
+   * Inventario es un módulo compartido entre negocios Lite y de restaurante:
+   * ambos usan el mismo catálogo (`get_productos`) y el mismo modelo de
+   * bodegas, así que la carga es siempre la misma sin importar `isLiteMode`.
+   * (Antes había una rama alterna con `InventoryService.getInventoryProducts`
+   * para negocios no-Lite, pero esa nunca mandaba `flatten_variants` ni
+   * `warehouse`: devolvía el producto agrupador de la variante —siempre con
+   * `maneja_stock: 0`, porque el stock real vive en la variante— y el filtro
+   * de abajo lo descartaba, dejando la lista y el resumen vacíos para
+   * cualquier negocio de restaurante con productos con variantes.)
+   */
   cargarProductosInventario(): void {
+    if (!this.canLoadInventory) return;
     this.spinner.show();
-    if (this.isLiteMode) {
-      forkJoin({
-        // `flatten_variants`: acá se administra el stock real, que vive en
-        // las variantes, no en el producto agrupador (siempre en 0).
-        // `isactive` siempre explícito: el backend no tiene un modo "todos".
-        products: this.productsService.getAll(
-          this.estadoFiltro === 'Activo' ? 1 : 0,
-          undefined,
-          0,
-          this.search,
-          undefined,
-          undefined,
-          this.onlyLowStock,
-          true
-        ),
-        summary: this.inventoryService.getStockSummary()
-      }).subscribe({
-        next: ({ products, summary }: any) => {
-          const productList = this.extractList(products, ['message', 'data']) as InventoryProduct[];
-          const summaryData = this.extractData(summary) as InventorySummary;
-          this.inventorySummary = summaryData || null;
-          const summaryProducts = (summaryData?.products || summaryData?.items || []) as InventoryProduct[];
-          const merged = productList.map((product) => {
-            const fromSummary = summaryProducts.find((item) => item.name === product.name);
-            return fromSummary ? { ...product, ...fromSummary } : product;
-          });
-          this.inventoryProducts = merged.filter((product) => this.hasInventory(product));
-        },
-        error: (error) => {
-          this.alertService.error(this.frappeErrorService.handle(error));
-          this.spinner.hide();
-        },
-        complete: () => this.spinner.hide()
-      });
-      return;
-    }
-
-    this.inventoryService.getInventoryProducts({
-      search: this.search || undefined,
-      onlyLowStock: this.onlyLowStock,
-      onlyActive: this.estadoFiltro === 'Activo',
+    forkJoin({
+      // `flatten_variants`: acá se administra el stock real, que vive en
+      // las variantes, no en el producto agrupador (siempre en 0).
+      // `isactive` siempre explícito: el backend no tiene un modo "todos".
+      products: this.productsService.getAll(
+        this.estadoFiltro === 'Activo' ? 1 : 0,
+        undefined,
+        0,
+        this.search,
+        undefined,
+        undefined,
+        this.onlyLowStock,
+        true,
+        this.isWarehouseMode ? this.selectedWarehouseId : undefined
+      ),
+      summary: this.inventoryService.getStockSummary(this.isWarehouseMode ? this.selectedWarehouseId : undefined)
     }).subscribe({
-      next: (res: any) => {
-        const data = this.extractList(res, ['message', 'data']);
-        this.inventoryProducts = ((Array.isArray(data) ? data : []) as InventoryProduct[])
-          .filter((product) => this.hasInventory(product));
+      next: ({ products, summary }: any) => {
+        const productList = this.extractList(products, ['message', 'data']) as InventoryProduct[];
+        const summaryData = this.extractData(summary) as InventorySummary;
+        this.inventorySummary = summaryData || null;
+        const summaryProducts = (summaryData?.products || summaryData?.items || []) as InventoryProduct[];
+        const merged = productList.map((product) => {
+          const fromSummary = summaryProducts.find((item) => item.name === product.name);
+          return fromSummary ? { ...product, ...fromSummary } : product;
+        });
+        this.inventoryProducts = merged.filter((product) => this.hasInventory(product));
       },
       error: (error) => {
-        const mensaje = this.frappeErrorService.handle(error);
-        this.alertService.error(mensaje);
+        this.alertService.error(this.frappeErrorService.handle(error));
         this.spinner.hide();
       },
-      complete: () => {
-        this.spinner.hide();
-      }
+      complete: () => this.spinner.hide()
     });
   }
 
   cargarOpcionesProducto(): void {
-    this.productsService.getAll(1, undefined, 0, '', undefined, undefined, false, true).subscribe({
+    this.productsService.getAll(1, undefined, 0, '', undefined, undefined, false, true, this.isWarehouseMode ? this.selectedWarehouseId : undefined).subscribe({
       next: (res: any) => {
         const data = Array.isArray(res) ? res : (res?.message?.data || []);
         this.productOptions = ((Array.isArray(data) ? data : []) as Product[])
@@ -294,7 +390,7 @@ export class InventoryComponent implements OnInit {
    * agrega al final sin tocar lo ya cargado.
    */
   cargarMovimientos(append = false): void {
-    if (this.historyAccessDenied) return;
+    if (this.historyAccessDenied || !this.canLoadInventory) return;
     if (append) this.historyLoadingMore = true;
     else this.spinner.show();
 
@@ -303,6 +399,7 @@ export class InventoryComponent implements OnInit {
       offset: this.historyOffset,
       product: this.historyProduct || undefined,
       movementType: this.historyMovementType || undefined,
+      warehouse: this.isWarehouseMode ? this.selectedWarehouseId : undefined,
     }).subscribe({
       next: (res: any) => {
         const list = this.extractList(res, ['message', 'data']);
@@ -326,6 +423,99 @@ export class InventoryComponent implements OnInit {
         this.historyLoadingMore = false;
       }
     });
+  }
+
+  toggleSoloTraslados(value: boolean): void {
+    this.soloTraslados = value;
+    if (value) this.cargarTraslados();
+  }
+
+  /**
+   * Trae movimientos SIN restringir a la bodega elegida en esta pantalla: un
+   * traslado siempre involucra dos bodegas a la vez (origen y destino), así
+   * que agruparlos exige ver ambas, no solo la seleccionada arriba.
+   */
+  private cargarTraslados(): void {
+    this.loadingTraslados = true;
+    this.inventoryService.getInventoryMovements({
+      limit: 200,
+      offset: 0,
+      warehouse: ''
+    }).subscribe({
+      next: (res: any) => {
+        const list = this.extractList(res, ['message', 'data']) as InventoryMovement[];
+        this.traslados = this.groupTransferMovements(list);
+      },
+      error: (error) => {
+        const mensaje = this.frappeErrorService.handle(error);
+        this.alertService.error(mensaje);
+      },
+      complete: () => {
+        this.loadingTraslados = false;
+      }
+    });
+  }
+
+  /**
+   * Un traslado deja dos movimientos con la MISMA referencia (el `transfer_id`,
+   * ej. "TRF-...") para el mismo producto: una Salida en origen y una Entrada
+   * en destino. Se identifican por esa referencia (no hay otro campo que los
+   * marque como "traslado" en vez de un movimiento manual) y se combinan en
+   * una sola fila legible.
+   */
+  private groupTransferMovements(list: InventoryMovement[]): typeof this.traslados {
+    const transferMovements = list.filter((movement) => this.isTransferMovement(movement));
+    const byKey = new Map<string, InventoryMovement[]>();
+    transferMovements.forEach((movement) => {
+      const key = `${movement.reference_name}::${movement.item}`;
+      const group = byKey.get(key) || [];
+      group.push(movement);
+      byKey.set(key, group);
+    });
+
+    return Array.from(byKey.values())
+      .map((group) => {
+        const salida = group.find((movement) => movement.movement_type === 'Salida');
+        const entrada = group.find((movement) => movement.movement_type === 'Entrada');
+        const any = salida || entrada;
+        return {
+          reference_name: any?.reference_name,
+          item: any?.item,
+          item_name: any?.item_name || this.resolveProductName(any?.item || ''),
+          quantity: Number(entrada?.quantity ?? salida?.quantity ?? 0),
+          timestamp: this.movementTimestamp(any),
+          source_warehouse: salida?.warehouse,
+          target_warehouse: entrada?.warehouse,
+        };
+      })
+      .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+  }
+
+  private isTransferMovement(movement: InventoryMovement): boolean {
+    const reference = String(movement?.reference_name || '');
+    const doctype = String(movement?.reference_doctype || '').toLowerCase();
+    return /^TRF-/i.test(reference) || doctype.includes('transfer') || doctype.includes('traslado');
+  }
+
+  /**
+   * `movement_datetime` trae fecha y hora reales del registro; `created_at`
+   * es el respaldo si faltara. `posting_date`/`creation` solo quedan como
+   * último recurso (fecha sin hora, o auditoría genérica).
+   */
+  movementTimestamp(movement: InventoryMovement | null | undefined): string | null {
+    const raw = movement?.movement_datetime || movement?.created_at || movement?.posting_date || movement?.creation || null;
+    if (!raw) return null;
+    // El backend envía "YYYY-MM-DD HH:mm:ss.ffffff" (espacio, sin zona) en vez
+    // de ISO 8601: no todos los navegadores lo interpretan igual con
+    // `new Date(...)`, así que se normaliza a un formato que el DatePipe
+    // siempre reconoce.
+    return /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(raw) ? raw.replace(' ', 'T') : raw;
+  }
+
+  warehouseLabel(id?: string): string {
+    if (!id) return '—';
+    const warehouse = this.capabilities.warehouses.find((item: any) => String(item?.name || '') === String(id));
+    return warehouse?.warehouse_name || warehouse?.name || id;
   }
 
   private isPermissionError(error: any): boolean {
@@ -370,6 +560,10 @@ export class InventoryComponent implements OnInit {
       this.alertService.error(this.inventoryEnabled
         ? 'No tienes permisos para administrar inventario.'
         : 'El inventario no está incluido en el plan actual.');
+      return;
+    }
+    if (!this.canLoadInventory) {
+      this.alertService.error('Selecciona una bodega activa antes de registrar movimientos.');
       return;
     }
     this.showMovementModal = true;
@@ -488,12 +682,19 @@ export class InventoryComponent implements OnInit {
         this.alertService.error('No se encontró el negocio activo.');
         return null;
       }
-      const payload: LiteStockMovementPayload = {
+      // En modo Por Bodega la bodega es obligatoria en todo movimiento: sin
+      // ella el backend no sabría a qué stock aplicarlo.
+      if (this.isWarehouseMode && !this.selectedWarehouseId) {
+        this.alertService.error('Selecciona una bodega activa antes de registrar el movimiento.');
+        return null;
+      }
+      const payload: LiteStockMovementPayload & { warehouse?: string } = {
         business,
         item: row.product,
         movement_type: movementType as 'Entrada' | 'Salida' | 'Ajuste',
         notes: raw.notes || ''
       };
+      if (this.isWarehouseMode) payload.warehouse = this.selectedWarehouseId;
       if (movementType === 'Ajuste') {
         const target = Number(raw.items?.[0]?.target_stock);
         if (!Number.isFinite(target) || target < 0) {

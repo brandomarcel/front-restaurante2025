@@ -15,7 +15,7 @@
           shadow="small"
           [disabled]="isSaving || isLoadingCompany || !canEditLiteSetup"
           (click)="save()">
-          {{ isSaving ? 'Guardando...' : (isLiteMode ? 'Guardar configuración Lite' : 'Guardar') }}
+          {{ isSaving ? 'Guardando...' : (isLiteMode ? 'Guardar configuración' : 'Guardar') }}
         </app-button>
       </div>
 
@@ -352,7 +352,7 @@
                 <ol class="mt-2 list-decimal space-y-1 pl-4">
                   <li>Selecciona el archivo privado con extensión <strong>.p12</strong> o <strong>.pfx</strong>.</li>
                   <li>Escribe la contraseña del certificado.</li>
-                  <li>Pulsa <strong>Guardar configuración Lite</strong> para validarlo.</li>
+                  <li>Pulsa <strong>Guardar configuración</strong> para validarlo.</li>
                 </ol>
                 <p class="mt-2 text-amber-800">El backend validará la contraseña y la vigencia. Nunca guardamos la contraseña en el navegador.</p>
               </div>
@@ -640,7 +640,7 @@
                 <ol class="mt-2 list-decimal space-y-1 pl-4">
                   <li>Selecciona el archivo privado con extensión <strong>.p12</strong> o <strong>.pfx</strong>.</li>
                   <li>Escribe la contraseña del certificado.</li>
-                  <li>Pulsa <strong>Guardar configuración Lite</strong> para validarlo.</li>
+                  <li>Pulsa <strong>Guardar configuración</strong> para validarlo.</li>
                 </ol>
                 <p class="mt-2 text-amber-800">El backend validará la contraseña y la vigencia. Nunca guardamos la contraseña en el navegador.</p>
               </div>

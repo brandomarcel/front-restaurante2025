@@ -1,13 +1,13 @@
-<div class="flex h-[100dvh] w-full overflow-hidden bg-muted/70">
+<div class="flex h-[100dvh] w-full overflow-hidden bg-background">
   <app-sidebar *ngIf="!menuService.isPosMode"></app-sidebar>
 
-  <div class="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-card">
+  <div class="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
     <app-navbar class="sticky top-0 z-[95] flex-shrink-0"></app-navbar>
 
     <main
       id="main-content"
       class="flex-1 min-h-0"
-      [ngClass]="menuService.isPosMode ? 'overflow-hidden bg-muted' : 'overflow-y-auto bg-card'"
+      [ngClass]="menuService.isPosMode ? 'overflow-hidden bg-muted' : 'overflow-y-auto bg-background'"
     >
       <div
         [ngClass]="

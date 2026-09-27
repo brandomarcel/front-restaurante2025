@@ -19,22 +19,23 @@
             <span class="badge" [ngClass]="getSriStatusBadge(invoiceStatusRaw)">
               {{ sriStatus }}
             </span>
-            <span *ngIf="invoice?.type" class="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+            <span *ngIf="invoice?.type"
+              class="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
               {{ invoice?.type }}
             </span>
           </div>
 
           <div class="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
             <span>ID: <b class="font-semibold text-foreground/80">{{ invoice?.name || '—' }}</b></span>
-            <span *ngIf="invoice?.createdAt">Emisión: <b class="font-semibold text-foreground/80">{{ invoice?.createdAt}}</b></span>
+            <span *ngIf="invoice?.createdAt">Emisión: <b class="font-semibold text-foreground/80">{{
+                invoice?.createdAt}}</b></span>
             <span *ngIf="invoice?.order">Orden: <b class="font-semibold text-primary">{{ invoice?.order }}</b></span>
           </div>
         </div>
       </div>
 
       <div class="hidden items-center gap-1.5 md:flex">
-        <button *ngIf="canAnnul" class="btn btn-warn !px-3 !py-1.5 !text-[11px]"
-          (click)="openMotivo()"
+        <button *ngIf="canAnnul" class="btn btn-warn !px-3 !py-1.5 !text-[11px]" (click)="openMotivo()"
           [title]="'Crear nota de crédito'">
           Anular
         </button>
@@ -42,24 +43,35 @@
         <button *ngIf="canResend" class="btn btn-warn !px-3 !py-1.5 !text-[11px]" (click)="reenviarFactura()">
           {{ sriActionLabel }}
         </button>
-        <button *ngIf="canConsultAuthorization" class="btn btn-warn !px-3 !py-1.5 !text-[11px]" (click)="consultarEstadoSri()" [disabled]="liteActionRunning">
+        <button *ngIf="canConsultAuthorization" class="btn btn-warn !px-3 !py-1.5 !text-[11px]"
+          (click)="consultarEstadoSri()" [disabled]="liteActionRunning">
           Consultar autorización
         </button>
-        <button *ngIf="canRetryLite" class="btn btn-warn !px-3 !py-1.5 !text-[11px]" (click)="retryLiteInvoice()" [disabled]="liteActionRunning">
+        <button *ngIf="canRetryLite" class="btn btn-warn !px-3 !py-1.5 !text-[11px]" (click)="retryLiteInvoice()"
+          [disabled]="liteActionRunning">
           Reintentar emisión
         </button>
 
-        <button *ngIf="capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta' && (!capabilities.isLiteMode || isLiteAuthorized)" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="getFacturaPdf()" [disabled]="documentActionRunning">
+        <button
+          *ngIf="capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta' && (!capabilities.isLiteMode || isLiteAuthorized)"
+          class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="getFacturaPdf()"
+          [disabled]="documentActionRunning">
           <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>
           RIDE
         </button>
-        <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta'" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="getTicketPdf()" [disabled]="documentActionRunning">
+        <button
+          *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta'"
+          class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="getTicketPdf()"
+          [disabled]="documentActionRunning">
           Ticket
         </button>
-        <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && isLiteAuthorized" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="downloadLiteXml()" [disabled]="documentActionRunning">
+        <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && isLiteAuthorized"
+          class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="downloadLiteXml()"
+          [disabled]="documentActionRunning">
           XML
         </button>
-        <button *ngIf="canSendEmail" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="sendLiteInvoiceEmail()" [disabled]="emailActionRunning">
+        <button *ngIf="canSendEmail" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="sendLiteInvoiceEmail()"
+          [disabled]="emailActionRunning">
           {{ emailActionRunning ? 'Enviando…' : 'Enviar por correo' }}
         </button>
       </div>
@@ -75,7 +87,8 @@
     <button type="button" class="invoice-detail-tab" [class.is-active]="activeDetailTab === 'electronic'"
       (click)="selectDetailTab('electronic')">
       Estado SRI
-      <span class="ml-1 rounded-full px-1.5 py-0.5 text-[9px]" [ngClass]="getSriStatusBadge(invoiceStatusRaw)">{{ sriStatus }}</span>
+      <span class="ml-1 rounded-full px-1.5 py-0.5 text-[9px]" [ngClass]="getSriStatusBadge(invoiceStatusRaw)">{{
+        sriStatus }}</span>
     </button>
   </nav>
 
@@ -87,7 +100,8 @@
             {{ activeDetailTab === 'electronic' ? 'Estado SRI' : 'Cliente y facturación' }}
           </h2>
           <div class="flex flex-wrap items-center gap-1.5">
-            <span *ngIf="activeDetailTab === 'general'" class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+            <span *ngIf="activeDetailTab === 'general'"
+              class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
               {{ invoice?.customer?.tipo_identificacion || 'Identificación' }}
             </span>
             <span class="badge" [ngClass]="getSriStatusBadge(invoiceStatusRaw)">
@@ -102,7 +116,8 @@
             <div class="grid gap-x-3 gap-y-1 sm:grid-cols-2 xl:grid-cols-4">
               <div class="sm:col-span-2 xl:col-span-2">
                 <span class="text-[10px] font-bold uppercase text-muted-foreground">Cliente</span>
-                <p class="truncate font-bold text-foreground">{{ invoice?.customer?.fullName || invoice?.customer?.name || '—' }}</p>
+                <p class="truncate font-bold text-foreground">{{ invoice?.customer?.fullName || invoice?.customer?.name
+                  || '—' }}</p>
               </div>
               <div>
                 <span class="text-[10px] font-bold uppercase text-muted-foreground">Cédula/RUC</span>
@@ -125,7 +140,7 @@
 
           <div *ngIf="activeDetailTab === 'electronic'" class="rounded-lg bg-muted/40 px-2.5 py-2">
             <div class="grid gap-x-3 gap-y-1 sm:grid-cols-2">
-               <div *ngIf="invoice?.sri?.access_key" class="sm:col-span-2">
+              <div *ngIf="invoice?.sri?.access_key" class="sm:col-span-2">
                 <span class="text-[10px] font-bold uppercase text-muted-foreground">Clave de acceso</span>
                 <p class="truncate font-mono text-[11px] font-semibold text-blue-700">{{ invoice?.sri?.access_key }}</p>
               </div>
@@ -139,11 +154,13 @@
               </div>
               <div>
                 <span class="text-[10px] font-bold uppercase text-muted-foreground">Establecimiento</span>
-                <p class="font-semibold">{{ invoice?.electronic?.establishment_code || invoice?.sri?.establishment_code || invoice?.establishment_code || '—' }}</p>
+                <p class="font-semibold">{{ invoice?.electronic?.establishment_code || invoice?.sri?.establishment_code
+                  || invoice?.establishment_code || '—' }}</p>
               </div>
               <div>
                 <span class="text-[10px] font-bold uppercase text-muted-foreground">Punto de emisión</span>
-                <p class="font-semibold">{{ invoice?.electronic?.emission_point_code || invoice?.sri?.emission_point_code || invoice?.emission_point_code || '—' }}</p>
+                <p class="font-semibold">{{ invoice?.electronic?.emission_point_code ||
+                  invoice?.sri?.emission_point_code || invoice?.emission_point_code || '—' }}</p>
               </div>
               <div *ngIf="invoice?.sri?.authorization_datetime" class="sm:col-span-2">
                 <span class="text-[10px] font-bold uppercase text-muted-foreground">Autorización</span>
@@ -153,12 +170,13 @@
                 <span class="text-[10px] font-bold uppercase text-muted-foreground">Número de autorización</span>
                 <p class="truncate font-semibold">{{ invoice?.sri?.authorization_number }}</p>
               </div>
-             
+
             </div>
           </div>
         </div>
 
-        <div *ngIf="activeDetailTab === 'electronic'" class="mt-2 grid gap-1.5 text-[11px] text-foreground/80 sm:grid-cols-3">
+        <div *ngIf="activeDetailTab === 'electronic'"
+          class="mt-2 grid gap-1.5 text-[11px] text-foreground/80 sm:grid-cols-3">
           <div class="rounded-lg bg-muted/40 px-2.5 py-1.5">
             <span class="font-bold uppercase text-muted-foreground">Estado FacturADA</span>
             <p class="font-semibold">{{ facturaStatusLabel }}</p>
@@ -183,13 +201,18 @@
           </div>
         </div>
 
-        <div *ngIf="activeDetailTab === 'electronic' && sriMessages.length === 1" class="mt-2 rounded-lg bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
+        <div *ngIf="activeDetailTab === 'electronic' && sriMessages.length === 1"
+          class="mt-2 rounded-lg bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
           <span class="font-bold uppercase">Mensaje SRI:</span>
           <span class="ml-1">{{ sriMessages[0] }}</span>
         </div>
-        <details *ngIf="activeDetailTab === 'electronic' && sriMessages.length > 1" class="mt-2 rounded-lg border border-border bg-muted/40 px-2.5 py-2 text-[11px]">
-          <summary class="cursor-pointer font-bold text-foreground/80">Ver mensajes tributarios ({{ sriMessages.length }})</summary>
-          <ul class="mt-1 list-disc space-y-0.5 pl-4 text-muted-foreground"><li *ngFor="let message of sriMessages">{{ message }}</li></ul>
+        <details *ngIf="activeDetailTab === 'electronic' && sriMessages.length > 1"
+          class="mt-2 rounded-lg border border-border bg-muted/40 px-2.5 py-2 text-[11px]">
+          <summary class="cursor-pointer font-bold text-foreground/80">Ver mensajes tributarios ({{ sriMessages.length
+            }})</summary>
+          <ul class="mt-1 list-disc space-y-0.5 pl-4 text-muted-foreground">
+            <li *ngFor="let message of sriMessages">{{ message }}</li>
+          </ul>
         </details>
       </section>
 
@@ -199,9 +222,6 @@
             <h2 class="text-sm font-bold text-foreground">Productos</h2>
             <p class="text-[11px] text-muted-foreground">{{ invoiceItems.length }} ítem(s) en la factura</p>
           </div>
-          <span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-            IVA incluido según línea
-          </span>
         </div>
 
         <div class="app-table-wrap hidden max-h-[58vh] lg:block">
@@ -211,7 +231,9 @@
                 <th class="px-3 py-2 text-left">Producto</th>
                 <th class="px-3 py-2 text-center">Cant.</th>
                 <th class="px-3 py-2 text-right">P. Unit.</th>
+                <th class="px-3 py-2 text-right">Descuento</th>
                 <th class="px-3 py-2 text-center">IVA</th>
+
                 <th class="px-3 py-2 text-right">Subtotal</th>
                 <th class="px-3 py-2 text-right">Total</th>
               </tr>
@@ -219,17 +241,23 @@
             <tbody>
               <tr *ngFor="let item of invoiceItems" class="app-tr">
                 <td class="px-3 py-2">
-                  <p class="font-semibold text-foreground">{{ item.productName || item.item_name || item.nombre || item.name || item.item || item.product || 'Producto' }}</p>
+                  <p class="font-semibold text-foreground">{{ item.productName || item.item_name || item.nombre ||
+                    item.name || item.item || item.product || 'Producto' }}</p>
                 </td>
                 <td class="px-3 py-2 text-center font-semibold">{{ item.quantity ?? item.qty ?? 0 }}</td>
-                <td class="px-3 py-2 text-right">{{ (item.price ?? item.rate ?? 0) | currency:'USD':'symbol':'1.2-2' }}</td>
+                <td class="px-3 py-2 text-right">{{ (item.price ?? item.rate ?? 0) | currency:'USD':'symbol':'1.2-2' }}
+                </td>
+                <td class="px-3 py-2 text-right">{{ (item.discount_amount ?? item.total_discount ?? 0) | currency:'USD':'symbol':'1.2-2' }}</td>
                 <td class="px-3 py-2 text-center">
                   <span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                     {{ item.tax_rate ?? 0 }}%
                   </span>
                 </td>
+
                 <td class="px-3 py-2 text-right">{{ itemSubtotal(item) | currency:'USD':'symbol':'1.2-2' }}</td>
-                <td class="px-3 py-2 text-right font-bold text-foreground">{{ itemTotal(item) | currency:'USD':'symbol':'1.2-2' }}</td>
+
+                <td class="px-3 py-2 text-right font-bold text-foreground">{{ itemTotal(item) |
+                  currency:'USD':'symbol':'1.2-2' }}</td>
               </tr>
               <tr *ngIf="!invoiceItems.length">
                 <td colspan="6" class="px-3 py-8 text-center text-xs text-muted-foreground">
@@ -244,20 +272,28 @@
           <article *ngFor="let item of invoiceItems" class="rounded-lg border border-border bg-muted/40 p-2">
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0">
-                <p class="line-clamp-2 text-xs font-bold text-foreground">{{ item.productName || item.item_name || item.nombre || item.name || item.item || item.product || 'Producto' }}</p>
+                <p class="line-clamp-2 text-xs font-bold text-foreground">{{ item.productName || item.item_name ||
+                  item.nombre || item.name || item.item || item.product || 'Producto' }}</p>
                 <p class="text-[10px] text-muted-foreground">
-                  {{ item.quantity ?? item.qty ?? 0 }} x {{ (item.price ?? item.rate ?? 0) | currency:'USD':'symbol':'1.2-2' }}
+                  {{ item.quantity ?? item.qty ?? 0 }} x {{ (item.price ?? item.rate ?? 0) |
+                  currency:'USD':'symbol':'1.2-2' }}
                 </p>
               </div>
-              <p class="shrink-0 text-sm font-bold text-foreground">{{ itemTotal(item) | currency:'USD':'symbol':'1.2-2' }}</p>
+              <p class="shrink-0 text-sm font-bold text-foreground">{{ itemTotal(item) | currency:'USD':'symbol':'1.2-2'
+                }}</p>
             </div>
             <div class="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
               <span>Subtotal {{ itemSubtotal(item) | currency:'USD':'symbol':'1.2-2' }}</span>
               <span>IVA {{ item.tax_rate ?? 0 }}%</span>
             </div>
+            <div *ngIf="(item.discount_amount ?? item.total_discount ?? 0) > 0" class="mt-1 flex items-center justify-between text-[11px] text-amber-600">
+              <span>Descuento</span>
+              <span>{{ (item.discount_amount ?? item.total_discount ?? 0) | currency:'USD':'symbol':'1.2-2' }}</span>
+            </div>
           </article>
 
-          <div *ngIf="!invoiceItems.length" class="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+          <div *ngIf="!invoiceItems.length"
+            class="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
             No hay productos en esta factura.
           </div>
         </div>
@@ -269,6 +305,11 @@
         <h2 class="mb-2 text-[11px] font-bold uppercase tracking-wide text-primary">Resumen</h2>
 
         <div class="space-y-1.5 text-xs text-foreground/80">
+ <div class="flex justify-between gap-3">
+            <span>Descuento</span>
+            <span class="font-semibold">{{ (invoice?.totals?.total_discount ?? invoice?.total_discount ?? 0) | currency:'USD':'symbol':'1.2-2' }}</span>
+          </div>
+          
           <div class="flex justify-between gap-3">
             <span>Subtotal</span>
             <span class="font-semibold">{{ invoice?.subtotal | currency:'USD':'symbol':'1.2-2' }}</span>
@@ -306,36 +347,47 @@
         <h2 class="mb-2 text-[11px] font-bold uppercase tracking-wide text-primary">Acciones</h2>
 
         <div class="grid gap-2">
-          <button *ngIf="canAnnul" class="btn btn-warn w-full !py-1.5 !text-[11px]"
-            (click)="openMotivo()"
+          <button *ngIf="canAnnul" class="btn btn-warn w-full !py-1.5 !text-[11px]" (click)="openMotivo()"
             [title]="'Crear nota de crédito'">
             Anular factura
           </button>
-          <p *ngIf="!canAnnul && annulBlockReason" class="rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800">
+          <p *ngIf="!canAnnul && annulBlockReason"
+            class="rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800">
             {{ annulBlockReason }}
           </p>
 
           <button *ngIf="canResend" class="btn btn-warn w-full !py-1.5 !text-[11px]" (click)="reenviarFactura()">
             {{ sriActionLabel }}
           </button>
-          <button *ngIf="canConsultAuthorization" class="btn btn-warn w-full !py-1.5 !text-[11px]" (click)="consultarEstadoSri()" [disabled]="liteActionRunning">
+          <button *ngIf="canConsultAuthorization" class="btn btn-warn w-full !py-1.5 !text-[11px]"
+            (click)="consultarEstadoSri()" [disabled]="liteActionRunning">
             Consultar autorización
           </button>
-          <button *ngIf="canRetryLite" class="btn btn-warn w-full !py-1.5 !text-[11px]" (click)="retryLiteInvoice()" [disabled]="liteActionRunning">
+          <button *ngIf="canRetryLite" class="btn btn-warn w-full !py-1.5 !text-[11px]" (click)="retryLiteInvoice()"
+            [disabled]="liteActionRunning">
             Reintentar emisión
           </button>
 
-          <button *ngIf="capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta' && (!capabilities.isLiteMode || isLiteAuthorized)" class="btn btn-primary w-full !py-1.5 !text-[11px]" (click)="getFacturaPdf()" [disabled]="documentActionRunning">
+          <button
+            *ngIf="capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta' && (!capabilities.isLiteMode || isLiteAuthorized)"
+            class="btn btn-primary w-full !py-1.5 !text-[11px]" (click)="getFacturaPdf()"
+            [disabled]="documentActionRunning">
             <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>
             Descargar RIDE
           </button>
-          <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta'" class="btn btn-outline w-full !py-1.5 !text-[11px]" (click)="getTicketPdf()" [disabled]="documentActionRunning">
+          <button
+            *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta'"
+            class="btn btn-outline w-full !py-1.5 !text-[11px]" (click)="getTicketPdf()"
+            [disabled]="documentActionRunning">
             Descargar ticket
           </button>
-          <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && isLiteAuthorized" class="btn btn-outline w-full !py-1.5 !text-[11px]" (click)="downloadLiteXml()" [disabled]="documentActionRunning">
+          <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && isLiteAuthorized"
+            class="btn btn-outline w-full !py-1.5 !text-[11px]" (click)="downloadLiteXml()"
+            [disabled]="documentActionRunning">
             Descargar XML
           </button>
-          <button *ngIf="canSendEmail" class="btn btn-outline w-full !py-1.5 !text-[11px]" (click)="sendLiteInvoiceEmail()" [disabled]="emailActionRunning">
+          <button *ngIf="canSendEmail" class="btn btn-outline w-full !py-1.5 !text-[11px]"
+            (click)="sendLiteInvoiceEmail()" [disabled]="emailActionRunning">
             {{ emailActionRunning ? 'Enviando…' : 'Enviar por correo' }}
           </button>
         </div>
@@ -344,19 +396,30 @@
   </div>
 </div>
 
-<div class="fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t bg-card px-3 py-2 shadow-[0_-8px_24px_rgba(15,23,42,0.12)] md:hidden">
+<div
+  class="fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t bg-card px-3 py-2 shadow-[0_-8px_24px_rgba(15,23,42,0.12)] md:hidden">
   <button *ngIf="canResend" class="btn btn-warn flex-1 !py-1.5 !text-[11px]" (click)="reenviarFactura()">
     {{ sriActionLabel }}
   </button>
-  <button *ngIf="canConsultAuthorization" class="btn btn-warn flex-1 !py-1.5 !text-[11px]" (click)="consultarEstadoSri()" [disabled]="liteActionRunning">Consultar autorización</button>
-  <button *ngIf="canRetryLite" class="btn btn-warn flex-1 !py-1.5 !text-[11px]" (click)="retryLiteInvoice()" [disabled]="liteActionRunning">Reintentar emisión</button>
-  <button *ngIf="capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta' && (!capabilities.isLiteMode || isLiteAuthorized)" class="btn btn-primary flex-1 !py-1.5 !text-[11px]" (click)="getFacturaPdf()" [disabled]="documentActionRunning">
+  <button *ngIf="canConsultAuthorization" class="btn btn-warn flex-1 !py-1.5 !text-[11px]"
+    (click)="consultarEstadoSri()" [disabled]="liteActionRunning">Consultar autorización</button>
+  <button *ngIf="canRetryLite" class="btn btn-warn flex-1 !py-1.5 !text-[11px]" (click)="retryLiteInvoice()"
+    [disabled]="liteActionRunning">Reintentar emisión</button>
+  <button
+    *ngIf="capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta' && (!capabilities.isLiteMode || isLiteAuthorized)"
+    class="btn btn-primary flex-1 !py-1.5 !text-[11px]" (click)="getFacturaPdf()" [disabled]="documentActionRunning">
     <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>
     RIDE
   </button>
-  <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta'" class="btn btn-outline flex-1 !py-1.5 !text-[11px]" (click)="getTicketPdf()" [disabled]="documentActionRunning">Ticket</button>
-  <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && isLiteAuthorized" class="btn btn-outline flex-1 !py-1.5 !text-[11px]" (click)="downloadLiteXml()" [disabled]="documentActionRunning">XML</button>
-  <button *ngIf="canSendEmail" class="btn btn-outline flex-1 !py-1.5 !text-[11px]" (click)="sendLiteInvoiceEmail()" [disabled]="emailActionRunning">Correo</button>
+  <button
+    *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta'"
+    class="btn btn-outline flex-1 !py-1.5 !text-[11px]" (click)="getTicketPdf()"
+    [disabled]="documentActionRunning">Ticket</button>
+  <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && isLiteAuthorized"
+    class="btn btn-outline flex-1 !py-1.5 !text-[11px]" (click)="downloadLiteXml()"
+    [disabled]="documentActionRunning">XML</button>
+  <button *ngIf="canSendEmail" class="btn btn-outline flex-1 !py-1.5 !text-[11px]" (click)="sendLiteInvoiceEmail()"
+    [disabled]="emailActionRunning">Correo</button>
   <button class="btn btn-outline flex-1 !py-1.5 !text-[11px]" (click)="goBack()">
     Volver
   </button>
@@ -364,7 +427,8 @@
 
 <div *ngIf="showMotivoModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-3">
   <div class="relative w-full max-w-md rounded-xl bg-card p-4 text-xs shadow-xl">
-    <button class="absolute right-3 top-2 text-lg text-muted-foreground hover:text-foreground" (click)="closeMotivo()">×</button>
+    <button class="absolute right-3 top-2 text-lg text-muted-foreground hover:text-foreground"
+      (click)="closeMotivo()">×</button>
 
     <h3 class="text-center text-base font-bold text-foreground">Anular factura</h3>
     <p class="mb-3 text-center text-xs text-muted-foreground">Elige un motivo o especifica uno nuevo.</p>
@@ -384,13 +448,15 @@
         <input type="text" formControlName="otroTexto"
           class="w-full rounded-lg border px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-card text-foreground"
           placeholder="Escribe aquí..." />
-        <div *ngIf="motivoForm.get('otroTexto')?.invalid && motivoForm.get('otroTexto')?.touched" class="mt-1 text-[11px] text-red-500">
+        <div *ngIf="motivoForm.get('otroTexto')?.invalid && motivoForm.get('otroTexto')?.touched"
+          class="mt-1 text-[11px] text-red-500">
           Escribe al menos 2 caracteres.
         </div>
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-1">
-        <button type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="closeMotivo()">Cancelar</button>
+        <button type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]"
+          (click)="closeMotivo()">Cancelar</button>
         <button type="submit" class="btn btn-primary !px-3 !py-1.5 !text-[11px]">Aceptar</button>
       </div>
     </form>

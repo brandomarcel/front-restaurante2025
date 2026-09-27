@@ -102,8 +102,23 @@ export class UserService {
     });
   }
 
+  /** @deprecated Lista genérica de roles, sin filtrar por licencias del negocio. Preferir `getAvailableBusinessRoles`. */
   getBusinessRoles(): Observable<FacturadaBusinessRole[]> {
     return this.http.get<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_business_roles`, {
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(map((response: any) => this.frappeDataList(response)));
+  }
+
+  /**
+   * Roles realmente asignables para ESTE negocio, ya filtrados por sus
+   * licencias en el backend. El frontend nunca decide qué roles tienen
+   * sentido: solo pinta lo que este endpoint devuelve, y envía el `name`
+   * de cada uno tal cual como `business_role` al guardar.
+   */
+  getAvailableBusinessRoles(business: string): Observable<FacturadaBusinessRole[]> {
+    const params = new HttpParams().set('business', business);
+    return this.http.get<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_available_business_roles`, {
+      params,
       context: new HttpContext().set(REQUIRE_AUTH, true)
     }).pipe(map((response: any) => this.frappeDataList(response)));
   }

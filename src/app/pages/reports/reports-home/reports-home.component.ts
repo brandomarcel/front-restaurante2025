@@ -81,6 +81,7 @@ export class ReportsHomeComponent {
   private canViewReport(report: ReportCard): boolean {
     const features = this.capabilities.features;
     if (!this.canViewReports()) return false;
+    if (!this.allowedByReportScope(report)) return false;
 
     switch (report.category) {
       case 'billing':
@@ -102,6 +103,22 @@ export class ReportsHomeComponent {
       default:
         return false;
     }
+  }
+
+  /**
+   * `ui_capabilities.report_scope` (get_user_context): global ve todo,
+   * billing solo comprobantes/pagos, operational solo lo del día a día
+   * (órdenes, caja, productos), none oculta todos. `null` (backend no manda
+   * el dato todavía) no restringe nada más allá de lo que ya filtraban
+   * `features`/`permissions`.
+   */
+  private allowedByReportScope(report: ReportCard): boolean {
+    const scope = this.capabilities.reportScope;
+    if (!scope || scope === 'global') return true;
+    if (scope === 'none') return false;
+    if (scope === 'billing') return report.category === 'billing' || report.category === 'billing_or_restaurant';
+    // operational
+    return report.category !== 'billing';
   }
 
   trackByReport = (_: number, report: ReportCard) => report.route;

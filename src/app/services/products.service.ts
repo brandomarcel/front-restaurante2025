@@ -30,7 +30,13 @@ export class ProductsService {
     category?: string,
     onlyLowStock = false,
     /** Pantallas de inventario/stock: trae las variantes activas en vez del producto agrupador (que nunca tiene stock propio). El catálogo de Productos nunca debe mandar esto. */
-    flattenVariants = false
+    flattenVariants = false,
+    /**
+     * Sobrescribe la bodega derivada del terminal activo. Lo usa la pantalla
+     * de Inventario, que permite elegir cualquier bodega propia sin depender
+     * de un terminal POS. `undefined` conserva el comportamiento anterior.
+     */
+    warehouseOverride?: string
   ) {
       let params = new HttpParams();
 
@@ -46,6 +52,9 @@ export class ProductsService {
       if (onlyLowStock) params = params.set('only_low_stock', '1');
       if (flattenVariants) params = params.set('flatten_variants', '1');
       params = this.withLiteBusiness(params);
+      params = warehouseOverride !== undefined
+        ? (warehouseOverride ? params.set('warehouse', warehouseOverride) : params)
+        : this.withWarehouse(params);
       const url = `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_productos`;
 
       const request$ = this.http.get(url, {
@@ -89,6 +98,7 @@ export class ProductsService {
       .set('limit', String(limit))
       .set('offset', String(offset));
     params = this.withLiteBusiness(params);
+    params = this.withWarehouse(params);
     const url = `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_producto_variantes`;
 
     return this.http.get(url, {
@@ -134,6 +144,43 @@ export class ProductsService {
     }).pipe(map((res: any) => frappeList<any>(res).map((item) => this.fromLiteProduct(item))));
   }
 
+
+  /**
+   * Escaneo rápido de POS: siempre usa este endpoint exacto, nunca una
+   * búsqueda por texto ni carga del catálogo completo. `pos_terminal` tiene
+   * prioridad; `warehouse` solo se envía cuando el negocio no usa terminales.
+   */
+  getProductoByBarcode(options: { barcode: string; posTerminal?: string; warehouse?: string }) {
+    const business = this.activeBusiness();
+    if (!business) return throwError(() => new Error('Selecciona un negocio para escanear.'));
+    const barcode = String(options.barcode || '').trim();
+    if (!barcode) return throwError(() => new Error('El código escaneado está vacío.'));
+    let params = new HttpParams().set('business', business).set('barcode', barcode);
+    if (options.posTerminal) params = params.set('pos_terminal', options.posTerminal);
+    else if (options.warehouse) params = params.set('warehouse', options.warehouse);
+    const url = `${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_producto_by_barcode`;
+    return this.http.get(url, {
+      context: new HttpContext().set(REQUIRE_AUTH, true),
+      params
+    }).pipe(map((res: any) => {
+      const message = res?.message ?? res ?? {};
+      const found = message?.found === true;
+      const rawData = message?.data;
+      return {
+        found,
+        scanned_code: String(message?.scanned_code ?? barcode),
+        data: found && rawData ? {
+          ...this.fromLiteProduct(rawData),
+          can_sell: rawData.can_sell !== false,
+          matched_by: rawData.matched_by,
+          scanned_code: rawData.scanned_code,
+          stock_available: Number(rawData.stock_available ?? rawData.current_stock ?? 0) || 0,
+          warehouse: rawData.warehouse,
+          attributes: Array.isArray(rawData.attributes) ? rawData.attributes : []
+        } : null
+      };
+    }));
+  }
 
   getById(id: number) {
     let params = new HttpParams().set('product_id', String(id));
@@ -203,6 +250,48 @@ export class ProductsService {
     }).pipe(map((res: any) => frappeData<any>(res)));
   }
 
+  /** Plantilla .xlsx de carga masiva. `responseType: 'blob'` conserva el archivo binario. */
+  downloadProductImportTemplate() {
+    const business = this.activeBusiness();
+    if (!business) return throwError(() => new Error('Selecciona un negocio para descargar la plantilla.'));
+    const params = new HttpParams().set('business', business);
+    return this.http.get(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.download_product_import_template`, {
+      context: new HttpContext().set(REQUIRE_AUTH, true),
+      params,
+      responseType: 'blob'
+    });
+  }
+
+  /**
+   * Valida el Excel sin guardar nada. `mode` decide si códigos existentes se
+   * rechazan (`create_only`) o se actualizan (`upsert`). El mismo `FormData`
+   * (con el mismo `File`) se reutiliza tal cual en `confirmProductImport`.
+   */
+  previewProductImport(mode: 'create_only' | 'upsert', file: File) {
+    const business = this.activeBusiness();
+    if (!business) return throwError(() => new Error('Selecciona un negocio para validar el archivo.'));
+    const form = new FormData();
+    form.append('business', business);
+    form.append('mode', mode);
+    form.append('file', file);
+    return this.http.post(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.preview_product_import`, form, {
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(map((res: any) => frappeData<any>(res)));
+  }
+
+  /** Confirma la importación ya validada. Mismo contrato que `previewProductImport`. */
+  confirmProductImport(mode: 'create_only' | 'upsert', file: File) {
+    const business = this.activeBusiness();
+    if (!business) return throwError(() => new Error('Selecciona un negocio para confirmar la importación.'));
+    const form = new FormData();
+    form.append('business', business);
+    form.append('mode', mode);
+    form.append('file', file);
+    return this.http.post(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.confirm_product_import`, form, {
+      context: new HttpContext().set(REQUIRE_AUTH, true)
+    }).pipe(map((res: any) => frappeData<any>(res)));
+  }
+
   /**
    * Crea una variante concreta de un producto principal. El payload sigue
    * exactamente el contrato de `create_producto` para variantes (item_name,
@@ -239,6 +328,11 @@ export class ProductsService {
     payload.iva = this.parseTaxRate(payload.iva ?? payload.tax_value ?? payload.tax ?? 0);
     payload.track_stock = payload.track_stock ?? payload.maneja_stock ?? payload.controlar_inventario ?? 0;
     payload.minimum_stock = Number(payload.minimum_stock ?? payload.stock_minimo ?? 0) || 0;
+    // El backend acepta ambos alias; se envían siempre iguales para no
+    // depender de cuál de los dos use la integración que reciba el payload.
+    const barcode = String(payload.barcode ?? payload.codigo_barras ?? '').trim() || null;
+    payload.barcode = barcode;
+    payload.codigo_barras = barcode;
     // La existencia actual solo cambia mediante create_stock_movement.
     if (isCreate) payload.current_stock = 0;
 
@@ -276,6 +370,7 @@ export class ProductsService {
 
     const image = product.image ?? product.imagen ?? '';
     const imageUrl = this.resolveImageUrl(product.image_url || image);
+    const barcode = String(product.barcode ?? product.codigo_barras ?? '').trim() || null;
     return {
       ...product,
       nombre: product.nombre ?? product.item_name ?? product.name,
@@ -286,6 +381,8 @@ export class ProductsService {
       tax_value: taxValue,
       tax: product.tax ?? product.tax_id ?? (taxValue ? `IVA-${taxValue}` : null),
       codigo: product.codigo ?? product.item_code ?? product.name,
+      barcode,
+      codigo_barras: barcode,
       isactive: product.isactive ?? (status ? status === 'activo' : true),
       controlar_inventario: managesStock,
       track_stock: managesStock,
@@ -330,5 +427,16 @@ export class ProductsService {
   private withLiteBusiness(params: HttpParams): HttpParams {
     const business = this.activeBusiness();
     return business ? params.set('business', business) : params;
+  }
+
+  /**
+   * En modo "Por Bodega" el stock que devuelve `get_productos`/
+   * `get_producto_variantes` debe ser siempre el de la bodega del terminal
+   * activo, nunca el stock global ni el de otro local. En modo "Simple" no
+   * se manda nada (comportamiento actual intacto).
+   */
+  private withWarehouse(params: HttpParams): HttpParams {
+    const warehouse = String(this.capabilities.activeWarehouse?.name || '').trim();
+    return warehouse ? params.set('warehouse', warehouse) : params;
   }
 }

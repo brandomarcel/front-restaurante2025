@@ -72,6 +72,26 @@ export class PosSaleService {
     });
   }
 
+  /**
+   * Misma nota de venta que `downloadPdf`, pero como URL directa (no un blob
+   * de Angular) para abrir con `openPrintWindow`/`window.open`: navega
+   * directo a lo que genera Frappe, igual que el resto de impresiones del
+   * POS (comanda, recibo, ticket, RIDE).
+   */
+  getPdfUrl(name: string): string {
+    const business = this.activeBusiness();
+    const params = new URLSearchParams({
+      name,
+      format: 'FacturADA POS Sale Note',
+      print_format: 'FacturADA POS Sale Note',
+      ...(business ? { business } : {})
+    });
+    // `openPrintWindow` antepone la URL raíz del sitio (sin `/api`), a
+    // diferencia de `this.api`/`endpoint()` que sí lo incluye para las
+    // llamadas normales de HttpClient.
+    return `/api${API_ENDPOINT.FacturadaLitePosSale}.download_pos_sale_note_pdf?${params.toString()}`;
+  }
+
   private action(method: string, name: string): Observable<any> {
     return this.http.post<any>(this.endpoint(method), this.withBusiness({ name }), this.auth()).pipe(
       map((response) => this.unwrap(response))

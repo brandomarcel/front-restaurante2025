@@ -38,7 +38,7 @@
         <input class="input" [(ngModel)]="search" (ngModelChange)="applyFilters()" placeholder="Buscar por nombre o correo" aria-label="Buscar usuarios" />
         <select class="select" [(ngModel)]="roleFilter" (ngModelChange)="applyFilters()" aria-label="Filtrar por rol">
           <option value="all">Todos los roles</option>
-          <option *ngFor="let role of roles" [value]="roleName(role)">{{ roleName(role) }}</option>
+          <option *ngFor="let role of roles" [value]="roleValue(role)">{{ roleLabel(role) }}</option>
         </select>
         <select class="select" [(ngModel)]="statusFilter" (ngModelChange)="applyFilters()" aria-label="Filtrar por estado">
           <option value="all">Todos los estados</option>
@@ -88,7 +88,7 @@
 
     <section *ngIf="!loading && !filtered.length && !error" class="app-card p-8 text-center">
       <h2 class="text-sm font-semibold text-foreground">No hay usuarios asignados</h2>
-      <p class="mt-1 text-xs text-muted-foreground">Asigna un usuario Frappe existente a {{ activeBusinessName }}.</p>
+      <p class="mt-1 text-xs text-muted-foreground">Asigna un usuario existente a {{ activeBusinessName }}.</p>
     </section>
   </ng-container>
 
@@ -97,7 +97,7 @@
       <header class="border-b border-border px-4 py-3 md:px-5">
         <div class="flex items-start justify-between gap-3">
           <div>
-            <h2 class="text-base font-bold text-foreground">{{ selectedUser ? 'Editar asignación' : (selectedFrappeUser ? 'Asignar usuario existente' : 'Crear usuario Frappe') }}</h2>
+            <h2 class="text-base font-bold text-foreground">{{ selectedUser ? 'Editar asignación' : (selectedFrappeUser ? 'Asignar usuario existente' : 'Crear usuario') }}</h2>
           </div>
           <button type="button" class="btn btn-ghost !px-2" (click)="closeModal()" aria-label="Cerrar">×</button>
         </div>
@@ -147,12 +147,13 @@
 
         <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div>
-            <label class="mb-1 block text-xs font-semibold text-foreground/80">Rol FacturADA</label>
+            <label class="mb-1 block text-xs font-semibold text-foreground/80">Tipo de usuario</label>
             <select class="select" formControlName="business_role">
               <option value="" disabled>Seleccione un rol</option>
-              <option *ngFor="let role of assignableRoles" [value]="roleName(role)">{{ roleName(role) }}</option>
+              <option *ngFor="let role of formRoleOptions" [value]="roleValue(role)">{{ roleLabel(role) }}</option>
             </select>
             <p *ngIf="submitted && form.get('business_role')?.invalid" class="field-error">Seleccione un rol.</p>
+            <p *ngIf="selectedRoleDescription" class="mt-1 text-[11px] text-muted-foreground">{{ selectedRoleDescription }}</p>
           </div>
           <div>
             <label class="mb-1 block text-xs font-semibold text-foreground/80">Estado</label>
@@ -165,20 +166,20 @@
 
         <label class="flex cursor-pointer items-start gap-2 rounded-xl border border-border p-3 text-sm">
           <input class="mt-0.5" type="checkbox" formControlName="is_default" />
-          <span><b class="block text-foreground/80">Negocio predeterminado</b><span class="text-xs text-muted-foreground">Solo puede existir uno activo por usuario. El backend aplica la validación final.</span></span>
+          <span><b class="block text-foreground/80">Negocio predeterminado</b><span class="text-xs text-muted-foreground">Solo puede existir uno activo por usuario.</span></span>
         </label>
 
-        <section class="rounded-xl border border-primary/15 bg-primary/5 p-3">
+        <!-- <section class="rounded-xl border border-primary/15 bg-primary/5 p-3">
           <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">Permisos del rol</p>
           <div *ngIf="selectedRolePermissions.length; else noPermissions" class="mt-2 flex flex-wrap gap-1.5">
             <span *ngFor="let permission of selectedRolePermissions" class="rounded-full bg-card px-2 py-1 text-[11px] text-muted-foreground shadow-sm">{{ permission }}</span>
           </div>
           <ng-template #noPermissions><p class="mt-1 text-xs text-muted-foreground">Seleccione un rol para consultar sus permisos.</p></ng-template>
-        </section>
+        </section> -->
 
         <footer class="flex justify-end gap-2 border-t border-border pt-3">
           <button type="button" class="btn btn-outline" (click)="closeModal()" [disabled]="saving">Cancelar</button>
-          <button type="submit" class="btn btn-primary" [disabled]="saving || !assignableRoles.length">{{ saving ? 'Guardando…' : (selectedUser || selectedFrappeUser ? 'Guardar asignación' : 'Crear y asignar') }}</button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving || !formRoleOptions.length">{{ saving ? 'Guardando…' : (selectedUser || selectedFrappeUser ? 'Guardar asignación' : 'Crear y asignar') }}</button>
         </footer>
       </form>
     </section>

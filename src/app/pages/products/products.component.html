@@ -21,6 +21,9 @@
         <div *ngIf="inventoryEnabled" class="rounded-full bg-rose-500/20 px-3 py-1 text-xs font-semibold">
           Agotados: {{ outOfStockCount }}
         </div>
+        <app-button *ngIf="canImportProducts" impact="light" tone="light" shape="rounded" size="small" (click)="abrirImportModal()">
+          Carga masiva
+        </app-button>
         <app-button *ngIf="canManageProducts" impact="bold" tone="light" shape="rounded" size="small" (click)="abrirModal()">
           Nuevo Producto
         </app-button>
@@ -72,14 +75,9 @@
         <thead class="app-thead">
           <tr>
             <th class="app-th">Producto</th>
-            <th class="app-th">Imagen</th>
-            <th class="app-th">Codigo</th>
             <th class="app-th">Categoria</th>
             <th class="app-th text-right">Precio</th>
-            <th *ngIf="inventoryEnabled" class="app-th">Inventario</th>
-            <th *ngIf="inventoryEnabled" class="app-th">Stock actual</th>
-            <th *ngIf="inventoryEnabled" class="app-th">Stock minimo</th>
-            <th *ngIf="inventoryEnabled" class="app-th">Unidad</th>
+            <th *ngIf="inventoryEnabled" class="app-th text-right">Stock</th>
             <th class="app-th">Estado</th>
             <th *ngIf="canManageProducts" class="app-th text-center">Acciones</th>
           </tr>
@@ -91,48 +89,29 @@
             class="app-tr"
           >
             <td class="app-td">
-              <div class="flex flex-col">
-                <div class="flex flex-wrap items-center gap-1.5">
-                  <span class="font-medium text-foreground">{{ p.nombre | uppercase }}</span>
-                  <span *ngIf="(p.variant_count || 0) > 0" class="badge badge-blue" title="Este producto tiene variantes; el precio y stock de aquí no se usan al vender.">
-                    {{ p.variant_count }} {{ p.variant_count === 1 ? 'variante' : 'variantes' }}
-                  </span>
+              <div class="flex items-center gap-2.5">
+                <div class="h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+                  <img *ngIf="p.image_url" [src]="p.image_url" [alt]="p.nombre" class="h-full w-full object-cover" />
                 </div>
-                <span class="text-xs text-muted-foreground">{{ (p.descripcion || '') | uppercase }}</span>
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="font-medium text-foreground">{{ p.nombre | uppercase }}</span>
+                    <span *ngIf="(p.variant_count || 0) > 0" class="badge badge-blue" title="Este producto tiene variantes; el precio y stock de aquí no se usan al vender.">
+                      {{ p.variant_count }} {{ p.variant_count === 1 ? 'variante' : 'variantes' }}
+                    </span>
+                  </div>
+                  <span class="block text-[11px] text-muted-foreground">{{ p.codigo || '—' }}</span>
+                </div>
               </div>
             </td>
-            <td class="app-td">
-              <div class="h-[56px] w-[56px] overflow-hidden rounded-lg border border-border bg-muted">
-                <img *ngIf="p.image_url" [src]="p.image_url" [alt]="p.nombre" class="h-full w-full object-cover" />
-                <div *ngIf="!p.image_url" class="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground/70">Sin imagen</div>
-              </div>
-            </td>
-            <td class="app-td font-mono text-xs text-muted-foreground">{{ p.codigo || '—' }}</td>
             <td class="app-td">{{ getNameCategory(p.categoria || p.category) | uppercase }}</td>
             <td class="app-td text-right font-semibold">{{ p.precio | currency }}</td>
-            <td *ngIf="inventoryEnabled" class="app-td">
-              <span class="badge" [ngClass]="hasInventory(p) ? 'badge-green' : 'badge-gray'">
-                {{ hasInventory(p) ? 'Controlado' : 'No aplica' }}
+            <td *ngIf="inventoryEnabled" class="app-td text-right">
+              <span *ngIf="hasInventory(p); else noStockData" class="font-semibold"
+                [ngClass]="isOutOfStock(p) ? 'text-destructive' : (isLowStock(p) ? 'text-amber-600' : 'text-foreground')">
+                {{ formatStock(p) }}
               </span>
-            </td>
-            <td *ngIf="inventoryEnabled" class="app-td">
-              <div class="flex flex-col" *ngIf="hasInventory(p); else noStockData">
-                <span class="font-semibold">{{ formatStock(p) }}</span>
-                <span *ngIf="isLowStock(p)" class="text-[11px] text-amber-700">Reposicion requerida</span>
-              </div>
               <ng-template #noStockData>
-                <span class="text-muted-foreground/70">—</span>
-              </ng-template>
-            </td>
-            <td *ngIf="inventoryEnabled" class="app-td">
-              <span *ngIf="hasInventory(p); else noMinStock">{{ p.stock_minimo || 0 }}</span>
-              <ng-template #noMinStock>
-                <span class="text-muted-foreground/70">—</span>
-              </ng-template>
-            </td>
-            <td *ngIf="inventoryEnabled" class="app-td">
-              <span *ngIf="hasInventory(p); else noUnit">{{ getInventoryUnit(p) }}</span>
-              <ng-template #noUnit>
                 <span class="text-muted-foreground/70">—</span>
               </ng-template>
             </td>
@@ -146,13 +125,11 @@
               </div>
             </td>
             <td *ngIf="canManageProducts" class="app-td text-center">
-              <div class="inline-flex flex-wrap justify-center gap-2">
-                <button *ngIf="canHaveVariants(p)" class="btn btn-outline" (click)="abrirVariantes(p)">
-                  {{ (p.variant_count || 0) > 0 ? 'Variantes (' + p.variant_count + ')' : 'Variantes' }}
-                </button>
-                <!-- <button *ngIf="!p.isactive" type="button" class="btn btn-success !px-2.5 !py-1 !text-[11px]" (click)="toggleActivo(p)">
-                  Activar
-                </button> -->
+              <div class="inline-flex flex-wrap justify-center gap-1.5">
+                <app-icon-action-button *ngIf="canHaveVariants(p)" variant="view"
+                  [label]="(p.variant_count || 0) > 0 ? 'Ver variantes (' + p.variant_count + ')' : 'Ver variantes'"
+                  (action)="abrirVariantes(p)"></app-icon-action-button>
+                <app-icon-action-button *ngIf="!p.isactive" variant="activate" (action)="toggleActivo(p)"></app-icon-action-button>
                 <app-icon-action-button variant="edit" (action)="abrirModal(p)"></app-icon-action-button>
                 <app-icon-action-button variant="delete" tone="warn" (action)="eliminar(p.name)"></app-icon-action-button>
               </div>
@@ -249,6 +226,11 @@
             <div>
               <label class="mb-1 block font-medium">Codigo interno</label>
               <input type="text" class="input" formControlName="codigo" placeholder="Opcional" />
+            </div>
+
+            <div>
+              <label class="mb-1 block font-medium">Código de barras</label>
+              <input type="text" class="input" formControlName="barcode" placeholder="Opcional · único por negocio" />
             </div>
 
             <div class="md:col-span-2">
@@ -525,6 +507,7 @@
                   <th class="app-th">Variante</th>
                   <th class="app-th">Atributos</th>
                   <th class="app-th">Codigo</th>
+                  <th class="app-th">Código de barras</th>
                   <th class="app-th text-right">Precio</th>
                   <th class="app-th">Stock</th>
                   <th class="app-th">Estado</th>
@@ -536,6 +519,7 @@
                   <td class="app-td font-medium text-foreground">{{ v.nombre | uppercase }}</td>
                   <td class="app-td">{{ formatAttributes(v) }}</td>
                   <td class="app-td font-mono text-xs text-muted-foreground">{{ v.codigo || '—' }}</td>
+                  <td class="app-td font-mono text-xs text-muted-foreground">{{ v.barcode || v.codigo_barras || '—' }}</td>
                   <td class="app-td text-right font-semibold">{{ v.precio | currency }}</td>
                   <td class="app-td">
                     <span *ngIf="hasInventory(v); else noStock">{{ formatStock(v) }}</span>
@@ -619,6 +603,11 @@
           </div>
 
           <div>
+            <label class="mb-1 block font-medium">Código de barras</label>
+            <input type="text" class="input" formControlName="barcode" placeholder="Opcional · identifica esta variante exacta" />
+          </div>
+
+          <div>
             <label class="mb-1 block font-medium">Precio</label>
             <input type="number" step="0.01" class="input no-spinner" formControlName="standard_rate" />
             <div *ngIf="varianteSubmitted && vf['standard_rate'].invalid" class="field-error">Precio invalido.</div>
@@ -680,6 +669,134 @@
           </div>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Carga masiva de productos -->
+  <div *ngIf="showImportModal" class="app-modal-backdrop">
+    <div class="app-modal !max-w-4xl">
+      <div class="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <h3 class="text-base font-bold text-foreground">Carga masiva de productos</h3>
+          <p class="text-xs text-muted-foreground">Crea o actualiza productos desde un archivo Excel (.xlsx).</p>
+        </div>
+        <button type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground/80"
+          (click)="cerrarImportModal()" aria-label="Cerrar">×</button>
+      </div>
+
+      <div class="space-y-4">
+        <div class="rounded-xl border border-border bg-muted/40 p-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <button type="button" class="btn btn-outline inline-flex items-center gap-1.5 !text-xs" [disabled]="importDownloading" (click)="descargarPlantillaImportacion()">
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 4.75A2.75 2.75 0 0 1 6.75 2h7.4c.73 0 1.43.29 1.94.8l3.1 3.11c.52.51.81 1.21.81 1.94v9.4A2.75 2.75 0 0 1 17.25 20H6.75A2.75 2.75 0 0 1 4 17.25V4.75Z" fill="currentColor" opacity=".2"/>
+                <path d="M14 2.5V7a1 1 0 0 0 1 1h4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 8.5v7m0 0-2.5-2.5M12 15.5l2.5-2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              {{ importDownloading ? 'Descargando...' : 'Descargar plantilla' }}
+            </button>
+
+            <label class="inline-flex items-center gap-2 text-xs font-medium text-foreground/80">
+              Modo
+              <select class="select !h-8 !w-auto !text-xs" [(ngModel)]="importMode" [ngModelOptions]="{standalone: true}" (ngModelChange)="onImportModeChange()">
+                <option value="create_only">Solo crear (rechaza códigos existentes)</option>
+                <option value="upsert">Crear y actualizar (actualiza códigos existentes)</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <input type="file" accept=".xlsx" class="input !h-9 flex-1 !py-1.5" (change)="onImportFileSelected($event)" />
+            <button type="button" class="btn btn-primary !text-xs" [disabled]="!importFile || importValidating" (click)="validarImportacion()">
+              {{ importValidating ? 'Validando...' : 'Validar archivo' }}
+            </button>
+          </div>
+          <p *ngIf="importFile" class="mt-1.5 text-[11px] text-muted-foreground">Archivo seleccionado: <b class="text-foreground/80">{{ importFile.name }}</b></p>
+          <p *ngIf="!inventoryEnabled" class="mt-1.5 text-[11px] text-amber-600">
+            La columna "stock_inicial" solo aplica si esta empresa tiene Inventario habilitado.
+          </p>
+        </div>
+
+        <div *ngIf="importError" class="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive">
+          {{ importError }}
+        </div>
+
+        <div *ngIf="importResult" class="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-3 text-xs font-semibold text-emerald-700">
+          Importación completa: {{ importResult.created }} creado(s), {{ importResult.updated }} actualizado(s)<span *ngIf="importResult.stock_movements">, {{ importResult.stock_movements }} movimiento(s) de stock</span>.
+        </div>
+
+        <ng-container *ngIf="importPreview">
+          <div class="grid grid-cols-3 gap-2">
+            <article class="rounded-lg border border-border bg-card p-2.5 text-center shadow-sm">
+              <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Total</p>
+              <p class="mt-0.5 text-lg font-black text-foreground">{{ importPreview.summary.total }}</p>
+            </article>
+            <article class="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-2.5 text-center shadow-sm">
+              <p class="text-[10px] font-bold uppercase tracking-wide text-emerald-700">Válidas</p>
+              <p class="mt-0.5 text-lg font-black text-emerald-700">{{ importPreview.summary.valid }}</p>
+            </article>
+            <article class="rounded-lg border border-destructive/20 bg-destructive/5 p-2.5 text-center shadow-sm">
+              <p class="text-[10px] font-bold uppercase tracking-wide text-destructive">Con error</p>
+              <p class="mt-0.5 text-lg font-black text-destructive">{{ importPreview.summary.invalid }}</p>
+            </article>
+          </div>
+
+          <div class="app-table-wrap max-h-[42vh]">
+            <table class="app-table text-xs">
+              <thead class="app-thead">
+                <tr>
+                  <th class="app-th">Fila</th>
+                  <th class="app-th">Código</th>
+                  <th class="app-th">Código de barras</th>
+                  <th class="app-th">Nombre</th>
+                  <th class="app-th">Tipo</th>
+                  <th class="app-th">Categoría</th>
+                  <th class="app-th text-right">Precio</th>
+                  <th class="app-th text-center">Stock</th>
+                  <th class="app-th text-right">Stock inicial</th>
+                  <th class="app-th text-center">Variante</th>
+                  <th class="app-th">Producto principal</th>
+                  <th class="app-th">Estado</th>
+                  <th class="app-th">Errores</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of importPreview.rows" class="app-tr" [ngClass]="row.errors.length ? 'bg-destructive/5' : ''">
+                  <td class="app-td">{{ row.row_number }}</td>
+                  <td class="app-td font-mono">{{ row.code || '—' }}</td>
+                  <td class="app-td font-mono">{{ row.barcode || row.codigo_barras || '—' }}</td>
+                  <td class="app-td font-medium text-foreground">{{ row.name || '—' }}</td>
+                  <td class="app-td">{{ row.type || '—' }}</td>
+                  <td class="app-td">{{ row.category || '—' }}</td>
+                  <td class="app-td text-right">{{ row.price != null ? (row.price | currency) : '—' }}</td>
+                  <td class="app-td text-center">{{ row.track_stock ? 'Sí' : 'No' }}</td>
+                  <td class="app-td text-right">{{ row.initial_stock ?? '—' }}</td>
+                  <td class="app-td text-center">{{ row.is_variant ? 'Sí' : 'No' }}</td>
+                  <td class="app-td font-mono">{{ row.parent_code || '—' }}</td>
+                  <td class="app-td">
+                    <span class="badge" [ngClass]="row.errors.length ? 'badge-red' : 'badge-green'">
+                      {{ row.errors.length ? 'Con error' : (row.status || 'Válida') }}
+                    </span>
+                  </td>
+                  <td class="app-td max-w-[220px]">
+                    <span *ngIf="row.errors.length; else sinErrores" class="text-[11px] text-destructive">{{ row.errors.join(' · ') }}</span>
+                    <ng-template #sinErrores><span class="text-muted-foreground/70">—</span></ng-template>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </ng-container>
+      </div>
+
+      <div class="sticky bottom-0 -mx-4 mt-4 border-t border-border bg-card px-4 py-3 md:-mx-5 md:px-5">
+        <div class="flex justify-end gap-2">
+          <button type="button" class="btn btn-outline" (click)="cerrarImportModal()">Cerrar</button>
+          <button type="button" class="btn btn-primary" [disabled]="!canConfirmImport" (click)="confirmarImportacion()">
+            {{ importConfirming ? 'Confirmando...' : 'Confirmar importación' }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </div>

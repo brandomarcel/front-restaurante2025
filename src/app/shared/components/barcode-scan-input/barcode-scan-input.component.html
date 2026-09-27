@@ -1,0 +1,23 @@
+<div class="flex items-center gap-1.5" [ngClass]="wide ? 'flex-1 min-w-0' : ''">
+  <input
+    #scanInput
+    type="text"
+    class="input !h-8 !text-xs"
+    [ngClass]="wide ? 'flex-1 min-w-0' : '!w-40'"
+    [placeholder]="wide ? 'Buscar producto, SKU o escanear código...' : 'Escanear código de barras'"
+    [(ngModel)]="value"
+    (keyup.enter)="scan()"
+    [disabled]="scanning"
+    autocomplete="off"
+    autofocus
+  />
+  <button
+    type="button"
+    class="btn  bg-primary !h-8 !px-2 !text-xs"
+    [disabled]="scanning || !value.trim()"
+    (click)="scan()"
+    title="Buscar por código de barras"
+  >
+    Buscar
+  </button>
+</div>

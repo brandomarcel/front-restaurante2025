@@ -15,6 +15,13 @@ export interface MenuItem {
   permissionKeys?: string[];
   /** Permite mostrar la opción cuando cualquiera de estos permisos está activo. */
   anyPermissionKeys?: string[];
+  /**
+   * Prioriza `ui_capabilities` (get_user_context) sobre `featureKey` cuando
+   * el backend lo envía; `featureKey` queda como respaldo para negocios que
+   * todavía no reciben ese contrato. Ver `UI_VISIBILITY_RESOLVERS` en
+   * `menu.service.ts`.
+   */
+  uiVisibilityKey?: 'pos' | 'reports' | 'users' | 'restaurantOrders' | 'restaurantTables' | 'restaurantKitchen';
 }
 
 export interface SubMenuItem {
@@ -38,5 +45,7 @@ export interface SubMenuItem {
   /** Requiere que el contexto exponga api_configuration.enabled. */
   requiresApiConfiguration?: boolean;
   hideWhenFeature?: import('../services/company-capabilities.service').CompanyFeatureKey;
+  /** Ver `MenuItem.uiVisibilityKey`. */
+  uiVisibilityKey?: 'pos' | 'reports' | 'users' | 'restaurantOrders' | 'restaurantTables' | 'restaurantKitchen';
 }
 export type Role = 'SYSTEM MANAGER' | 'ADMINISTRADOR' | 'GERENTE' | 'CAJERO' | 'FACTURACION' | 'MESERO' | 'COCINA' | 'USUARIO';

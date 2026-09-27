@@ -24,6 +24,7 @@ import { CajaAbiertaGuard } from 'src/app/core/guards/caja-abierta.guard';
 import { RoleAccessGuard } from 'src/app/core/guards/role-access.guard';
 import { SuppliersComponent } from 'src/app/pages/suppliers/suppliers.component';
 import { InventoryComponent } from 'src/app/pages/inventory/inventory.component';
+import { StockLookupComponent } from 'src/app/pages/stock-lookup/stock-lookup.component';
 import { NoAccessComponent } from 'src/app/pages/no-access.component';
 import { TablesComponent } from 'src/app/pages/tables/tables.component';
 
@@ -35,13 +36,14 @@ const routes: Routes = [
       { path: '', redirectTo: 'main', pathMatch: 'full' },
       { path: 'main', component: NftComponent, canActivate: [RoleAccessGuard], data: { allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
       // { path: 'pos', component: PosComponent },
-      { path: 'pos', component: PosShellComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { featureKey: 'restaurant', requiredFeatures: ['orders'], anyPermissionKeys: ['restaurant.orders.create', 'billing.create'], liteBlocked: true } },
-      { path: 'pos-generic', component: PosCajaComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { featureKey: 'generic_pos', requiredFeatures: ['generic_pos', 'billing'], readOnlyFeature: true, permissionKey: 'billing.create' } },
+      { path: 'pos', component: PosShellComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { featureKey: 'restaurant', requiredFeatures: ['orders', 'pos'], anyPermissionKeys: ['restaurant.orders.create', 'billing.create'], liteBlocked: true } },
+      { path: 'pos-generic', component: PosCajaComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { featureKey: 'generic_pos', requiredFeatures: ['generic_pos', 'billing', 'pos'], readOnlyFeature: true, permissionKey: 'billing.create' } },
       { path: 'pos-sale-notes', component: PosSaleNotesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'generic_pos', permissionKey: 'billing.read' } },
       { path: 'pos-sale-notes/:id', component: PosSaleNoteDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'generic_pos', permissionKey: 'billing.read' } },
       { path: 'customers', component: CustomersComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'customers', permissionKey: 'customers.read' } },
       { path: 'suppliers', component: SuppliersComponent, canActivate: [RoleAccessGuard], data: { allowedRoles: ['GERENTE'], liteBlocked: true } },
       { path: 'inventory', component: InventoryComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'inventory', permissionKey: 'inventory.read' } },
+      { path: 'inventory/stock-lookup', component: StockLookupComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'inventory', permissionKey: 'inventory.read' } },
       { path: 'products', component: ProductsComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'products', permissionKey: 'products.read' } },
       { path: 'company', component: CompanyComponent, canActivate: [RoleAccessGuard], data: { permissionKey: 'business.settings.manage' } },
       { path: 'orders', component: OrdersComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'orders', permissionKey: 'restaurant.orders.read', liteBlocked: true } },

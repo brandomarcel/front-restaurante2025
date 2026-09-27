@@ -24,6 +24,12 @@
         <button type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="irAHistorial()">
           Historial
         </button>
+        <a *ngIf="isWarehouseMode" routerLink="/dashboard/inventory/stock-lookup" class="btn btn-outline !px-3 !py-1.5 !text-[11px]">
+          Buscar en otras bodegas
+        </a>
+        <a *ngIf="canTransferStock" routerLink="/settings/lite/warehouses/transfer" class="btn btn-outline !px-3 !py-1.5 !text-[11px]">
+          Traslado entre bodegas
+        </a>
         <button *ngIf="canManageInventory" type="button" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="abrirMovimientoModal()">
           + Movimiento
         </button>
@@ -31,7 +37,27 @@
     </div>
   </section>
 
-  <section class="grid grid-cols-2 gap-2 xl:grid-cols-4">
+  <section *ngIf="isWarehouseMode" class="rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
+    <div class="flex flex-wrap items-center gap-2">
+      <label class="text-[11px] font-semibold text-foreground/80">Bodega activa</label>
+      <select
+        class="select !h-8 !w-56 !text-xs"
+        [ngModel]="selectedWarehouseId"
+        (ngModelChange)="onWarehouseChange($event)"
+      >
+        <option value="">Selecciona una bodega</option>
+        <option *ngFor="let warehouse of warehouseOptions" [value]="warehouse.name">
+          {{ warehouse.warehouse_name || warehouse.name }}
+        </option>
+      </select>
+      <span class="text-[11px] text-muted-foreground">Este negocio usa inventario "Por Bodega": todo el stock y los movimientos son de esta bodega.</span>
+    </div>
+    <p *ngIf="!selectedWarehouseId" class="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700">
+      Selecciona una bodega activa para ver el inventario y registrar movimientos.
+    </p>
+  </section>
+
+  <section *ngIf="canLoadInventory" class="grid grid-cols-2 gap-2 xl:grid-cols-4">
     <article class="inventory-stat-card">
       <p class="inventory-stat-card__label">Controlados</p>
       <p class="inventory-stat-card__value">{{ controlledProductsCount }}</p>
@@ -53,7 +79,7 @@
     </article>
   </section>
 
-  <section class="rounded-xl border border-border bg-card p-2 shadow-sm">
+  <section *ngIf="canLoadInventory" class="rounded-xl border border-border bg-card p-2 shadow-sm">
     <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
       <div class="flex rounded-lg bg-muted p-1">
         <button
@@ -102,7 +128,13 @@
     </div>
   </section>
 
-  <ng-container *ngIf="activeTab === 'overview'; else historyTab">
+  <ng-container *ngIf="!canLoadInventory">
+    <section class="app-card p-8 text-center text-sm text-muted-foreground">
+      Selecciona una bodega activa arriba para ver el inventario.
+    </section>
+  </ng-container>
+
+  <ng-container *ngIf="canLoadInventory && activeTab === 'overview'; else historyTab">
     <section class="app-table-wrap">
       <div class="hidden overflow-x-auto lg:block">
         <table class="app-table text-xs">
@@ -133,7 +165,10 @@
                   </ng-template>
                 </div>
               </td>
-              <td class="app-td py-2 font-mono text-[11px]">{{ product.codigo || '-' }}</td>
+              <td class="app-td py-2 font-mono text-[11px]">
+                <span class="block">{{ product.codigo || '-' }}</span>
+                <span *ngIf="product.barcode || product.codigo_barras" class="block text-muted-foreground/70">{{ product.barcode || product.codigo_barras }}</span>
+              </td>
               <td class="app-td py-2 text-center">
                 <span class="badge" [ngClass]="canSell(product) ? 'badge-green' : 'badge-red'">
                   {{ canSell(product) ? 'Disponible' : 'Agotado' }}
@@ -180,6 +215,7 @@
               <ng-template #plainCode>
                 <p class="truncate text-[10px] text-muted-foreground">{{ product.codigo || 'Sin código' }}</p>
               </ng-template>
+              <p *ngIf="product.barcode || product.codigo_barras" class="truncate text-[10px] text-muted-foreground/70">CB: {{ product.barcode || product.codigo_barras }}</p>
             </div>
             <span class="badge shrink-0" [ngClass]="canSell(product) ? 'badge-green' : 'badge-red'">
               {{ canSell(product) ? 'Disponible' : 'Agotado' }}
@@ -230,7 +266,7 @@
   </ng-container>
 
   <ng-template #historyTab>
-    <section class="rounded-xl border border-border bg-card p-2 shadow-sm">
+    <section *ngIf="canLoadInventory" class="rounded-xl border border-border bg-card p-2 shadow-sm">
       <div class="mb-2 flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <h3 class="text-sm font-bold text-foreground">Historial de movimientos</h3>
@@ -238,7 +274,7 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-1.5">
-          <button type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="aplicarFiltrosHistorial()">
+          <button type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="soloTraslados ? toggleSoloTraslados(true) : aplicarFiltrosHistorial()">
             Refrescar
           </button>
           <button *ngIf="canManageInventory" type="button" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="abrirMovimientoModal()">
@@ -247,7 +283,12 @@
         </div>
       </div>
 
-      <div class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_220px_auto]">
+      <label *ngIf="isWarehouseMode" class="mb-2 flex items-center gap-2 text-[11px] font-semibold text-foreground/80">
+        <input type="checkbox" [ngModel]="soloTraslados" (ngModelChange)="toggleSoloTraslados($event)" [ngModelOptions]="{standalone: true}" />
+        Ver solo traslados entre bodegas (agrupados por origen → destino)
+      </label>
+
+      <div *ngIf="!soloTraslados" class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_220px_auto]">
         <ng-select
           class="ng-select-tailwind text-xs"
           [(ngModel)]="historyProduct"
@@ -271,11 +312,60 @@
       </div>
     </section>
 
-    <div *ngIf="historyAccessDenied" class="mt-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm font-semibold text-destructive">
+    <!-- Vista agrupada: cada traslado (Salida en origen + Entrada en destino) en una sola fila. -->
+    <section *ngIf="soloTraslados" class="app-table-wrap mt-3">
+      <p *ngIf="loadingTraslados" class="p-4 text-center text-xs text-muted-foreground">Cargando traslados…</p>
+      <div *ngIf="!loadingTraslados" class="hidden overflow-x-auto lg:block">
+        <table class="app-table text-xs">
+          <thead class="app-thead">
+            <tr>
+              <th class="app-th py-2">Fecha</th>
+              <th class="app-th py-2">Producto</th>
+              <th class="app-th py-2">Origen</th>
+              <th class="app-th py-2">Destino</th>
+              <th class="app-th py-2 text-right">Cantidad</th>
+              <th class="app-th py-2">Referencia</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let traslado of traslados" class="app-tr">
+              <td class="app-td py-2 whitespace-nowrap">{{ traslado.timestamp | date:'short' }}</td>
+              <td class="app-td py-2">
+                <p class="font-semibold text-foreground">{{ traslado.item_name }}</p>
+              </td>
+              <td class="app-td py-2">{{ warehouseLabel(traslado.source_warehouse) }}</td>
+              <td class="app-td py-2">{{ warehouseLabel(traslado.target_warehouse) }}</td>
+              <td class="app-td py-2 text-right font-bold text-foreground">{{ traslado.quantity }}</td>
+              <td class="app-td py-2 font-mono text-[11px]">{{ traslado.reference_name || '—' }}</td>
+            </tr>
+            <tr *ngIf="!traslados.length">
+              <td colspan="6" class="app-td py-8 text-center text-xs text-muted-foreground">No hay traslados registrados todavía.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div *ngIf="!loadingTraslados" class="grid gap-2 p-2 lg:hidden">
+        <article *ngFor="let traslado of traslados" class="rounded-xl border border-border bg-card p-3 shadow-sm">
+          <p class="text-xs font-bold text-foreground">{{ traslado.item_name }}</p>
+          <p class="mt-0.5 text-[10px] text-muted-foreground">{{ traslado.timestamp | date:'short' }}</p>
+          <div class="mt-2 flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-2.5 py-2 text-[11px]">
+            <span>{{ warehouseLabel(traslado.source_warehouse) }} → {{ warehouseLabel(traslado.target_warehouse) }}</span>
+            <span class="font-bold text-foreground">{{ traslado.quantity }}</span>
+          </div>
+          <p class="mt-1.5 text-[11px] text-muted-foreground">Ref: {{ traslado.reference_name || '—' }}</p>
+        </article>
+        <div *ngIf="!traslados.length" class="rounded-xl border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
+          No hay traslados registrados todavía.
+        </div>
+      </div>
+    </section>
+
+    <div *ngIf="historyAccessDenied && !soloTraslados" class="mt-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm font-semibold text-destructive">
       No tienes permiso para consultar el historial de movimientos de este negocio.
     </div>
 
-    <ng-container *ngIf="!historyAccessDenied">
+    <ng-container *ngIf="!historyAccessDenied && !soloTraslados">
 
     <section class="app-table-wrap mt-3">
       <div class="hidden overflow-x-auto lg:block">
@@ -294,7 +384,7 @@
 
           <tbody>
             <tr *ngFor="let movement of movements; trackBy: trackByMovement" class="app-tr">
-              <td class="app-td py-2 whitespace-nowrap">{{ (movement.posting_date || movement.creation) | date:'short' }}</td>
+              <td class="app-td py-2 whitespace-nowrap">{{ movementTimestamp(movement) | date:'short' }}</td>
               <td class="app-td py-2">
                 <p class="font-semibold text-foreground">{{ movement.item_name || resolveProductName(movement.item || '') }}</p>
                 <p *ngIf="movement.item_code" class="text-[10px] text-muted-foreground">{{ movement.item_code }}</p>
@@ -331,7 +421,7 @@
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
               <p class="truncate text-xs font-bold text-foreground">{{ movement.item_name || resolveProductName(movement.item || '') }}</p>
-              <p class="text-[10px] text-muted-foreground">{{ (movement.posting_date || movement.creation) | date:'short' }}</p>
+              <p class="text-[10px] text-muted-foreground">{{ movementTimestamp(movement) | date:'short' }}</p>
             </div>
             <span class="badge shrink-0" [ngClass]="getMovementTone(movement.movement_type)">
               {{ getMovementOptionLabel(movement.movement_type || 'Sin tipo') }}
@@ -397,6 +487,10 @@
 
             <div class="rounded-lg border border-border bg-card p-2 text-[11px] text-muted-foreground">
               {{ getMovementHint() }}
+            </div>
+
+            <div *ngIf="isWarehouseMode" class="md:col-span-2 rounded-lg bg-primary/5 px-2.5 py-1.5 text-[11px] font-semibold text-primary">
+              Este movimiento se aplicará a la bodega activa seleccionada arriba.
             </div>
 
             <div class="md:col-span-2">

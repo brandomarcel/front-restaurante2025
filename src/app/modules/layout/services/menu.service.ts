@@ -6,6 +6,20 @@ import { Menu } from 'src/app/core/constants/menu';
 import { MenuItem, SubMenuItem, Role } from 'src/app/core/models/menu.model';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
+/**
+ * Traduce `uiVisibilityKey` a la propiedad de `CompanyCapabilitiesService`
+ * que ya prioriza `ui_capabilities` (con respaldo al feature legado si el
+ * backend no lo envía todavía).
+ */
+const UI_VISIBILITY_RESOLVERS: Record<string, (capabilities: CompanyCapabilitiesService) => boolean> = {
+  pos: (capabilities) => capabilities.canUsePos,
+  reports: (capabilities) => capabilities.reportsVisible,
+  users: (capabilities) => capabilities.usersModuleVisible,
+  restaurantOrders: (capabilities) => capabilities.restaurantOrdersVisible,
+  restaurantTables: (capabilities) => capabilities.restaurantTablesVisible,
+  restaurantKitchen: (capabilities) => capabilities.restaurantKitchenVisible,
+};
+
 @Injectable({ providedIn: 'root' })
 export class MenuService implements OnDestroy {
   private _showSidebar = signal(this.defaultSidebarState());
@@ -125,9 +139,11 @@ export class MenuService implements OnDestroy {
         : item.permissionKeys?.length
           ? item.permissionKeys.every((permission) => this.capabilities.hasPermission(permission))
           : (!item.permissionKey || this.capabilities.hasPermission(item.permissionKey));
-      const allowedByFeature = item.featureKeys?.length
-        ? item.featureKeys.some(key => this.capabilities.isEnabled(key))
-        : this.capabilities.isEnabled(featureKey);
+      const allowedByFeature = item.uiVisibilityKey
+        ? UI_VISIBILITY_RESOLVERS[item.uiVisibilityKey](this.capabilities)
+        : item.featureKeys?.length
+          ? item.featureKeys.some(key => this.capabilities.isEnabled(key))
+          : this.capabilities.isEnabled(featureKey);
       const requiredFeatures = item.requiredFeatures ?? [];
       const allowedByRequiredFeatures = requiredFeatures.every(key => this.capabilities.isEnabled(key));
       const allowed = allowedByRole && allowedByPermission && allowedByFeature && allowedByRequiredFeatures;
@@ -149,9 +165,11 @@ export class MenuService implements OnDestroy {
         const groupRoles = normRoles(group.allowedRoles);
         const groupAllowed = !groupRoles || groupRoles.some(role => currentRoles.includes(role));
         if (groupRoles && !groupAllowed) return null;
-        const groupFeatureAllowed = group.featureKeys?.length
-          ? group.featureKeys.some(key => this.capabilities.isEnabled(key))
-          : this.capabilities.isEnabled(group.featureKey);
+        const groupFeatureAllowed = group.uiVisibilityKey
+          ? UI_VISIBILITY_RESOLVERS[group.uiVisibilityKey](this.capabilities)
+          : group.featureKeys?.length
+            ? group.featureKeys.some(key => this.capabilities.isEnabled(key))
+            : this.capabilities.isEnabled(group.featureKey);
         if (!groupFeatureAllowed) return null;
         if (group.permissionKey && !this.capabilities.hasPermission(group.permissionKey)) return null;
 

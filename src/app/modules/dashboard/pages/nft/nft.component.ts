@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { OrdersService } from '../../../../services/orders.service';
 import { CajasService } from 'src/app/services/cajas.service';
 import { CompanyService } from '../../../../services/company.service';
@@ -14,6 +14,7 @@ import { diasRestantes } from 'src/app/shared/utils/date.utils';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { BusinessMode, CompanyCapabilitiesService, CompanyFeatureKey, CompanyPlan } from 'src/app/core/services/company-capabilities.service';
 import { FacturadaLiteDashboardService, LiteDashboard, LiteDashboardPlan } from 'src/app/services/facturada-lite-dashboard.service';
+import { InventoryService } from 'src/app/services/inventory.service';
 
 // Interfaz para los avisos
 interface Aviso {
@@ -82,6 +83,10 @@ export class NftComponent implements OnInit, OnDestroy {
   salesByType: Record<string, number> = {};
   activeOrdersCount = 0;
   activeOrdersTotal = 0;
+  /** Solo se carga para el Cajero Retail (ver `loadRetailStockSummary`). */
+  retailLowStockCount = 0;
+  retailOutOfStockCount = 0;
+  retailStockLoading = false;
   today = new Date();
   certDaysLeft: number | null = null;
   businessMode: BusinessMode = 'RESTAURANTE';
@@ -114,11 +119,29 @@ export class NftComponent implements OnInit, OnDestroy {
   };
 
   /**
+   * `ui_capabilities.dashboard` (get_user_context) manda cuando el backend lo
+   * envía: mapea a las variantes que ya existen acá en vez de construir una
+   * pantalla paralela. `null` (backend no manda el dato todavía) preserva el
+   * comportamiento anterior por completo, calculado solo con `features`.
+   */
+  private get uiDashboardOverride(): 'business_overview' | 'cashier_shift' | 'billing_overview' | 'restaurant_service' | 'kitchen_board' | 'none' | null {
+    return this.capabilities.dashboardScreen;
+  }
+
+  /** "kitchen_board" no tiene equivalente acá: es la pantalla de cocina real, en otra ruta. */
+  get showEmptyDashboard(): boolean {
+    return this.uiDashboardOverride === 'none';
+  }
+
+  /**
    * Restaurante y POS genérico comparten `get_dashboard_metrics`. Nunca se
    * llama para negocios de solo facturación directa o API-only, que siguen
    * usando el dashboard Lite basado en comprobantes.
    */
   get usesUnifiedDashboard(): boolean {
+    const override = this.uiDashboardOverride;
+    if (override === 'cashier_shift' || override === 'restaurant_service') return true;
+    if (override === 'billing_overview' || override === 'business_overview' || override === 'none') return false;
     return this.capabilities.isEnabled('pos') || this.capabilities.isEnabled('restaurant');
   }
 
@@ -127,7 +150,9 @@ export class NftComponent implements OnInit, OnDestroy {
     private cajasService: CajasService,
     private companyService: CompanyService,
     public capabilities: CompanyCapabilitiesService,
-    private liteDashboardService: FacturadaLiteDashboardService
+    private liteDashboardService: FacturadaLiteDashboardService,
+    private inventoryService: InventoryService,
+    private router: Router
   ) { }
 
   ngOnInit(): void {
@@ -135,6 +160,12 @@ export class NftComponent implements OnInit, OnDestroy {
     this.currentPlan = this.capabilities.plan;
     window.addEventListener('facturada:restaurant-data-changed', this.restaurantDataChanged);
     this.actualizarVisualizaciones();
+    // La pantalla de cocina real vive en otra ruta; "kitchen_board" nunca se
+    // dibuja acá, solo redirige.
+    if (this.uiDashboardOverride === 'kitchen_board') {
+      this.router.navigate(['/dashboard/orders-realtime']);
+      return;
+    }
     this.loadData();
   }
 
@@ -220,6 +251,11 @@ export class NftComponent implements OnInit, OnDestroy {
     try {
       const dashboard = await firstValueFrom(this.ordersService.get_dashboard_metrics());
       this.procesarDashboard(dashboard);
+      // Solo el Cajero Retail necesita ver stock acá: es la alerta que más le
+      // importa a boutique/tienda para no vender algo que ya no hay.
+      if (this.capabilities.isRetailCashier && this.capabilities.isEnabled('inventory')) {
+        void this.loadRetailStockSummary();
+      }
     } catch (error: any) {
       console.error('Error al obtener métricas:', error);
       this.dashboardError = this.isTerminalRequiredError(error)
@@ -231,6 +267,26 @@ export class NftComponent implements OnInit, OnDestroy {
 
     if (this.isRestaurantMode && !this.idApertura) {
       await this.getDatosCierre();
+    }
+  }
+
+  /** Bajo stock/agotados de la bodega activa, solo para el Cajero Retail. */
+  async loadRetailStockSummary(): Promise<void> {
+    this.retailStockLoading = true;
+    try {
+      const response: any = await firstValueFrom(this.inventoryService.getStockSummary());
+      const data = response?.message?.data ?? response?.data ?? response ?? {};
+      const products: any[] = Array.isArray(data?.products) ? data.products : (Array.isArray(data) ? data : []);
+      this.retailLowStockCount = Number(data?.low_stock_items ?? data?.low_stock_products
+        ?? products.filter((item) => item?.is_low_stock).length) || 0;
+      const outOfStock = data?.out_of_stock_items ?? data?.out_of_stock_products;
+      this.retailOutOfStockCount = Array.isArray(outOfStock)
+        ? outOfStock.length
+        : Number(outOfStock ?? products.filter((item) => item?.is_out_of_stock).length) || 0;
+    } catch (error) {
+      console.error('Error al obtener el resumen de stock para el dashboard:', error);
+    } finally {
+      this.retailStockLoading = false;
     }
   }
 
@@ -756,6 +812,9 @@ export class NftComponent implements OnInit, OnDestroy {
 
   /** Dashboard informativo de facturación cuando no está habilitado Restaurante. */
   get isBillingDashboard(): boolean {
+    const override = this.uiDashboardOverride;
+    if (override === 'billing_overview') return true;
+    if (override === 'cashier_shift' || override === 'restaurant_service' || override === 'business_overview' || override === 'none') return false;
     return (this.capabilities.features.billing === true || this.capabilities.features.generic_pos === true) && !this.isRestaurantMode;
   }
 
@@ -764,6 +823,13 @@ export class NftComponent implements OnInit, OnDestroy {
   }
 
   get isApiOnlyMode(): boolean {
+    const override = this.uiDashboardOverride;
+    // Ningún valor de `ui_capabilities.dashboard` corresponde a "API-only":
+    // ese caso hoy se detecta puramente por licencias (`features.api` sin
+    // billing/restaurant), y `business_overview` es lo más parecido que
+    // existe para una vista general — se respeta esa preferencia dejando que
+    // la detección normal decida si además es API-only.
+    if (override && override !== 'business_overview') return false;
     return this.capabilities.isApiOnlyMode;
   }
 
@@ -835,20 +901,48 @@ export class NftComponent implements OnInit, OnDestroy {
     return this.capabilities.isEnabled('restaurant');
   }
 
+  /**
+   * Un Cajero no es un solo perfil: distingue Restaurante/Retail/General
+   * usando el contexto completo (`CompanyCapabilitiesService.isRestaurantCashier`
+   * etc.), nunca solo `business_role === 'Cajero'`. `null` para cualquier
+   * otro rol (Administrador, Gerente, Facturación...), que sigue viendo el
+   * título/subtítulo de siempre.
+   */
+  get cashierExperience(): 'Restaurante' | 'Retail' | 'General' | null {
+    if (this.capabilities.isRestaurantCashier) return 'Restaurante';
+    if (this.capabilities.isRetailCashier) return 'Retail';
+    if (this.capabilities.isGeneralCashier) return 'General';
+    return null;
+  }
+
   get modeLabel(): string {
     if (this.isApiOnlyMode) return 'FacturADA API';
+    // Antes de `isLiteMode`: un Cajero Retail/General en un negocio Lite
+    // (billing/generic_pos, sin restaurante) también debe ver su experiencia
+    // de POS, no el genérico "FacturADA Lite" que aplica a otros roles ahí.
+    if (this.cashierExperience) return `Cajero · ${this.cashierExperience}`;
     if (this.isLiteMode) return 'FacturADA Lite';
     return this.isFacturadorMode ? 'Facturador' : 'Restaurante';
   }
 
   get dashboardTitle(): string {
     if (this.isApiOnlyMode) return 'Panel API';
+    if (this.cashierExperience) return `Panel de Cajero · ${this.cashierExperience}`;
     return this.isFacturadorMode ? 'Panel de facturación' : 'Panel operativo';
   }
 
   get dashboardSubtitle(): string {
     if (this.isApiOnlyMode) {
       return `Consumo de API, comprobantes y configuración tributaria: ${this.today.toLocaleDateString('es-EC')}`;
+    }
+    if (this.cashierExperience === 'Restaurante') {
+      return `Turno de caja, mesas y comandas del restaurante: ${this.today.toLocaleDateString('es-EC')}`;
+    }
+    if (this.cashierExperience === 'Retail') {
+      return `Turno de caja, ventas y stock de tienda: ${this.today.toLocaleDateString('es-EC')}`;
+    }
+    if (this.cashierExperience === 'General') {
+      return `Turno de caja y ventas del punto de venta: ${this.today.toLocaleDateString('es-EC')}`;
     }
     return this.isFacturadorMode
       ? `Facturación electrónica, clientes y documentos: ${this.today.toLocaleDateString('es-EC')}`
@@ -1263,9 +1357,18 @@ export class NftComponent implements OnInit, OnDestroy {
     return this.totalOrdersToday / elapsedHours;
   }
 
+  /**
+   * "Rendimiento comercial" es compartido por Restaurante y POS genérico
+   * (Retail/General): un cajero de tienda no toma "pedidos", hace "ventas".
+   * Mismo criterio que ya usan `resumenVentasClaro`/`resumenProductosClaro`.
+   */
+  get commercialUnitLabel(): string {
+    return this.isFacturadorMode ? 'ventas' : 'pedidos';
+  }
+
   get ticketPromedioLabel(): string {
     if (!this.totalOrdersToday) {
-      return 'Sin pedidos';
+      return `Sin ${this.commercialUnitLabel}`;
     }
     if (this.ticketPromedio >= 15) {
       return 'Ticket fuerte';
@@ -1468,9 +1571,9 @@ export class NftComponent implements OnInit, OnDestroy {
 
   get resumenComercialClaro(): string {
     if (!this.totalOrdersToday) {
-      return 'Aun no hay pedidos suficientes para leer el rendimiento comercial del turno.';
+      return `Aun no hay ${this.commercialUnitLabel} suficientes para leer el rendimiento comercial del turno.`;
     }
-    return `Promedio de ${this.ordersPerHour.toFixed(1)} pedidos por hora con un ticket medio de ${this.ticketPromedio.toFixed(2)} USD.`;
+    return `Promedio de ${this.ordersPerHour.toFixed(1)} ${this.commercialUnitLabel} por hora con un ticket medio de ${this.ticketPromedio.toFixed(2)} USD.`;
   }
 
   get saludCajaPercent(): number {

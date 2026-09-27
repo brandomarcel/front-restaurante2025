@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, HostListener, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   AbstractControl,
@@ -35,11 +35,14 @@ import { UtilsService } from 'src/app/core/services/utils.service';
 import { buildMultiplePaymentPayload, findPaymentMethod, getDefaultPaymentValue, getPaymentDisplayLabel, isCashPayment, isPaymentMethodAlreadySelected, PaymentRow, roundMoney } from 'src/app/shared/utils/payment.utils';
 import { liteEmissionMessages, liteEmissionState } from 'src/app/core/utils/lite-invoice-emission';
 import { ProductVariantPickerComponent } from 'src/app/shared/components/product-variant-picker/product-variant-picker.component';
+import { BarcodeScanInputComponent } from 'src/app/shared/components/barcode-scan-input/barcode-scan-input.component';
+import { ProductSearchModalComponent } from 'src/app/shared/components/product-search-modal/product-search-modal.component';
+import { formatVariantAttributes } from 'src/app/shared/utils/product-variants.utils';
 
 @Component({
   selector: 'app-pos-caja',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, ProductVariantPickerComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, ProductVariantPickerComponent, BarcodeScanInputComponent, ProductSearchModalComponent],
   templateUrl: './pos-caja.component.html',
   styles: [':host { display: block; height: 100%; min-height: 0; }']
 })
@@ -47,10 +50,13 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   @Input() selectedTableId = '';
   @Input() selectedTableLabel = '';
   @ViewChild('productVariantPicker') productVariantPicker!: ProductVariantPickerComponent;
+  @ViewChild(BarcodeScanInputComponent) barcodeScanInput?: BarcodeScanInputComponent;
+  @ViewChild(ProductSearchModalComponent) productSearchModal?: ProductSearchModalComponent;
   ambiente = '';
   showPaymentModal = false;
   showCustomerModal = false;
   showPrintModal = false;
+  showShortcutsHelp = false;
   isSubmittingOrder = false;
   isSubmittingPosSale = false;
   activePosSaleNote: any | null = null;
@@ -59,6 +65,8 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   change = 0;
 
   products: any[] = [];
+  /** Solo para la búsqueda avanzada (Ctrl+K): mismo catálogo pero con variantes ya expandidas. Ver `loadProductsFlat`. */
+  productsFlat: any[] = [];
   filteredProductList: any[] = [];
   favoriteProducts: any[] = [];
   categories: any[] = [];
@@ -114,6 +122,44 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     private router: Router
   ) { }
 
+  /**
+   * Atajos globales del POS: no interceptan teclas normales de escritura
+   * (letras, números, backspace/delete) para no romper la edición de texto
+   * en ningún input; solo F-keys, Escape y combinaciones con Ctrl, que nunca
+   * insertan un carácter.
+   */
+  @HostListener('document:keydown', ['$event'])
+  handleKeyboardShortcut(event: KeyboardEvent): void {
+    // Ctrl+K: búsqueda avanzada (igual que F3).
+    if (event.ctrlKey && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      this.productSearchModal?.open();
+      return;
+    }
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
+
+    switch (event.key) {
+      case 'F3':
+        event.preventDefault();
+        this.productSearchModal?.open();
+        break;
+      case 'F10':
+        event.preventDefault();
+        if (!this.showPaymentModal && !this.showPrintModal) this.abrirModalPago();
+        break;
+      case 'Escape':
+        if (this.showPrintModal) { this.closePrintModal(); }
+        else if (this.showPaymentModal) { this.showPaymentModal = false; this.refocusScanner(); }
+        else if (this.showCustomerModal) { this.cerrarModal(); }
+        else if (this.showShortcutsHelp) { this.showShortcutsHelp = false; this.refocusScanner(); }
+        break;
+    }
+  }
+
+  toggleShortcutsHelp(): void {
+    this.showShortcutsHelp = !this.showShortcutsHelp;
+  }
+
   ngOnInit(): void {
     if (this.selectedTableLabel && !this.alias) this.alias = this.selectedTableLabel;
     // El ambiente se toma exclusivamente del contexto/perfil tributario del
@@ -156,9 +202,16 @@ export class PosCajaComponent implements OnInit, OnDestroy {
 
   /** The generic POS intentionally reuses this component's proven product,
    * customer, cart and payment UI, but emits a Lite invoice instead of a
-   * restaurant order. */
+   * restaurant order.
+   *
+   * This can't be decided from the `generic_pos` feature flag alone: a
+   * business can have both `restaurant` and `generic_pos` active at the
+   * same time, and this same component is rendered from both the
+   * restaurant POS (`/dashboard/pos`, via PosShellComponent) and the
+   * generic POS (`/dashboard/pos-generic`) routes. The route is what
+   * actually tells the two apart. */
   get genericMode(): boolean {
-    return this.capabilities.isEnabled('generic_pos');
+    return this.router.url.includes('/pos-generic') && this.capabilities.isEnabled('generic_pos');
   }
 
   get canEmitInvoice(): boolean {
@@ -191,6 +244,17 @@ export class PosCajaComponent implements OnInit, OnDestroy {
 
   get activePosTerminals(): any[] {
     return this.capabilities.activePosTerminals;
+  }
+
+  /** Preferencia visual del POS configurada fuera del frontend; adapta solo presentación, nunca lógica de venta. */
+  get isRetailPos(): boolean {
+    return this.capabilities.isRetailPos;
+  }
+
+  /** "Color: Negro · Talla: M" para una línea del carrito, o '' si el producto no tiene atributos de variante. */
+  cartLineAttributes(item: any): string {
+    const label = formatVariantAttributes(item);
+    return label === '—' ? '' : label;
   }
 
   onSelectPosTerminal(terminalName: string): void {
@@ -302,6 +366,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
         toast.error('Error al cargar productos.');
       }
     });
+    this.loadProductsFlat();
   }
 
   loadCategory(): void {
@@ -444,6 +509,9 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.customerSearchTerm = this.formatCustomerSearchLabel(customer);
     this.filteredCustomers = [];
     this.isCustomerSearchOpen = false;
+    // Cliente listo: el cajero sigue con los productos, así que el foco
+    // vuelve al escáner en vez de quedarse en el buscador de cliente.
+    this.refocusScanner();
   }
 
   clearCustomerSelection(): void {
@@ -549,6 +617,12 @@ export class PosCajaComponent implements OnInit, OnDestroy {
 
   onVariantResolved(resolved: any): void {
     this.addProduct(resolved);
+    this.refocusScanner();
+  }
+
+  /** Se usa al cerrar el picker de variantes o la búsqueda avanzada sin elegir nada, y después de agregar un producto. */
+  refocusScanner(): void {
+    this.barcodeScanInput?.focus();
   }
 
   addProduct(product: any): void {
@@ -750,22 +824,17 @@ export class PosCajaComponent implements OnInit, OnDestroy {
         return;
       }
       if (option === 'ticket' || option === 'ride') {
-        const format: 'FACTURADA RIDE' | 'FacturADA Lite Ticket' = option === 'ride'
-          ? 'FACTURADA RIDE'
-          : 'FacturADA Lite Ticket';
-        this.printService.downloadLiteInvoicePdf(invoiceId, format).subscribe({
-          next: (blob) => {
-            this.openPdfBlob(blob);
-            this.finishPrintFlow();
-          },
-          error: () => {
-            toast.error('El documento aún no está disponible. Puedes consultarlo desde la lista de facturas.');
-            this.finishPrintFlow();
-          }
-        });
-      } else {
-        this.finishPrintFlow();
+        // Igual que comanda/recibo/RIDE de orden: navega directo a la URL que
+        // genera Frappe (`/printview` o `download_lite_invoice_pdf`), sin
+        // pasar por un blob de Angular. Abrir el popup así, en vez de dentro
+        // del callback async de una descarga, evita que el navegador lo
+        // bloquee como ventana emergente no solicitada.
+        const path = option === 'ride'
+          ? this.printService.getFacturaPdf(invoiceId)
+          : this.printService.getSalesInvoiceTicket(invoiceId);
+        this.openPrintWindow(path);
       }
+      this.finishPrintFlow();
       return;
     }
 
@@ -849,6 +918,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       telefono: '',
       direccion: ''
     });
+    this.refocusScanner();
   }
 
   clearPage(): void {
@@ -867,6 +937,10 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.deliveryPhone = '';
     this.searchTerm = '';
     this.onCategorySelected('');
+    // El carrito quedó vacío (factura, nota u orden ya se registraron): el
+    // cajero sigue atendiendo, así que el foco vuelve al input de escaneo en
+    // vez de obligarlo a hacer clic ahí antes de leer el siguiente código.
+    this.barcodeScanInput?.focus();
   }
 
   identificacionLengthValidator(): ValidatorFn {
@@ -1295,10 +1369,11 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   printPosSaleNote(name: string): void {
-    this.posSaleService.downloadPdf(name).subscribe({
-      next: (blob) => this.openPdfBlob(blob),
-      error: () => toast.error('No se pudo descargar la Nota de Venta.')
-    });
+    // Navega directo a la URL que genera Frappe (igual que comanda/recibo/
+    // RIDE), en vez de traer un blob por Angular y recién ahí abrir el
+    // popup: eso último se dispara fuera del gesto de clic del usuario y el
+    // navegador puede bloquearlo como ventana emergente no solicitada.
+    this.openPrintWindow(this.posSaleService.getPdfUrl(name));
   }
 
   private ensureValidPaymentMethod(): void {
@@ -1401,13 +1476,6 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       ? raw
       : (raw?.name ?? raw?.invoice_name ?? raw?.id ?? '');
     return String(name || '').trim() || null;
-  }
-
-  private openPdfBlob(blob: Blob): void {
-    const url = window.URL.createObjectURL(blob);
-    const popup = window.open(url, '_blank', 'noopener=yes,noreferrer=yes');
-    if (!popup) toast.error('No se pudo abrir el ticket descargado.');
-    window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
   }
 
   private buildEcuadorIsoDate(): string {
@@ -1514,6 +1582,22 @@ export class PosCajaComponent implements OnInit, OnDestroy {
         this.products = Array.isArray(res) ? res : (res?.message?.data || []);
         this.applyFilters();
       }
+    });
+    this.loadProductsFlat();
+  }
+
+  /**
+   * Igual que `products`, pero con `flatten_variants=1`: cada variante llega
+   * como su propia fila (con su color/talla, precio y stock reales), no el
+   * producto agrupador con "Ver variantes". Solo la usa la búsqueda avanzada
+   * (Ctrl+K): el grid de tarjetas sigue mostrando agrupadores, sin cambios.
+   */
+  private loadProductsFlat(): void {
+    this.productsService.getAll(1, undefined, 0, '', undefined, undefined, false, true).subscribe({
+      next: (res: any) => {
+        this.productsFlat = Array.isArray(res) ? res : (res?.message?.data || []);
+      },
+      error: () => undefined
     });
   }
 

@@ -13,6 +13,7 @@ import { CustomersService } from 'src/app/services/customers.service';
 import { PaymentsService } from 'src/app/services/payments.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { PrintService } from 'src/app/services/print.service';
+import { environment } from 'src/environments/environment';
 import { Product } from '../../core/models/product';
 import { InvoicesService } from 'src/app/services/invoices.service';
 import { UtilsService } from '../../core/services/utils.service';
@@ -865,27 +866,21 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     return this.capabilities.isEnabled('additional_fields');
   }
 
+  /**
+   * Siempre navega directo a la URL que genera Frappe (`getFacturaPdf`/
+   * `getSalesInvoiceTicket`), nunca a un blob traído por Angular: abrir el
+   * popup dentro del callback async de una descarga se dispara fuera del
+   * gesto de clic del usuario y el navegador puede bloquearlo.
+   */
   private printInvoice(invoiceId: string, format: 'ride' | 'ticket' = 'ride'): void {
     if (!invoiceId) return;
-    if (this.capabilities.isLiteMode) {
-      this.printService.downloadLiteInvoicePdf(
-        invoiceId,
-        format === 'ride' ? 'FACTURADA RIDE' : 'FacturADA Lite Ticket'
-      ).subscribe({
-        next: (blob) => this.openPdfBlob(blob),
-        error: () => toast.error('No se pudo descargar el documento Lite.')
-      });
-      return;
-    }
-    const invoiceUrl = this.printService.getFacturaPdf(invoiceId);
-    window.open(invoiceUrl, '_blank', 'noopener=yes,noreferrer=yes');
-  }
-
-  private openPdfBlob(blob: Blob): void {
-    const url = window.URL.createObjectURL(blob);
-    const popup = window.open(url, '_blank', 'noopener=yes,noreferrer=yes');
-    if (!popup) toast.error('No se pudo abrir el documento descargado.');
-    window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+    const invoicePath = format === 'ride'
+      ? this.printService.getFacturaPdf(invoiceId)
+      : this.printService.getSalesInvoiceTicket(invoiceId);
+    // `getFacturaPdf`/`getSalesInvoiceTicket` devuelven una ruta relativa al
+    // sitio de Frappe (`environment.URL`), no al origen de esta SPA: hay que
+    // anteponerlo explícitamente, igual que `openPrintWindow` en el POS.
+    window.open(`${environment.URL}${invoicePath}`, '_blank', 'noopener=yes,noreferrer=yes');
   }
 
   printRide(): void {

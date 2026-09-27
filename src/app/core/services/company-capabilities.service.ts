@@ -71,6 +71,22 @@ export interface CompanyCapabilitiesConfig {
   terminal?: any | null;
   /** Configuración de integración API devuelta por get_user_context. */
   apiConfiguration?: any | null;
+  /** "Simple" (stock global) o "Por Bodega" (stock independiente por local). */
+  inventoryMode?: 'Simple' | 'Por Bodega';
+  warehouses?: any[];
+  /**
+   * Preferencia de presentación del POS ("General" | "Retail" | "Restaurante"),
+   * configurada fuera del frontend (administración del sistema). Solo se lee
+   * de `get_user_context` para adaptar la UI; nunca se edita desde acá.
+   */
+  posExperience?: 'General' | 'Retail' | 'Restaurante';
+  /**
+   * `response.message.ui_capabilities` de `get_user_context`: fuente
+   * preferida de navegación/acciones para pantallas nuevas. `features` y
+   * `permissions` se conservan intactos para pantallas antiguas; esto no los
+   * reemplaza, solo se prioriza cuando está presente.
+   */
+  uiCapabilities?: any | null;
   loaded: boolean;
 }
 
@@ -144,6 +160,148 @@ export class CompanyCapabilitiesService {
   get sequences(): any[] { return this.state().sequences || []; }
   get posTerminals(): any[] { return this.state().posTerminals || []; }
   get apiConfiguration(): any | null { return this.state().apiConfiguration ?? null; }
+
+  /**
+   * `response.message.ui_capabilities` de `get_user_context`. Fuente
+   * preferida para pantallas nuevas (navegación, acciones, dashboard,
+   * reportes); `features`/`permissions` no se tocan y siguen siendo la
+   * fuente de las pantallas existentes.
+   */
+  get uiCapabilities(): any | null { return this.state().uiCapabilities ?? null; }
+
+  private uiModule(key: string): any | null {
+    return this.uiCapabilities?.modules?.[key] ?? null;
+  }
+
+  /** Regla 1: visibilidad de un módulo del sidebar. Sin `ui_capabilities` para ese módulo, cae al feature legado indicado. */
+  isUiModuleVisible(key: string, fallbackFeature?: CompanyFeatureKey): boolean {
+    const module = this.uiModule(key);
+    if (module && typeof module.visible === 'boolean') return module.visible === true;
+    return fallbackFeature ? this.isEnabled(fallbackFeature) : false;
+  }
+
+  /** Regla 2: `can_create`/`can_manage` por módulo, con permiso legado de respaldo. */
+  canCreateInModule(key: string, fallbackPermission?: string): boolean {
+    const module = this.uiModule(key);
+    if (module && typeof module.can_create === 'boolean') return module.can_create === true;
+    return fallbackPermission ? this.hasPermission(fallbackPermission) : false;
+  }
+
+  canManageInModule(key: string, fallbackPermission?: string): boolean {
+    const module = this.uiModule(key);
+    if (module && typeof module.can_manage === 'boolean') return module.can_manage === true;
+    return fallbackPermission ? this.hasPermission(fallbackPermission) : false;
+  }
+
+  /**
+   * Preferencia de PRESENTACIÓN del POS. Prioriza `ui_capabilities.modules.pos`
+   * (regla 3); sin ese dato, cae al `business.pos_experience` legado.
+   */
+  get posExperience(): 'General' | 'Retail' | 'Restaurante' {
+    const fromCapabilities = this.uiModule('pos')?.experience;
+    if (fromCapabilities === 'Retail' || fromCapabilities === 'Restaurante' || fromCapabilities === 'General') return fromCapabilities;
+    return this.state().posExperience === 'Retail' || this.state().posExperience === 'Restaurante'
+      ? this.state().posExperience!
+      : 'General';
+  }
+  /**
+   * La licencia POS en sí. Prioriza `ui_capabilities.modules.pos.visible`;
+   * sin ese dato cae a `features.pos`/`generic_pos`/`restaurant_pos` (estos
+   * últimos, compatibilidad temporal mientras el backend termina de poblar
+   * `features.pos` en todos los negocios existentes).
+   */
+  get canUsePos(): boolean { return this.isUiModuleVisible('pos', 'pos'); }
+  /** `pos_experience "Retail"` solo tiene efecto si el negocio tiene la licencia POS. */
+  get isRetailPos(): boolean { return this.canUsePos && this.posExperience === 'Retail'; }
+  /** Requiere además el módulo `restaurant` activo: "Restaurante" no es una licencia por sí sola. */
+  get isRestaurantPos(): boolean { return this.canUsePos && this.isEnabled('restaurant') && this.posExperience === 'Restaurante'; }
+  /** Regla 3: exige terminal seleccionado/asignado antes de vender cuando el backend lo marca explícitamente. */
+  get posRequiresTerminal(): boolean { return this.uiModule('pos')?.requires_terminal === true; }
+
+  /**
+   * Un Cajero no es un solo perfil: distinguir de restaurante/genérico exige
+   * el contexto completo (rol + `features.restaurant` + `pos_experience` +
+   * `ui_capabilities.modules.restaurant.visible`), nunca solo comparar
+   * `business_role === 'Cajero'`.
+   */
+  get isCashier(): boolean { return this.normalize(this.businessRole || '') === 'CAJERO'; }
+
+  /** Cajero de un negocio con módulo Restaurante activo y `pos_experience` en modo Restaurante. */
+  get isRestaurantCashier(): boolean {
+    return this.isCashier
+      && this.isEnabled('restaurant')
+      && this.posExperience === 'Restaurante'
+      && this.isUiModuleVisible('restaurant', 'restaurant');
+  }
+
+  /** Cajero con licencia POS que no es de restaurante (POS genérico: General o Retail). */
+  get isGenericCashier(): boolean { return this.isCashier && this.canUsePos && !this.isRestaurantCashier; }
+
+  get isRetailCashier(): boolean { return this.isGenericCashier && this.posExperience === 'Retail'; }
+
+  get isGeneralCashier(): boolean { return this.isGenericCashier && this.posExperience === 'General'; }
+
+  /** Regla 4: pantalla de dashboard a cargar. `null` cuando el backend no envía este dato todavía (la pantalla decide su propio respaldo). */
+  get dashboardScreen(): 'business_overview' | 'cashier_shift' | 'billing_overview' | 'restaurant_service' | 'kitchen_board' | 'none' | null {
+    const value = this.uiCapabilities?.dashboard;
+    const valid = ['business_overview', 'cashier_shift', 'billing_overview', 'restaurant_service', 'kitchen_board', 'none'];
+    return valid.includes(value) ? value : null;
+  }
+
+  /** Regla 5: módulo Reportes. */
+  get reportsVisible(): boolean { return this.isUiModuleVisible('reports', undefined) || (!this.uiModule('reports') && this.hasPermission('reports.view')); }
+  /** `null` cuando el backend no envía este dato todavía. */
+  get reportScope(): 'global' | 'billing' | 'operational' | 'none' | null {
+    const value = this.uiCapabilities?.report_scope;
+    const valid = ['global', 'billing', 'operational', 'none'];
+    return valid.includes(value) ? value : null;
+  }
+
+  /** Regla 6: submódulos de Restaurante — nunca se muestran si su `visible` explícito es `false`. */
+  get restaurantOrdersVisible(): boolean { return this.isUiModuleVisible2('restaurant', 'orders', 'orders'); }
+  get restaurantTablesVisible(): boolean { return this.isUiModuleVisible2('restaurant', 'tables', 'tables'); }
+  get restaurantKitchenVisible(): boolean { return this.isUiModuleVisible2('restaurant', 'kitchen', 'kitchen'); }
+
+  private isUiModuleVisible2(moduleKey: string, subKey: string, fallbackFeature: CompanyFeatureKey): boolean {
+    const module = this.uiModule(moduleKey);
+    const value = module?.[subKey];
+    if (typeof value === 'boolean') return value;
+    return this.isEnabled(fallbackFeature);
+  }
+
+  /** Regla 7: visibilidad del módulo Usuarios. */
+  get usersModuleVisible(): boolean { return this.isUiModuleVisible('users', undefined) || (!this.uiModule('users') && this.hasPermission('business.users.manage')); }
+  get isGeneralPos(): boolean { return this.canUsePos && this.posExperience === 'General'; }
+  /** "Simple" hasta que `get_inventory_configuration` confirme lo contrario. */
+  get inventoryMode(): 'Simple' | 'Por Bodega' { return this.state().inventoryMode === 'Por Bodega' ? 'Por Bodega' : 'Simple'; }
+  get isWarehouseMode(): boolean { return this.inventoryMode === 'Por Bodega'; }
+  get warehouses(): any[] { return this.state().warehouses || []; }
+  get activeWarehouses(): any[] { return this.warehouses.filter((item: any) => this.isActiveRecord(item)); }
+  get defaultWarehouse(): any | null {
+    return this.activeWarehouses.find((item: any) => this.toBoolean(item?.is_default))
+      || (this.activeWarehouses.length === 1 ? this.activeWarehouses[0] : null);
+  }
+  /**
+   * En modo "Por Bodega" el stock/las ventas siempre usan la bodega del
+   * terminal POS activo, nunca la de otro local. `null` en modo Simple (no
+   * aplica) o cuando el terminal existe pero no tiene bodega asignada (debe
+   * bloquear). Un negocio que NO usa el modelo de terminales (por ejemplo,
+   * factura administrativa directa) no tiene de dónde leer una bodega por
+   * terminal, así que usa la predeterminada del negocio.
+   */
+  get activeWarehouse(): any | null {
+    if (!this.isWarehouseMode) return null;
+    if (!this.usesPosTerminalModel) return this.defaultWarehouse;
+    const terminalWarehouseId = String(this.activePosTerminal?.warehouse || '').trim();
+    if (!terminalWarehouseId) return null;
+    return this.warehouses.find((item: any) => this.referenceId(item) === terminalWarehouseId) || null;
+  }
+  /** El terminal activo existe pero no tiene bodega asignada: hay que bloquear la venta. */
+  get needsWarehouseAssignment(): boolean {
+    if (!this.isWarehouseMode || !this.usesPosTerminalModel) return false;
+    const terminal = this.activePosTerminal;
+    return !!terminal && !String(terminal?.warehouse || '').trim();
+  }
   get terminalAccessRequired(): boolean { return this.state().terminalAccessRequired === true; }
   get requiresTerminalSelection(): boolean { return this.state().requiresTerminalSelection === true; }
   get hasTerminalAccess(): boolean { return this.state().hasTerminalAccess !== false; }
@@ -274,6 +432,12 @@ export class CompanyCapabilitiesService {
     // sea o no el rol el que requiere asignación explícita del backend.
     if (this.needsPosTerminalSelection) {
       return 'Seleccione un terminal POS para continuar.';
+    }
+    // El negocio opera "Por Bodega": sin bodega en el terminal no hay de
+    // dónde descontar stock real, así que se bloquea la venta igual que
+    // cuando falta el establecimiento/punto de emisión.
+    if (this.needsWarehouseAssignment) {
+      return 'Este terminal no tiene una bodega asignada. El administrador debe asignarla antes de poder vender.';
     }
     return null;
   }
@@ -568,6 +732,17 @@ export class CompanyCapabilitiesService {
         : this.toBoolean(message?.has_terminal_access ?? terminalContext?.has_terminal_access),
       terminal: selectedTerminal,
       apiConfiguration,
+      // `get_user_context` puede traer el modo ya resuelto en el negocio;
+      // las bodegas en sí solo llegan por `get_inventory_configuration`
+      // (ver `setInventoryConfiguration`), nunca se reemplazan acá.
+      inventoryMode: normalizedCompany?.inventory_mode === 'Por Bodega' ? 'Por Bodega' : (this.state().inventoryMode ?? 'Simple'),
+      warehouses: this.state().warehouses || [],
+      // Preferencia de solo lectura: se configura fuera del frontend y llega
+      // como `business.pos_experience` dentro de `get_user_context`.
+      posExperience: ['General', 'Retail', 'Restaurante'].includes(normalizedCompany?.pos_experience)
+        ? normalizedCompany.pos_experience
+        : (this.state().posExperience ?? 'General'),
+      uiCapabilities: message?.ui_capabilities !== undefined ? message.ui_capabilities : this.state().uiCapabilities ?? null,
       loaded: true
     };
     this.state.set(config);
@@ -699,6 +874,19 @@ export class CompanyCapabilitiesService {
     if (setupEnvironment) this.utilsService.cambiarAmbiente(setupEnvironment);
   }
 
+  /** Actualiza exclusivamente lo devuelto por `get_inventory_configuration`. */
+  setInventoryConfiguration(response: any): void {
+    const data = frappeData<any>(response) || {};
+    const current = this.state();
+    const next: CompanyCapabilitiesConfig = {
+      ...current,
+      inventoryMode: data?.inventory_mode === 'Por Bodega' ? 'Por Bodega' : 'Simple',
+      warehouses: Array.isArray(data?.warehouses) ? data.warehouses : []
+    };
+    this.state.set(next);
+    if (next.loaded) localStorage.setItem(this.storageKey, JSON.stringify(next));
+  }
+
   /** Conserva la lista de negocios y selecciona uno antes de consultar el contexto. */
   setActiveBusiness(business: any, businesses?: any[]): void {
     const current = this.state();
@@ -729,7 +917,11 @@ export class CompanyCapabilitiesService {
       requiresTerminalSelection: false,
       hasTerminalAccess: true,
       terminal: null,
-      apiConfiguration: null
+      apiConfiguration: null,
+      inventoryMode: 'Simple' as const,
+      warehouses: [],
+      posExperience: 'General' as const,
+      uiCapabilities: null
     };
     this.state.set(next);
     localStorage.setItem('active_business', String(selectedId));
@@ -776,8 +968,10 @@ export class CompanyCapabilitiesService {
     if (feature === 'restaurant_pos') return isRestaurant && features.restaurant_pos === true;
     if (feature === 'generic_pos') return features.generic_pos === true;
     if (feature === 'pos_terminal') return features.pos_terminal === true;
-    // `pos` es la licencia POS; no habilita por sí sola la caja.
-    if (feature === 'pos') return features.pos === true;
+    // `pos` es la licencia POS; no habilita por sí sola la caja. Se acepta
+    // `generic_pos`/`restaurant_pos` como compatibilidad temporal mientras
+    // el backend termina de poblar `features.pos` en negocios existentes.
+    if (feature === 'pos') return features.pos === true || features.generic_pos === true || features.restaurant_pos === true;
     // La caja de restaurante requiere su bandera explícita.
     if (feature === 'cash_register') return features.cash_register === true;
 
@@ -1085,6 +1279,10 @@ export class CompanyCapabilitiesService {
           hasTerminalAccess: stored.hasTerminalAccess !== false,
           terminal: stored.terminal ?? null,
           apiConfiguration: this.normalizeApiConfiguration(stored.apiConfiguration),
+          inventoryMode: stored.inventoryMode === 'Por Bodega' ? 'Por Bodega' : 'Simple',
+          warehouses: Array.isArray(stored.warehouses) ? stored.warehouses : [],
+          posExperience: ['General', 'Retail', 'Restaurante'].includes(stored.posExperience) ? stored.posExperience : 'General',
+          uiCapabilities: stored.uiCapabilities ?? null,
           loaded: stored.loaded === true
         };
       }

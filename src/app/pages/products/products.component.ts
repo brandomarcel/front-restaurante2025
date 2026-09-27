@@ -28,6 +28,11 @@ import {
   getVariantAttributeDefinitions,
   VariantAttributeDefinition,
 } from 'src/app/shared/utils/product-variants.utils';
+import {
+  ProductImportConfirmResult,
+  ProductImportMode,
+  ProductImportPreview,
+} from 'src/app/models/product-import';
 
 type StockEditMode = 'absolute' | 'delta';
 
@@ -85,6 +90,17 @@ export class ProductsComponent implements OnInit {
   pageSize = 10;
   totalProducts = 0;
   totalPages = 1;
+
+  // --- Carga masiva de productos ---
+  showImportModal = false;
+  importMode: ProductImportMode = 'create_only';
+  importFile: File | null = null;
+  importDownloading = false;
+  importValidating = false;
+  importConfirming = false;
+  importError = '';
+  importPreview: ProductImportPreview | null = null;
+  importResult: ProductImportConfirmResult | null = null;
 
   // --- Variantes de producto ---
   variantesModalVisible = false;
@@ -265,6 +281,138 @@ export class ProductsComponent implements OnInit {
     this.actualizarProductosFiltrados();
   }
 
+  // ==================== Carga masiva de productos ====================
+
+  get canImportProducts(): boolean {
+    return this.canManageProducts;
+  }
+
+  abrirImportModal(): void {
+    if (!this.canImportProducts) {
+      this.alertService.error('No tienes permiso products.manage para importar productos.');
+      return;
+    }
+    this.showImportModal = true;
+    this.resetImportState();
+  }
+
+  cerrarImportModal(): void {
+    this.showImportModal = false;
+    this.resetImportState();
+  }
+
+  private resetImportState(): void {
+    this.importMode = 'create_only';
+    this.importFile = null;
+    this.importPreview = null;
+    this.importResult = null;
+    this.importError = '';
+  }
+
+  /** Cambiar el archivo o el modo invalida cualquier previsualización anterior: hay que validar de nuevo. */
+  onImportModeChange(): void {
+    this.importPreview = null;
+    this.importResult = null;
+    this.importError = '';
+  }
+
+  onImportFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files && input.files.length ? input.files[0] : null;
+    input.value = '';
+
+    if (!file) return;
+    if (!/\.xlsx$/i.test(file.name)) {
+      this.alertService.error('El archivo debe tener extensión .xlsx.');
+      return;
+    }
+
+    this.importFile = file;
+    this.importPreview = null;
+    this.importResult = null;
+    this.importError = '';
+  }
+
+  descargarPlantillaImportacion(): void {
+    this.importDownloading = true;
+    this.productsService.downloadProductImportTemplate().pipe(
+      finalize(() => this.importDownloading = false)
+    ).subscribe({
+      next: (blob: Blob) => {
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'plantilla-carga-masiva-productos.xlsx';
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+      },
+      error: (err) => this.alertService.error(this.frappeErrorService.handle(err) || 'No se pudo descargar la plantilla.')
+    });
+  }
+
+  validarImportacion(): void {
+    if (!this.importFile || this.importValidating) return;
+
+    this.importValidating = true;
+    this.importError = '';
+    this.importResult = null;
+    this.productsService.previewProductImport(this.importMode, this.importFile).pipe(
+      finalize(() => this.importValidating = false)
+    ).subscribe({
+      next: (preview: ProductImportPreview) => {
+        this.importPreview = preview;
+        if (!preview?.summary?.total) {
+          toast.warning('El archivo no tiene filas para importar.');
+        } else if (preview.summary.invalid > 0) {
+          toast.warning(`${preview.summary.invalid} fila(s) con error. Corrígelas antes de confirmar.`);
+        } else {
+          toast.success('Archivo validado sin errores.');
+        }
+      },
+      error: (err) => {
+        this.importPreview = null;
+        this.importError = this.frappeErrorService.handle(err) || 'No se pudo validar el archivo.';
+      }
+    });
+  }
+
+  get canConfirmImport(): boolean {
+    return !!this.importFile
+      && !!this.importPreview?.can_confirm
+      && !this.importValidating
+      && !this.importConfirming;
+  }
+
+  confirmarImportacion(): void {
+    // Nunca importar con errores pendientes, aunque `can_confirm` viniera mal.
+    if (!this.canConfirmImport || !this.importFile || (this.importPreview?.summary?.invalid ?? 0) > 0) return;
+
+    this.importConfirming = true;
+    this.importError = '';
+    // Se reutiliza el mismo File ya validado; no se reconstruye ningún JSON.
+    this.productsService.confirmProductImport(this.importMode, this.importFile).pipe(
+      finalize(() => this.importConfirming = false)
+    ).subscribe({
+      next: (result: ProductImportConfirmResult) => {
+        this.importResult = result;
+        toast.success(
+          `Importación completa: ${result.created} creado(s), ${result.updated} actualizado(s)` +
+          (result.stock_movements ? `, ${result.stock_movements} movimiento(s) de stock` : '') + '.'
+        );
+        this.importFile = null;
+        this.importPreview = null;
+        // El resumen de inventario vive en la pantalla de Inventario; se
+        // recarga solo al entrar ahí, no hace falta duplicarlo acá.
+        this.cargarProductos();
+      },
+      error: (err) => {
+        this.importError = this.frappeErrorService.handle(err) || 'No se pudo confirmar la importación.';
+      }
+    });
+  }
+
   abrirModal(producto: Product | null = null) {
     if (!this.canManageProducts) {
       this.alertService.error('No tienes permiso products.manage para crear o editar productos.');
@@ -294,6 +442,7 @@ export class ProductsComponent implements OnInit {
       tax: this.resolveTaxControlValue(producto),
       categoria: producto.categoria,
       codigo: producto.codigo,
+      barcode: producto.barcode || producto.codigo_barras || '',
       isactive: toInventoryBool(producto.isactive),
       controlar_inventario: this.hasInventory(producto),
       unidad_inventario: producto.unidad_inventario || 'und',
@@ -560,6 +709,7 @@ export class ProductsComponent implements OnInit {
       tax: [null, Validators.required],
       categoria: ['', this.isLiteMode ? [] : [Validators.required]],
       codigo: [''],
+      barcode: [''],
       isactive: [true],
       controlar_inventario: [false],
       unidad_inventario: ['und'],
@@ -633,6 +783,7 @@ export class ProductsComponent implements OnInit {
       tax: raw.tax,
       tax_value: this.resolveTaxRate(raw.tax),
       codigo: String(raw.codigo || '').trim(),
+      barcode: String(raw.barcode || '').trim() || null,
       isactive: !!raw.isactive,
       controlar_inventario: !!raw.controlar_inventario,
     };
@@ -928,6 +1079,7 @@ export class ProductsComponent implements OnInit {
     this.varianteForm.patchValue({
       item_name: variante.nombre,
       item_code: variante.codigo,
+      barcode: variante.barcode || variante.codigo_barras || '',
       standard_rate: variante.precio,
       tax_rate: variante.tax_value ?? 0,
       track_stock: !!variante.track_stock,
@@ -950,6 +1102,7 @@ export class ProductsComponent implements OnInit {
     this.varianteForm = this.fb.group({
       item_name: ['', Validators.required],
       item_code: ['', Validators.required],
+      barcode: [''],
       standard_rate: [null, [Validators.required, Validators.min(0)]],
       tax_rate: [0, Validators.required],
       track_stock: [true],
@@ -1048,6 +1201,8 @@ export class ProductsComponent implements OnInit {
     return {
       item_name: String(raw.item_name || '').toUpperCase().trim(),
       item_code: String(raw.item_code || '').trim(),
+      barcode: String(raw.barcode || '').trim() || null,
+      codigo_barras: String(raw.barcode || '').trim() || null,
       item_type: 'Producto',
       variant_of: this.variantesParent?.name,
       is_variant: 1,

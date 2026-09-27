@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 
-export type IconActionVariant = 'edit' | 'delete' | 'view' | 'duplicate' | 'add';
+export type IconActionVariant = 'edit' | 'delete' | 'view' | 'duplicate' | 'add' | 'activate';
 export type IconActionTone = 'outline' | 'warn' | 'primary';
 
 /**
@@ -34,6 +34,7 @@ export class IconActionButtonComponent {
       case 'view': return 'Ver';
       case 'duplicate': return 'Duplicar';
       case 'add': return 'Agregar';
+      case 'activate': return 'Activar';
       default: return '';
     }
   }
@@ -47,6 +48,9 @@ export class IconActionButtonComponent {
   get toneClasses(): string {
     if (this.variant === 'delete') {
       return 'border-destructive/30 bg-destructive/10 text-destructive hover:border-destructive/50 hover:bg-destructive/20';
+    }
+    if (this.variant === 'activate') {
+      return 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-100';
     }
     if (this.tone === 'primary') {
       return 'border-primary bg-primary text-primary-foreground hover:bg-primary/90';

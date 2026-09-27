@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, ViewChild } from '@angular/core';
+import { Component, HostListener, Input, OnInit, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { CartService } from '../services/cart.service';
 import { ProductsService } from 'src/app/services/products.service';
@@ -13,22 +13,28 @@ import { finalize } from 'rxjs';
 import { canSellProduct, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { ProductVariantPickerComponent } from 'src/app/shared/components/product-variant-picker/product-variant-picker.component';
+import { BarcodeScanInputComponent } from 'src/app/shared/components/barcode-scan-input/barcode-scan-input.component';
+import { ProductSearchModalComponent } from 'src/app/shared/components/product-search-modal/product-search-modal.component';
 
 type OrderType = 'Servirse' | 'Llevar' | 'Domicilio';
 
 @Component({
   selector: 'app-pos-mesero',
   standalone: true,
-  imports: [CommonModule, FormsModule, ProductVariantPickerComponent],
+  imports: [CommonModule, FormsModule, ProductVariantPickerComponent, BarcodeScanInputComponent, ProductSearchModalComponent],
   templateUrl: './pos-mesero.component.html',
   styles: [':host { display: block; height: 100%; min-height: 0; }']
 })
 export class PosMeseroComponent implements OnInit {
   @ViewChild('productVariantPicker') productVariantPicker!: ProductVariantPickerComponent;
+  @ViewChild(BarcodeScanInputComponent) barcodeScanInput?: BarcodeScanInputComponent;
+  @ViewChild(ProductSearchModalComponent) productSearchModal?: ProductSearchModalComponent;
   @Input() selectedTableId = '';
   @Input() selectedTableLabel = '';
 
   products: any[] = [];
+  /** Solo para la búsqueda avanzada (Ctrl+K): mismo catálogo pero con variantes ya expandidas. Ver `loadProductsFlat`. */
+  productsFlat: any[] = [];
   filteredProductList: any[] = [];
   categories: any[] = [];
   selectedCategory = '';
@@ -55,6 +61,40 @@ export class PosMeseroComponent implements OnInit {
     private router: Router,
     private capabilities: CompanyCapabilitiesService
   ) {}
+
+  /** Preferencia visual del POS configurada fuera del frontend; adapta solo presentación, nunca lógica de venta. */
+  get isRetailPos(): boolean {
+    return this.capabilities.isRetailPos;
+  }
+
+  /** Mismos atajos globales que en el POS Cajero: solo F-keys/Escape, nunca teclas que insertan texto. */
+  @HostListener('document:keydown', ['$event'])
+  handleKeyboardShortcut(event: KeyboardEvent): void {
+    if (event.ctrlKey && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      this.productSearchModal?.open();
+      return;
+    }
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
+
+    switch (event.key) {
+      case 'F3':
+        event.preventDefault();
+        this.productSearchModal?.open();
+        break;
+      case 'F7':
+        event.preventDefault();
+        this.toggleCartDetails();
+        break;
+      case 'F10':
+        event.preventDefault();
+        if (!this.isSubmittingOrder) void this.saveOrderMesero();
+        break;
+      case 'Escape':
+        if (this.cartExpanded) { this.cartExpanded = false; this.refocusScanner(); }
+        break;
+    }
+  }
 
   ngOnInit(): void {
     if (this.selectedTableLabel && !this.alias) this.alias = this.selectedTableLabel;
@@ -120,6 +160,22 @@ export class PosMeseroComponent implements OnInit {
         const status = Number(error?.status ?? error?.error?.status ?? 0);
         toast.error(status === 403 ? 'No tienes permiso para realizar esta operación.' : 'No se pudieron cargar los productos.');
       }
+    });
+    this.loadProductsFlat();
+  }
+
+  /**
+   * Igual que `products`, pero con `flatten_variants=1`: cada variante llega
+   * como su propia fila (con su color/talla, precio y stock reales), no el
+   * producto agrupador con "Ver variantes". Solo la usa la búsqueda avanzada
+   * (Ctrl+K): el grid de tarjetas sigue mostrando agrupadores, sin cambios.
+   */
+  private loadProductsFlat(): void {
+    this.productsService.getAll(1, undefined, 0, '', undefined, undefined, false, true).subscribe({
+      next: (res: any) => {
+        this.productsFlat = Array.isArray(res) ? res : (res?.message?.data || []);
+      },
+      error: () => undefined
     });
   }
 
@@ -202,6 +258,12 @@ export class PosMeseroComponent implements OnInit {
 
   onVariantResolved(resolved: any): void {
     this.addProduct(resolved);
+    this.refocusScanner();
+  }
+
+  /** Se usa al cerrar el picker de variantes o la búsqueda avanzada sin elegir nada, y después de agregar un producto. */
+  refocusScanner(): void {
+    this.barcodeScanInput?.focus();
   }
 
   addProduct(product: any): void {
@@ -257,6 +319,9 @@ export class PosMeseroComponent implements OnInit {
 
   toggleCartDetails(): void {
     this.cartExpanded = !this.cartExpanded;
+    // Al cerrar el carrito (no al abrirlo, ahí el mesero va a tocar la
+    // pantalla) vuelve el foco al escáner para seguir agregando productos.
+    if (!this.cartExpanded) this.refocusScanner();
   }
 
   async clearCart(): Promise<void> {
@@ -406,6 +471,9 @@ export class PosMeseroComponent implements OnInit {
     this.deliveryAddress = '';
     this.deliveryPhone = '';
     this.cartExpanded = false;
+    // La comanda se envió y el carrito quedó vacío: el foco vuelve al input
+    // de escaneo para seguir tomando el siguiente pedido sin un clic extra.
+    this.barcodeScanInput?.focus();
   }
 
   private normalize(txt: any = ''): string {
@@ -471,5 +539,6 @@ export class PosMeseroComponent implements OnInit {
         this.applyFilters();
       }
     });
+    this.loadProductsFlat();
   }
 }

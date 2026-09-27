@@ -76,6 +76,11 @@
           class="h-8 rounded-lg border border-primary/20 bg-card px-2.5 text-[11px] font-bold text-muted-foreground">
           Limpiar
         </button>
+        <app-barcode-scan-input></app-barcode-scan-input>
+        <button type="button" (click)="productSearchModal?.open()" title="Búsqueda avanzada (Ctrl+K)"
+          class="h-8 rounded-lg border border-primary/30 bg-primary/5 px-2.5 text-[11px] font-bold text-primary">
+          🔍
+        </button>
       </div>
 
       <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5">
@@ -122,15 +127,19 @@
         Cargando productos...
       </div>
 
-      <div *ngIf="!isLoadingProducts" class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
+      <div *ngIf="!isLoadingProducts" class="grid gap-2" [ngClass]="isRetailPos ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5'">
         <article
           *ngFor="let product of visibleProductList; trackBy: trackByProduct"
-          class="relative flex min-h-[132px] touch-manipulation flex-col rounded-xl border bg-card p-2 shadow-sm transition active:scale-[.98] sm:min-h-[142px] sm:p-2.5"
+          class="relative flex touch-manipulation flex-col rounded-xl border bg-card p-2 shadow-sm transition active:scale-[.98] sm:p-2.5"
           [ngClass]="{
             'border-border': canAddProduct(product),
-            'border-red-200 bg-red-50 opacity-80': !canAddProduct(product)
+            'border-red-200 bg-red-50 opacity-80': !canAddProduct(product),
+            'min-h-[132px] sm:min-h-[142px]': !isRetailPos,
+            'min-h-[160px] sm:min-h-[172px]': isRetailPos
           }">
-          <div class="mb-1 flex h-[82px] cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-muted sm:h-[92px]" (click)="addProduct(product)">
+          <div class="mb-1 flex cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-muted"
+            [ngClass]="isRetailPos ? 'h-[108px] sm:h-[122px]' : 'h-[82px] sm:h-[92px]'"
+            (click)="addProduct(product)">
             <img *ngIf="product.image_url" [src]="product.image_url" [alt]="product.nombre || product.name" class="pointer-events-none h-full w-full object-cover" />
             <span *ngIf="!product.image_url" class="pointer-events-none text-[10px] text-muted-foreground/70">Sin imagen</span>
           </div>
@@ -179,7 +188,17 @@
               </p>
             </ng-template>
 
-            <div class="mt-auto flex flex-wrap gap-1 pt-1">
+            <div *ngIf="isRetailPos" class="mt-auto flex items-center justify-between gap-1 pt-1">
+              <span *ngIf="hasInventory(product)" class="text-[10px] font-semibold"
+                [ngClass]="isOutOfStock(product) ? 'text-destructive' : (isLowStock(product) ? 'text-amber-600' : 'text-emerald-600')">
+                {{ isOutOfStock(product) ? 'Sin stock' : (isLowStock(product) ? 'Quedan ' + getInventoryLabel(product) : 'Stock ' + getInventoryLabel(product)) }}
+              </span>
+              <span *ngIf="getCartQuantityForProduct(product)" class="text-[10px] font-semibold text-primary">
+                En venta {{ getCartQuantityForProduct(product) }}
+              </span>
+            </div>
+
+            <div *ngIf="!isRetailPos" class="mt-auto flex flex-wrap gap-1 pt-1">
               <span
                 *ngIf="(product.variant_count || 0) > 0"
                 class="inline-flex w-fit rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary"
@@ -358,6 +377,13 @@
 
   <app-product-variant-picker
     #productVariantPicker
-    (resolved)="onVariantResolved($event)">
+    (resolved)="onVariantResolved($event)"
+    (cancelled)="refocusScanner()">
   </app-product-variant-picker>
+
+  <app-product-search-modal
+    [products]="productsFlat"
+    (productSelected)="onProductCardClick($event)"
+    (closed)="refocusScanner()">
+  </app-product-search-modal>
 </div>

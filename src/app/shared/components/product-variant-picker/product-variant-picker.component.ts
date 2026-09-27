@@ -210,6 +210,25 @@ export class ProductVariantPickerComponent implements OnDestroy {
   }
 
   /**
+   * Enter agrega la variante cuando la combinación ya está completa, sin
+   * forzar al cajero a mover el mouse hasta "Agregar". Si el foco está en un
+   * chip (`<button>`), se deja que su propio Enter lo active primero: no hay
+   * que duplicar esa selección acá.
+   */
+  onEnterKey(event: Event): void {
+    if (event.target instanceof HTMLButtonElement) return;
+    if (this.canConfirm) this.confirm();
+  }
+
+  /** ←/→ mueven el foco entre los chips de la misma fila (Color, Talla...), como un boutique real. */
+  focusSibling(event: Event, direction: 1 | -1): void {
+    event.preventDefault();
+    const current = event.target as HTMLElement;
+    const sibling = direction > 0 ? current.nextElementSibling : current.previousElementSibling;
+    if (sibling instanceof HTMLElement) sibling.focus();
+  }
+
+  /**
    * Invalida la caché de variantes. Hay que llamarlo después de cualquier
    * venta (el stock de la variante vendida cambió) o de crear/editar/borrar
    * una variante desde el admin: la caché no se entera sola de esos cambios,

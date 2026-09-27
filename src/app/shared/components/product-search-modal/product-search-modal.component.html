@@ -1,0 +1,61 @@
+<div *ngIf="isOpen" class="app-modal-backdrop !items-start !pt-[8vh]" (click)="close()">
+  <div class="app-modal !max-w-2xl !rounded-2xl !shadow-2xl !p-0 overflow-hidden" (click)="$event.stopPropagation()" (keydown)="onKeydown($event)">
+
+    <div class="flex items-center gap-2 border-b border-border px-4 py-3">
+      <span class="text-muted-foreground">🔍</span>
+      <input
+        #queryInput
+        type="text"
+        class="min-w-0 flex-1 border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+        placeholder="Buscar por nombre, código, código de barras o categoría…"
+        [(ngModel)]="query"
+        (ngModelChange)="onQueryChange()"
+        autocomplete="off"
+      />
+      <kbd class="hidden rounded border border-border bg-muted/50 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground sm:inline">Esc</kbd>
+    </div>
+
+    <div #resultsList class="max-h-[60vh] overflow-y-auto">
+      <button
+        *ngFor="let product of results; let i = index; trackBy: trackByProduct"
+        type="button"
+        [attr.data-index]="i"
+        (click)="select(product)"
+        (mouseenter)="activeIndex = i"
+        [disabled]="!canSelect(product)"
+        class="flex w-full items-center gap-3 border-b border-border/60 px-4 py-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-50"
+        [ngClass]="i === activeIndex ? 'bg-primary/10' : 'hover:bg-muted/40'"
+      >
+        <div class="h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+          <img *ngIf="product.image_url" [src]="product.image_url" [alt]="product.nombre" class="h-full w-full object-cover" />
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-semibold text-foreground">{{ displayName(product) }}</p>
+          <p *ngIf="attributesLabel(product)" class="truncate text-[11px] font-semibold text-primary">{{ attributesLabel(product) }}</p>
+          <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+            <span *ngIf="product.codigo">{{ product.codigo }}</span>
+            <span *ngIf="stockLabel(product)" [ngClass]="stockClass(product)" class="font-semibold">{{ stockLabel(product) }}</span>
+          </div>
+        </div>
+        <div class="shrink-0 text-right">
+          <p *ngIf="(product.variant_count || 0) > 0; else simplePrice" class="text-xs font-bold text-primary">Ver variantes</p>
+          <ng-template #simplePrice>
+            <p class="text-sm font-bold text-foreground">${{ product.precio | number:'1.2-2' }}</p>
+          </ng-template>
+        </div>
+      </button>
+
+      <div *ngIf="!results.length" class="px-4 py-10 text-center text-sm text-muted-foreground">
+        No hay productos que coincidan con "{{ query }}".
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between border-t border-border bg-muted/30 px-4 py-2 text-[10px] text-muted-foreground">
+      <span>{{ results.length }} resultado(s)</span>
+      <span class="flex items-center gap-3">
+        <span><kbd class="rounded border border-border bg-card px-1 font-mono">↑↓</kbd> moverse</span>
+        <span><kbd class="rounded border border-border bg-card px-1 font-mono">Enter</kbd> agregar</span>
+      </span>
+    </div>
+  </div>
+</div>

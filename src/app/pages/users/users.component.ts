@@ -82,9 +82,14 @@ export class UsersComponent implements OnInit, DoCheck {
     return String(this.capabilities.businessRole || '—');
   }
 
+  /** Regla 7: visibilidad/edición del módulo Usuarios. Prioriza `ui_capabilities.modules.users`; sin ese dato cae al permiso legado. */
   get canManageUsers(): boolean {
     return this.capabilities.hasPermission('*')
-      || this.capabilities.hasPermission('business.users.manage');
+      || this.capabilities.canManageInModule('users', 'business.users.manage');
+  }
+
+  get usersModuleVisible(): boolean {
+    return this.capabilities.hasPermission('*') || this.capabilities.usersModuleVisible;
   }
 
   get activeCount(): number {
@@ -95,14 +100,44 @@ export class UsersComponent implements OnInit, DoCheck {
     return this.filtered.length - this.activeCount;
   }
 
+  /**
+   * `this.roles` ya viene filtrado por licencias desde `get_available_business_roles`
+   * (el backend decide qué roles tienen sentido para este negocio; el
+   * frontend no reconstruye esa regla). Lo único que se aplica acá es una
+   * restricción de autoridad: un Gerente nunca puede asignar Administrador
+   * ni Gerente.
+   */
   get assignableRoles(): FacturadaBusinessRole[] {
     const current = this.normalized(this.capabilities.businessRole);
     if (current !== 'GERENTE') return this.roles;
-    return this.roles.filter((role) => !['ADMINISTRADOR', 'GERENTE'].includes(this.normalized(this.roleName(role))));
+    return this.roles.filter((role) => !['ADMINISTRADOR', 'GERENTE'].includes(this.normalized(this.roleValue(role))));
+  }
+
+  /**
+   * Lo que realmente se pinta en el `<select>` del formulario: `assignableRoles`
+   * más el rol que ya tenía el usuario en edición, aunque haya dejado de estar
+   * disponible — si no, el select mostraría una opción "fantasma" (el valor
+   * del control no calzaría con ningún `<option>`) para una asignación que ya
+   * existe y que el backend sigue aceptando mientras no se cambie.
+   */
+  get formRoleOptions(): FacturadaBusinessRole[] {
+    if (!this.selectedUser) return this.assignableRoles;
+    const currentRole = this.normalized(this.roleName(this.selectedUser));
+    const alreadyIncluded = this.assignableRoles.some((role) => this.normalized(this.roleValue(role)) === currentRole);
+    if (alreadyIncluded) return this.assignableRoles;
+    const existing = this.roles.find((role) => this.normalized(this.roleValue(role)) === currentRole);
+    return existing ? [...this.assignableRoles, existing] : this.assignableRoles;
+  }
+
+  /** Descripción del rol elegido, tal como la devuelve el backend (nunca un texto inventado en frontend). */
+  get selectedRoleDescription(): string {
+    const selected = this.normalized(this.form?.value?.business_role);
+    const match = this.roles.find((role) => this.normalized(this.roleValue(role)) === selected);
+    return String(match?.['description'] || match?.['descripcion'] || '');
   }
 
   get selectedRolePermissions(): string[] {
-    const selected = this.roles.find((role) => this.roleName(role) === this.form?.value?.business_role);
+    const selected = this.roles.find((role) => this.roleValue(role) === this.form?.value?.business_role);
     const permissions = selected?.permissions ?? selected?.['permission_list'] ?? [];
     return Array.isArray(permissions) ? permissions.map((item) => String(item)) : [];
   }
@@ -140,7 +175,7 @@ export class UsersComponent implements OnInit, DoCheck {
     this.loading = true;
     forkJoin({
       users: this.usersService.getBusinessUsers(business),
-      roles: this.usersService.getBusinessRoles()
+      roles: this.usersService.getAvailableBusinessRoles(business)
     }).pipe(finalize(() => {
       if (requestId === this.requestId) this.loading = false;
     })).subscribe({
@@ -173,12 +208,31 @@ export class UsersComponent implements OnInit, DoCheck {
     });
   }
 
+  /**
+   * Antes de abrir el formulario se refresca `get_user_context` para este
+   * negocio: si las licencias cambiaron desde que se cargó la pantalla, el
+   * selector de rol debe reflejarlo, no una foto vieja del contexto.
+   */
   openCreate(): void {
     if (!this.canManageUsers) return;
+    const business = this.activeBusinessId;
+    if (!business) return;
+    this.companyService.get_empresa(business).subscribe({
+      next: (context) => {
+        this.capabilities.setFromResponse(context);
+        this.openCreateForm();
+      },
+      // Si el refresco falla, se abre igual con el contexto ya cargado en
+      // memoria en vez de bloquear por completo la asignación de usuarios.
+      error: () => this.openCreateForm()
+    });
+  }
+
+  private openCreateForm(): void {
     this.selectedUser = null;
     this.selectedFrappeUser = null;
     this.submitted = false;
-    this.form.reset({ user: '', first_name: '', last_name: '', new_password: '', business_role: this.assignableRoles[0] ? this.roleName(this.assignableRoles[0]) : '', status: 'Activo', is_default: false });
+    this.form.reset({ user: '', first_name: '', last_name: '', new_password: '', business_role: this.assignableRoles[0] ? this.roleValue(this.assignableRoles[0]) : '', status: 'Activo', is_default: false });
     this.frappeUsers = [];
     this.mostrarModal = true;
   }
@@ -359,6 +413,21 @@ export class UsersComponent implements OnInit, DoCheck {
 
   roleName(record: FacturadaBusinessRole | FacturadaBusinessUser): string {
     return String(record.business_role || record.role || record.role_name || record.label || record.name || '—').trim();
+  }
+
+  /**
+   * El valor que se envía al backend como `business_role`. Para un rol del
+   * catálogo (`FacturadaBusinessRole`, de `get_available_business_roles`) es
+   * siempre `name`, exacto, sin pasar por ningún otro alias — para no romper
+   * el contrato si además trae `label`/`description` para mostrar.
+   */
+  roleValue(role: FacturadaBusinessRole): string {
+    return String(role.name || '').trim();
+  }
+
+  /** Texto a mostrar para un rol del catálogo: el `label` que trae el backend, o el `name` si no hay label. */
+  roleLabel(role: FacturadaBusinessRole): string {
+    return String(role.label || role.name || '—').trim();
   }
 
   isActive(user: FacturadaBusinessUser): boolean {

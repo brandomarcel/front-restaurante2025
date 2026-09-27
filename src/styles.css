@@ -390,7 +390,15 @@ select {
 /* ============================
    KIT UI (Products/Orders/etc)
    ============================ */
-@layer utilities {
+/* Va en `components`, no `utilities`: en Tailwind v4 el layer `utilities`
+   siempre gana sobre `components` sin importar el orden en el archivo. Este
+   bloque (.app-th/.app-td/.btn/.input/.select/.badge...) estaba en
+   `utilities`, así que un `text-right`/`text-center` puesto junto a `app-th`
+   en una plantilla NUNCA le ganaba al `text-left` fijo de `.app-th` — por
+   eso en casi toda tabla con columnas numéricas el título quedaba
+   desalineado del contenido. Con esto en `components`, las utilidades reales
+   de Tailwind (sin necesitar el sufijo `!important`) vuelven a mandar. */
+@layer components {
   /* Layout base */
   .app-container { @apply container mx-auto my-2 px-2; }
 
@@ -405,14 +413,18 @@ select {
   .select { @apply w-full md:w-60 rounded-md border border-border bg-card px-3 py-2 pr-9 text-xs text-foreground transition-colors duration-150 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20; }
 
   /* Botones */
-  .btn { @apply inline-flex items-center justify-center rounded-md px-3.5 py-2 text-xs font-semibold transition; }
-  .btn:disabled { @apply opacity-50 cursor-not-allowed; }
-  .btn-primary { @apply bg-primary text-primary-foreground hover:opacity-90; }
-  .btn-success { @apply bg-green-500 text-primary-foreground hover:opacity-90; }
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md px-3.5 py-2 text-xs font-semibold
+           transition-all duration-150 ease-out active:scale-[0.97]
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 focus-visible:ring-offset-background;
+  }
+  .btn:disabled { @apply opacity-50 cursor-not-allowed active:scale-100; }
+  .btn-primary { @apply bg-primary text-primary-foreground shadow-sm hover:opacity-90 hover:shadow-md; }
+  .btn-success { @apply bg-green-500 text-primary-foreground shadow-sm hover:opacity-90 hover:shadow-md; }
   .btn-ghost   { @apply bg-muted text-foreground hover:bg-muted-foreground/20; }
-  .btn-outline { @apply border border-border text-foreground bg-card hover:bg-muted; }
-  .btn-warn    { @apply bg-amber-300 text-black hover:bg-amber-600; }
-  .btn-danger    { @apply bg-red-400 text-black hover:bg-amber-600; }
+  .btn-outline { @apply border border-border text-foreground bg-card shadow-sm hover:border-primary/40 hover:bg-muted hover:text-primary; }
+  .btn-warn    { @apply bg-amber-300 text-black shadow-sm hover:opacity-90 hover:shadow-md; }
+  .btn-danger    { @apply bg-red-400 text-black shadow-sm hover:opacity-90 hover:shadow-md; }
 
   /* Badges */
   .badge { @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium; }
@@ -477,8 +489,9 @@ select {
   .pager { @apply mt-4 flex items-center justify-center gap-2; }
 .pager-btn {
   @apply inline-flex items-center justify-center rounded-md
-         px-3.5 py-2 text-xs font-semibold transition
-         bg-muted text-foreground hover:bg-muted-foreground/20
+         px-3.5 py-2 text-xs font-semibold transition-all duration-150 ease-out
+         bg-muted text-foreground hover:bg-muted-foreground/20 active:scale-[0.97]
+         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 focus-visible:ring-offset-background
          px-3 py-1; /* extra tamaño compacto que tenías */
 }
 
