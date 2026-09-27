@@ -1,0 +1,198 @@
+<ngx-spinner></ngx-spinner>
+
+<div class="app-container space-y-4" [formGroup]="form">
+  <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
+    <h2 class="text-xl font-bold">{{ isEditMode ? 'Editar guía de remisión' : 'Nueva guía de remisión' }}</h2>
+    <p class="text-xs opacity-90">Este documento no afecta inventario: solo emite el comprobante de transporte.</p>
+  </section>
+
+  <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
+    <h3 class="mb-2 text-sm font-bold text-foreground">Emisión</h3>
+    <div class="grid gap-3 sm:grid-cols-3">
+      <div>
+        <label class="mb-1 block text-xs font-semibold text-foreground/80">Establecimiento</label>
+        <select class="select !w-full" formControlName="establishment" (change)="onEstablishmentChange()">
+          <option value="" disabled>Seleccione un establecimiento</option>
+          <option *ngFor="let item of establishmentOptions" [value]="item.name">{{ item.establishment_name || item.name }}</option>
+        </select>
+        <p *ngIf="submitted && form.get('establishment')?.invalid" class="field-error">Requerido.</p>
+      </div>
+      <div>
+        <label class="mb-1 block text-xs font-semibold text-foreground/80">Punto de emisión</label>
+        <select class="select !w-full" formControlName="emission_point">
+          <option value="" disabled>Seleccione un punto de emisión</option>
+          <option *ngFor="let item of emissionPointOptions" [value]="item.name">{{ item.emission_point_name || item.name }}</option>
+        </select>
+        <p *ngIf="submitted && form.get('emission_point')?.invalid" class="field-error">Requerido.</p>
+      </div>
+      <div>
+        <label class="mb-1 block text-xs font-semibold text-foreground/80">Ambiente</label>
+        <select class="select !w-full" formControlName="environment">
+          <option value="Pruebas">Pruebas</option>
+          <option value="Produccion">Producción</option>
+        </select>
+      </div>
+    </div>
+    <p *ngIf="form.get('establishment')?.value && form.get('emission_point')?.value && !hasActiveSequence"
+      class="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700">
+      No existe una secuencia activa de Guía de Remisión (SRI 06) para esta combinación de establecimiento, punto de emisión y ambiente.
+      Puedes guardar el borrador, pero no podrás emitirlo hasta configurar la secuencia en Secuencias de documentos.
+    </p>
+  </section>
+
+  <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
+    <h3 class="mb-2 text-sm font-bold text-foreground">Información de transporte</h3>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <div>
+        <label class="mb-1 block text-xs font-semibold text-foreground/80">Dirección del establecimiento</label>
+        <input class="input !w-full" formControlName="dirEstablecimiento" />
+        <p *ngIf="submitted && form.get('dirEstablecimiento')?.invalid" class="field-error">Requerido.</p>
+      </div>
+      <div>
+        <label class="mb-1 block text-xs font-semibold text-foreground/80">Dirección de partida</label>
+        <input class="input !w-full" formControlName="dirPartida" />
+        <p *ngIf="submitted && form.get('dirPartida')?.invalid" class="field-error">Requerido.</p>
+      </div>
+      <div>
+        <label class="mb-1 block text-xs font-semibold text-foreground/80">Transportista (razón social)</label>
+        <input class="input !w-full" formControlName="razonSocialTransportista" />
+        <p *ngIf="submitted && form.get('razonSocialTransportista')?.invalid" class="field-error">Requerido.</p>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-foreground/80">Tipo identificación</label>
+          <select class="select !w-full" formControlName="tipoIdentificacionTransportista">
+            <option *ngFor="let item of identificationTypes" [value]="item.value">{{ item.label }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-foreground/80">RUC / identificación</label>
+          <input class="input !w-full" formControlName="rucTransportista" />
+          <p *ngIf="submitted && form.get('rucTransportista')?.errors?.['required']" class="field-error">Requerido.</p>
+          <p *ngIf="submitted && form.get('rucTransportista')?.errors?.['cedulaInvalida']" class="field-error">La cédula debe tener 10 dígitos.</p>
+          <p *ngIf="submitted && form.get('rucTransportista')?.errors?.['rucInvalido']" class="field-error">El RUC debe tener 13 dígitos.</p>
+        </div>
+      </div>
+      <div>
+        <label class="mb-1 block text-xs font-semibold text-foreground/80">Placa</label>
+        <input class="input !w-full" formControlName="placa" placeholder="ABC-1234" />
+        <p *ngIf="submitted && form.get('placa')?.errors?.['required']" class="field-error">Requerido.</p>
+        <p *ngIf="submitted && form.get('placa')?.errors?.['placaInvalida']" class="field-error">Formato de placa inválido (ej. ABC-1234).</p>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-foreground/80">Inicio transporte</label>
+          <input class="input !w-full" type="date" formControlName="fechaIniTransporte" />
+          <p *ngIf="submitted && form.get('fechaIniTransporte')?.invalid" class="field-error">Requerido.</p>
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-foreground/80">Fin transporte</label>
+          <input class="input !w-full" type="date" formControlName="fechaFinTransporte" />
+          <p *ngIf="submitted && form.get('fechaFinTransporte')?.invalid" class="field-error">Requerido.</p>
+        </div>
+      </div>
+      <p *ngIf="submitted && form.errors?.['rangoFechaInvalido']" class="field-error sm:col-span-2">La fecha de fin de transporte no puede ser anterior a la de inicio.</p>
+    </div>
+  </section>
+
+  <section class="rounded-xl border border-border bg-card p-3 shadow-sm" formArrayName="destinatarios">
+    <div class="mb-2 flex items-center justify-between">
+      <h3 class="text-sm font-bold text-foreground">Destinatarios</h3>
+      <button type="button" class="btn btn-outline" (click)="addDestinatario()">+ Destinatario</button>
+    </div>
+
+    <div *ngFor="let destinatario of destinatarios.controls; let di = index" [formGroupName]="di"
+      class="mb-3 rounded-lg border border-border bg-muted/40 p-2.5">
+      <div class="mb-2 flex items-center justify-between">
+        <p class="text-xs font-bold uppercase tracking-wide text-primary">Destinatario {{ di + 1 }}</p>
+        <button type="button" class="btn btn-warn !px-2 !py-1 !text-[11px]" (click)="removeDestinatario(di)" [disabled]="destinatarios.length <= 1">Quitar</button>
+      </div>
+
+      <div class="grid gap-2 sm:grid-cols-2">
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-foreground/80">Identificación</label>
+          <input class="input !w-full" formControlName="identificacionDestinatario" />
+          <p *ngIf="submitted && destinatario.get('identificacionDestinatario')?.errors?.['required']" class="field-error">Requerido.</p>
+          <p *ngIf="submitted && destinatario.get('identificacionDestinatario')?.errors?.['identificacionInvalida']" class="field-error">Debe tener 10 (cédula) o 13 (RUC) dígitos.</p>
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-foreground/80">Razón social</label>
+          <input class="input !w-full" formControlName="razonSocialDestinatario" />
+          <p *ngIf="submitted && destinatario.get('razonSocialDestinatario')?.invalid" class="field-error">Requerido.</p>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="mb-1 block text-xs font-semibold text-foreground/80">Dirección</label>
+          <input class="input !w-full" formControlName="dirDestinatario" />
+          <p *ngIf="submitted && destinatario.get('dirDestinatario')?.invalid" class="field-error">Requerido.</p>
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-foreground/80">Motivo de traslado</label>
+          <select class="select !w-full" formControlName="motivoTraslado">
+            <option *ngFor="let motivo of motivosTraslado" [value]="motivo">{{ motivo }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-2 rounded-md border border-dashed border-border p-2">
+        <p class="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Documento sustento (opcional)</p>
+        <div class="grid gap-2 sm:grid-cols-3">
+          <div>
+            <label class="mb-1 block text-[11px] text-foreground/70">Código</label>
+            <input class="input !w-full" formControlName="codDocSustento" placeholder="01 = Factura" />
+          </div>
+          <div>
+            <label class="mb-1 block text-[11px] text-foreground/70">N° documento</label>
+            <input class="input !w-full" formControlName="numDocSustento" placeholder="001-001-000000123" />
+            <p *ngIf="submitted && destinatario.get('numDocSustento')?.errors?.['formatoInvalido']" class="field-error">Formato esperado: 001-001-000000123.</p>
+          </div>
+          <div>
+            <label class="mb-1 block text-[11px] text-foreground/70">Fecha de emisión</label>
+            <input class="input !w-full" type="date" formControlName="fechaEmisionDocSustento" />
+          </div>
+        </div>
+        <p *ngIf="submitted && destinatario.errors?.['docSustentoIncompleto']" class="field-error">Si registras un documento sustento, completa código, número y fecha.</p>
+      </div>
+
+      <div class="mt-2" formArrayName="detalles">
+        <div class="mb-1 flex items-center justify-between">
+          <p class="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Detalles</p>
+          <button type="button" class="btn btn-outline !px-2 !py-1 !text-[11px]" (click)="addDetalle(di)">+ Detalle</button>
+        </div>
+
+        <div *ngFor="let detalle of detalles(di).controls; let ki = index" [formGroupName]="ki"
+          class="mb-1.5 grid grid-cols-1 items-start gap-2 rounded-md border border-border bg-card p-2 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,90px)_minmax(0,110px)_auto]">
+          <div class="min-w-0">
+            <input class="input !w-full" formControlName="codigoInterno" placeholder="Código" />
+            <p *ngIf="submitted && detalle.get('codigoInterno')?.invalid" class="field-error">Requerido.</p>
+          </div>
+          <div class="min-w-0">
+            <input class="input !w-full" formControlName="descripcion" placeholder="Descripción" />
+            <p *ngIf="submitted && detalle.get('descripcion')?.invalid" class="field-error">Requerido.</p>
+          </div>
+          <div class="min-w-0">
+            <input class="input !w-full" type="number" min="0.01" step="0.01" formControlName="cantidad" placeholder="Cantidad" />
+            <p *ngIf="submitted && detalle.get('cantidad')?.invalid" class="field-error">&gt; 0.</p>
+          </div>
+          <div class="min-w-0">
+            <input class="input !w-full" formControlName="unidadMedida" placeholder="Unidad" />
+            <p *ngIf="submitted && detalle.get('unidadMedida')?.invalid" class="field-error">Requerido.</p>
+          </div>
+          <button type="button" class="btn btn-warn !px-2 !py-1 !text-[11px] md:self-start" (click)="removeDetalle(di, ki)" [disabled]="detalles(di).length <= 1">Quitar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section *ngIf="validationSummary.length" class="rounded-xl border border-red-200 bg-red-50 p-3">
+    <p class="mb-1.5 text-xs font-bold text-red-700">Corrige lo siguiente antes de continuar:</p>
+    <ul class="list-disc space-y-0.5 pl-4 text-[11px] text-red-700">
+      <li *ngFor="let message of validationSummary">{{ message }}</li>
+    </ul>
+  </section>
+
+  <section class="flex flex-wrap justify-end gap-2 pb-6">
+    <button type="button" class="btn btn-outline" (click)="cancelar()">Cancelar</button>
+    <button type="button" class="btn btn-outline" [disabled]="submitting" (click)="guardarBorrador()">Guardar borrador</button>
+    <button type="button" class="btn btn-primary" [disabled]="submitting" (click)="guardarYEmitir()">Guardar y emitir</button>
+  </section>
+</div>

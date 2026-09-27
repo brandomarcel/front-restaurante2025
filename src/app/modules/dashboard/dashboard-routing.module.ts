@@ -27,6 +27,9 @@ import { InventoryComponent } from 'src/app/pages/inventory/inventory.component'
 import { StockLookupComponent } from 'src/app/pages/stock-lookup/stock-lookup.component';
 import { NoAccessComponent } from 'src/app/pages/no-access.component';
 import { TablesComponent } from 'src/app/pages/tables/tables.component';
+import { RemissionGuidesComponent } from 'src/app/pages/remission-guides/remission-guides.component';
+import { RemissionGuideDetailComponent } from 'src/app/pages/remission-guide-detail/remission-guide-detail.component';
+import { RemissionGuideFormComponent } from 'src/app/pages/remission-guide-form/remission-guide-form.component';
 
 const routes: Routes = [
   {
@@ -60,6 +63,11 @@ const routes: Routes = [
 
       { path: 'credit-notes', component: CreditNotesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'credit_note', featureKeys: ['credit_note', 'api'], readOnlyFeature: true, permissionKey: 'billing.read' } },
       { path: 'credit-note/:id', component: CreditNoteDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'credit_note', featureKeys: ['credit_note', 'api'], readOnlyFeature: true, permissionKey: 'billing.read' } },
+
+      { path: 'remission-guides', component: RemissionGuidesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'billing', readOnlyFeature: true, permissionKey: 'billing.read' } },
+      { path: 'remission-guides/new', component: RemissionGuideFormComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'billing', permissionKey: 'billing.create' } },
+      { path: 'remission-guides/:id/edit', component: RemissionGuideFormComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'billing', permissionKey: 'billing.create' } },
+      { path: 'remission-guides/:id', component: RemissionGuideDetailComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'billing', readOnlyFeature: true, permissionKey: 'billing.read' } },
       { path: 'no-access', component: NoAccessComponent },
 
       {

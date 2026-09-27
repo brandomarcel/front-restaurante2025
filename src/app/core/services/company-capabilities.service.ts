@@ -515,7 +515,7 @@ export class CompanyCapabilitiesService {
   }
 
   /** Devuelve una combinación segura para emitir; no genera secuenciales. */
-  getLiteDocumentConfiguration(documentType: 'Factura' | 'Nota de Credito', environment?: unknown): {
+  getLiteDocumentConfiguration(documentType: 'Factura' | 'Nota de Credito' | 'Guia de Remision', environment?: unknown): {
     business: string;
     establishment: any;
     emissionPoint: any;
@@ -566,6 +566,39 @@ export class CompanyCapabilitiesService {
 
   hasActiveInvoiceSequence(environment?: unknown): boolean {
     return !!this.getLiteDocumentConfiguration('Factura', environment);
+  }
+
+  /**
+   * Cada tipo documental (Factura SRI 01, Nota de Crédito SRI 04, Guía de
+   * Remisión SRI 06) tiene su propia serie por establecimiento + punto de
+   * emisión + ambiente: nunca comparten consecutivo aunque usen la misma
+   * ubicación fiscal. A diferencia de `getLiteDocumentConfiguration` (que
+   * siempre resuelve la ubicación del terminal/selección activa), esto
+   * valida una combinación explícita, para pantallas donde el usuario elige
+   * establecimiento y punto manualmente (ej. el formulario de Guía de
+   * Remisión).
+   */
+  hasActiveSequence(
+    documentType: 'Factura' | 'Nota de Credito' | 'Guia de Remision',
+    establishmentId: unknown,
+    emissionPointId: unknown,
+    environment?: unknown
+  ): boolean {
+    const establishment = String(establishmentId || '').trim();
+    const emissionPoint = String(emissionPointId || '').trim();
+    if (!establishment || !emissionPoint) return false;
+    const target = this.normalizeEnvironment(environment
+      || this.business?.environment
+      || this.business?.ambiente
+      || this.business?.tax_profile?.environment);
+    return this.sequences.some((item: any) =>
+      this.belongsToActiveBusiness(item)
+      && this.isActiveRecord(item)
+      && this.normalize(String(item?.document_type ?? item?.documentType ?? '')) === this.normalize(documentType)
+      && this.normalizeEnvironment(item?.environment) === target
+      && this.referenceId(item?.establishment) === establishment
+      && this.referenceId(item?.emission_point ?? item?.emissionPoint) === emissionPoint
+    );
   }
   get businessId(): string | null { return this.business?.name || this.business?.business || null; }
   get isLoaded(): boolean { return this.state().loaded; }

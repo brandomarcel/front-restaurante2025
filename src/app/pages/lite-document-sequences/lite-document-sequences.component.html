@@ -39,7 +39,7 @@
     </div>
     <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
       <p class="text-xs font-semibold text-foreground/80">Configurando: {{ selectedEstablishmentLabel }} · {{ selectedEmissionPointLabel }}</p>
-      <div class="flex flex-wrap items-center gap-2"><select class="select !w-auto" [(ngModel)]="documentFilter"><option value="all">Todos los documentos</option><option value="Factura">Facturas</option><option value="Nota de Credito">Notas de crédito</option></select><select class="select !w-auto" [(ngModel)]="environmentFilter"><option value="all">Todos los ambientes</option><option value="Pruebas">Pruebas</option><option value="Produccion">Producción</option></select><p class="text-[11px] text-muted-foreground">{{ canManage ? 'Puede administrar' : 'Modo lectura' }}</p></div>
+      <div class="flex flex-wrap items-center gap-2"><select class="select !w-auto" [(ngModel)]="documentFilter"><option value="all">Todos los documentos</option><option value="Factura">Facturas</option><option value="Nota de Credito">Notas de crédito</option><option value="Guia de Remision">Guías de remisión</option></select><select class="select !w-auto" [(ngModel)]="environmentFilter"><option value="all">Todos los ambientes</option><option value="Pruebas">Pruebas</option><option value="Produccion">Producción</option></select><p class="text-[11px] text-muted-foreground">{{ canManage ? 'Puede administrar' : 'Modo lectura' }}</p></div>
     </div>
   </section>
 
@@ -60,7 +60,7 @@
       [ngClass]="sequenceState(sequenceFor(item.documentType, item.environment)) === 'ready' ? 'border-emerald-200 bg-emerald-50/60' : (sequenceState(sequenceFor(item.documentType, item.environment)) === 'blocked' ? 'border-amber-200 bg-amber-50/70' : 'border-border bg-card')">
       <div class="flex items-start justify-between gap-2">
         <div>
-          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{{ item.documentType }}</p>
+          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{{ documentTypeLabel(item.documentType) }} <span class="text-muted-foreground/70">(SRI {{ sriCode(item.documentType) }})</span></p>
           <p class="mt-1 text-sm font-bold text-foreground">{{ item.environment }}</p>
         </div>
         <span class="rounded-full px-2 py-1 text-[10px] font-semibold"
@@ -99,7 +99,8 @@
       <tbody>
         <tr *ngFor="let sequence of visibleSequences; trackBy: trackBy" class="app-tr">
           <td class="app-td">
-            <span class="font-semibold text-foreground">{{ sequence.document_type || '—' }}</span>
+            <span class="font-semibold text-foreground">{{ documentTypeLabel(sequence.document_type) }}</span>
+            <span class="ml-1 text-[10px] text-muted-foreground">(SRI {{ sriCode(sequence.document_type) }})</span>
           </td>
           <td class="app-td"><span class="inline-flex rounded-full bg-muted px-2 py-1 text-[11px] font-semibold text-foreground/80">{{ sequence.environment || '—' }}</span></td>
           <td class="app-td text-muted-foreground"><span class="block">{{ sequence.establishment_code || selectedEstablishment?.establishment_code || '—' }} · {{ sequence.establishment_name || selectedEstablishment?.establishment_name || '—' }}</span><span class="mt-0.5 block text-[11px]">{{ sequence.emission_point_code || selectedEmissionPoint?.emission_point_code || '—' }} · {{ sequence.emission_point_name || selectedEmissionPoint?.emission_point_name || '—' }}</span></td>
@@ -115,7 +116,7 @@
   <section *ngIf="!loading && selectedEstablishmentId && selectedEmissionPointId && !visibleSequences.length && !error" class="app-card p-8 text-center">
     <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-xl text-indigo-600">＋</div>
     <h2 class="mt-3 text-sm font-semibold text-foreground">No hay secuencias para este filtro</h2>
-    <p class="mt-1 text-xs text-muted-foreground">Crea una secuencia para Factura o Nota de Crédito en el ambiente correspondiente.</p>
+    <p class="mt-1 text-xs text-muted-foreground">Crea una secuencia para Factura, Nota de Crédito o Guía de Remisión en el ambiente correspondiente.</p>
     <button *ngIf="canManage && !sequences.length" type="button" class="btn btn-primary mt-4" (click)="openCreate()">Crear la primera secuencia</button>
   </section>
 
@@ -126,7 +127,7 @@
         <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div><label class="mb-1 block text-xs font-semibold text-foreground/80">Establecimiento</label><select class="select" formControlName="establishment"><option *ngFor="let establishment of activeEstablishments" [value]="establishment.name">{{ establishment.establishment_code }} - {{ establishment.establishment_name || establishment.name }}</option></select></div>
           <div><label class="mb-1 block text-xs font-semibold text-foreground/80">Punto de emisión</label><select class="select" formControlName="emission_point"><option *ngFor="let point of activeEmissionPoints" [value]="point.name">{{ point.emission_point_code }} - {{ point.emission_point_name || point.name }}</option></select></div>
-          <div><label class="mb-1 block text-xs font-semibold text-foreground/80">Tipo de documento</label><select class="select" formControlName="document_type"><option *ngFor="let type of documentTypes" [value]="type">{{ type }}</option></select></div>
+          <div><label class="mb-1 block text-xs font-semibold text-foreground/80">Tipo de documento</label><select class="select" formControlName="document_type"><option *ngFor="let type of documentTypes" [value]="type">{{ documentTypeLabel(type) }} (SRI {{ sriCode(type) }})</option></select></div>
           <div><label class="mb-1 block text-xs font-semibold text-foreground/80">Ambiente</label><select class="select" formControlName="environment"><option *ngFor="let environment of environments" [value]="environment">{{ environment }}</option></select></div>
           <div><label class="mb-1 block text-xs font-semibold text-foreground/80">Estado</label><select class="select" formControlName="status"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select></div>
           <div><label class="mb-1 block text-xs font-semibold text-foreground/80">Último número utilizado</label><input class="input" type="number" min="0" max="999999999" step="1" formControlName="current_number" /><p class="mt-1 text-[11px] text-muted-foreground">Se mostrará con nueve dígitos. No puede disminuirse al editar.</p><p *ngIf="submitted && form.get('current_number')?.invalid" class="field-error">Ingrese un número entero entre 0 y 999999999.</p><p *ngIf="consecutiveError" class="field-error">{{ consecutiveError }}</p></div>

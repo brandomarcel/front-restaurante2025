@@ -1,0 +1,152 @@
+<ngx-spinner></ngx-spinner>
+
+<header class="mb-3 rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
+  <div class="app-container flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <button class="btn btn-ghost px-2 py-1" (click)="goBack()" aria-label="Volver a Guías de Remisión">
+        <fa-icon icon="arrow-left"></fa-icon>
+        <span class="ml-2 hidden sm:inline">Atrás</span>
+      </button>
+
+      <div>
+        <div class="flex items-center gap-3">
+          <h1 class="text-base font-bold leading-tight text-foreground sm:text-lg">
+            Guía de Remisión <span class="text-muted-foreground">#{{ documentNumber }}</span>
+          </h1>
+          <span class="badge" [ngClass]="statusBadge">{{ statusLabel }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Acciones rápidas (solo desktop) -->
+    <div class="hidden items-center gap-1.5 md:flex">
+      <button *ngIf="canEmitDraft" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" [disabled]="actionRunning" (click)="emitirBorrador()">Emitir</button>
+      <button *ngIf="canEdit" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" [routerLink]="['/dashboard/remission-guides', guide?.name, 'edit']">Editar</button>
+      <button *ngIf="isAuthorized" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="downloadPdf()">
+        <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Descargar PDF
+      </button>
+      <button *ngIf="isAuthorized" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="downloadXml()">XML</button>
+      <button *ngIf="canConsult" class="btn btn-warn !px-3 !py-1.5 !text-[11px]" [disabled]="actionRunning" (click)="consultarAutorizacion()">Consultar autorización</button>
+      <button *ngIf="canRetry" class="btn btn-warn !px-3 !py-1.5 !text-[11px]" [disabled]="actionRunning" (click)="reintentar()">Reintentar</button>
+    </div>
+  </div>
+</header>
+
+<main *ngIf="guide" class="app-container space-y-3 pb-20 md:pb-0">
+  <!-- FILA 1: Información general + Transporte + SRI -->
+  <section class="grid grid-cols-1 gap-3 md:grid-cols-3">
+    <div class="app-card p-3">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-foreground">🧾 Información general</h3>
+        <span class="badge" [ngClass]="statusBadge">{{ statusLabel }}</span>
+      </div>
+      <ul class="grid gap-y-2 text-sm text-foreground/80">
+        <li><strong>ID:</strong> {{ guide?.name || '—' }}</li>
+        <li><strong>N° documento:</strong> {{ documentNumber }}</li>
+        <li><strong>Fecha emisión:</strong> {{ guide?.posting_date || '—' }}</li>
+        <li><strong>Ambiente:</strong> {{ guide?.environment || '—' }}</li>
+        <li><strong>Estado:</strong> {{ statusLabel }}</li>
+      </ul>
+    </div>
+
+    <div class="app-card p-3">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-foreground">🚚 Transporte</h3>
+      </div>
+      <ul class="grid gap-y-2 text-sm text-foreground/80">
+        <li><strong>Transportista:</strong> {{ guide?.transport?.razon_social_transportista || '—' }}</li>
+        <li><strong>Identificación:</strong> {{ identificationLabel(guide?.transport?.tipo_identificacion_transportista) }} {{ guide?.transport?.ruc_transportista || '' }}</li>
+        <li><strong>Placa:</strong> {{ guide?.transport?.placa || '—' }}</li>
+        <li><strong>Dirección establecimiento:</strong> {{ guide?.transport?.dir_establecimiento || '—' }}</li>
+        <li><strong>Dirección partida:</strong> {{ guide?.transport?.dir_partida || '—' }}</li>
+        <li><strong>Fecha inicio:</strong> {{ guide?.transport?.fecha_ini_transporte || '—' }}</li>
+        <li><strong>Fecha fin:</strong> {{ guide?.transport?.fecha_fin_transporte || '—' }}</li>
+      </ul>
+    </div>
+
+    <div class="app-card p-3">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-foreground">📤 Información del SRI</h3>
+        <span class="badge" [ngClass]="statusBadge">{{ statusLabel }}</span>
+      </div>
+      <ul class="grid gap-y-2 text-sm text-foreground/80">
+        <li><strong>Estado FacturADA:</strong> {{ statusLabel }}</li>
+        <li *ngIf="providerStatus !== '—'"><strong>Estado proveedor:</strong> {{ providerStatus }}</li>
+        <li *ngIf="accessKey">
+          <strong>Clave de acceso:</strong>
+          <span class="break-all">{{ accessKey }}</span>
+          <button type="button" class="ml-2 text-primary underline" (click)="copyAccessKey()">Copiar</button>
+        </li>
+        <li *ngIf="authorizationNumber"><strong>Autorización:</strong> {{ authorizationNumber }}</li>
+        <li *ngIf="authorizationDatetime"><strong>Fecha autorización:</strong> {{ authorizationDatetime }}</li>
+        <li *ngIf="emissionError" class="text-red-700"><strong>Error de envío:</strong> {{ emissionError }}</li>
+        <li *ngIf="!emissionError && sriMessage"><strong>Mensaje SRI:</strong> {{ sriMessage }}</li>
+        <li *ngIf="!accessKey && !sriMessage && !emissionError" class="text-muted-foreground">Sin información adicional del SRI todavía.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- FILA 2: Destinatarios y detalles (ancho completo) -->
+  <section>
+    <div class="app-card p-3">
+      <div class="mb-2 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-foreground">📦 Destinatarios</h3>
+      </div>
+
+      <div class="space-y-3">
+        <article *ngFor="let destinatario of destinatarios" class="rounded-lg border border-border bg-muted/40 p-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <p class="font-semibold text-foreground">{{ destinatario.razon_social_destinatario || '—' }}</p>
+            <span class="text-[11px] text-muted-foreground">{{ destinatario.identificacion_destinatario || '—' }}</span>
+          </div>
+          <p class="mt-0.5 text-[11px] text-muted-foreground">{{ destinatario.dir_destinatario || '—' }}</p>
+          <p class="mt-0.5 text-[11px] text-muted-foreground">
+            Motivo: {{ destinatario.motivo_traslado || '—' }}
+            <span *ngIf="destinatario.num_doc_sustento"> · Doc. sustento: {{ destinatario.num_doc_sustento }}</span>
+          </p>
+
+          <div class="app-table-wrap mt-2">
+            <table class="app-table">
+              <thead class="app-thead">
+                <tr>
+                  <th class="p-3 text-left">Código</th>
+                  <th class="p-3 text-left">Descripción</th>
+                  <th class="p-3 text-left">Cantidad</th>
+                  <th class="p-3 text-left">Unidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let detalle of destinatario.detalles" class="app-tr">
+                  <td class="p-3">{{ detalle.codigo_interno || detalle.codigoInterno || '—' }}</td>
+                  <td class="p-3">{{ detalle.descripcion || '—' }}</td>
+                  <td class="p-3">{{ detalle.cantidad ?? 0 }}</td>
+                  <td class="p-3">{{ detalle.unidad_medida || detalle.unidadMedida || '—' }}</td>
+                </tr>
+                <tr *ngIf="!destinatario.detalles?.length">
+                  <td colspan="4" class="p-4 text-center text-muted-foreground">Sin detalles.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <div *ngIf="!destinatarios.length" class="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+          No hay destinatarios registrados.
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Barra de acciones móvil (fija en el pie de la página) -->
+<div *ngIf="guide"
+  class="fixed inset-x-0 bottom-0 z-40 flex justify-center gap-2 border-t bg-card px-4 py-2 text-center md:hidden">
+  <button *ngIf="canEmitDraft" class="btn btn-primary" [disabled]="actionRunning" (click)="emitirBorrador()">Emitir</button>
+  <button *ngIf="canEdit" class="btn btn-outline" [routerLink]="['/dashboard/remission-guides', guide?.name, 'edit']">Editar</button>
+  <button *ngIf="isAuthorized" class="btn btn-primary" (click)="downloadPdf()">
+    <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>PDF
+  </button>
+  <button *ngIf="isAuthorized" class="btn btn-outline" (click)="downloadXml()">XML</button>
+  <button *ngIf="canConsult" class="btn btn-warn" [disabled]="actionRunning" (click)="consultarAutorizacion()">Consultar</button>
+  <button *ngIf="canRetry" class="btn btn-warn" [disabled]="actionRunning" (click)="reintentar()">Reintentar</button>
+</div>

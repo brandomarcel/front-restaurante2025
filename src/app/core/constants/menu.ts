@@ -83,6 +83,13 @@ export class Menu {
           featureKeys: ['credit_note', 'api'],
           permissionKey: 'billing.read',
         },
+        {
+          icon: 'assets/icons/tablericons/file-invoice.svg',
+          label: 'Guías de Remisión',
+          route: '/dashboard/remission-guides',
+          featureKey: 'billing',
+          permissionKey: 'billing.read',
+        },
       ],
     },
 

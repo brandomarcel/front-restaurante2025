@@ -103,5 +103,15 @@ export class PrintService {
     return `/api/method/facturada_lite.api.frontend.download_lite_invoice_pdf?invoice_name=${encodeURIComponent(factId)}&format=Credit%20Note&no_letterhead=1${business ? `&business=${encodeURIComponent(business)}` : ''}`;
   }
 
-  
+  /** Solo disponible cuando la guía está Autorizada; el backend valida esto igualmente. */
+  getRemissionGuidePdf(guideName: string) {
+    const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || '';
+    return `/api/method/facturada_lite.api.frontend.download_lite_remission_guide_pdf?guide_name=${encodeURIComponent(guideName)}&format=FacturADA%20Lite%20Remission%20Guide&print_format=FacturADA%20Lite%20Remission%20Guide&no_letterhead=1${business ? `&business=${encodeURIComponent(business)}` : ''}`;
+  }
+
+  getRemissionGuideXml(guideName: string) {
+    const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || '';
+    return `/api/method/facturada_lite.api.frontend.download_lite_remission_guide_xml?guide_name=${encodeURIComponent(guideName)}${business ? `&business=${encodeURIComponent(business)}` : ''}`;
+  }
+
 }

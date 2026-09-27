@@ -1,0 +1,86 @@
+<div class="app-container space-y-4">
+  <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 class="text-xl font-bold">Guías de Remisión</h2>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="rounded-full bg-card/20 px-3 py-1 text-xs font-semibold">Registros: {{ total }}</div>
+        <button *ngIf="capabilities.hasPermission('billing.create')" class="btn btn-primary" routerLink="/dashboard/remission-guides/new">
+          + Nueva guía
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="rounded-xl border border-primary/15 bg-card p-4 shadow-sm">
+    <div class="toolbar !mb-0">
+      <div class="flex w-full flex-col gap-2 sm:flex-row">
+        <input class="input" type="search" [(ngModel)]="search" placeholder="Buscar por número, destinatario o clave de acceso..." />
+        <select class="input sm:max-w-[190px]" [(ngModel)]="statusFilter" (change)="page = 1; loadGuides()">
+          <option value="">Todos los estados</option>
+          <option value="Borrador">Borrador</option>
+          <option value="Pendiente Emision">Pendiente emisión</option>
+          <option value="Emitida">Emitida</option>
+          <option value="Autorizada">Autorizada</option>
+          <option value="Rechazada">Rechazada</option>
+          <option value="Error de Envio">Error de envío</option>
+        </select>
+      </div>
+      <app-button (click)="limpiarFiltros()" impact="bold" tone="light" shape="rounded" size="small">Limpiar</app-button>
+    </div>
+  </section>
+
+  <ng-container *ngIf="guides.length > 0; else empty">
+    <section class="app-table-wrap">
+      <table class="app-table text-xs">
+        <thead class="app-thead">
+          <tr>
+            <th class="app-th">Documento</th>
+            <th class="app-th">Fecha</th>
+            <th class="app-th">Destinatario</th>
+            <th class="app-th">Ambiente</th>
+            <th class="app-th">Estado</th>
+            <th class="app-th text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let guide of guides" class="app-tr">
+            <td class="app-td">
+              <div class="flex flex-col">
+                <span class="font-semibold">{{ documentNumber(guide) }}</span>
+                <span class="text-[11px] text-muted-foreground">{{ guide.name }}</span>
+              </div>
+            </td>
+            <td class="app-td">{{ (guide.posting_date || guide.createdAt || guide.creation) | ecuadorTime }}</td>
+            <td class="app-td">{{ recipientsSummary(guide) }}</td>
+            <td class="app-td">{{ guide.environment || '—' }}</td>
+            <td class="app-td">
+              <span class="badge" [ngClass]="getStatusBadge(guide.status)">{{ getStatusLabel(guide.status) }}</span>
+            </td>
+            <td class="app-td text-center">
+              <div class="flex items-center justify-center gap-1.5">
+                <button class="btn btn-outline" [routerLink]="['/dashboard/remission-guides', guide.name]">Ver</button>
+                <button *ngIf="isDraft(guide) && capabilities.hasPermission('billing.create')" class="btn btn-outline"
+                  [routerLink]="['/dashboard/remission-guides', guide.name, 'edit']">Editar</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <app-pagination
+        [page]="page"
+        [totalPages]="totalPages"
+        [totalItems]="total"
+        [pageSize]="pageSize"
+        (pageChange)="onPaginationPage($event)"
+        (pageSizeChange)="onPaginationPageSize($event)">
+      </app-pagination>
+    </section>
+  </ng-container>
+
+  <ng-template #empty>
+    <div class="app-card"><div class="app-card-body text-center text-muted-foreground">No hay guías de remisión para los filtros seleccionados.</div></div>
+  </ng-template>
+</div>

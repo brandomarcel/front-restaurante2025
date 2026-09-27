@@ -28,15 +28,27 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
   selectedEstablishmentId = '';
   selectedEmissionPointId = '';
   environmentFilter: 'all' | 'Pruebas' | 'Produccion' = 'all';
-  documentFilter: 'all' | 'Factura' | 'Nota de Credito' = 'all';
+  documentFilter: 'all' | 'Factura' | 'Nota de Credito' | 'Guia de Remision' = 'all';
 
-  readonly documentTypes = ['Factura', 'Nota de Credito'];
+  readonly documentTypes = ['Factura', 'Nota de Credito', 'Guia de Remision'];
   readonly environments = ['Pruebas', 'Produccion'];
+  /**
+   * Cada tipo documental tiene su propia serie SRI (Factura 01, Nota de
+   * Crédito 04, Guía de Remisión 06): el mismo establecimiento y punto de
+   * emisión llevan tres consecutivos independientes, nunca uno compartido.
+   */
+  readonly sriCodes: Record<string, string> = {
+    'FACTURA': '01',
+    'NOTA DE CREDITO': '04',
+    'GUIA DE REMISION': '06'
+  };
   readonly sequenceMatrix = [
     { documentType: 'Factura', environment: 'Pruebas', label: 'Factura · Pruebas' },
     { documentType: 'Factura', environment: 'Produccion', label: 'Factura · Producción' },
     { documentType: 'Nota de Credito', environment: 'Pruebas', label: 'Nota de crédito · Pruebas' },
-    { documentType: 'Nota de Credito', environment: 'Produccion', label: 'Nota de crédito · Producción' }
+    { documentType: 'Nota de Credito', environment: 'Produccion', label: 'Nota de crédito · Producción' },
+    { documentType: 'Guia de Remision', environment: 'Pruebas', label: 'Guía de remisión · Pruebas' },
+    { documentType: 'Guia de Remision', environment: 'Produccion', label: 'Guía de remisión · Producción' }
   ] as const;
 
   private loadedBusiness = '';
@@ -279,6 +291,19 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
 
   displayName(sequence: any): string {
     return `${sequence?.document_type || 'Documento'} · ${sequence?.environment || '—'}`;
+  }
+
+  /** Código SRI del tipo documental (01 Factura, 04 Nota de Crédito, 06 Guía de Remisión). */
+  sriCode(documentType: unknown): string {
+    return this.sriCodes[this.normalize(documentType)] || '—';
+  }
+
+  documentTypeLabel(documentType: unknown): string {
+    const key = this.normalize(documentType);
+    if (key === 'FACTURA') return 'Factura';
+    if (key === 'NOTA DE CREDITO') return 'Nota de Crédito';
+    if (key === 'GUIA DE REMISION') return 'Guía de Remisión';
+    return String(documentType || '—');
   }
 
   isActive(sequence: any): boolean {
