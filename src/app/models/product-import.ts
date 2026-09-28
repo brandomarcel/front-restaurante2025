@@ -12,7 +12,17 @@ export interface ProductImportRow {
   category?: string;
   price?: number;
   track_stock?: boolean;
-  initial_stock?: number;
+  stock_initial?: number;
+  /** Columna `stock_minimo`: solo tiene sentido en variantes (o productos sin variantes). */
+  minimum_stock?: number;
+  stock_minimo?: number;
+  /**
+   * Columna `atributos` (ej. "Color=Negro"): lo que distingue a una variante
+   * de otra. El backend puede devolverlo como texto plano o ya parseado en
+   * un arreglo de `{attribute, value}`; por eso el tipo queda abierto.
+   */
+  attributes?: string | Array<{ attribute?: string; atributo?: string; name?: string; value?: string; valor?: string }>;
+  atributos?: string | Array<{ attribute?: string; atributo?: string; name?: string; value?: string; valor?: string }>;
   is_variant: boolean;
   parent_code?: string;
   status?: string;

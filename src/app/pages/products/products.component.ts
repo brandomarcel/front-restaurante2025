@@ -32,6 +32,7 @@ import {
   ProductImportConfirmResult,
   ProductImportMode,
   ProductImportPreview,
+  ProductImportRow,
 } from 'src/app/models/product-import';
 
 type StockEditMode = 'absolute' | 'delta';
@@ -362,6 +363,7 @@ export class ProductsComponent implements OnInit {
       finalize(() => this.importValidating = false)
     ).subscribe({
       next: (preview: ProductImportPreview) => {
+        console.log('Import preview:', preview);
         this.importPreview = preview;
         if (!preview?.summary?.total) {
           toast.warning('El archivo no tiene filas para importar.');
@@ -376,6 +378,54 @@ export class ProductsComponent implements OnInit {
         this.importError = this.frappeErrorService.handle(err) || 'No se pudo validar el archivo.';
       }
     });
+  }
+
+  /**
+   * Atributos legibles de la fila. El backend puede devolver `atributos` como
+   * texto plano ("Color=Negro,Talla=M") o ya parseado en un arreglo de
+   * objetos `{attribute, value}` (el mismo formato que usa el formulario de
+   * variantes) — hay que soportar ambos, nunca convertir el arreglo a string
+   * directamente o se muestra "[object Object]".
+   */
+  importRowAttributes(row: ProductImportRow): string {
+    const source: any = row.atributos ?? row.attributes;
+    if (!source) return '';
+    if (Array.isArray(source)) {
+      return source
+        .map((item: any) => {
+          if (item && typeof item === 'object') {
+            const attr = String(item.attribute ?? item.atributo ?? item.name ?? '').trim();
+            const value = String(item.value ?? item.valor ?? '').trim();
+            return attr && value ? `${attr}: ${value}` : '';
+          }
+          return String(item ?? '').trim();
+        })
+        .filter(Boolean)
+        .join(' · ');
+    }
+    const raw = String(source).trim();
+    if (!raw) return '';
+    return raw.split(',').map((pair) => pair.trim().replace('=', ': ')).filter(Boolean).join(' · ');
+  }
+
+  importRowMinimumStock(row: ProductImportRow): number | null {
+    const value = row.stock_minimo ?? row.minimum_stock;
+    return value === undefined || value === null ? null : Number(value);
+  }
+
+  /**
+   * Un producto agrupador (no es variante, pero otras filas del mismo
+   * archivo lo referencian como `parent_code`) nunca maneja stock propio: el
+   * stock real vive en cada variante. Mostrarlo igual que una fila normal
+   * confunde al usuario ("¿por qué este producto tiene stock 0?").
+   */
+  isImportGrouperRow(row: ProductImportRow): boolean {
+    if (!this.importPreview || row.is_variant) return false;
+    return this.importPreview.rows.some((item) => item.parent_code === row.code && item.is_variant);
+  }
+
+  get importHasVariants(): boolean {
+    return !!this.importPreview?.rows?.some((row) => row.is_variant);
   }
 
   get canConfirmImport(): boolean {
@@ -1084,6 +1134,7 @@ export class ProductsComponent implements OnInit {
       tax_rate: variante.tax_value ?? 0,
       track_stock: !!variante.track_stock,
       isactive: toInventoryBool(variante.isactive ?? true),
+      stock_minimo: toInventoryNumber(variante.stock_minimo, 0),
     });
 
     this.vfAttributes.clear();
@@ -1111,6 +1162,10 @@ export class ProductsComponent implements OnInit {
       // Entrada después de crear la variante, igual que si se hiciera desde
       // Inventario, para no perder el historial de movimientos.
       stock_inicial: [0, [Validators.min(0)]],
+      // A diferencia del stock inicial, es solo un umbral informativo (para
+      // la alerta de "bajo stock"): se puede editar libremente al crear o
+      // al editar, sin generar ningún movimiento de inventario.
+      stock_minimo: [0, [Validators.min(0)]],
       attributes: this.fb.array([]),
     });
     this.vfAttributes.clear();
@@ -1213,6 +1268,7 @@ export class ProductsComponent implements OnInit {
       tax_rate: Number(raw.tax_rate || 0),
       track_stock: raw.track_stock ? 1 : 0,
       isactive: !!raw.isactive,
+      stock_minimo: Number(raw.stock_minimo || 0),
     };
   }
 
