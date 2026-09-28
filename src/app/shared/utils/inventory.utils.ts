@@ -76,11 +76,22 @@ export function isOutOfStockProduct(product: Partial<Product> | null | undefined
 }
 
 export function isLowStockProduct(product: Partial<Product> | null | undefined): boolean {
+  const item: any = product || {};
+
+  // Un agrupador siempre tiene su propio `current_stock` en 0 (su stock real
+  // vive en las variantes), así que compararlo contra su propio mínimo
+  // siempre daría "bajo stock" sin importar cuánto tengan las variantes. Sin
+  // una señal agregada explícita del backend, lo correcto es no adivinar.
+  if (isVariantGrouper(product)) {
+    return item.is_low_stock !== undefined && item.is_low_stock !== null
+      ? toInventoryBool(item.is_low_stock)
+      : false;
+  }
+
   if (!hasInventoryControl(product)) {
     return false;
   }
 
-  const item: any = product || {};
   if (item.is_low_stock !== undefined && item.is_low_stock !== null) {
     return toInventoryBool(item.is_low_stock);
   }
