@@ -13,6 +13,7 @@ import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabi
 import { liteEmissionMessages } from 'src/app/core/utils/lite-invoice-emission';
 import { canConsultLiteInvoice, canRetryLiteInvoice, getLiteInvoiceAction } from 'src/app/core/utils/lite-invoice-actions';
 import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
+import { electronicDocumentLabel } from 'src/app/core/utils/electronic-document';
 
 @Component({
   selector: 'app-invoices',
@@ -211,7 +212,7 @@ export class InvoicesComponent implements OnInit {
       return;
     }
 
-    if (this.capabilities.isLiteMode && !this.isLiteRetryable(this.invoiceSelected) && !this.isLiteProcessing(this.invoiceSelected)) {
+    if (!this.canRunSriAction) {
       toast.info('Esta factura no está disponible para reintento ni consulta de estado.');
       return;
     }
@@ -283,6 +284,7 @@ export class InvoicesComponent implements OnInit {
   }
 
   getInvoiceStatusLabel(invoice: any): string {
+    if (this.capabilities.isLiteMode) return electronicDocumentLabel(invoice);
     const status = String(invoice?.status || invoice?.sri?.status || '').trim().toUpperCase();
     const provider = String(invoice?.sri?.provider_status || invoice?.provider_status || '').trim().toUpperCase();
     const code = String(invoice?.sri?.sri_code || invoice?.sri?.status_code || invoice?.sri?.code || invoice?.sri_code || invoice?.status_code || invoice?.provider_status_code || '').trim().toUpperCase();
@@ -294,7 +296,7 @@ export class InvoicesComponent implements OnInit {
   getInvoiceStatusBadge(invoice: any): string {
     const label = this.getInvoiceStatusLabel(invoice);
     if (label === 'Autorizada') return 'badge-green';
-    if (label === 'Rechazada' || label === 'Error' || label === 'Error de envío' || label === 'Anulada') return 'badge-red';
+    if (['Rechazada', 'Devuelta', 'No autorizada', 'Error', 'Error de envío', 'Anulada'].includes(label)) return 'badge-red';
     if (label === 'Reemplazada') return 'badge-gray';
     return 'badge-yellow';
   }
@@ -338,6 +340,13 @@ export class InvoicesComponent implements OnInit {
   get sriActionLabel(): string {
     if (this.capabilities.isLiteMode) return this.isLiteRetryable(this.invoiceSelected) ? 'Reintentar emisión' : 'Consultar autorización';
     return 'Reenviar factura';
+  }
+
+  get canRunSriAction(): boolean {
+    if (!this.invoiceSelected || !this.capabilities.hasPermission('billing.manage')) return false;
+    const action = getLiteInvoiceAction(this.invoiceSelected);
+    // The legacy emit endpoint must never be used for a consultation.
+    return action === 'retry' || (this.capabilities.isLiteMode && action === 'consult');
   }
 
   private readActionError(error: any): string {

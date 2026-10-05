@@ -5,10 +5,11 @@ import { AlertService } from 'src/app/core/services/alert.service';
 import { CajasService } from 'src/app/services/cajas.service';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 
 @Component({
   selector: 'app-retiro-caja',
-  imports: [CommonModule, FormsModule, ButtonComponent],
+  imports: [CommonModule, FormsModule, ButtonComponent, DecimalInputDirective],
   templateUrl: './retiro-caja.component.html',
   styleUrls: ['./retiro-caja.component.css']
 })

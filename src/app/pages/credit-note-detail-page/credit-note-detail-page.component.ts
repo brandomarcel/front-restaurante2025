@@ -7,21 +7,23 @@ import { environment } from 'src/environments/environment';
 import { toast } from 'ngx-sonner';
 import { PrintService } from 'src/app/services/print.service';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { CreditNoteService } from 'src/app/services/credit-note.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { finalize } from 'rxjs';
 import { canConsultLiteInvoice, canRetryLiteInvoice } from 'src/app/core/utils/lite-invoice-actions';
+import { ElectronicStatusPanelComponent } from 'src/app/shared/components/electronic-status-panel/electronic-status-panel.component';
+import { electronicDocumentLabel } from 'src/app/core/utils/electronic-document';
 @Component({
   selector: 'app-credit-note-detail-page',
   standalone: true,
   imports: [CommonModule,
     RouterModule,
     // EcuadorTimePipe,
-    FontAwesomeModule],
+    FontAwesomeModule, ElectronicStatusPanelComponent],
   templateUrl: './credit-note-detail-page.component.html',
   styleUrl: './credit-note-detail-page.component.css'
 })
 export class CreditNoteDetailPageComponent implements OnInit {
+  activeDetailTab: 'general' | 'electronic' = 'general';
   invoice: any = null;
   loading = true;
   error = '';
@@ -35,7 +37,6 @@ export class CreditNoteDetailPageComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private invoicesSvc: CreditNoteService,
     private liteInvoicesSvc: InvoicesService,
     private printSvc: PrintService,
     public capabilities: CompanyCapabilitiesService,
@@ -46,24 +47,31 @@ export class CreditNoteDetailPageComponent implements OnInit {
     this.fetch(id);
   }
 
-  fetch(id: string) {
-    this.loading = true; this.error = '';
-    const request$ = this.capabilities.isLiteMode
-      ? this.liteInvoicesSvc.getLiteCreditNoteDetail(id)
-      : this.invoicesSvc.getCreditNoteDetail(id);
-    request$.subscribe({
+  fetch(id: string): void {
+    this.invoice = null;
+    this.error = '';
+    const name = String(id ?? '').trim();
+    if (!name) {
+      this.loading = false;
+      this.error = 'Nota de crédito no encontrada';
+      return;
+    }
 
-      next: (res: any) => {
-        console.log('res', res);
-        this.invoice = res || res?.message?.data || res?.message || null;
-        this.loading = false;
-        if (!this.invoice) this.error = 'Factura no encontrada';
-      },
-      error: (err) => {
-        this.loading = false;
-        this.error = 'No se pudo cargar la factura';
-      }
-    });
+    this.loading = true;
+    // The service already unwraps response.message.data and normalizes the document.
+    this.liteInvoicesSvc.getLiteCreditNoteDetail(name)
+      .pipe(finalize(() => { this.loading = false; }))
+      .subscribe({
+        next: (document: any) => {
+          this.invoice = document?.name ? document : null;
+          if (!this.invoice) this.error = 'Nota de crédito no encontrada';
+        },
+        error: (err) => {
+          this.error = err?.status === 403
+            ? 'No tienes permiso para consultar esta nota de crédito.'
+            : this.backendError(err, 'No se pudo cargar la nota de crédito');
+        }
+      });
   }
 
   goBack() {
@@ -101,7 +109,7 @@ export class CreditNoteDetailPageComponent implements OnInit {
       return;
     }
     const inv = this.invoice?.name;
-    if (!inv || !this.capabilities.isLiteMode || this.documentLoading) return;
+    if (!inv || !this.isAuthorized || this.documentLoading) return;
     this.documentLoading = true;
     this.printSvc.downloadLiteInvoiceXml(inv).pipe(
       finalize(() => { this.documentLoading = false; })
@@ -122,7 +130,7 @@ export class CreditNoteDetailPageComponent implements OnInit {
       toast.error('No tienes permisos para enviar documentos por correo.');
       return;
     }
-    if (!name || !this.capabilities.isLiteMode || !this.isAuthorized || this.emailLoading) return;
+    if (!name || !this.isAuthorized || this.emailLoading) return;
     this.emailLoading = true;
     this.liteInvoicesSvc.sendLiteInvoiceEmail(name).pipe(
       finalize(() => { this.emailLoading = false; })
@@ -173,12 +181,11 @@ export class CreditNoteDetailPageComponent implements OnInit {
   }
 
   get sriStatus(): string {
-    const st = String(this.invoice?.status || this.invoice?.sri?.status || '').trim().toUpperCase();
-    if (st === 'AUTHORIZED' || st === 'AUTORIZADA' || st === 'AUTORIZADO') return 'Autorizada';
-    if (st === 'PROCESSING' || st === 'EMITIDA' || st === 'PENDING' || this.providerCode === '70' || this.hasAccessKeyRegistered) return 'Procesando';
-    if (st === 'NOT_AUTHORIZED' || st === 'REJECTED' || st === 'RECHAZADA' || st === 'RECHAZADO') return 'Rechazada';
-    if (st === 'ERROR') return 'Error';
-    return st || '—';
+    return electronicDocumentLabel(this.invoice);
+  }
+
+  selectDetailTab(tab: 'general' | 'electronic'): void {
+    this.activeDetailTab = tab;
   }
 
   get statusBadge(): string {
@@ -201,7 +208,7 @@ export class CreditNoteDetailPageComponent implements OnInit {
   }
 
   get canConsultAuthorization(): boolean {
-    return this.capabilities.isLiteMode && !this.documentLoading && !this.actionLoading &&
+    return !!this.invoice && !this.loading &&
       this.capabilities.hasPermission('billing.manage') && canConsultLiteInvoice(this.invoice);
   }
 
@@ -210,19 +217,24 @@ export class CreditNoteDetailPageComponent implements OnInit {
   }
 
   get canRetry(): boolean {
-    return this.capabilities.isLiteMode && !this.actionLoading && !this.documentLoading &&
+    return !!this.invoice && !this.loading &&
       this.capabilities.hasPermission('billing.manage') && canRetryLiteInvoice(this.invoice);
   }
 
   get canReissue(): boolean {
-    if (!this.capabilities.isLiteMode || this.actionLoading || this.documentLoading || this.hasAccessKeyRegistered || this.isAuthorizationPending) return false;
-    const status = String(this.invoice?.status || this.invoice?.sri?.status || '').trim().toUpperCase();
-    return ['RECHAZADA', 'RECHAZADO', 'REJECTED', 'ERROR DE ENVIO', 'ERROR DE ENVÍO', 'ERROR'].includes(status);
+    // Replacement/date handling belongs to retry_lite_invoice under the current contract.
+    return false;
+  }
+
+  electronicDocumentUpdated(document: any): void {
+    if (document.name !== this.invoice?.name) this.router.navigate(['/dashboard/credit-note', document.name]);
+    this.invoice = document;
+    this.fetch(document.name);
   }
 
   retryEmission(): void {
     const name = this.invoice?.name;
-    if (!name || !this.canRetry) return;
+    if (!name || !this.canRetry || this.actionLoading || this.documentLoading) return;
     this.actionLoading = true;
     this.liteInvoicesSvc.retryLiteInvoice(name).pipe(finalize(() => { this.actionLoading = false; })).subscribe({
       next: (response: any) => {

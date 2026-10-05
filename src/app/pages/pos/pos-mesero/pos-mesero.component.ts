@@ -15,13 +15,14 @@ import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabi
 import { ProductVariantPickerComponent } from 'src/app/shared/components/product-variant-picker/product-variant-picker.component';
 import { BarcodeScanInputComponent } from 'src/app/shared/components/barcode-scan-input/barcode-scan-input.component';
 import { ProductSearchModalComponent } from 'src/app/shared/components/product-search-modal/product-search-modal.component';
+import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 
 type OrderType = 'Servirse' | 'Llevar' | 'Domicilio';
 
 @Component({
   selector: 'app-pos-mesero',
   standalone: true,
-  imports: [CommonModule, FormsModule, ProductVariantPickerComponent, BarcodeScanInputComponent, ProductSearchModalComponent],
+  imports: [CommonModule, FormsModule, ProductVariantPickerComponent, BarcodeScanInputComponent, ProductSearchModalComponent, DecimalInputDirective],
   templateUrl: './pos-mesero.component.html',
   styles: [':host { display: block; height: 100%; min-height: 0; }']
 })

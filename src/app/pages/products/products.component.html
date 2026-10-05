@@ -257,7 +257,7 @@
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label class="mb-1 block font-medium">Precio</label>
-              <input type="number" step="0.01" class="input no-spinner" formControlName="precio" />
+              <input type="text" inputmode="decimal" appDecimalInput step="0.01" class="input no-spinner" formControlName="precio" />
               <div *ngIf="submitted && f['precio'].invalid" class="field-error">Precio invalido.</div>
             </div>
 
@@ -609,7 +609,7 @@
 
           <div>
             <label class="mb-1 block font-medium">Precio</label>
-            <input type="number" step="0.01" class="input no-spinner" formControlName="standard_rate" />
+            <input type="text" inputmode="decimal" appDecimalInput step="0.01" class="input no-spinner" formControlName="standard_rate" />
             <div *ngIf="varianteSubmitted && vf['standard_rate'].invalid" class="field-error">Precio invalido.</div>
           </div>
 

@@ -90,11 +90,17 @@
       <span class="ml-1 rounded-full px-1.5 py-0.5 text-[9px]" [ngClass]="getSriStatusBadge(invoiceStatusRaw)">{{
         sriStatus }}</span>
     </button>
+    <button type="button" class="invoice-detail-tab" [class.is-active]="activeDetailTab === 'collections'"
+      (click)="selectDetailTab('collections')">
+      Cartera y abonos
+      <span class="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] text-amber-800">{{ collectionStatus }}</span>
+    </button>
   </nav>
 
   <div class="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
     <main class="space-y-3">
-      <section class="rounded-xl border border-border bg-card p-2.5 shadow-sm">
+      <section *ngIf="activeDetailTab !== 'collections'"
+        class="rounded-xl border border-border bg-card p-2.5 shadow-sm">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 class="text-[11px] font-bold uppercase tracking-wide text-primary">
             {{ activeDetailTab === 'electronic' ? 'Estado SRI' : 'Cliente y facturación' }}
@@ -175,6 +181,7 @@
           </div>
         </div>
 
+        <app-electronic-status-panel *ngIf="activeDetailTab === 'electronic' && capabilities.isLiteMode" [document]="invoice" (updated)="electronicDocumentUpdated($event)" />
         <div *ngIf="activeDetailTab === 'electronic'"
           class="mt-2 grid gap-1.5 text-[11px] text-foreground/80 sm:grid-cols-3">
           <div class="rounded-lg bg-muted/40 px-2.5 py-1.5">
@@ -216,6 +223,92 @@
         </details>
       </section>
 
+      <section *ngIf="activeDetailTab === 'collections'" class="rounded-xl border border-border bg-card p-3 shadow-sm">
+        <div class="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-bold text-foreground">Cartera de la factura</h2>
+            <p class="mt-0.5 text-[11px] text-muted-foreground">El saldo no depende del estado SRI.</p>
+            <p *ngIf="lastCollectionAt" class="mt-1 text-[10px] text-muted-foreground">Último abono: {{ lastCollectionAt
+              }}</p>
+          </div>
+          <span class="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800">{{ collectionStatus
+            }}</span>
+        </div>
+        <div class="mt-3 grid gap-2 sm:grid-cols-3">
+          <div class="rounded-lg bg-muted/50 p-2.5">
+            <p class="text-[10px] uppercase text-muted-foreground">Total factura</p>
+            <p class="mt-1 text-base font-bold">{{ (invoice?.totals?.grand_total ?? invoice?.total ?? 0) |
+              currency:'USD':'symbol':'1.2-2' }}</p>
+          </div>
+          <div class="rounded-lg bg-emerald-50 p-2.5">
+            <p class="text-[10px] uppercase text-emerald-700">Total cobrado</p>
+            <p class="mt-1 text-base font-bold text-emerald-700">{{ totalCollected | currency:'USD':'symbol':'1.2-2' }}
+            </p>
+          </div>
+          <div class="rounded-lg bg-amber-50 p-2.5">
+            <p class="text-[10px] uppercase text-amber-700">Saldo pendiente</p>
+            <p class="mt-1 text-base font-bold text-amber-800">{{ outstandingAmount | currency:'USD':'symbol':'1.2-2' }}
+            </p>
+          </div>
+        </div>
+
+        <form *ngIf="canManageCollections && outstandingAmount > 0" [formGroup]="collectionForm"
+          (ngSubmit)="registerCollection()" class="mt-3 rounded-xl border border-primary/15 bg-primary/5 p-3">
+          <div class="mb-2">
+            <h3 class="text-xs font-bold text-primary">Registrar abono</h3>
+            <p class="text-[11px] text-muted-foreground">No se permite superar el saldo actual.</p>
+          </div>
+          <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <select class="input !h-9 text-xs" formControlName="payment_method">
+              <option value="">Método de pago</option>
+              <option *ngFor="let method of paymentMethods" [value]="method.name">{{ method.description || method.nombre
+                || method.name }}</option>
+            </select>
+            <input type="text" inputmode="decimal" appDecimalInput min="0.01" [max]="outstandingAmount" step="0.01"
+              class="input !h-9 text-xs" formControlName="amount" placeholder="Monto" />
+            <input class="input !h-9 text-xs" formControlName="reference" placeholder="Referencia" />
+            <button type="submit" class="btn btn-primary !h-9 !text-xs" [disabled]="savingCollection">{{
+              savingCollection ? 'Registrando…' : 'Registrar abono' }}</button>
+          </div>
+          <input class="input mt-2 !h-9 text-xs" formControlName="notes" placeholder="Notas del abono (opcional)" />
+          <p class="mt-2 text-[10px] text-muted-foreground">Los abonos en efectivo requieren una caja abierta; el
+            backend valida la apertura y el saldo final.</p>
+        </form>
+
+        <div class="mt-3 overflow-x-auto rounded-lg border border-border">
+          <table class="w-full text-xs">
+            <thead class="bg-muted/50 text-left text-[10px] uppercase text-muted-foreground">
+              <tr>
+                <th class="p-2">Fecha</th>
+                <th class="p-2">Método</th>
+                <th class="p-2 text-right">Monto</th>
+                <th class="p-2">Referencia</th>
+                <th class="p-2">Estado</th>
+                <th class="p-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let collection of collections" class="border-t border-border">
+                <td class="p-2">{{ collection.posting_date || collection.created_at || collection.creation || '—' }}
+                </td>
+                <td class="p-2">{{ collection.payment_method || '—' }} <span class="text-muted-foreground">{{
+                    collection.payment_code ? '(' + collection.payment_code + ')' : '' }}</span></td>
+                <td class="p-2 text-right font-semibold">{{ (collection.amount ?? collection.monto ?? 0) |
+                  currency:'USD':'symbol':'1.2-2' }}</td>
+                <td class="p-2">{{ collection.reference || '—' }}</td>
+                <td class="p-2">{{ collection.status || collection.estado || 'Confirmado' }}</td>
+                <td class="p-2 text-right"><button *ngIf="canCancelCollection(collection)" type="button"
+                    class="text-[11px] font-semibold text-red-600 hover:underline"
+                    (click)="cancelCollection(collection)">Anular</button></td>
+              </tr>
+              <tr *ngIf="!collections.length && !loadingCollections">
+                <td colspan="6" class="p-5 text-center text-muted-foreground">No hay abonos registrados.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section class="rounded-xl border border-border bg-card shadow-sm">
         <div class="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
           <div>
@@ -247,7 +340,8 @@
                 <td class="px-3 py-2 text-center font-semibold">{{ item.quantity ?? item.qty ?? 0 }}</td>
                 <td class="px-3 py-2 text-right">{{ (item.price ?? item.rate ?? 0) | currency:'USD':'symbol':'1.2-2' }}
                 </td>
-                <td class="px-3 py-2 text-right">{{ (item.discount_amount ?? item.total_discount ?? 0) | currency:'USD':'symbol':'1.2-2' }}</td>
+                <td class="px-3 py-2 text-right">{{ (item.discount_amount ?? item.total_discount ?? 0) |
+                  currency:'USD':'symbol':'1.2-2' }}</td>
                 <td class="px-3 py-2 text-center">
                   <span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                     {{ item.tax_rate ?? 0 }}%
@@ -286,7 +380,8 @@
               <span>Subtotal {{ itemSubtotal(item) | currency:'USD':'symbol':'1.2-2' }}</span>
               <span>IVA {{ item.tax_rate ?? 0 }}%</span>
             </div>
-            <div *ngIf="(item.discount_amount ?? item.total_discount ?? 0) > 0" class="mt-1 flex items-center justify-between text-[11px] text-amber-600">
+            <div *ngIf="(item.discount_amount ?? item.total_discount ?? 0) > 0"
+              class="mt-1 flex items-center justify-between text-[11px] text-amber-600">
               <span>Descuento</span>
               <span>{{ (item.discount_amount ?? item.total_discount ?? 0) | currency:'USD':'symbol':'1.2-2' }}</span>
             </div>
@@ -305,11 +400,12 @@
         <h2 class="mb-2 text-[11px] font-bold uppercase tracking-wide text-primary">Resumen</h2>
 
         <div class="space-y-1.5 text-xs text-foreground/80">
- <div class="flex justify-between gap-3">
+          <div class="flex justify-between gap-3">
             <span>Descuento</span>
-            <span class="font-semibold">{{ (invoice?.totals?.total_discount ?? invoice?.total_discount ?? 0) | currency:'USD':'symbol':'1.2-2' }}</span>
+            <span class="font-semibold">{{ (invoice?.totals?.total_discount ?? invoice?.total_discount ?? 0) |
+              currency:'USD':'symbol':'1.2-2' }}</span>
           </div>
-          
+
           <div class="flex justify-between gap-3">
             <span>Subtotal</span>
             <span class="font-semibold">{{ invoice?.subtotal | currency:'USD':'symbol':'1.2-2' }}</span>

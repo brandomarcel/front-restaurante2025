@@ -7,6 +7,7 @@ import {
   SplitPaymentRequest
 } from 'src/app/services/order-split.types';
 import { findPaymentMethod, getPaymentDisplayLabel, getPaymentValue as getInternalPaymentValue, isPaymentMethodAlreadySelected } from 'src/app/shared/utils/payment.utils';
+import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 
 type SplitItemRowForm = {
   order_item: string;
@@ -37,7 +38,7 @@ type OrderItemSource = {
 @Component({
   selector: 'app-split-order-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DecimalInputDirective],
   templateUrl: './split-order-dialog.component.html'
 })
 export class SplitOrderDialogComponent implements OnChanges {

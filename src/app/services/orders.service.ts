@@ -8,6 +8,7 @@ import { toast } from 'ngx-sonner';
 import { API_ENDPOINT } from '../core/constants/api.constants';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 import { CompanyCapabilitiesService } from '../core/services/company-capabilities.service';
+import { parseLocalizedDecimal } from '../shared/utils/decimal.utils';
 
 // 👇 Interface alineada a tu payload
 export interface OrderItemDTO {
@@ -368,17 +369,17 @@ updateOrderForInvoice(payload: any): Observable<any> {
     alias: payload?.alias ?? '',
     items: (payload?.items ?? []).map((item: any) => ({
       product: item?.product ?? item?.item,
-      qty: Number(item?.qty ?? item?.quantity ?? 0),
-      rate: Number(item?.rate ?? item?.price ?? 0),
-      discount_percentage: Number(item?.discount_percentage ?? 0),
-      discount_amount: Number(item?.discount_amount ?? 0),
-      tax_rate: Number(item?.tax_rate ?? item?.tax_value ?? 0),
+      qty: parseLocalizedDecimal(item?.qty ?? item?.quantity ?? 0) ?? 0,
+      rate: parseLocalizedDecimal(item?.rate ?? item?.price ?? 0) ?? 0,
+      discount_percentage: parseLocalizedDecimal(item?.discount_percentage ?? 0) ?? 0,
+      discount_amount: parseLocalizedDecimal(item?.discount_amount ?? 0) ?? 0,
+      tax_rate: parseLocalizedDecimal(item?.tax_rate ?? item?.tax_value ?? 0) ?? 0,
       ...(item?.notes ? { notes: String(item.notes) } : {})
     })),
     payments: (payload?.payments ?? []).map((payment: any) => ({
       payment_method: payment?.payment_method ?? payment?.formas_de_pago,
       payment_code: payment?.payment_code ?? payment?.forma_pago ?? '',
-      amount: Number(payment?.amount ?? payment?.monto ?? 0),
+      amount: parseLocalizedDecimal(payment?.amount ?? payment?.monto ?? 0) ?? 0,
       reference: payment?.reference ?? ''
     })),
     notes: payload?.notes ?? ''
@@ -395,14 +396,14 @@ updateOrderForInvoice(payload: any): Observable<any> {
     const sourceStatus = String(source.status ?? 'Ingresada');
     const items = Array.isArray(source.items) ? source.items.map((item: any) => ({
       product: item?.product ?? item?.item ?? item?.productId ?? item?.name,
-      qty: Number(item?.qty ?? item?.quantity ?? 1),
-      rate: Number(item?.rate ?? item?.price ?? 0),
+      qty: parseLocalizedDecimal(item?.qty ?? item?.quantity ?? 1) ?? 0,
+      rate: parseLocalizedDecimal(item?.rate ?? item?.price ?? 0) ?? 0,
       // Siempre explícitos, aunque sean 0: el backend recalcula el total a
       // partir de estos dos campos y nunca debe asumir un descuento
       // implícito por la diferencia entre precio y pago.
-      discount_percentage: Number(item?.discount_percentage ?? 0),
-      discount_amount: Number(item?.discount_amount ?? 0),
-      tax_rate: Number(item?.tax_rate ?? item?.tax_value ?? 0),
+      discount_percentage: parseLocalizedDecimal(item?.discount_percentage ?? 0) ?? 0,
+      discount_amount: parseLocalizedDecimal(item?.discount_amount ?? 0) ?? 0,
+      tax_rate: parseLocalizedDecimal(item?.tax_rate ?? item?.tax_value ?? 0) ?? 0,
       ...(item?.notes ? { notes: String(item.notes) } : {})
     })) : [];
     const payments = Array.isArray(source.payments) ? source.payments.map((payment: any) => {
@@ -410,7 +411,7 @@ updateOrderForInvoice(payload: any): Observable<any> {
       return {
         formas_de_pago: payment?.formas_de_pago ?? payment?.payment_method ?? payment?.name,
         ...(payment?.payment_code ?? payment?.forma_pago ? { payment_code: payment?.payment_code ?? payment?.forma_pago } : {}),
-        ...(amount !== undefined && amount !== null && amount !== '' ? { amount: Number(amount) } : {})
+        ...(amount !== undefined && amount !== null && amount !== '' ? { amount: parseLocalizedDecimal(amount) ?? 0 } : {})
       };
     }) : [];
     const fiscalStatus = String(source.fiscal_status ?? source.estado ?? 'Nota Venta').trim();

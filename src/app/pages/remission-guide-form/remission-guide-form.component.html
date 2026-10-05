@@ -170,7 +170,7 @@
             <p *ngIf="submitted && detalle.get('descripcion')?.invalid" class="field-error">Requerido.</p>
           </div>
           <div class="min-w-0">
-            <input class="input !w-full" type="number" min="0.01" step="0.01" formControlName="cantidad" placeholder="Cantidad" />
+            <input class="input !w-full" type="text" inputmode="decimal" appDecimalInput min="0.01" step="0.01" formControlName="cantidad" placeholder="Cantidad" />
             <p *ngIf="submitted && detalle.get('cantidad')?.invalid" class="field-error">&gt; 0.</p>
           </div>
           <div class="min-w-0">

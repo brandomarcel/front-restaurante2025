@@ -30,6 +30,7 @@ import { TablesComponent } from 'src/app/pages/tables/tables.component';
 import { RemissionGuidesComponent } from 'src/app/pages/remission-guides/remission-guides.component';
 import { RemissionGuideDetailComponent } from 'src/app/pages/remission-guide-detail/remission-guide-detail.component';
 import { RemissionGuideFormComponent } from 'src/app/pages/remission-guide-form/remission-guide-form.component';
+import { ReceivablesComponent } from 'src/app/pages/receivables/receivables.component';
 
 const routes: Routes = [
   {
@@ -60,6 +61,7 @@ const routes: Routes = [
 
       { path: 'invoices', component: InvoicesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', featureKeys: ['direct_invoice', 'generic_pos', 'api'], readOnlyFeature: true, permissionKey: 'billing.read' } },
       { path: 'invoices/:id', component: InvoiceDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', featureKeys: ['direct_invoice', 'generic_pos', 'api'], readOnlyFeature: true, permissionKey: 'billing.read' } },
+      { path: 'receivables', component: ReceivablesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'billing', featureKeys: ['billing', 'api'], readOnlyFeature: true, permissionKey: 'billing.read' } },
 
       { path: 'credit-notes', component: CreditNotesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'credit_note', featureKeys: ['credit_note', 'api'], readOnlyFeature: true, permissionKey: 'billing.read' } },
       { path: 'credit-note/:id', component: CreditNoteDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'credit_note', featureKeys: ['credit_note', 'api'], readOnlyFeature: true, permissionKey: 'billing.read' } },

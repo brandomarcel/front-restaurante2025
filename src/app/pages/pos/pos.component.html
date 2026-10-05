@@ -433,7 +433,7 @@
                                     <option value="">Método</option>
                                     <option [value]="item.name || item.codigo" *ngFor="let item of payments">{{ item.description || item.nombre || item.name }}</option>
                                 </select>
-                                <input type="number" min="0.01" step="0.01" [(ngModel)]="payment.amount" (input)="calcularCambio()" class="border border-border rounded-md px-2 py-2 text-right text-xs bg-card text-foreground" placeholder="0.00" />
+                                <input type="text" inputmode="decimal" appDecimalInput min="0.01" step="0.01" [(ngModel)]="payment.amount" (ngModelChange)="calcularCambio()" class="border border-border rounded-md px-2 py-2 text-right text-xs bg-card text-foreground" placeholder="0.00" />
                                 <button type="button" (click)="removePaymentRow(index)" [disabled]="paymentRows.length === 1" class="rounded-md text-lg text-red-500 disabled:opacity-30">×</button>
                             </div>
                         </div>
@@ -449,8 +449,7 @@
                         <div>
                             <label for="amount-received" class="sr-only">Monto entregado</label>
                             
-                            <input id="amount-received" type="number" [(ngModel)]="amountReceived"
-                                (input)="calcularCambio()" inputmode="decimal"
+                            <input id="amount-received" type="text" inputmode="decimal" appDecimalInput [(ngModel)]="amountReceived" (ngModelChange)="calcularCambio()"
                                 class="w-full border border-border rounded-md px-3 md:px-4 py-3 text-xl font-semibold text-center text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground"
                                 placeholder="Monto recibido (opcional)" min="0" step="0.01" />
                         </div>

@@ -1,3 +1,5 @@
+import { backendFlag } from './electronic-document';
+
 export type LiteInvoiceAction = 'consult' | 'retry' | 'none';
 
 function normalized(value: unknown): string {
@@ -19,7 +21,7 @@ export function getLiteInvoiceAction(invoice: any): LiteInvoiceAction {
   const emission = invoice?.emission && typeof invoice.emission === 'object' ? invoice.emission : {};
 
   const status = normalized(invoice?.status ?? invoice?.einvoice_status ?? sri?.status);
-  const provider = normalized(sri?.provider_status ?? electronic?.provider_status ?? invoice?.provider_status ?? emission?.provider_status);
+  const provider = normalized(electronic?.provider_status ?? sri?.provider_status ?? invoice?.provider_status ?? emission?.provider_status);
   const emissionStatus = normalized(emission?.status);
   const code = [
     sri?.sri_code, sri?.status_code, sri?.code,
@@ -36,9 +38,10 @@ export function getLiteInvoiceAction(invoice: any): LiteInvoiceAction {
     .join(' | ');
 
   const authorized = ['AUTORIZADO', 'AUTORIZADA', 'AUTHORIZED', 'SRI_AUTHORIZED'].includes(status)
+    || electronic.authorization_status === 'AUTORIZADO'
     || provider === 'AUTHORIZED'
     || emissionStatus === 'AUTHORIZED';
-  const blocked = ['BORRADOR', 'DRAFT', 'REEMPLAZADA', 'REPLACED'].includes(status);
+  const blocked = ['BORRADOR', 'DRAFT', 'REEMPLAZADA', 'REPLACED', 'ANULADA', 'CANCELLED'].includes(status);
   const processing = code === '43'
     || code === '70'
     || messages.includes('CLAVE ACCESO REGISTRADA')
@@ -47,7 +50,14 @@ export function getLiteInvoiceAction(invoice: any): LiteInvoiceAction {
     || ['PROCESSING', 'EMITIDA'].includes(status);
 
   if (authorized || blocked) return 'none';
+  const uncertain = electronic.reception_status === 'UNKNOWN'
+    || ['UNKNOWN', 'PENDIENTE'].includes(electronic.authorization_status);
+  const accessKey = electronic.access_key || invoice?.access_key || sri.access_key;
+  if (uncertain || status === 'EN REVISION'
+    || (status === 'ERROR DE ENVIO' && accessKey && !['DEVUELTA'].includes(electronic.reception_status)
+      && electronic.authorization_status !== 'NO_AUTORIZADO')) return 'consult';
   if (processing) return 'consult';
+  if (backendFlag(electronic.manual_review_required ?? invoice?.manual_review_required)) return 'none';
 
   const retryableStatus = [
     'ERROR', 'ERROR DE ENVIO', 'RECHAZADA', 'RECHAZADO', 'REJECTED',

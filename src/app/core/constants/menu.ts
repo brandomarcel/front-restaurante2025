@@ -69,6 +69,14 @@ export class Menu {
           permissionKey: 'billing.read',
         },
         {
+          icon: 'assets/icons/tablericons/cash-banknote.svg',
+          label: 'Cartera y Abonos',
+          route: '/dashboard/receivables',
+          featureKey: 'billing',
+          featureKeys: ['billing', 'api'],
+          permissionKey: 'billing.read',
+        },
+        {
           icon: 'assets/icons/tablericons/file-invoice.svg',
           label: 'Notas de Venta',
           route: '/dashboard/pos-sale-notes',

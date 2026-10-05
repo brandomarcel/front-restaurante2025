@@ -25,6 +25,7 @@ import { AlertService } from 'src/app/core/services/alert.service';
 import { InvoicePaymentPayload, isPaymentMethodAlreadySelected, roundMoney, validatePaymentsTotal } from 'src/app/shared/utils/payment.utils';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { RestaurantRealtimeEvent, RestaurantRealtimeService } from 'src/app/services/restaurant-realtime.service';
+import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 
 type Product = any; // usa tu modelo si lo tienes
 type OrderItem = {
@@ -51,6 +52,7 @@ type OrderItem = {
     EcuadorTimePipe,
     FontAwesomeModule,
     ButtonComponent,
+    DecimalInputDirective,
     SplitOrderDialogComponent,
     OrderSplitsTableComponent
   ],

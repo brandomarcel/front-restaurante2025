@@ -8,6 +8,7 @@ import { API_ENDPOINT } from '../core/constants/api.constants';
 import { CompanyCapabilitiesService } from '../core/services/company-capabilities.service';
 import { frappeData, frappeList } from '../core/utils/frappe-response';
 import { normalizeLiteEmissionResponse } from '../core/utils/lite-invoice-emission';
+import { parseLocalizedDecimal } from '../shared/utils/decimal.utils';
 
 @Injectable({ providedIn: 'root' })
 export class InvoicesService {
@@ -224,21 +225,21 @@ export class InvoicesService {
       return {
         item: itemId,
         item_code: itemCode,
-        qty: Number(item?.qty ?? item?.quantity ?? 1),
-        rate: Number(item?.rate ?? item?.price ?? 0),
+        qty: parseLocalizedDecimal(item?.qty ?? item?.quantity ?? 1) ?? 0,
+        rate: parseLocalizedDecimal(item?.rate ?? item?.price ?? 0) ?? 0,
         // Siempre explícitos, aunque sean 0: el backend recalcula el total a
         // partir de estos dos campos y nunca debe asumir un descuento
         // implícito por la diferencia entre precio y pago.
-        discount_percentage: Number(item?.discount_percentage ?? 0),
-        discount_amount: Number(item?.discount_amount ?? 0),
-        tax_rate: Number(item?.tax_rate ?? item?.tax_value ?? 0)
+        discount_percentage: parseLocalizedDecimal(item?.discount_percentage ?? 0) ?? 0,
+        discount_amount: parseLocalizedDecimal(item?.discount_amount ?? 0) ?? 0,
+        tax_rate: parseLocalizedDecimal(item?.tax_rate ?? item?.tax_value ?? 0) ?? 0
       };
     });
 
     normalized.payments = (payload?.payments || []).map((payment: any) => {
       const rawMethod = payment?.payment_method || payment?.formas_de_pago || payment?.name || payment?.codigo;
       const litePayment = this.normalizeLitePayment(rawMethod, payment?.payment_code || payment?.forma_pago || payment?.codigo);
-      const amount = Number(payment?.amount ?? payment?.monto ?? 0);
+      const amount = parseLocalizedDecimal(payment?.amount ?? payment?.monto ?? 0) ?? 0;
       return {
         payment_method: litePayment.payment_method,
         payment_code: litePayment.payment_code,
@@ -248,6 +249,34 @@ export class InvoicesService {
           : {})
       };
     });
+
+    // En crédito, payments representa la forma fiscal por el total completo;
+    // initial_collection es un cobro real separado y nunca se mezcla con ella.
+    if (payload?.initial_collection && typeof payload.initial_collection === 'object') {
+      const collection = payload.initial_collection;
+      const litePayment = this.normalizeLitePayment(
+        collection?.payment_method || collection?.formas_de_pago || collection?.name,
+        collection?.payment_code || collection?.forma_pago || collection?.codigo
+      );
+      normalized.initial_collection = {
+        payment_method: litePayment.payment_method,
+        payment_code: litePayment.payment_code,
+        amount: parseLocalizedDecimal(collection?.amount ?? collection?.monto ?? 0) ?? 0,
+        reference: String(collection?.reference ?? collection?.referencia ?? '').trim(),
+        notes: String(collection?.notes ?? collection?.nota ?? '').trim(),
+        ...(String(collection?.cash_opening ?? collection?.apertura ?? '').trim()
+          ? { cash_opening: String(collection?.cash_opening ?? collection?.apertura).trim() }
+          : {})
+      };
+    } else {
+      delete normalized.initial_collection;
+    }
+    normalized.payment_condition = String(payload?.payment_condition || 'Contado').trim() === 'Credito' ? 'Credito' : 'Contado';
+    if (normalized.payment_condition === 'Credito') {
+      normalized.payment_due_date = String(payload?.payment_due_date || '').trim();
+    } else {
+      delete normalized.payment_due_date;
+    }
 
     normalized.additional_fields = (payload?.additional_fields || payload?.additionalFields || [])
       .map((field: any) => ({
@@ -329,6 +358,17 @@ export class InvoicesService {
     const documentStatus = invoice.status ?? invoice.einvoice_status ?? invoice.document_status;
     const normalizedStatus = this.normalizeLiteStatus(documentStatus ?? sriSource.status ?? sriSource.provider_status);
     const providerStatus = String(sriSource.provider_status ?? invoice.provider_status ?? '').trim().toUpperCase();
+    const grandTotal = Number(totals.grand_total ?? invoice.grand_total ?? invoice.total ?? 0) || 0;
+    const totalCollected = Number(totals.total_collected ?? invoice.total_collected ?? 0) || 0;
+    const declaredOutstanding = totals.outstanding_amount ?? invoice.outstanding_amount;
+    // Compatibilidad con documentos anteriores: si el backend aún no devolvió
+    // el campo de saldo, se deriva solo para visualizarlo. Para documentos
+    // actuales se preserva exactamente el monto oficial recibido.
+    const outstandingAmount = declaredOutstanding === undefined || declaredOutstanding === null || declaredOutstanding === ''
+      ? Math.max(0, grandTotal - totalCollected)
+      : Number(declaredOutstanding) || 0;
+    const collectionStatus = invoice.collection_status ?? totals.collection_status
+      ?? (outstandingAmount <= 0 ? 'Pagada' : totalCollected > 0 ? 'Abonada' : 'Pendiente');
 
     return {
       ...invoice,
@@ -336,8 +376,18 @@ export class InvoicesService {
       createdAt: invoice.createdAt ?? invoice.posting_date ?? invoice.issue_date ?? invoice.fecha_emision,
       subtotal: Number(invoice.subtotal ?? invoice.net_total ?? totals.total_without_tax ?? totals.total_gross ?? 0) || 0,
       iva: Number(invoice.iva ?? invoice.tax_total ?? invoice.total_taxes_and_charges ?? totals.total_taxes ?? 0) || 0,
-      total: Number(invoice.total ?? invoice.grand_total ?? totals.grand_total ?? 0) || 0,
-      status: normalizedStatus,
+      total: grandTotal,
+      totals: {
+        ...totals,
+        grand_total: grandTotal,
+        total_collected: totalCollected,
+        outstanding_amount: outstandingAmount
+      },
+      payment_condition: invoice.payment_condition ?? invoice.condicion_pago ?? 'Contado',
+      payment_due_date: invoice.payment_due_date ?? invoice.due_date ?? null,
+      collection_status: collectionStatus,
+      last_collection_at: invoice.last_collection_at ?? totals.last_collection_at ?? null,
+      status: documentStatus ?? normalizedStatus,
       type: invoice.type ?? invoice.tipo ?? invoice.document_type ?? 'Factura',
       document_type: invoice.document_type ?? invoice.type ?? invoice.tipo ?? 'Factura',
       related_invoice: invoice.related_invoice ?? invoice.invoice_modified?.invoice_reference,

@@ -39,6 +39,29 @@ describe('InvoicesService (FacturADA Lite)', () => {
     req.flush({ message: { emission: { ok: true, code: 'SRI_AUTHORIZED' }, data: { name: 'FLINV-1' } } });
   });
 
+  it('keeps the fiscal payment separate from the initial credit collection and its cash opening', () => {
+    service.create_and_emit_from_ui_v2({
+      customer: 'FLC-1',
+      payment_condition: 'Credito',
+      payment_due_date: '2026-10-30',
+      items: [{ item: 'FLI-1', qty: 1, rate: 500, tax_rate: 0 }],
+      payments: [{ payment_method: 'TRANSFER', payment_code: '20', amount: 500 }],
+      initial_collection: {
+        payment_method: 'CASH', payment_code: '01', amount: 200,
+        reference: '', notes: 'Abono inicial acordado con cliente', cash_opening: 'FRCO-00001'
+      }
+    }).subscribe();
+
+    const req = http.expectOne((request) => request.url.includes('create_and_emit_from_ui_v2'));
+    expect(req.request.body.payment_condition).toBe('Credito');
+    expect(req.request.body.payments).toEqual([{ payment_method: 'TRANSFER', payment_code: '20', amount: 500 }]);
+    expect(req.request.body.initial_collection).toEqual({
+      payment_method: 'CASH', payment_code: '01', amount: 200,
+      reference: '', notes: 'Abono inicial acordado con cliente', cash_opening: 'FRCO-00001'
+    });
+    req.flush({ message: { emission: { ok: true, code: 'SRI_RECEIVED' }, data: { name: 'FLINV-2' } } });
+  });
+
   it('normalizes authorized, processing and rejected results', () => {
     const results: any[] = [];
     service.create_and_emit_from_ui_v2({}).subscribe((value) => results.push(value));
@@ -83,7 +106,7 @@ describe('InvoicesService (FacturADA Lite)', () => {
 
   it('maps the current Lite list/detail field names and Autorizada status', () => {
     service.getAllInvoices(10, 0).subscribe((result: any) => {
-      expect(result.data[0].status).toBe('AUTORIZADO');
+      expect(result.data[0].status).toBe('Autorizada');
       expect(result.data[0].customer.fullName).toBe('CONSUMIDOR FINAL');
       expect(result.data[0].total).toBe(11.5);
     });

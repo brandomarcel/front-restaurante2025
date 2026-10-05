@@ -214,7 +214,9 @@ export class CreditNotesComponent implements OnInit {
     if (value === 'ERROR') return 'Error';
     if (value === 'QUEUED' || value === 'EN COLA') return 'En cola';
     if (value === 'PROCESSING') return 'Procesando';
-    if (value === 'EMITIDA') return 'Emitida';
+    if (value === 'EMITIDA') return 'Autorización pendiente';
+    if (value === 'EN REVISION') return 'En revisión';
+    if (value === 'ANULADA') return 'Anulada';
     if (value === 'DRAFT' || value === 'BORRADOR') return 'Borrador';
     if (value === 'PENDIENTE EMISION' || value === 'PENDIENTE EMISIÓN') return 'Pendiente emisión';
     if (value === 'ERROR DE ENVIO' || value === 'ERROR DE ENVÍO') return 'Error de envío';

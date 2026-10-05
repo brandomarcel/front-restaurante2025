@@ -11,6 +11,8 @@ import { RemissionGuidesService } from 'src/app/services/remission-guides.servic
 import { PrintService } from 'src/app/services/print.service';
 import { liteEmissionMessages } from 'src/app/core/utils/lite-invoice-emission';
 import { canConsultLiteInvoice, canRetryLiteInvoice } from 'src/app/core/utils/lite-invoice-actions';
+import { ElectronicStatusPanelComponent } from 'src/app/shared/components/electronic-status-panel/electronic-status-panel.component';
+import { electronicDocumentLabel } from 'src/app/core/utils/electronic-document';
 
 /**
  * Sigue el mismo formato de página que invoice-detail-page / credit-note-detail-page
@@ -20,7 +22,7 @@ import { canConsultLiteInvoice, canRetryLiteInvoice } from 'src/app/core/utils/l
 @Component({
   selector: 'app-remission-guide-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, FontAwesomeModule, NgxSpinnerComponent],
+  imports: [CommonModule, RouterModule, FontAwesomeModule, NgxSpinnerComponent, ElectronicStatusPanelComponent],
   templateUrl: './remission-guide-detail.component.html'
 })
 export class RemissionGuideDetailComponent implements OnInit {
@@ -102,13 +104,7 @@ export class RemissionGuideDetailComponent implements OnInit {
   }
 
   get statusLabel(): string {
-    if (this.statusRaw === 'AUTORIZADA' || this.statusRaw === 'AUTORIZADO') return 'Autorizada';
-    if (this.statusRaw === 'RECHAZADA' || this.statusRaw === 'RECHAZADO') return 'Rechazada';
-    if (this.statusRaw === 'ERROR DE ENVIO' || this.statusRaw === 'ERROR DE ENVÍO') return 'Error de envío';
-    if (this.statusRaw === 'PENDIENTE EMISION' || this.statusRaw === 'PENDIENTE EMISIÓN') return 'Pendiente emisión';
-    if (this.statusRaw === 'EMITIDA') return 'Emitida';
-    if (this.statusRaw === 'BORRADOR' || this.statusRaw === 'DRAFT') return 'Borrador';
-    return this.statusRaw || '—';
+    return electronicDocumentLabel(this.guide);
   }
 
   get statusBadge(): string {

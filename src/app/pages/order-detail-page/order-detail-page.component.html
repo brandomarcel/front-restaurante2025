@@ -147,7 +147,7 @@
                 </label>
                 <label>
                   <span class="mb-1 block text-[9px] font-semibold uppercase text-muted-foreground/70">Monto</span>
-                  <input type="number" min="0" step="0.01" class="h-8 w-full rounded-md border border-border bg-card px-2 text-right text-[11px]" [(ngModel)]="payment.amount" [ngModelOptions]="{standalone: true}" />
+                  <input type="text" inputmode="decimal" appDecimalInput min="0" step="0.01" class="h-8 w-full rounded-md border border-border bg-card px-2 text-right text-[11px]" [(ngModel)]="payment.amount" [ngModelOptions]="{standalone: true}" />
                 </label>
                 <button type="button" class="h-8 rounded-md border border-red-200 bg-card px-2 text-[11px] font-semibold text-red-600" (click)="removeOrderPayment(i)">Quitar</button>
               </div>
@@ -243,7 +243,9 @@
                       <p class="mb-0.5 text-[9px] font-semibold uppercase text-muted-foreground/70">Precio</p>
                       <input
                         *ngIf="!isReadOnlyView; else readOnlyPrice"
-                        type="number"
+                        type="text"
+                        inputmode="decimal"
+                        appDecimalInput
                         class="no-spinner h-7 w-20 rounded-md border-border bg-card text-center text-[11px]"
                         min="0"
                         step="0.01"

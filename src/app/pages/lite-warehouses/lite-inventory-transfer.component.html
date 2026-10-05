@@ -131,7 +131,7 @@
               class="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-2.5 py-1.5">
               <span class="min-w-0 flex-1 truncate text-xs font-semibold text-foreground">{{ productLabel(group.get('item')?.value) }}</span>
               <span class="text-[11px] text-muted-foreground">Disp: {{ availableStock(group.get('item')?.value) }}</span>
-              <input type="number" min="0.0001" step="0.01" class="input !h-8 !w-24 text-right" formControlName="qty" />
+              <input type="text" inputmode="decimal" appDecimalInput min="0.0001" step="0.01" class="input !h-8 !w-24 text-right" formControlName="qty" />
               <button type="button" class="btn btn-outline !px-2.5 !py-1 !text-[11px]" (click)="removeItem(i)">Quitar</button>
               <p *ngIf="lineExceedsAvailable(group)" class="w-full text-[11px] font-semibold text-destructive">
                 Supera el stock disponible en origen ({{ availableStock(group.get('item')?.value) }}).

@@ -5,6 +5,7 @@ import { environment } from 'src/environments/environment';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 import { CompanyCapabilitiesService } from '../core/services/company-capabilities.service';
 import { OrderSplitResponse, SplitOrderPayload, SplitPaymentRequest } from './order-split.types';
+import { parseLocalizedDecimal } from '../shared/utils/decimal.utils';
 
 @Injectable({ providedIn: 'root' })
 export class OrderSplitService {
@@ -89,7 +90,7 @@ export class OrderSplitService {
   }
 
   private roundMoney(value: unknown): number {
-    const amount = Number(value);
-    return Number.isFinite(amount) ? Math.round((amount + Number.EPSILON) * 100) / 100 : 0;
+    const amount = parseLocalizedDecimal(value);
+    return amount === null ? 0 : Math.round((amount + Number.EPSILON) * 100) / 100;
   }
 }

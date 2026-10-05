@@ -8,10 +8,11 @@ import { finalize } from 'rxjs';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { CajaAbiertaGuard } from 'src/app/core/guards/caja-abierta.guard';
+import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 
 @Component({
   selector: 'app-close-caja',
-  imports: [CommonModule, FormsModule, ButtonComponent],
+  imports: [CommonModule, FormsModule, ButtonComponent, DecimalInputDirective],
   templateUrl: './close-caja.component.html',
   styleUrls: ['./close-caja.component.css']
 })

@@ -1,4 +1,9 @@
 /* Etiquetas compactas compartidas con el detalle de facturas. */
+.detail-tabs { display: flex; gap: .375rem; padding: .375rem; overflow-x: auto; background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: .75rem; }
+.detail-tab { display: flex; align-items: center; gap: .5rem; white-space: nowrap; padding: .625rem .875rem; border-radius: .5rem; font-size: .8125rem; font-weight: 600; color: inherit; transition: background-color .15s; }
+.detail-tab:hover { background: rgba(99, 102, 241, .06); }
+.detail-tab.is-active { background: rgba(99, 102, 241, .1); color: #4f46e5; }
+.detail-tab:focus-visible { outline: 2px solid #6366f1; outline-offset: 2px; }
 .label {
   display: block;
   color: #64748b;

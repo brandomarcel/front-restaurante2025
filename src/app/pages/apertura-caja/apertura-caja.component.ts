@@ -8,10 +8,11 @@ import { NgxSpinnerService } from 'ngx-spinner';
 import { finalize } from 'rxjs';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { CajaAbiertaGuard } from 'src/app/core/guards/caja-abierta.guard';
+import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 
 @Component({
   selector: 'app-apertura-caja',
-  imports: [CommonModule, FormsModule, ButtonComponent],
+  imports: [CommonModule, FormsModule, ButtonComponent, DecimalInputDirective],
   templateUrl: './apertura-caja.component.html',
   styleUrls: ['./apertura-caja.component.css']
 })

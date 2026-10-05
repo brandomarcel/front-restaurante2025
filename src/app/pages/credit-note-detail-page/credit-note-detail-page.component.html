@@ -1,5 +1,5 @@
 <header class="mb-3 rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
-    <div class="app-container flex items-center justify-between gap-3">
+    <div class="app-container flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div class="flex items-center gap-3">
             <button class="btn btn-ghost px-2 py-1" (click)="goBack()" aria-label="Volver a Notas de Crédito">
                 <fa-icon icon="arrow-left"></fa-icon>
@@ -7,9 +7,9 @@
             </button>
 
             <div>
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-2">
                     <h1 class="text-base font-bold leading-tight text-foreground sm:text-lg">
-                        Nota de Crédito <span class="text-muted-foreground">#{{ invoice?.sri?.number || '—' }}</span>
+                        Nota de crédito <span class="text-muted-foreground">{{ invoice?.document_number || invoice?.sri?.number || invoice?.name || '—' }}</span>
                     </h1>
                     <span class="badge" [ngClass]="statusBadge">
                         {{ sriStatus }}
@@ -26,15 +26,15 @@
         </div>
 
         <!-- Acciones rápidas (solo desktop) -->
-        <div class="hidden items-center gap-1.5 md:flex">
+        <div *ngIf="invoice && !loading" class="hidden flex-wrap items-center gap-2 md:flex">
             <button *ngIf="capabilities.hasPermission('billing.read')" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="getFacturaPdf()" [disabled]="documentLoading"> <fa-icon
                     [icon]="['fas','download']" class="mr-1"></fa-icon>Descargar Nota de Crédito</button>
-            <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read')" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="downloadXml()" [disabled]="documentLoading">XML</button>
-            <button *ngIf="capabilities.isLiteMode && isAuthorized && capabilities.hasPermission('billing.manage')" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="sendEmail()" [disabled]="emailLoading">
+            <button *ngIf="isAuthorized && capabilities.hasPermission('billing.read')" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="downloadXml()" [disabled]="documentLoading">XML</button>
+            <button *ngIf="isAuthorized && capabilities.hasPermission('billing.manage')" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="sendEmail()" [disabled]="emailLoading">
                 {{ emailLoading ? 'Enviando…' : 'Enviar por correo' }}
             </button>
             <button *ngIf="canConsultAuthorization" class="btn btn-warn !px-3 !py-1.5 !text-[11px]" (click)="consultAuthorization()" [disabled]="documentLoading">
-                Consultar autorización
+                {{ actionLoading ? 'Consultando…' : 'Consultar autorización' }}
             </button>
             <button *ngIf="canRetry" class="btn btn-warn !px-3 !py-1.5 !text-[11px]" (click)="retryEmission()" [disabled]="actionLoading">
                 {{ actionLoading ? 'Procesando…' : 'Reintentar envío' }}
@@ -53,12 +53,21 @@
 <!-- CONTENIDO: 2 columnas -->
 <!-- CONTENIDO: prioridad a Cliente y SRI, luego Resumen, luego Productos -->
 <main *ngIf="invoice && !loading" class="app-container space-y-3 pb-20 md:pb-0">
+    <nav class="detail-tabs" aria-label="Secciones de la nota de crédito">
+        <button type="button" class="detail-tab" [class.is-active]="activeDetailTab === 'general'" [attr.aria-pressed]="activeDetailTab === 'general'" (click)="selectDetailTab('general')">Información general</button>
+        <button type="button" class="detail-tab" [class.is-active]="activeDetailTab === 'electronic'" [attr.aria-pressed]="activeDetailTab === 'electronic'" (click)="selectDetailTab('electronic')">Estado SRI <span class="badge" [ngClass]="statusBadge">{{ sriStatus }}</span></button>
+    </nav>
+    <app-electronic-status-panel *ngIf="activeDetailTab === 'electronic'" [document]="invoice" kind="credit-note" (updated)="electronicDocumentUpdated($event)" />
+    <div *ngIf="activeDetailTab === 'electronic' && isAuthorizationPending" class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+        <p class="text-sm text-amber-900">La autorización está pendiente o requiere revisión. Consulta el SRI sin volver a emitir la nota.</p>
+        <button *ngIf="canConsultAuthorization" type="button" class="btn btn-warn" (click)="consultAuthorization()" [disabled]="actionLoading || documentLoading">{{ actionLoading ? 'Consultando…' : 'Consultar autorización' }}</button>
+    </div>
 
     <!-- FILA 1: Cliente + SRI (prioridad visual) -->
-    <section class="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <div class="app-card p-3">
+    <section class="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div *ngIf="activeDetailTab === 'general'" class="app-card p-4">
             <div class="mb-4 flex items-center justify-between">
-                <h3 class="text-sm font-bold text-foreground">🧾 Información general</h3>
+                <h3 class="text-sm font-bold text-foreground">Datos de la nota de crédito</h3>
                 <span class="badge" [ngClass]="statusBadge">{{ sriStatus }}</span>
             </div>
             <ul class="grid gap-y-2 text-sm text-foreground/80">
@@ -66,15 +75,17 @@
                 <li><strong>N° nota:</strong> {{ invoice?.document_number || invoice?.sri?.number || '—' }}</li>
                 <li><strong>Fecha emisión:</strong> {{ invoice?.posting_date || invoice?.createdAt || '—' }}</li>
                 <li><strong>Ambiente:</strong> {{ invoice?.environment || invoice?.ambiente || '—' }}</li>
+                <li><strong>Establecimiento:</strong> {{ invoice?.establishment_code || invoice?.electronic?.establishment_code || '—' }}</li>
+                <li><strong>Punto de emisión:</strong> {{ invoice?.emission_point_code || invoice?.electronic?.emission_point_code || '—' }}</li>
                 <li><strong>Moneda:</strong> {{ invoice?.currency || 'USD' }}</li>
                 <li><strong>Estado:</strong> {{ sriStatus }}</li>
             </ul>
         </div>
 
         <!-- Información del Cliente -->
-        <div class="app-card p-3">
+        <div *ngIf="activeDetailTab === 'general'" class="app-card p-4">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-sm font-bold text-foreground">👤 Información del Cliente</h3>
+                <h3 class="text-sm font-bold text-foreground">Cliente</h3>
                 <!-- <span *ngIf="invoice?.customer?.fullName" class="badge badge-outline">
           {{ invoice?.customer?.fullName }}
         </span> -->
@@ -89,9 +100,9 @@
         </div>
 
         <!-- Información del SRI -->
-        <div class="app-card p-3">
+        <div *ngIf="activeDetailTab === 'electronic'" class="app-card p-4 md:col-span-2">
             <div class="flex items-center justify-between mb-4">
-            <h3 class="text-sm font-bold text-foreground">📤 Información del SRI</h3>
+            <h3 class="text-sm font-bold text-foreground">Autorización y documentos electrónicos</h3>
                 <span class="badge" [ngClass]="statusBadge">
                     {{ sriStatus }}
                 </span>
@@ -130,7 +141,7 @@
         </div>
     </section>
 
-    <section *ngIf="relatedInvoice || relatedDocumentNumber || relatedAccessKey || creditNoteReason">
+    <section *ngIf="activeDetailTab === 'general' && (relatedInvoice || relatedDocumentNumber || relatedAccessKey || creditNoteReason)">
         <div class="app-card p-3">
             <h3 class="mb-2 text-sm font-bold text-foreground">Factura relacionada</h3>
             <div class="grid gap-3 text-sm text-foreground/80 sm:grid-cols-2">
@@ -148,9 +159,9 @@
     </section>
 
     <!-- FILA 2: Resumen (compacto) -->
-    <section>
+    <section *ngIf="activeDetailTab === 'general'">
         <div class="app-card p-3">
-            <h3 class="text-sm font-bold text-foreground mb-2">🧾 Resumen de la Nota de Crédito</h3>
+            <h3 class="text-sm font-bold text-foreground mb-2">Resumen de importes</h3>
             <div class="text-sm text-foreground/80" *ngIf="creditNoteReason">
                 <strong>Motivo:</strong> {{ creditNoteReason }}
             </div>
@@ -189,7 +200,7 @@
         </div>
     </section>
 
-    <section *ngIf="invoice?.additional_fields?.length">
+    <section *ngIf="activeDetailTab === 'general' && invoice?.additional_fields?.length">
         <div class="app-card p-3">
             <h3 class="mb-2 text-[11px] font-bold uppercase tracking-wide text-primary">Información adicional</h3>
             <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -202,10 +213,10 @@
     </section>
 
     <!-- FILA 3: Productos (a ancho completo) -->
-    <section>
+    <section *ngIf="activeDetailTab === 'general'">
         <div class="app-card p-3">
             <div class="mb-2 flex items-center justify-between">
-                <h3 class="text-sm font-bold text-foreground">📦 Productos de la Nota</h3>
+                <h3 class="text-sm font-bold text-foreground">Productos de la nota</h3>
             </div>
 
             <div class="app-table-wrap max-h-[60vh]">
@@ -261,11 +272,11 @@
 
 <!-- Barra de acciones móvil (fija en el pie de la página) -->
 <div *ngIf="invoice && !loading"
-    class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-card border-t px-4 py-2 flex gap-2 text-center text-flex align-items-center justify-center">
+    class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-card border-t px-3 py-2 flex gap-2 overflow-x-auto items-center [&>button]:shrink-0">
     <button *ngIf="capabilities.hasPermission('billing.read')" class="btn btn-primary" (click)="getFacturaPdf()" [disabled]="documentLoading"> <fa-icon
             [icon]="['fas','download']" class="mr-1"></fa-icon>Nota de Crédito</button>
-    <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read')" class="btn btn-outline" (click)="downloadXml()" [disabled]="documentLoading">XML</button>
-    <button *ngIf="capabilities.isLiteMode && isAuthorized && capabilities.hasPermission('billing.manage')" class="btn btn-outline" (click)="sendEmail()" [disabled]="emailLoading">Correo</button>
+    <button *ngIf="isAuthorized && capabilities.hasPermission('billing.read')" class="btn btn-outline" (click)="downloadXml()" [disabled]="documentLoading">XML</button>
+    <button *ngIf="isAuthorized && capabilities.hasPermission('billing.manage')" class="btn btn-outline" (click)="sendEmail()" [disabled]="emailLoading">Correo</button>
     <button *ngIf="canConsultAuthorization" class="btn btn-warn" (click)="consultAuthorization()" [disabled]="documentLoading">Consultar autorización</button>
     <button *ngIf="canRetry" class="btn btn-warn" (click)="retryEmission()" [disabled]="actionLoading">Reintentar</button>
     <button *ngIf="canReissue" class="btn btn-outline" (click)="reissueWithNewDate()" [disabled]="actionLoading">Nueva fecha</button>

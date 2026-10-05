@@ -54,7 +54,7 @@
 
           <span class="text-left text-xs text-muted-foreground sm:text-right">{{ payment.amount | currency }}</span>
 
-          <input type="number" min="0" step="0.01"
+          <input type="text" inputmode="decimal" appDecimalInput min="0" step="0.01"
             class="input h-8 w-full text-right text-xs" [ngModel]="paymentCount(payment.payment_code)"
             (ngModelChange)="onPaymentCountChange(payment.payment_code, $event)"
             [disabled]="loadingData || saving" [attr.aria-label]="'Valor contado de ' + payment.payment_method" />

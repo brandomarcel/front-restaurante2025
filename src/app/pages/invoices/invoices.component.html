@@ -37,7 +37,7 @@
             <th class="app-th">Fecha emisión</th>
             <th class="app-th">Cliente / identificación</th>
             <th class="app-th text-right">Total</th>
-            <th class="app-th">Moneda</th>
+            <!-- <th class="app-th">Moneda</th> -->
             <th class="app-th">Estado</th>
             <th class="app-th">Proveedor / SRI</th>
             <th class="app-th">Correo</th>
@@ -65,7 +65,7 @@
               <div class="text-[10px] text-muted-foreground">{{ customerIdentification(inv) }}</div>
             </td>
             <td class="app-td text-right font-semibold">{{ (inv.total ?? inv.grand_total ?? 0) | currency:(inv.currency || 'USD'):'symbol':'1.2-2' }}</td>
-            <td class="app-td">{{ inv.currency || 'USD' }}</td>
+            <!-- <td class="app-td">{{ inv.currency || 'USD' }}</td> -->
             <td class="app-td">
               <span class="badge" [ngClass]="getInvoiceStatusBadge(inv)">{{ getInvoiceStatusLabel(inv) }}</span>
             </td>
@@ -125,7 +125,7 @@
                     Ver Orden: {{ invoiceSelected?.order }}
                 </button>
 
-                <button *ngIf="capabilities.hasPermission('billing.manage') && (!capabilities.isLiteMode ? invoiceSelected?.sri?.status !== 'AUTORIZADO' : (isLiteProcessing(invoiceSelected) || isLiteRetryable(invoiceSelected)))" class="btn btn-primary"
+                <button *ngIf="canRunSriAction" class="btn btn-primary"
                     (click)="reenviarFactura()" [disabled]="actionRunning">
                     {{ sriActionLabel }}
                 </button>

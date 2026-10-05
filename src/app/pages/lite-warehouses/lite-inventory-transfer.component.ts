@@ -7,11 +7,12 @@ import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabi
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { InventoryService } from 'src/app/services/inventory.service';
 import { ProductsService } from 'src/app/services/products.service';
+import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 
 @Component({
   selector: 'app-lite-inventory-transfer',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, DecimalInputDirective],
   templateUrl: './lite-inventory-transfer.component.html'
 })
 export class LiteInventoryTransferComponent implements OnInit {

@@ -6,6 +6,7 @@ import { NgSelectModule } from '@ng-select/ng-select';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { OnlyNumbersDirective } from 'src/app/core/directives/only-numbers.directive';
+import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 import { MenuService } from 'src/app/modules/layout/services/menu.service';
 import { CategoryService } from 'src/app/services/category.service';
 import { CustomersService } from 'src/app/services/customers.service';
@@ -28,7 +29,7 @@ type RoleName = 'Cajero' | 'Mesero' | 'Gerente' | 'Desconocido';
 
 @Component({
   selector: 'app-pos',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, OnlyNumbersDirective, ButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, OnlyNumbersDirective, DecimalInputDirective, ButtonComponent],
   templateUrl: './pos.component.html',
 })
 export class PosComponent implements OnInit {

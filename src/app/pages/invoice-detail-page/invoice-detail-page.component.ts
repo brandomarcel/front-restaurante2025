@@ -15,16 +15,21 @@ import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabi
 import { roundMoney } from 'src/app/shared/utils/payment.utils';
 import { LiteEmissionState, liteEmissionMessages, liteEmissionState } from 'src/app/core/utils/lite-invoice-emission';
 import { canConsultLiteInvoice, canRetryLiteInvoice } from 'src/app/core/utils/lite-invoice-actions';
+import { PaymentsService } from 'src/app/services/payments.service';
+import { InvoiceCollectionsService } from 'src/app/services/invoice-collections.service';
+import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
+import { ElectronicStatusPanelComponent } from 'src/app/shared/components/electronic-status-panel/electronic-status-panel.component';
+import { electronicDocumentLabel } from 'src/app/core/utils/electronic-document';
 
 @Component({
   selector: 'app-invoice-detail-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, FontAwesomeModule, ReactiveFormsModule, NgxSpinnerComponent],
+  imports: [CommonModule, RouterModule, FontAwesomeModule, ReactiveFormsModule, NgxSpinnerComponent, DecimalInputDirective, ElectronicStatusPanelComponent],
   templateUrl: './invoice-detail-page.component.html',
   styleUrl: './invoice-detail-page.component.css'
 })
 export class InvoiceDetailPageComponent implements OnInit {
-  activeDetailTab: 'general' | 'electronic' = 'general';
+  activeDetailTab: 'general' | 'electronic' | 'collections' = 'general';
   invoice: any = null;
   additionalFields: AdditionalFieldPayload[] = [];
   motivosAnulacion: string[] = [
@@ -40,6 +45,12 @@ export class InvoiceDetailPageComponent implements OnInit {
   emailActionRunning = false;
   documentActionRunning = false;
   motivoForm: FormGroup;
+  collectionForm: FormGroup;
+  collections: any[] = [];
+  collectionSummary: any = {};
+  paymentMethods: any[] = [];
+  loadingCollections = false;
+  savingCollection = false;
 
   private baseUrl = environment.URL;
 
@@ -51,12 +62,20 @@ export class InvoiceDetailPageComponent implements OnInit {
     private fb: FormBuilder,
     private creditNoteSvc: CreditNoteService,
     private spinner: NgxSpinnerService,
+    private paymentsSvc: PaymentsService,
+    private collectionsSvc: InvoiceCollectionsService,
     public capabilities: CompanyCapabilitiesService,
   ) {
     this.motivoForm = this.fb.group({
       // El backend Lite asigna el motivo predeterminado cuando llega vacío.
       motivo: [''],
       otroTexto: [''] // se valida dinámicamente si elige "Otro"
+    });
+    this.collectionForm = this.fb.group({
+      payment_method: ['', Validators.required],
+      amount: [0, [Validators.required, Validators.min(0.01)]],
+      reference: [''],
+      notes: ['']
     });
   }
 
@@ -82,6 +101,8 @@ export class InvoiceDetailPageComponent implements OnInit {
           res?.message?.additionalFields ??
           res?.message?.additional_fields
         );
+        this.loadPaymentMethods();
+        this.loadCollections();
         this.spinner.hide();
       },
       error: (err) => {
@@ -94,6 +115,132 @@ this.spinner.hide();
   goBack() {
     if (history.length > 2) history.back();
     else this.router.navigate(['/dashboard/invoices']);
+  }
+
+  get collectionStatus(): string {
+    return String(this.collectionSummary?.collection_status ?? this.invoice?.collection_status ?? 'Pendiente');
+  }
+
+  get totalCollected(): number {
+    return Number(this.collectionSummary?.total_collected ?? this.invoice?.totals?.total_collected ?? this.invoice?.total_collected ?? 0) || 0;
+  }
+
+  get outstandingAmount(): number {
+    const declared = this.collectionSummary?.outstanding_amount ?? this.invoice?.totals?.outstanding_amount ?? this.invoice?.outstanding_amount;
+    if (declared !== undefined && declared !== null && declared !== '') return Number(declared) || 0;
+    return Math.max(0, roundMoney((this.invoice?.totals?.grand_total ?? this.invoice?.total ?? 0) - this.totalCollected));
+  }
+
+  get lastCollectionAt(): string | null {
+    return this.collectionSummary?.last_collection_at ?? this.invoice?.last_collection_at ?? null;
+  }
+
+  get canManageCollections(): boolean {
+    return this.capabilities.hasPermission('*')
+      || this.capabilities.hasPermission('billing.manage')
+      || this.capabilities.hasPermission('billing.create');
+  }
+
+  selectDetailTab(tab: 'general' | 'electronic' | 'collections'): void {
+    this.activeDetailTab = tab;
+    if (tab === 'collections') this.loadCollections();
+  }
+
+  loadCollections(): void {
+    const name = String(this.invoice?.name || '').trim();
+    if (!name || this.loadingCollections) return;
+    this.loadingCollections = true;
+    this.collectionsSvc.getCollections(name).pipe(finalize(() => this.loadingCollections = false)).subscribe({
+      next: (response: any) => {
+        const message = response?.message ?? response ?? {};
+        this.collections = Array.isArray(message?.data) ? message.data : [];
+        this.collectionSummary = message?.summary || {};
+        this.invoice = {
+          ...this.invoice,
+          collection_status: this.collectionSummary?.collection_status ?? this.invoice?.collection_status,
+          totals: { ...(this.invoice?.totals || {}), ...this.collectionSummary }
+        };
+      },
+      error: (error: any) => toast.error(this.collectionError(error))
+    });
+  }
+
+  registerCollection(): void {
+    if (!this.canManageCollections) { toast.error('No tienes permiso para registrar abonos.'); return; }
+    if (this.collectionForm.invalid) { this.collectionForm.markAllAsTouched(); return; }
+    const amount = roundMoney(this.collectionForm.get('amount')?.value);
+    if (amount > this.outstandingAmount) { toast.error('El abono no puede ser mayor al saldo pendiente.'); return; }
+    const methodValue = String(this.collectionForm.get('payment_method')?.value || '').trim();
+    const method = this.paymentMethods.find((item: any) => String(item?.name || item?.codigo || '') === methodValue);
+    if (!method) { toast.error('Selecciona un método de pago válido.'); return; }
+    const code = String(method?.codigo || method?.payment_code || method?.forma_pago || '').trim();
+    const submit = () => {
+      this.savingCollection = true;
+      this.collectionsSvc.createCollection({
+        invoice: String(this.invoice?.name || '').trim(),
+        payment_method: String(method?.name || methodValue),
+        payment_code: code,
+        amount,
+        reference: String(this.collectionForm.get('reference')?.value || '').trim(),
+        notes: String(this.collectionForm.get('notes')?.value || '').trim()
+      }).pipe(finalize(() => this.savingCollection = false)).subscribe({
+        next: () => {
+          toast.success('Abono registrado correctamente.');
+          this.collectionForm.reset({ payment_method: '', amount: 0, reference: '', notes: '' });
+          this.loadCollections();
+          this.fetch(String(this.invoice?.name || ''));
+        },
+        error: (error: any) => toast.error(this.collectionError(error))
+      });
+    };
+    // El efectivo requiere caja abierta; los demás medios se asocian a ella
+    // si existe, decisión que el backend conserva para el cierre.
+    if (code === '01') {
+      this.collectionsSvc.getCurrentCashOpening().subscribe({ next: () => submit(), error: (error: any) => toast.error(this.collectionError(error) || 'Debe abrir caja antes de registrar un abono en efectivo.') });
+    } else {
+      submit();
+    }
+  }
+
+  canCancelCollection(collection: any): boolean {
+    const status = String(collection?.status ?? collection?.estado ?? '').toLowerCase();
+    const cashOpening = collection?.cash_opening ?? collection?.apertura ?? collection?.opening;
+    const cashStatus = String(
+      collection?.cash_opening_status
+      ?? collection?.apertura_estado
+      ?? (typeof cashOpening === 'object' ? (cashOpening?.status ?? cashOpening?.estado) : '')
+      ?? ''
+    ).toLowerCase();
+    const belongsToCashOpening = Boolean(cashOpening) || String(collection?.payment_code || '').trim() === '01';
+    // Si el abono está ligado a caja, solo exponemos anulación cuando el
+    // backend devolvió explícitamente una apertura todavía abierta. Ante
+    // información incompleta se bloquea preventivamente y el backend sigue
+    // validando la operación.
+    const cashCanBeCancelled = !belongsToCashOpening || Boolean(cashStatus) && !cashStatus.includes('cerrad') && !cashStatus.includes('closed');
+    return this.canManageCollections && !status.includes('anulad') && !status.includes('cancel') && cashCanBeCancelled;
+  }
+
+  cancelCollection(collection: any): void {
+    if (!this.canCancelCollection(collection)) return;
+    const reason = window.prompt('Motivo de anulación del abono:');
+    if (!reason?.trim()) return;
+    this.collectionsSvc.cancelCollection(String(collection?.name || ''), reason).subscribe({
+      next: () => { toast.success('Abono anulado.'); this.loadCollections(); this.fetch(String(this.invoice?.name || '')); },
+      error: (error: any) => toast.error(this.collectionError(error))
+    });
+  }
+
+  private loadPaymentMethods(): void {
+    if (this.paymentMethods.length) return;
+    this.paymentsSvc.getAll().subscribe({
+      next: (rows: any[]) => this.paymentMethods = (rows || []).map((item: any) => ({ ...item, name: item?.name || item?.codigo, description: item?.description || item?.nombre || item?.name || item?.codigo })),
+      error: () => toast.error('No se pudieron cargar los métodos de pago.')
+    });
+  }
+
+  private collectionError(error: any): string {
+    if (error?.status === 403) return 'No tienes permiso para administrar la cartera.';
+    return String(error?.error?.message?.message || error?.error?.message || error?.message || 'No se pudo completar la operación de cartera.');
   }
 
   getFacturaPdf(): void {
@@ -221,6 +368,10 @@ this.spinner.hide();
   reenviarFactura() {
     if (this.capabilities.isLiteMode) {
       this.consultarEstadoSri();
+      return;
+    }
+    if (this.liteActionRunning || !this.canResend) {
+      toast.info('Este documento no permite reenviar al SRI. Consulta su autorización o revisa el estado electrónico.');
       return;
     }
     const planBlockMessage = this.capabilities.getPlanBlockMessage('direct_invoice');
@@ -418,10 +569,6 @@ this.spinner.hide();
     return Array.isArray(this.invoice?.items) ? this.invoice.items : [];
   }
 
-  selectDetailTab(tab: 'general' | 'electronic'): void {
-    this.activeDetailTab = tab;
-  }
-
   get invoiceNumber(): string {
     return this.invoice?.sri?.number || this.invoice?.name || '—';
   }
@@ -438,19 +585,17 @@ this.spinner.hide();
   }
 
   get liteState(): LiteEmissionState {
-    const status = this.invoiceStatusRaw;
-    const providerStatus = this.liteProviderStatus;
-    const providerCode = this.liteProviderCode;
-    if (status === 'AUTORIZADO' || status === 'AUTORIZADA' || status === 'AUTHORIZED' || status === 'SRI_AUTHORIZED' || providerStatus === 'AUTHORIZED') return 'AUTHORIZED';
-    if (providerCode === '70' || providerCode === '43' || ['PROCESSING', 'PENDING', 'PENDIENTE EMISION', 'PENDIENTE EMISIÓN', 'EN COLA', 'FIRMADO', 'ENVIADO', 'QUEUED'].includes(status)) return 'PROCESSING';
-    if (status === 'EMITIDA' && ['PROCESSING', 'RECEIVED', 'PENDING'].includes(providerStatus)) return 'PROCESSING';
-    if (['RECHAZADO', 'RECHAZADA', 'REJECTED', 'NOT_AUTHORIZED', 'SRI_REJECTED'].includes(status)) return 'REJECTED';
-    if (['ERROR', 'ERRONEO', 'ERROR DE ENVIO', 'ERROR DE ENVÍO'].includes(status)) return 'ERROR';
-    return liteEmissionState({ ok: false, status });
+    return liteEmissionState({
+      ...(this.invoice?.electronic ?? {}),
+      status: this.invoiceStatusRaw,
+      provider_status: this.liteProviderStatus,
+      sri_code: this.liteProviderCode
+    });
   }
 
   get isLiteAuthorized(): boolean { return this.liteState === 'AUTHORIZED'; }
   get facturaStatusLabel(): string {
+    if (this.capabilities.isLiteMode) return electronicDocumentLabel(this.invoice);
     const value = this.invoiceStatusRaw;
     if (value === 'AUTORIZADO' || value === 'AUTORIZADA' || value === 'AUTHORIZED') return 'Autorizada';
     if (value === 'EMITIDA') return 'Emitida';
@@ -461,6 +606,11 @@ this.spinner.hide();
   }
   get liteProviderStatus(): string {
     return String(this.invoice?.sri?.provider_status || this.invoice?.provider_status || this.invoice?.electronic?.provider_status || '').trim().toUpperCase();
+  }
+  electronicDocumentUpdated(document: any): void {
+    if (document.name !== this.invoice?.name) this.router.navigate(['/dashboard/invoices', document.name]);
+    this.invoice = document;
+    this.fetch(document.name);
   }
   get liteProviderCode(): string {
     return String(this.invoice?.sri?.sri_code || this.invoice?.sri?.status_code || this.invoice?.sri?.code ||
@@ -539,7 +689,7 @@ this.spinner.hide();
     if (this.capabilities.isLiteMode) return false;
     return !!this.invoice
       && this.capabilities.hasPermission('billing.manage')
-      && this.invoiceStatusRaw !== 'AUTORIZADO'
+      && canRetryLiteInvoice(this.invoice)
       && this.capabilities.validateFeatureUse('direct_invoice').allowed;
   }
 
@@ -691,6 +841,7 @@ this.spinner.hide();
   }
 
   get sriStatus(): string {
+    if (this.capabilities.isLiteMode) return electronicDocumentLabel(this.invoice);
     if (this.capabilities.isLiteMode && (this.liteProviderCode === '70' || this.liteProviderCode === '43' || this.hasAccessKeyRegistered ||
       (this.invoiceStatusRaw === 'EMITIDA' && ['PROCESSING', 'RECEIVED', 'PENDING'].includes(this.liteProviderStatus)))) {
       return 'En proceso';

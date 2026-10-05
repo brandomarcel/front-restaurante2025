@@ -33,6 +33,7 @@
 </header>
 
 <main *ngIf="guide" class="app-container space-y-3 pb-20 md:pb-0">
+  <app-electronic-status-panel [document]="guide" kind="guide" (updated)="fetch($event.name)" />
   <!-- FILA 1: Información general + Transporte + SRI -->
   <section class="grid grid-cols-1 gap-3 md:grid-cols-3">
     <div class="app-card p-3">

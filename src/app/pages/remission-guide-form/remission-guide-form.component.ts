@@ -8,6 +8,7 @@ import { finalize } from 'rxjs';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { RemissionGuidesService } from 'src/app/services/remission-guides.service';
 import { liteEmissionMessages } from 'src/app/core/utils/lite-invoice-emission';
+import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 
 /** Códigos de identificación SRI usados en transportista/destinatario. */
 const IDENTIFICATION_TYPES = [
@@ -84,7 +85,7 @@ function docSustentoGroupValidator(): ValidatorFn {
 @Component({
   selector: 'app-remission-guide-form',
   standalone: true,
-  imports: [CommonModule, RouterModule, ReactiveFormsModule, NgxSpinnerComponent],
+  imports: [CommonModule, RouterModule, ReactiveFormsModule, NgxSpinnerComponent, DecimalInputDirective],
   templateUrl: './remission-guide-form.component.html'
 })
 export class RemissionGuideFormComponent implements OnInit {

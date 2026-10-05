@@ -5,6 +5,18 @@ import {
 } from './lite-invoice-emission';
 
 describe('FacturADA Lite emission responses', () => {
+  it('keeps explicit failure authoritative over provider authorization', () => {
+    expect(liteEmissionState({ ok: true, status: 'ERROR', provider_status: 'AUTHORIZED' })).toBe('ERROR');
+    const result = normalizeLiteEmissionResponse({ message: { ok: false, emission: { ok: true, status: 'AUTHORIZED' } } });
+    expect(result.state).toBe('ERROR');
+    expect(result.emission.ok).toBeFalse();
+  });
+  it('reads persisted electronic phases without inventing reception', () => {
+    const result = normalizeLiteEmissionResponse({ message: { data: { name: 'A', status: 'En Revision', electronic: { access_key: 'key', messages: 'Revisar', authorization_status: 'UNKNOWN' } } } });
+    expect(result.accessKey).toBe('key');
+    expect(result.emission.reception_status).toBeUndefined();
+    expect(result.messages).toContain('Revisar');
+  });
   it('recognizes an authorized invoice and preserves data', () => {
     const result = normalizeLiteEmissionResponse({
       message: {

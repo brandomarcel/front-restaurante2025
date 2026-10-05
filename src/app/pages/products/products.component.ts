@@ -15,6 +15,7 @@ import { ButtonComponent } from 'src/app/shared/components/button/button.compone
 import { IconActionButtonComponent } from 'src/app/shared/components/icon-action-button/icon-action-button.component';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
+import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 import {
   getInventoryUnit,
   hasInventoryControl,
@@ -39,7 +40,7 @@ type StockEditMode = 'absolute' | 'delta';
 
 @Component({
   selector: 'app-products',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonComponent, AppPaginationComponent, IconActionButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonComponent, AppPaginationComponent, IconActionButtonComponent, DecimalInputDirective],
   templateUrl: './products.component.html',
   styleUrl: './products.component.css'
 })

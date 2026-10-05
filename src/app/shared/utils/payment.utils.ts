@@ -1,3 +1,5 @@
+import { parseLocalizedDecimal } from './decimal.utils';
+
 export interface PaymentMethodLike {
   name?: string;
   codigo?: string;
@@ -27,8 +29,8 @@ export interface PaymentRow {
 }
 
 export function roundMoney(value: any): number {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return 0;
+  const numeric = parseLocalizedDecimal(value);
+  if (numeric === null) return 0;
   return Math.round((numeric + Number.EPSILON) * 100) / 100;
 }
 
@@ -197,3 +199,4 @@ export function validatePaymentsTotal(
 
   return null;
 }
+

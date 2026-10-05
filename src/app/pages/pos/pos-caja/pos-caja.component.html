@@ -482,14 +482,14 @@
                             <div class="mt-1 flex flex-wrap items-center gap-1.5">
                                 <label class="flex items-center gap-1 text-[9px] text-muted-foreground">
                                     %
-                                    <input type="number" min="0" max="100" step="1"
+                                    <input type="text" inputmode="decimal" appDecimalInput min="0" max="100" step="1"
                                         [ngModel]="item.discount_percentage" [ngModelOptions]="{standalone: true}"
                                         (ngModelChange)="cartService.setDiscountPercentage(item, $event)"
                                         class="h-5 w-12 rounded border border-border bg-card px-1 text-[10px] text-foreground" />
                                 </label>
                                 <label class="flex items-center gap-1 text-[9px] text-muted-foreground">
                                     $
-                                    <input type="number" min="0" step="0.01"
+                                    <input type="text" inputmode="decimal" appDecimalInput min="0" step="0.01"
                                         [ngModel]="item.discount_amount" [ngModelOptions]="{standalone: true}"
                                         (ngModelChange)="cartService.setDiscountAmount(item, $event)"
                                         class="h-5 w-14 rounded border border-border bg-card px-1 text-[10px] text-foreground" />
@@ -524,10 +524,12 @@
                     </div>
                 </div>
 
-                <button type="button" (click)="abrirModalPago()" [disabled]="!canCheckout"
-                    class="mt-2 min-h-[40px] flex-shrink-0 rounded-lg bg-primary px-3 text-xs font-bold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
-                    {{ genericMode ? 'Cobrar y emitir' : 'Cobrar' }}
-                </button>
+                <div class="mt-2 flex-shrink-0">
+                    <button type="button" (click)="abrirModalPago()" [disabled]="!canCheckout"
+                        class="min-h-[40px] w-full rounded-lg bg-primary px-3 text-xs font-bold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
+                        {{ genericMode ? 'Cobrar y emitir' : 'Cobrar' }}
+                    </button>
+                </div>
             </aside>
 
         </div>
@@ -625,11 +627,11 @@
     aria-modal="true">
 
     <!-- CONTENEDOR: alto máximo acotado al viewport, nunca más alto que la pantalla -->
-    <div class="bg-card w-full max-w-6xl max-h-[92vh] rounded-xl shadow-2xl flex flex-col overflow-hidden">
+    <div class="bg-card flex h-[97dvh] w-full max-w-[1440px] flex-col overflow-hidden rounded-xl shadow-2xl">
 
         <!-- HEADER -->
-        <div class="flex shrink-0 items-center justify-between px-5 py-3 border-b border-border bg-card">
-            <h2 class="text-lg font-semibold text-foreground">
+        <div class="flex shrink-0 items-center justify-between border-b border-border bg-card px-4 py-2.5">
+            <h2 class="text-base font-semibold text-foreground">
                 {{ genericMode ? 'Finalizar venta' : 'Finalizar pedido' }}
             </h2>
 
@@ -644,16 +646,16 @@
         <div class="flex flex-1 min-h-0 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
 
             <!-- ================= IZQUIERDA ================= -->
-            <div class="border-b border-border p-4 flex flex-col lg:w-1/2 lg:overflow-hidden lg:border-b-0 lg:border-r">
+            <div class="flex flex-col border-b border-border p-3 lg:w-[46%] lg:overflow-hidden lg:border-b-0 lg:border-r">
 
                 <!-- Cliente -->
-                <div class="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs">
-                    <p class="font-semibold text-foreground">
+                <div class="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs">
+                    <p class="font-semibold leading-4 text-foreground">
                         👤 {{ customer?.nombre }}
                     </p>
 
                     <div *ngIf="customer?.nombre !== 'Consumidor Final'"
-                        class="mt-1 text-muted-foreground text-[11px] space-y-0.5">
+                        class="mt-0.5 grid grid-cols-1 gap-x-3 text-[10px] text-muted-foreground sm:grid-cols-2">
                         <p>{{ customer?.num_identificacion }}</p>
                         <p>{{ customer?.telefono }}</p>
                         <p class="break-all">{{ customer?.correo }}</p>
@@ -661,7 +663,7 @@
                 </div>
 
                 <!-- Tipo orden (solo restaurante) -->
-                <div *ngIf="!genericMode" class="mt-3 text-xs">
+                <div *ngIf="!genericMode" class="mt-2 text-xs">
                     <span class="text-muted-foreground">Tipo:</span>
                     <span class="font-semibold ml-1 text-foreground">{{ orderType }}</span>
 
@@ -672,9 +674,9 @@
                 </div>
 
                 <!-- Detalle -->
-                <div class="mt-3 flex-1 lg:overflow-y-auto bg-muted/40 rounded-lg border border-border p-3 text-xs">
+                <div class="mt-2 flex-1 rounded-lg border border-border bg-muted/40 p-2.5 text-xs lg:overflow-y-auto">
 
-                    <div *ngFor="let item of cartService.cart" class="border-b border-border py-1.5">
+                    <div *ngFor="let item of cartService.cart" class="border-b border-border py-1">
 
                         <div class="flex justify-between gap-2">
                             <div class="min-w-0">
@@ -692,17 +694,17 @@
                         </div>
 
                         <!-- Descuento por línea: porcentaje y monto fijo, con recálculo inmediato -->
-                        <div class="mt-1.5 flex flex-wrap items-center gap-2">
+                        <div class="mt-1 flex flex-wrap items-center gap-1.5">
                             <label class="flex items-center gap-1 text-[10px] text-muted-foreground">
                                 Desc. %
-                                <input type="number" min="0" max="100" step="1"
+                                <input type="text" inputmode="decimal" appDecimalInput min="0" max="100" step="1"
                                     [ngModel]="item.discount_percentage" [ngModelOptions]="{standalone: true}"
                                     (ngModelChange)="cartService.setDiscountPercentage(item, $event)"
                                     class="w-14 rounded border border-border bg-card px-1.5 py-0.5 text-[11px] text-foreground" />
                             </label>
                             <label class="flex items-center gap-1 text-[10px] text-muted-foreground">
                                 Desc. $
-                                <input type="number" min="0" step="0.01"
+                                <input type="text" inputmode="decimal" appDecimalInput min="0" step="0.01"
                                     [ngModel]="item.discount_amount" [ngModelOptions]="{standalone: true}"
                                     (ngModelChange)="cartService.setDiscountAmount(item, $event)"
                                     class="w-16 rounded border border-border bg-card px-1.5 py-0.5 text-[11px] text-foreground" />
@@ -714,7 +716,7 @@
                     </div>
 
                     <!-- Totales -->
-                    <div class="pt-3 space-y-1 border-t border-border mt-2 text-xs text-foreground">
+                    <div class="mt-2 space-y-0.5 border-t border-border pt-2 text-xs text-foreground">
                         <div class="flex justify-between">
                             <span>Subtotal</span>
                             <span>${{ subtotal | number:'1.2-2' }}</span>
@@ -740,32 +742,77 @@
             </div>
 
             <!-- ================= DERECHA ================= -->
-            <div class="p-5 flex flex-col lg:w-1/2 lg:overflow-y-auto">
+            <div class="flex flex-col p-3 lg:w-[54%] lg:overflow-y-auto">
 
                 <!-- TOTAL GRANDE -->
-                <div class="text-center">
-                    <p class="text-muted-foreground text-sm">Total a Pagar</p>
-                    <p class="text-5xl font-bold text-emerald-500">
+                <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-center">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-amber-800">Total a pagar</p>
+                    <p class="mt-1 text-5xl font-bold leading-none text-amber-600">
                         ${{ total | number:'1.2-2' }}
                     </p>
                 </div>
 
+                <!-- Crédito pertenece al mismo cobro: los pagos de abajo siguen
+                     siendo el detalle fiscal por el total completo. -->
+                <section *ngIf="genericMode && canUseCreditSales" class="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-2.5">
+                    <p class="text-xs font-bold text-foreground">Condición de pago</p>
+                    <div class="mt-2 grid grid-cols-2 gap-2">
+                        <button type="button" (click)="setPaymentCondition('Contado')"
+                            [ngClass]="!isCreditSale ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground hover:bg-muted/40'"
+                            class="min-h-[38px] rounded-lg border px-2 text-xs font-semibold transition">
+                            Pago completo
+                        </button>
+                        <button type="button" (click)="setPaymentCondition('Credito')"
+                            [ngClass]="isCreditSale ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground hover:bg-muted/40'"
+                            class="min-h-[38px] rounded-lg border px-2 text-xs font-semibold transition">
+                            Venta a crédito
+                        </button>
+                    </div>
+
+                    <div *ngIf="isCreditSale" class="mt-2.5 space-y-2">
+                        <p class="text-[10px] leading-3 text-muted-foreground">El abono es el dinero recibido ahora; los pagos fiscales se completan por el total.</p>
+                        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        <label class="block text-[11px] font-semibold text-foreground">Vencimiento <span class="font-normal text-muted-foreground">(opcional)</span>
+                            <input type="date" [(ngModel)]="paymentDueDate" class="mt-1 w-full rounded-md border border-border bg-card px-2.5 py-2 text-xs text-foreground" />
+                        </label>
+                            <label class="text-[11px] font-semibold text-foreground">Abono inicial
+                                <input type="text" inputmode="decimal" appDecimalInput [(ngModel)]="initialCollectionAmount" min="0" step="0.01"
+                                    class="mt-1 w-full rounded-md border border-border bg-card px-2.5 py-2 text-right text-xs text-foreground" placeholder="0.00" />
+                            </label>
+                            <label class="text-[11px] font-semibold text-foreground">Método del abono
+                                <select [(ngModel)]="initialCollectionMethod" class="mt-1 w-full rounded-md border border-border bg-card px-2.5 py-2 text-xs text-foreground">
+                                    <option value="">Seleccionar</option>
+                                    <option *ngFor="let item of payments" [value]="item.name || item.codigo">{{ item.description || item.nombre || item.name }}</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                            <input type="text" [(ngModel)]="initialCollectionReference" maxlength="140" class="w-full rounded-md border border-border bg-card px-2.5 py-2 text-xs text-foreground" placeholder="Referencia (opcional)" />
+                            <input type="text" [(ngModel)]="initialCollectionNotes" maxlength="240" class="w-full rounded-md border border-border bg-card px-2.5 py-2 text-xs text-foreground" placeholder="Observación (opcional)" />
+                            <div class="flex items-center justify-between rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs sm:min-w-[145px]">
+                            <span class="font-semibold text-amber-900">Saldo pendiente</span>
+                            <strong class="text-base text-amber-800">${{ creditOutstandingAmount | number:'1.2-2' }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Pagos combinados -->
-                <div class="mt-6 rounded-xl border border-border bg-muted/40 p-3">
+                <div class="mt-3 rounded-xl border border-border bg-muted/40 p-2.5">
                     <div class="mb-2 flex items-center justify-between gap-2">
                         <div>
-                            <p class="text-xs font-bold text-foreground">Métodos de pago</p>
-                            <p class="text-[10px] text-muted-foreground">No repitas una forma de pago.</p>
+                            <p class="text-xs font-bold text-foreground">{{ isCreditSale ? 'Información fiscal del comprobante' : 'Métodos de pago' }}</p>
+                            <p class="text-[10px] text-muted-foreground">{{ isCreditSale ? 'Debe completar el total de la factura. No incluye el abono inicial.' : 'No repitas una forma de pago.' }}</p>
                         </div>
                         <button type="button" (click)="addPaymentRow()" class="rounded-md border border-primary/20 bg-card px-2 py-1 text-[11px] font-semibold text-primary">+ Agregar</button>
                     </div>
                     <div class="space-y-2">
-                        <div *ngFor="let payment of paymentRows; let index = index" class="grid grid-cols-[1fr_82px_28px] gap-1.5">
-                            <select [(ngModel)]="payment.method" (change)="onPaymentRowMethodChange(index)" class="min-w-0 border border-border rounded-md px-2 py-2 text-xs bg-card text-foreground">
+                        <div *ngFor="let payment of paymentRows; let index = index" class="grid grid-cols-[1fr_78px_26px] gap-1.5">
+                            <select [(ngModel)]="payment.method" (change)="onPaymentRowMethodChange(index)" class="min-w-0 rounded-md border border-border bg-card px-2 py-1.5 text-xs text-foreground">
                                 <option value="">Método</option>
                                 <option *ngFor="let item of payments" [value]="item.name || item.codigo">{{ item.description || item.nombre || item.name }}</option>
                             </select>
-                            <input type="number" min="0.01" step="0.01" [(ngModel)]="payment.amount" (input)="calcularCambio()" class="w-full border border-border rounded-md px-2 py-2 text-right text-xs bg-card text-foreground" placeholder="0.00" />
+                            <input type="text" inputmode="decimal" appDecimalInput min="0.01" step="0.01" [(ngModel)]="payment.amount" (ngModelChange)="calcularCambio()" class="w-full rounded-md border border-border bg-card px-2 py-1.5 text-right text-xs text-foreground" placeholder="0.00" />
                             <button type="button" (click)="removePaymentRow(index)" [disabled]="paymentRows.length === 1" class="rounded-md text-lg text-red-500 disabled:opacity-30">×</button>
                         </div>
                     </div>
@@ -781,15 +828,15 @@
                 </div>
 
                 <!-- Efectivo -->
-                <div *ngIf="isSelectedPaymentCash" class="mt-6">
+                <div *ngIf="isSelectedPaymentCash && !isCreditSale" class="mt-3">
 
-                    <input type="number" [(ngModel)]="amountReceived" (input)="calcularCambio()"
-                        class="w-full border border-border rounded-md px-3 py-3 text-2xl font-semibold text-center focus:ring-2 focus:ring-primary bg-card text-foreground"
+                    <input type="text" inputmode="decimal" appDecimalInput [(ngModel)]="amountReceived" (ngModelChange)="calcularCambio()"
+                        class="w-full rounded-md border border-border bg-card px-3 py-2 text-xl font-semibold text-center text-foreground focus:ring-2 focus:ring-primary"
                         placeholder="Monto recibido (opcional)" min="0" step="0.01" />
 
-                    <div class="mt-4 text-center">
-                        <p class="text-muted-foreground text-sm">Cambio a entregar</p>
-                        <p class="text-5xl font-bold" [class.text-red-500]="change < 0"
+                    <div class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-center">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-amber-800">Cambio a entregar</p>
+                        <p class="mt-1 text-5xl font-bold leading-none" [class.text-red-500]="change < 0"
                             [class.text-emerald-500]="change >= 0">
                             ${{ change | number:'1.2-2' }}
                         </p>
@@ -798,7 +845,7 @@
                 </div>
 
                 <!-- Alias de orden (solo restaurante) -->
-                <div *ngIf="!genericMode" class="mt-6">
+                <div *ngIf="!genericMode" class="mt-3">
                     <input type="text" [(ngModel)]="alias" maxlength="20"
                         oninput="this.value = this.value.toUpperCase()"
                         class="w-full border border-border rounded-md px-3 py-2 text-sm text-center bg-card text-foreground" placeholder="Alias (opcional)" />
@@ -809,15 +856,15 @@
         </div>
 
         <!-- FOOTER fijo: las acciones nunca dependen del scroll, siempre visibles -->
-        <div class="shrink-0 border-t border-border bg-card p-4">
-            <div class="grid gap-3" [ngClass]="genericMode ? 'grid-cols-1' : 'grid-cols-2'">
+        <div class="shrink-0 border-t border-border bg-card p-3">
+            <div class="grid gap-2" [ngClass]="genericMode && isCreditSale ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'">
 
-                <button (click)="confirmarPago('Nota Venta')" [disabled]="paymentRemaining !== 0"
+                <button *ngIf="!genericMode || !isCreditSale" (click)="confirmarPago('Nota Venta')" [disabled]="paymentRemaining !== 0 || isSubmittingPosSale || checkingCashOpening"
                     class="bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-lg font-semibold text-sm disabled:cursor-not-allowed disabled:opacity-50">
                     {{ genericMode ? 'Guardar Nota de Venta' : 'Nota de Venta' }}
                 </button>
 
-                <button (click)="confirmarPago('Factura')" [disabled]="!canEmitInvoice || paymentRemaining !== 0"
+                <button (click)="confirmarPago('Factura')" [disabled]="!canEmitInvoice || paymentRemaining !== 0 || isSubmittingPosSale || checkingCashOpening"
                     class="bg-primary hover:bg-primary/90 text-white py-3 rounded-lg font-semibold text-sm disabled:cursor-not-allowed disabled:opacity-50">
                     {{ genericMode ? 'Cobrar y Facturar' : 'Facturar' }}
                 </button>
@@ -830,6 +877,40 @@
         </div>
 
     </div>
+</div>
+
+<!-- CARTERA: acceso operativo dentro del POS sin abandonar la venta actual. -->
+<div *ngIf="showReceivablesModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3" role="dialog" aria-modal="true">
+    <section class="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+        <header class="flex items-center justify-between border-b border-border px-5 py-3">
+            <div><h2 class="text-base font-bold text-foreground">Cartera / Créditos</h2><p class="text-xs text-muted-foreground">Facturas con saldo pendiente del negocio actual.</p></div>
+            <div class="flex gap-2"><button type="button" (click)="loadReceivables()" [disabled]="loadingReceivables" class="rounded-md border border-border px-2.5 py-1.5 text-xs font-semibold text-primary disabled:opacity-50">Actualizar</button><button type="button" (click)="showReceivablesModal = false; refocusScanner()" class="text-2xl text-muted-foreground">×</button></div>
+        </header>
+        <div class="overflow-auto p-4">
+            <div *ngIf="loadingReceivables" class="py-12 text-center text-sm text-muted-foreground">Cargando cartera…</div>
+            <div *ngIf="!loadingReceivables && receivables.length === 0" class="rounded-lg border border-dashed border-border py-12 text-center text-sm text-muted-foreground">No existen facturas con saldo pendiente.</div>
+            <div *ngIf="!loadingReceivables && receivables.length" class="overflow-x-auto rounded-lg border border-border">
+                <table class="min-w-[760px] w-full text-left text-xs"><thead class="bg-muted/50 text-muted-foreground"><tr><th class="px-3 py-2.5">Cliente</th><th class="px-3 py-2.5">Factura</th><th class="px-3 py-2.5">Fecha</th><th class="px-3 py-2.5 text-right">Total</th><th class="px-3 py-2.5 text-right">Cobrado</th><th class="px-3 py-2.5 text-right">Saldo</th><th class="px-3 py-2.5">Estado</th><th class="px-3 py-2.5"></th></tr></thead>
+                    <tbody><tr *ngFor="let row of receivables" class="border-t border-border"><td class="px-3 py-2.5 font-semibold text-foreground">{{ row.customer_name || row.customer?.customer_name || row.customer || '—' }}</td><td class="px-3 py-2.5">{{ row.name || row.invoice_name }}</td><td class="px-3 py-2.5">{{ row.posting_date || row.creation || '—' }}</td><td class="px-3 py-2.5 text-right">${{ (row.totals?.grand_total ?? row.grand_total ?? row.total ?? 0) | number:'1.2-2' }}</td><td class="px-3 py-2.5 text-right">${{ (row.totals?.total_collected ?? row.total_collected ?? 0) | number:'1.2-2' }}</td><td class="px-3 py-2.5 text-right font-bold text-amber-700">${{ (row.totals?.outstanding_amount ?? row.outstanding_amount ?? 0) | number:'1.2-2' }}</td><td class="px-3 py-2.5"><span class="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800">{{ row.collection_status || row.totals?.collection_status || 'Pendiente' }}</span></td><td class="px-3 py-2.5 text-right"><button *ngIf="canManageReceivables" type="button" (click)="openCollectionModal(row)" class="rounded-md bg-primary px-2.5 py-1.5 font-semibold text-primary-foreground">Abonar</button></td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- REGISTRAR ABONO: se valida contra el saldo que entregó el backend. -->
+<div *ngIf="showCollectionModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-3" role="dialog" aria-modal="true">
+    <section class="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-2xl">
+        <div class="flex items-start justify-between gap-3"><div><h2 class="text-base font-bold text-foreground">Registrar abono</h2><p class="mt-0.5 text-xs text-muted-foreground">Factura {{ selectedReceivable?.name || selectedReceivable?.invoice_name }}</p></div><button type="button" (click)="showCollectionModal = false" class="text-2xl text-muted-foreground">×</button></div>
+        <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"><span>Saldo pendiente</span><strong class="float-right">${{ selectedReceivableOutstanding | number:'1.2-2' }}</strong></div>
+        <div class="mt-4 space-y-3">
+            <label class="block text-xs font-semibold text-foreground">Monto<input type="text" inputmode="decimal" appDecimalInput [(ngModel)]="collectionAmount" min="0.01" step="0.01" class="mt-1 w-full rounded-md border border-border bg-card px-3 py-2 text-right text-sm text-foreground" placeholder="0.00" /></label>
+            <label class="block text-xs font-semibold text-foreground">Método de pago<select [(ngModel)]="collectionMethod" class="mt-1 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"><option value="">Seleccionar</option><option *ngFor="let item of payments" [value]="item.name || item.codigo">{{ item.description || item.nombre || item.name }}</option></select></label>
+            <input type="text" [(ngModel)]="collectionReference" maxlength="140" class="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground" placeholder="Referencia (opcional)" />
+            <textarea [(ngModel)]="collectionNotes" maxlength="240" rows="2" class="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground" placeholder="Observación (opcional)"></textarea>
+        </div>
+        <div class="mt-5 grid grid-cols-2 gap-2"><button type="button" (click)="showCollectionModal = false" class="rounded-lg border border-border px-3 py-2.5 text-sm font-semibold text-muted-foreground">Cancelar</button><button type="button" (click)="submitCollection()" [disabled]="savingCollection || checkingCashOpening" class="rounded-lg bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50">{{ savingCollection || checkingCashOpening ? 'Guardando…' : 'Registrar abono' }}</button></div>
+    </section>
 </div>
 
 

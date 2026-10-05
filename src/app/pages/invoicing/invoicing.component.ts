@@ -16,6 +16,8 @@ import { PrintService } from 'src/app/services/print.service';
 import { environment } from 'src/environments/environment';
 import { Product } from '../../core/models/product';
 import { InvoicesService } from 'src/app/services/invoices.service';
+import { InvoiceCollectionsService } from 'src/app/services/invoice-collections.service';
+import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 import { UtilsService } from '../../core/services/utils.service';
 import { Customer } from 'src/app/core/models/customer';
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
@@ -40,7 +42,7 @@ type CartItem = {
 @Component({
   selector: 'app-invoicing',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, RouterModule, ButtonComponent, ProductVariantPickerComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, RouterModule, ButtonComponent, ProductVariantPickerComponent, DecimalInputDirective],
   templateUrl: './invoicing.component.html',
   styleUrls: ['./invoicing.component.css']
 })
@@ -102,6 +104,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     private alertService: AlertService,
     private fb: FormBuilder,
     private invoicesService: InvoicesService,
+    private collectionsSvc: InvoiceCollectionsService,
     private utilsService: UtilsService,
     private capabilities: CompanyCapabilitiesService
 
@@ -138,6 +141,12 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       selectedCustomer: [null, Validators.required],
       selectedProduct: [null],
       paymentMethod: ['', Validators.required],
+      payment_condition: ['Contado', Validators.required],
+      payment_due_date: [''],
+      initial_collection_method: [''],
+      initial_collection_amount: [0],
+      initial_collection_reference: [''],
+      initial_collection_notes: [''],
       alias: [''],
       postingDate: [this.utilsService.getSoloFechaEcuador(), Validators.required], // YYYY-MM-DD, Validators.required],
       additional_fields: this.fb.array([]),
@@ -222,6 +231,32 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
   get paymentRemaining(): number {
     return roundMoney(this.total - this.paymentRowsTotal);
+  }
+
+  get isCreditInvoice(): boolean {
+    return this.invoiceForm?.get('payment_condition')?.value === 'Credito';
+  }
+
+  get initialCollectionAmount(): number {
+    return roundMoney(this.invoiceForm?.get('initial_collection_amount')?.value);
+  }
+
+  get estimatedOutstandingAmount(): number {
+    return Math.max(0, roundMoney(this.total - this.initialCollectionAmount));
+  }
+
+  onPaymentConditionChange(): void {
+    const dueDate = this.invoiceForm.get('payment_due_date');
+    if (this.isCreditInvoice) {
+      dueDate?.setValidators([Validators.required]);
+    } else {
+      dueDate?.clearValidators();
+      this.invoiceForm.patchValue({
+        payment_due_date: '', initial_collection_method: '', initial_collection_amount: 0,
+        initial_collection_reference: '', initial_collection_notes: ''
+      }, { emitEvent: false });
+    }
+    dueDate?.updateValueAndValidity({ emitEvent: false });
   }
 
   addPaymentRow(): void {
@@ -759,6 +794,44 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const paymentCondition = this.isCreditInvoice ? 'Credito' : 'Contado';
+    const dueDate = String(this.invoiceForm.get('payment_due_date')?.value || '').trim();
+    let initialCollection: any = undefined;
+    if (paymentCondition === 'Credito') {
+      if (!dueDate) {
+        toast.error('Indica la fecha de vencimiento para la factura a crédito.');
+        return;
+      }
+      const initialAmount = this.initialCollectionAmount;
+      const initialMethodValue = String(this.invoiceForm.get('initial_collection_method')?.value || '').trim();
+      if (initialAmount < 0) {
+        toast.error('El abono inicial no puede ser negativo.');
+        return;
+      }
+      if ((initialAmount > 0 && !initialMethodValue) || (initialMethodValue && initialAmount <= 0)) {
+        toast.error('El abono inicial requiere método de pago y monto mayor a cero.');
+        return;
+      }
+      if (initialAmount > total) {
+        toast.error('El abono inicial no puede ser mayor al total de la factura.');
+        return;
+      }
+      if (initialAmount > 0) {
+        const method = findPaymentMethod(this.payments, initialMethodValue);
+        if (!method) {
+          toast.error('Selecciona un método válido para el abono inicial.');
+          return;
+        }
+        initialCollection = {
+          payment_method: method.name || initialMethodValue,
+          payment_code: method.codigo || (method as any).payment_code || (method as any).forma_pago || '',
+          amount: initialAmount,
+          reference: String(this.invoiceForm.get('initial_collection_reference')?.value || '').trim(),
+          notes: String(this.invoiceForm.get('initial_collection_notes')?.value || '').trim()
+        };
+      }
+    }
+
     // payload para SalesInvoice
     const payload = {
       customer: customerName,
@@ -792,6 +865,9 @@ export class InvoicingComponent implements OnInit, OnDestroy {
           : (it.tax === 'IVA-15' ? 15 : 0)
       })),
       payments: paymentResult.payments,
+      payment_condition: paymentCondition,
+      ...(paymentCondition === 'Credito' ? { payment_due_date: dueDate } : {}),
+      ...(initialCollection ? { initial_collection: initialCollection } : {}),
       auto_queue: true, // 👈 firma+envío por el microservicio
       additional_fields: this.canUseAdditionalFields ? normalizeAdditionalFields(this.additionalFields.getRawValue()) : []
     };
@@ -800,14 +876,15 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       .then(result => {
         if (!result.isConfirmed) return;
 
-        this.isEmitting = true;
-        this.spinner.show();
-        this.invoicesService.create_and_emit_from_ui_v2(payload)
-          .pipe(finalize(() => {
-            this.spinner.hide();
-            this.isEmitting = false;
-          }))
-          .subscribe({
+        const submitInvoice = () => {
+          this.isEmitting = true;
+          this.spinner.show();
+          this.invoicesService.create_and_emit_from_ui_v2(payload)
+            .pipe(finalize(() => {
+              this.spinner.hide();
+              this.isEmitting = false;
+            }))
+            .subscribe({
             next: (res) => {
               this.emissionState = res?.state || null;
               this.emissionMessages = Array.isArray(res?.messages) ? res.messages : [];
@@ -846,8 +923,26 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
             },
             error: (err) => this.handleEmissionError(err)
+            });
+        };
+
+        // El efectivo se valida contra la apertura del usuario antes de
+        // enviar el abono inicial. Transferencias/tarjetas se asocian a la
+        // apertura si existe; no requieren bloquear la emisión.
+        if (initialCollection?.payment_code === '01') {
+          this.collectionsSvc.getCurrentCashOpening().subscribe({
+            next: () => submitInvoice(),
+            error: (error: any) => toast.error(this.collectionCashError(error))
           });
+          return;
+        }
+        submitInvoice();
       });
+  }
+
+  private collectionCashError(error: any): string {
+    if (error?.status === 403) return 'No tienes permiso para usar una caja para este abono.';
+    return String(error?.error?.message?.message || error?.error?.message || error?.message || 'Debe abrir caja antes de registrar un abono inicial en efectivo.');
   }
 
   get canEmitInvoice(): boolean {

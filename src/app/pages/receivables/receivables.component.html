@@ -1,0 +1,68 @@
+<div class="app-container space-y-4">
+  <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-wide opacity-80">FacturADA</p>
+        <h1 class="text-xl font-bold">Cartera y Abonos</h1>
+        <p class="mt-1 text-xs opacity-90">Saldos pendientes independientes del estado electrónico de cada factura.</p>
+      </div>
+      <span class="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">{{ total }} documentos</span>
+    </div>
+  </section>
+
+  <section class="grid gap-2 rounded-xl border border-border bg-card p-3 shadow-sm md:grid-cols-[1fr_180px_auto_auto]">
+    <input class="input" [(ngModel)]="customer" (keyup.enter)="applyFilters()" placeholder="Cliente o identificador" />
+    <select class="input" [(ngModel)]="collectionStatus" (change)="applyFilters()">
+      <option value="">Todos los saldos</option>
+      <option value="Pendiente">Pendiente</option>
+      <option value="Abonada">Abonada</option>
+      <option value="Pagada">Pagada</option>
+    </select>
+    <label class="flex items-center gap-2 rounded-lg bg-muted/50 px-3 text-xs font-semibold"><input type="checkbox"
+        [(ngModel)]="onlyOpen" (change)="applyFilters()" /> Solo con saldo</label>
+    <div class="flex gap-2"><button type="button" class="btn btn-primary !text-xs"
+        (click)="applyFilters()">Buscar</button><button type="button" class="btn btn-outline !text-xs"
+        (click)="clearFilters()">Limpiar</button></div>
+  </section>
+
+  <section *ngIf="rows.length; else empty" class="app-table-wrap">
+    <table class="app-table text-xs">
+      <thead class="app-thead">
+        <tr>
+          <th class="app-th">Factura</th>
+          <th class="app-th">Cliente</th>
+          <th class="app-th text-right">Total</th>
+          <th class="app-th text-right">Cobrado</th>
+          <th class="app-th text-right">Saldo</th>
+          <th class="app-th">Cartera</th>
+          <th class="app-th">Último abono</th>
+          <th class="app-th text-center">Acción</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows" class="app-tr">
+          <td class="app-td font-semibold">{{ row.name || row.invoice_name || '—' }}</td>
+          <td class="app-td">{{ row.customer_name || row.customer?.customer_name || row.customer?.fullName ||
+            row.customer || '—' }}</td>
+          <td class="app-td text-right">{{ grandTotal(row) | currency:'USD':'symbol':'1.2-2' }}</td>
+          <td class="app-td text-right">{{ collected(row) | currency:'USD':'symbol':'1.2-2' }}</td>
+          <td class="app-td text-right font-bold text-amber-700">{{ outstanding(row) | currency:'USD':'symbol':'1.2-2'
+            }}</td>
+          <td class="app-td"><span class="rounded-full px-2 py-1 text-[10px] font-bold"
+              [ngClass]="collectionClass(row)">{{ collectionLabel(row) }}</span></td>
+          <td class="app-td">{{ row.last_collection_at || '—' | date:'short' }}</td>
+          <td class="app-td text-center"><a class="btn btn-outline !px-2 !py-1 !text-[11px]"
+              [routerLink]="['/dashboard/invoices', row.name || row.invoice_name]">Ver abonos</a></td>
+        </tr>
+      </tbody>
+    </table>
+    <app-pagination [page]="page" [totalPages]="totalPages" [totalItems]="total" [pageSize]="pageSize"
+      (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)"></app-pagination>
+  </section>
+  <ng-template #empty>
+    <section class="app-card">
+      <div class="app-card-body py-10 text-center text-sm text-muted-foreground">No existen facturas en cartera para los
+        filtros seleccionados.</div>
+    </section>
+  </ng-template>
+</div>

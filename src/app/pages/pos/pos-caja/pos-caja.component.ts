@@ -25,6 +25,7 @@ import { OrdersService } from 'src/app/services/orders.service';
 import { PaymentsService } from 'src/app/services/payments.service';
 import { PosSaleService } from 'src/app/services/pos-sale.service';
 import { InvoicesService } from 'src/app/services/invoices.service';
+import { InvoiceCollectionsService } from 'src/app/services/invoice-collections.service';
 import { PrintService } from 'src/app/services/print.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { environment } from 'src/environments/environment';
@@ -38,11 +39,12 @@ import { ProductVariantPickerComponent } from 'src/app/shared/components/product
 import { BarcodeScanInputComponent } from 'src/app/shared/components/barcode-scan-input/barcode-scan-input.component';
 import { ProductSearchModalComponent } from 'src/app/shared/components/product-search-modal/product-search-modal.component';
 import { formatVariantAttributes } from 'src/app/shared/utils/product-variants.utils';
+import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 
 @Component({
   selector: 'app-pos-caja',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, ProductVariantPickerComponent, BarcodeScanInputComponent, ProductSearchModalComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, ProductVariantPickerComponent, BarcodeScanInputComponent, ProductSearchModalComponent, DecimalInputDirective],
   templateUrl: './pos-caja.component.html',
   styles: [':host { display: block; height: 100%; min-height: 0; }']
 })
@@ -56,10 +58,17 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   showPaymentModal = false;
   showCustomerModal = false;
   showPrintModal = false;
+  showReceivablesModal = false;
+  showCollectionModal = false;
   showShortcutsHelp = false;
   isSubmittingOrder = false;
   isSubmittingPosSale = false;
   activePosSaleNote: any | null = null;
+  receivables: any[] = [];
+  selectedReceivable: any | null = null;
+  loadingReceivables = false;
+  savingCollection = false;
+  checkingCashOpening = false;
 
   amountReceived: number | null = null;
   change = 0;
@@ -87,6 +96,16 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   deliveryPhone = '';
   paymentMethod = '';
   paymentRows: PaymentRow[] = [{ method: '', amount: 0 }];
+  paymentCondition: 'Contado' | 'Credito' = 'Contado';
+  paymentDueDate = '';
+  initialCollectionMethod = '';
+  initialCollectionAmount: number | null = null;
+  initialCollectionReference = '';
+  initialCollectionNotes = 'Abono inicial acordado con cliente';
+  collectionAmount: number | null = null;
+  collectionMethod = '';
+  collectionReference = '';
+  collectionNotes = 'Abono desde POS';
 
   printOption: 'comanda' | 'recibo' | 'ambas' = 'ambas';
   private pendingOrderId: string | null = null;
@@ -113,6 +132,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     private ordersService: OrdersService,
     private posSaleService: PosSaleService,
     private invoicesService: InvoicesService,
+    private collectionsService: InvoiceCollectionsService,
     private spinner: NgxSpinnerService,
     private printService: PrintService,
     public cartService: CartService,
@@ -295,6 +315,38 @@ export class PosCajaComponent implements OnInit, OnDestroy {
 
   get isSelectedPaymentCash(): boolean {
     return this.paymentRows.some((row) => isCashPayment(this.payments, row.method));
+  }
+
+  get canUseCreditSales(): boolean {
+    return this.genericMode && this.capabilities.hasPermission('billing.manage');
+  }
+
+  get canViewReceivables(): boolean {
+    return this.genericMode && (this.capabilities.hasPermission('*') || this.capabilities.hasPermission('billing.read'));
+  }
+
+  get canManageReceivables(): boolean {
+    return this.genericMode && (this.capabilities.hasPermission('*') || this.capabilities.hasPermission('billing.manage'));
+  }
+
+  get isCreditSale(): boolean {
+    return this.paymentCondition === 'Credito';
+  }
+
+  get initialCollectionValue(): number {
+    return Math.max(0, roundMoney(this.initialCollectionAmount));
+  }
+
+  get creditOutstandingAmount(): number {
+    return Math.max(0, roundMoney(this.total - this.initialCollectionValue));
+  }
+
+  get selectedReceivableOutstanding(): number {
+    return Math.max(0, roundMoney(
+      this.selectedReceivable?.totals?.outstanding_amount
+      ?? this.selectedReceivable?.outstanding_amount
+      ?? 0
+    ));
   }
 
   get paymentRowsTotal(): number {
@@ -673,6 +725,17 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.showPaymentModal = true;
   }
 
+  setPaymentCondition(condition: 'Contado' | 'Credito'): void {
+    if (condition === 'Credito' && !this.canUseCreditSales) {
+      toast.error('No tienes permiso para registrar ventas a crédito.');
+      return;
+    }
+    this.paymentCondition = condition;
+    if (condition === 'Contado') this.resetCreditSaleFields();
+    this.amountReceived = null;
+    this.change = 0;
+  }
+
   calcularCambio(): void {
     if (!this.isSelectedPaymentCash) {
       this.change = 0;
@@ -683,7 +746,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   confirmarPago(typePago: 'Nota Venta' | 'Factura'): void {
-    if (this.isSubmittingOrder || this.isSubmittingPosSale) return;
+    if (this.isSubmittingOrder || this.isSubmittingPosSale || this.checkingCashOpening) return;
     if (this.paymentRows.length === 1) this.paymentRows[0].amount = this.total;
 
     if (typePago === 'Factura') {
@@ -696,12 +759,21 @@ export class PosCajaComponent implements OnInit, OnDestroy {
         toast.error(planBlockMessage);
         return;
       }
+      if (this.isCreditSale && !this.canUseCreditSales) {
+        toast.error('No tienes permiso para registrar ventas a crédito.');
+        return;
+      }
+    }
+
+    if (typePago === 'Nota Venta' && this.isCreditSale) {
+      toast.error('Las ventas a crédito deben emitirse como factura.');
+      return;
     }
 
     const hasReceivedAmount = this.amountReceived !== null
       && String(this.amountReceived).trim() !== '';
     const receivedAmount = Number(this.amountReceived);
-    if (this.isSelectedPaymentCash && hasReceivedAmount
+    if (!this.isCreditSale && this.isSelectedPaymentCash && hasReceivedAmount
       && (!Number.isFinite(receivedAmount) || receivedAmount < this.cashPaymentAmount)) {
       toast.error('El monto recibido es menor al total.');
       return;
@@ -730,7 +802,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
         : 'La nota quedará en borrador para cobrarla después.';
       this.alertService.confirm(title, detail).then((result) => {
           if (!result.isConfirmed) return;
-          if (typePago === 'Factura') this.submitDirectLiteInvoice(payload);
+          if (typePago === 'Factura') this.submitDirectLiteInvoiceWithCashCheck(payload);
           else this.submitPosSaleNote(payload);
         });
       return;
@@ -931,6 +1003,9 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.identificationCustomer = '';
     this.amountReceived = null;
     this.change = 0;
+    this.paymentRows = [{ method: '', amount: 0 }];
+    this.paymentCondition = 'Contado';
+    this.resetCreditSaleFields();
     this.showPaymentModal = false;
     this.orderType = 'Servirse';
     this.deliveryAddress = '';
@@ -1199,15 +1274,100 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     const payload = this.buildPosSaleNotePayload();
     if (!payload) return null;
 
+    const initialCollection = this.buildInitialCollection();
+    if (initialCollection === null) return null;
+
     return {
       ...payload,
       environment: this.backendEnvironment() || undefined,
       // Cada fila ya fue validada para cuadrar exactamente con el total. El
       // excedente recibido en efectivo se trata como cambio, no como pago.
       payments: payload.payments || [],
+      payment_condition: this.isCreditSale ? 'Credito' : 'Contado',
+      ...(this.isCreditSale && this.paymentDueDate ? { payment_due_date: this.paymentDueDate } : {}),
+      ...(initialCollection ? { initial_collection: initialCollection } : {}),
       additional_fields: [],
       auto_queue: true
     };
+  }
+
+  /**
+   * En crédito, `payments` conserva la forma de pago fiscal por el total de
+   * la factura. El dinero realmente recibido viaja únicamente aquí para no
+   * duplicarlo ni alterar el saldo de cartera.
+   */
+  private buildInitialCollection(): any | null | undefined {
+    if (!this.isCreditSale) return undefined;
+    const amount = this.initialCollectionValue;
+    const methodValue = String(this.initialCollectionMethod || '').trim();
+    if (amount === 0 && !methodValue) return undefined;
+    if (!methodValue || amount <= 0) {
+      toast.error('Selecciona el método y el monto del abono inicial.');
+      return null;
+    }
+    if (amount > this.total) {
+      toast.error('El abono inicial no puede ser mayor al total de la factura.');
+      return null;
+    }
+    const method = findPaymentMethod(this.payments, methodValue);
+    const mapped = this.mapLitePayment(method, methodValue);
+    if (!mapped) {
+      toast.error('Selecciona un método de pago válido para el abono inicial.');
+      return null;
+    }
+    return {
+      ...mapped,
+      amount,
+      reference: String(this.initialCollectionReference || '').trim(),
+      notes: String(this.initialCollectionNotes || '').trim()
+    };
+  }
+
+  private submitDirectLiteInvoiceWithCashCheck(payload: any): void {
+    const initialCollection = payload?.initial_collection;
+    if (String(initialCollection?.payment_code || '') !== '01') {
+      this.submitDirectLiteInvoice(payload);
+      return;
+    }
+
+    if (this.checkingCashOpening) return;
+    this.checkingCashOpening = true;
+    this.collectionsService.getCurrentCashOpening().subscribe({
+      next: (response: any) => {
+        this.checkingCashOpening = false;
+        const cashOpening = this.getCashOpeningName(response);
+        if (!cashOpening) {
+          this.handleMissingCashOpening();
+          return;
+        }
+        payload.initial_collection = { ...initialCollection, cash_opening: cashOpening };
+        this.submitDirectLiteInvoice(payload);
+      },
+      error: () => {
+        this.checkingCashOpening = false;
+        this.handleMissingCashOpening();
+      }
+    });
+  }
+
+  private getCashOpeningName(response: any): string {
+    const message = response?.message ?? response ?? {};
+    const data = message?.data ?? response?.data ?? message;
+    const opening = data?.cash_opening ?? data?.apertura ?? data?.opening ?? (data?.name ? data : null);
+    return typeof opening === 'string' ? opening.trim() : String(opening?.name || '').trim();
+  }
+
+  private handleMissingCashOpening(): void {
+    toast.error('Debe abrir caja antes de cobrar un abono inicial en efectivo.');
+    this.router.navigate(['/caja/apertura']);
+  }
+
+  private resetCreditSaleFields(): void {
+    this.paymentDueDate = '';
+    this.initialCollectionMethod = '';
+    this.initialCollectionAmount = null;
+    this.initialCollectionReference = '';
+    this.initialCollectionNotes = 'Abono inicial acordado con cliente';
   }
 
   private backendEnvironment(): string {
@@ -1278,9 +1438,19 @@ export class PosCajaComponent implements OnInit, OnDestroy {
           return;
         }
 
+        const outstanding = Math.max(0, roundMoney(
+          data?.totals?.outstanding_amount ?? data?.outstanding_amount ?? 0
+        ));
+        const totalCollected = Math.max(0, roundMoney(
+          data?.totals?.total_collected ?? data?.total_collected ?? 0
+        ));
+        const collectionStatus = String(data?.collection_status ?? data?.totals?.collection_status ?? '').trim();
         this.clearPage();
         this.refreshProductsSilently();
         window.dispatchEvent(new CustomEvent('facturada:restaurant-data-changed'));
+        if (outstanding > 0 || collectionStatus === 'Abonada' || collectionStatus === 'Pendiente') {
+          toast.success(`Factura emitida con saldo pendiente. Cobrado: $${totalCollected.toFixed(2)} · Saldo: $${outstanding.toFixed(2)}.`);
+        }
         if (state === 'AUTHORIZED') {
           toast.success('Factura autorizada por el SRI.');
         } else if (state === 'PROCESSING') {
@@ -1296,6 +1466,109 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       },
       error: (error: any) => toast.error(this.extractApiError(error) || 'No se pudo emitir la factura.')
     });
+  }
+
+  openReceivables(): void {
+    if (!this.canViewReceivables) {
+      toast.error('No tienes permiso para consultar la cartera.');
+      return;
+    }
+    this.showReceivablesModal = true;
+    this.loadReceivables();
+  }
+
+  loadReceivables(): void {
+    if (this.loadingReceivables) return;
+    this.loadingReceivables = true;
+    this.collectionsService.getReceivables({ only_open: true, limit: 20, offset: 0 })
+      .pipe(finalize(() => this.loadingReceivables = false))
+      .subscribe({
+        next: (response: any) => {
+          const message = response?.message ?? response ?? {};
+          this.receivables = Array.isArray(message?.data) ? message.data : [];
+        },
+        error: (error: any) => toast.error(this.extractApiError(error) || 'No se pudo cargar la cartera.')
+      });
+  }
+
+  openCollectionModal(receivable: any): void {
+    if (!this.canManageReceivables) {
+      toast.error('No tienes permiso para registrar abonos.');
+      return;
+    }
+    const outstanding = Math.max(0, roundMoney(
+      receivable?.totals?.outstanding_amount ?? receivable?.outstanding_amount ?? 0
+    ));
+    if (!outstanding) {
+      toast.info('Esta factura no tiene saldo pendiente.');
+      return;
+    }
+    this.selectedReceivable = receivable;
+    this.collectionAmount = null;
+    this.collectionMethod = '';
+    this.collectionReference = '';
+    this.collectionNotes = 'Abono desde POS';
+    this.showCollectionModal = true;
+  }
+
+  submitCollection(): void {
+    if (!this.canManageReceivables) {
+      toast.error('No tienes permiso para registrar abonos.');
+      return;
+    }
+    if (this.savingCollection || this.checkingCashOpening || !this.selectedReceivable) return;
+    const amount = Math.max(0, roundMoney(this.collectionAmount));
+    if (amount <= 0) {
+      toast.error('Ingresa un monto de abono mayor a cero.');
+      return;
+    }
+    if (amount > this.selectedReceivableOutstanding) {
+      toast.error('El abono no puede ser mayor al saldo pendiente.');
+      return;
+    }
+    const methodValue = String(this.collectionMethod || '').trim();
+    const method = findPaymentMethod(this.payments, methodValue);
+    const mapped = this.mapLitePayment(method, methodValue);
+    if (!mapped) {
+      toast.error('Selecciona un método de pago válido.');
+      return;
+    }
+    const submit = () => {
+      this.savingCollection = true;
+      this.collectionsService.createCollection({
+        invoice: String(this.selectedReceivable?.name || this.selectedReceivable?.invoice_name || '').trim(),
+        ...mapped,
+        amount,
+        reference: String(this.collectionReference || '').trim(),
+        notes: String(this.collectionNotes || '').trim()
+      }).pipe(finalize(() => this.savingCollection = false)).subscribe({
+        next: () => {
+          toast.success('Abono registrado correctamente.');
+          this.showCollectionModal = false;
+          this.selectedReceivable = null;
+          this.loadReceivables();
+          window.dispatchEvent(new CustomEvent('facturada:restaurant-data-changed'));
+        },
+        error: (error: any) => toast.error(this.extractApiError(error) || 'No se pudo registrar el abono.')
+      });
+    };
+    // También en los abonos posteriores el efectivo exige caja abierta. El
+    // backend asocia los demás medios a la apertura vigente cuando aplica.
+    if (mapped.payment_code === '01') {
+      this.checkingCashOpening = true;
+      this.collectionsService.getCurrentCashOpening().subscribe({
+        next: () => {
+          this.checkingCashOpening = false;
+          submit();
+        },
+        error: () => {
+          this.checkingCashOpening = false;
+          this.handleMissingCashOpening();
+        }
+      });
+      return;
+    }
+    submit();
   }
 
   collectPosSaleNote(): void {
