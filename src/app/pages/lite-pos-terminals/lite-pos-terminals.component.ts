@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, DoCheck, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
 import { toast } from 'ngx-sonner';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
@@ -8,12 +9,13 @@ import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { CompanyService } from 'src/app/services/company.service';
 import { UserService } from 'src/app/services/user.service';
 import { InventoryService } from 'src/app/services/inventory.service';
-import { IconActionButtonComponent } from 'src/app/shared/components/icon-action-button/icon-action-button.component';
+import { FiscalSetupHeaderComponent } from 'src/app/shared/components/fiscal-setup-header/fiscal-setup-header.component';
+import { fiscalSeries } from 'src/app/core/utils/fiscal-setup';
 
 @Component({
   selector: 'app-lite-pos-terminals',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, IconActionButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, FiscalSetupHeaderComponent],
   templateUrl: './lite-pos-terminals.component.html'
 })
 export class LitePosTerminalsComponent implements OnInit, DoCheck {
@@ -28,6 +30,7 @@ export class LitePosTerminalsComponent implements OnInit, DoCheck {
   error = '';
   submitted = false;
   selectedUserIds: string[] = [];
+  userSearch = '';
 
   private loadedBusiness = '';
   private requestId = 0;
@@ -120,6 +123,65 @@ export class LitePosTerminalsComponent implements OnInit, DoCheck {
     return this.terminals.filter((item) => this.isActive(item)).length;
   }
 
+  get isWarehouseMode(): boolean {
+    return this.capabilities.isWarehouseMode;
+  }
+
+  /** Serie fiscal desde la que factura la terminal (001-002). */
+  series(terminal: any): string {
+    return fiscalSeries(terminal?.establishment_code, terminal?.emission_point_code);
+  }
+
+  get formSeries(): string {
+    return fiscalSeries(this.selectedEstablishment?.establishment_code, this.selectedEmissionPoint?.emission_point_code);
+  }
+
+  warehouseName(terminal: any): string {
+    const id = String(terminal?.warehouse || '').trim();
+    if (!id) return '';
+    const warehouse = this.warehouseOptions.find((item: any) => String(item?.name || '') === id);
+    return String(terminal?.warehouse_name || warehouse?.warehouse_name || warehouse?.name || id);
+  }
+
+  userCount(terminal: any): number {
+    return this.readTerminalUsers(terminal).length;
+  }
+
+  /** Avisos que impiden o limitan el uso de la terminal. */
+  warnings(terminal: any): string[] {
+    if (!this.isActive(terminal)) return [];
+    const warnings: string[] = [];
+    if (!this.userCount(terminal)) warnings.push('Nadie tiene asignada esta terminal.');
+    if (this.isWarehouseMode && !String(terminal?.warehouse || '').trim()) warnings.push('Sin bodega: no puede vender mientras el inventario sea "Por bodega".');
+    return warnings;
+  }
+
+  get filteredUsers(): any[] {
+    const term = this.userSearch.trim().toLowerCase();
+    if (!term) return this.businessUsers;
+    return this.businessUsers.filter((user) => `${this.userLabel(user)} ${this.userEmail(user)}`.toLowerCase().includes(term));
+  }
+
+  get allFilteredSelected(): boolean {
+    return this.filteredUsers.length > 0 && this.filteredUsers.every((user) => this.isUserSelected(user));
+  }
+
+  toggleAllFiltered(): void {
+    const select = !this.allFilteredSelected;
+    this.filteredUsers.forEach((user) => this.toggleUser(user, select));
+  }
+
+  selectEstablishment(id: string): void {
+    if (this.editing) return;
+    this.form.patchValue({ establishment: id });
+    this.onEstablishmentChange();
+  }
+
+  selectEmissionPoint(id: string): void {
+    if (this.editing) return;
+    this.form.patchValue({ emission_point: id });
+  }
+
   onEstablishmentChange(): void {
     const control = this.form.get('emission_point');
     const points = this.activeEmissionPoints;
@@ -134,7 +196,11 @@ export class LitePosTerminalsComponent implements OnInit, DoCheck {
     this.editing = null;
     this.submitted = false;
     this.selectedUserIds = [];
+    this.userSearch = '';
+    this.setLocationLocked(false);
     this.form.reset({ terminal_name: '', establishment: '', emission_point: '', warehouse: '', status: 'Activo' });
+    // Con un único establecimiento se preselecciona; el punto se completa si también es único.
+    if (this.activeEstablishments.length === 1) this.selectEstablishment(String(this.activeEstablishments[0].name));
     this.modalOpen = true;
   }
 
@@ -143,6 +209,7 @@ export class LitePosTerminalsComponent implements OnInit, DoCheck {
     this.editing = terminal;
     this.submitted = false;
     this.selectedUserIds = this.readTerminalUsers(terminal);
+    this.userSearch = '';
     this.form.reset({
       terminal_name: terminal.terminal_name || '',
       establishment: terminal.establishment || '',
@@ -150,6 +217,9 @@ export class LitePosTerminalsComponent implements OnInit, DoCheck {
       warehouse: terminal.warehouse || '',
       status: terminal.status || 'Activo'
     });
+    // La ubicación fiscal no se cambia al editar: el atributo [disabled] no
+    // aplica a controles reactivos, por eso se bloquea desde el formulario.
+    this.setLocationLocked(true);
     this.modalOpen = true;
     this.companyService.getLitePosTerminal(this.activeBusinessId, terminal.name).subscribe({
       next: (detail) => {
@@ -309,6 +379,14 @@ export class LitePosTerminalsComponent implements OnInit, DoCheck {
     this.companyService.get_empresa(business).subscribe({
       next: (context) => this.capabilities.setFromResponse(context),
       error: () => undefined
+    });
+  }
+
+  private setLocationLocked(locked: boolean): void {
+    ['establishment', 'emission_point'].forEach((key) => {
+      const control = this.form.get(key);
+      if (locked) control?.disable({ emitEvent: false });
+      else control?.enable({ emitEvent: false });
     });
   }
 

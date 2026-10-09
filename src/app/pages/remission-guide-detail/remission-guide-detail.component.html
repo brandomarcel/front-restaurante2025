@@ -179,7 +179,7 @@
           </p>
         </section>
 
-        <app-electronic-status-panel [document]="guide" kind="guide" (updated)="fetch($event.name)" />
+        <app-electronic-status-panel [document]="guide" kind="guide" (updated)="fetch($event.name, true)" />
       </div>
     </div>
   </ng-container>

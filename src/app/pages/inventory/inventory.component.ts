@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, DestroyRef, OnInit } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { NgxSpinnerService } from 'ngx-spinner';
@@ -15,6 +16,7 @@ import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabi
 import { forkJoin } from 'rxjs';
 import {
   canSellProduct,
+  getAvailableStock,
   getInventoryUnit,
   hasInventoryControl,
   isLowStockProduct,
@@ -22,42 +24,52 @@ import {
   toInventoryNumber,
 } from 'src/app/shared/utils/inventory.utils';
 import { formatVariantAttributes } from 'src/app/shared/utils/product-variants.utils';
+import { InventoryNavComponent } from 'src/app/shared/components/inventory-nav/inventory-nav.component';
+import { debouncedCallback } from 'src/app/shared/utils/debounced-callback';
+
+export type StockFilter = 'all' | 'available' | 'low' | 'out';
+
+/** Sentido visual de cada tipo de movimiento: suma, resta o fija el stock. */
+const MOVEMENT_DIRECTION: Record<InventoryMovementType, 'in' | 'out' | 'set'> = {
+  Entrada: 'in', 'Reversa Venta': 'in', Devolucion: 'in',
+  Salida: 'out', Venta: 'out', Consumo: 'out',
+  Ajuste: 'set'
+};
 
 @Component({
   selector: 'app-inventory',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgSelectModule, RouterLink],
-  templateUrl: './inventory.component.html',
-  styleUrl: './inventory.component.css'
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgSelectModule, RouterLink, InventoryNavComponent],
+  templateUrl: './inventory.component.html'
 })
 export class InventoryComponent implements OnInit {
   readonly movementTypeMeta: Record<InventoryMovementType, { label: string; description: string }> = {
     Entrada: {
       label: 'Ingreso de stock',
-      description: 'Cuando llego mercaderia, compra o reposicion.',
+      description: 'Llegó mercadería, una compra o una reposición.',
     },
     Salida: {
       label: 'Salida manual',
-      description: 'Cuando sale producto por merma, perdida o uso no comercial.',
+      description: 'Salió producto por merma, pérdida o uso no comercial.',
     },
     Ajuste: {
-      label: 'Correccion de stock',
-      description: 'Cuando quieres corregir una diferencia hacia arriba o abajo.',
+      label: 'Corrección de stock',
+      description: 'El conteo físico no coincide con el sistema.',
     },
     Venta: {
       label: 'Descuento por venta',
-      description: 'Uso excepcional si necesitas registrar una venta manualmente.',
+      description: 'Solo si necesitas registrar una venta a mano.',
     },
     'Reversa Venta': {
       label: 'Devolver por venta anulada',
-      description: 'Cuando una venta se revierte y el producto vuelve al inventario.',
+      description: 'Una venta se anuló y el producto regresa.',
     },
     Consumo: {
       label: 'Consumo interno',
-      description: 'Cuando el negocio usa producto y no va a una venta directa.',
+      description: 'El negocio usó producto sin venderlo.',
     },
     Devolucion: {
-      label: 'Devolucion al inventario',
-      description: 'Cuando el producto regresa y vuelve a estar disponible.',
+      label: 'Devolución al inventario',
+      description: 'El producto regresó y vuelve a estar disponible.',
     },
   };
 
@@ -91,7 +103,10 @@ export class InventoryComponent implements OnInit {
   activeTab: 'overview' | 'history' = 'overview';
 
   search = '';
-  onlyLowStock = false;
+  /** Filtro por estado de stock, aplicado sobre la lista cargada al pulsar las tarjetas de resumen. */
+  stockFilter: StockFilter = 'all';
+  visibleProducts: InventoryProduct[] = [];
+  private readonly searchBackend: () => void;
   /**
    * `get_productos` no tiene un modo "todos": siempre hay que pedir
    * explícitamente `isactive=1` o `isactive=0`. Selector de dos estados en
@@ -147,8 +162,18 @@ export class InventoryComponent implements OnInit {
     private spinner: NgxSpinnerService,
     private frappeErrorService: FrappeErrorService,
     private alertService: AlertService,
-    private capabilities: CompanyCapabilitiesService
-  ) { }
+    private capabilities: CompanyCapabilitiesService,
+    private route: ActivatedRoute,
+    private router: Router,
+    destroyRef: DestroyRef
+  ) {
+    this.searchBackend = debouncedCallback(destroyRef, () => this.cargarProductosInventario());
+    // La pestaña vive en la URL (?tab=history) para que la navegación común de
+    // inventario pueda enlazar directo a Movimientos.
+    this.route.queryParamMap.pipe(takeUntilDestroyed(destroyRef)).subscribe((params) => {
+      this.activeTab = params.get('tab') === 'history' ? 'history' : 'overview';
+    });
+  }
 
   ngOnInit(): void {
     this.initMovementForm();
@@ -219,6 +244,7 @@ export class InventoryComponent implements OnInit {
     }
     if (!this.canLoadInventory) {
       this.inventoryProducts = [];
+      this.visibleProducts = [];
       this.inventorySummary = null;
       this.movements = [];
       return;
@@ -341,7 +367,7 @@ export class InventoryComponent implements OnInit {
         this.search,
         undefined,
         undefined,
-        this.onlyLowStock,
+        false,
         true,
         this.isWarehouseMode ? this.selectedWarehouseId : undefined
       ),
@@ -357,6 +383,7 @@ export class InventoryComponent implements OnInit {
           return fromSummary ? { ...product, ...fromSummary } : product;
         });
         this.inventoryProducts = merged.filter((product) => this.hasInventory(product));
+        this.applyStockFilter();
       },
       error: (error) => {
         this.alertService.error(this.frappeErrorService.handle(error));
@@ -527,11 +554,86 @@ export class InventoryComponent implements OnInit {
     this.cargarProductosInventario();
   }
 
+  onSearchChange(value: string): void {
+    this.search = value;
+    this.searchBackend();
+  }
+
+  setStockFilter(filter: StockFilter): void {
+    this.stockFilter = this.stockFilter === filter && filter !== 'all' ? 'all' : filter;
+    this.applyStockFilter();
+  }
+
+  get hasActiveFilters(): boolean {
+    return !!this.search.trim() || this.stockFilter !== 'all' || this.estadoFiltro !== 'Activo';
+  }
+
   limpiarFiltrosInventario(): void {
     this.search = '';
-    this.onlyLowStock = false;
+    this.stockFilter = 'all';
     this.estadoFiltro = 'Activo';
     this.cargarProductosInventario();
+  }
+
+  private readonly stockFilters: Record<StockFilter, (product: InventoryProduct) => boolean> = {
+    all: () => true,
+    available: (product) => this.canSell(product) && !this.isLowStock(product) && !this.isOutOfStock(product),
+    low: (product) => this.isLowStock(product) && !this.isOutOfStock(product),
+    out: (product) => this.isOutOfStock(product)
+  };
+
+  /** Cantidad de productos que muestra cada filtro (las tarjetas de resumen usan el mismo criterio). */
+  stockFilterCount(filter: StockFilter): number {
+    return this.inventoryProducts.filter(this.stockFilters[filter]).length;
+  }
+
+  private applyStockFilter(): void {
+    this.visibleProducts = this.inventoryProducts.filter(this.stockFilters[this.stockFilter]);
+  }
+
+  /** Estado único de stock para la tabla: evita repetir "Disponible/Agotado" en dos columnas. */
+  stockStatus(product: InventoryProduct): { label: string; tone: string } {
+    if (this.isOutOfStock(product)) return { label: 'Agotado', tone: 'bg-red-100 text-red-800' };
+    if (this.isLowStock(product)) return { label: 'Bajo mínimo', tone: 'bg-amber-100 text-amber-900' };
+    return { label: 'Disponible', tone: 'bg-emerald-100 text-emerald-800' };
+  }
+
+  stockNumber(product: Partial<Product> | null | undefined): number {
+    return getAvailableStock(product);
+  }
+
+  movementDirection(type: InventoryMovementType | string | undefined): 'in' | 'out' | 'set' {
+    return MOVEMENT_DIRECTION[type as InventoryMovementType] || 'in';
+  }
+
+  selectMovementType(type: InventoryMovementType): void {
+    this.movementForm.patchValue({ movement_type: type });
+  }
+
+  /**
+   * Vista previa de cómo queda el stock de una fila del movimiento. Es solo
+   * orientativa: el backend calcula el stock real al registrar.
+   */
+  movementPreview(index: number): { current: number; result: number; unit: string } | null {
+    const row = this.movementItems.at(index)?.value;
+    const product = this.productOptions.find((item) => item.name === row?.product);
+    if (!product) return null;
+    const current = this.stockNumber(product);
+    const direction = this.movementDirection(this.currentMovementType);
+    let result = current;
+    if (direction === 'set' && this.isLiteMode) {
+      const target = Number(row?.target_stock);
+      if (row?.target_stock === null || row?.target_stock === '' || !Number.isFinite(target)) return { current, result: current, unit: this.getInventoryUnit(product) };
+      result = target;
+    } else {
+      const quantity = Number(row?.quantity) || 0;
+      result = direction === 'out' ? current - quantity : current + quantity;
+    }
+    return { current, result, unit: this.getInventoryUnit(product) };
+  }
+
+  selectedWarehouseLabel(): string {
+    return this.warehouseLabel(this.selectedWarehouseId);
   }
 
   /** Cambiar producto o tipo reinicia `offset = 0` y reemplaza la lista, nunca la acumula. */
@@ -548,11 +650,7 @@ export class InventoryComponent implements OnInit {
   }
 
   cambiarTab(tab: 'overview' | 'history'): void {
-    this.activeTab = tab;
-  }
-
-  irAHistorial(): void {
-    this.activeTab = 'history';
+    this.router.navigate([], { relativeTo: this.route, queryParams: { tab: tab === 'history' ? 'history' : null }, queryParamsHandling: 'merge' });
   }
 
   abrirMovimientoModal(): void {
@@ -623,7 +721,7 @@ export class InventoryComponent implements OnInit {
       return;
     }
 
-    this.alertService.confirm('Se registrara el movimiento de inventario.', 'Confirmar').then((result) => {
+    this.alertService.confirm('Se registrará el movimiento de inventario.', 'Confirmar').then((result) => {
       if (!result.isConfirmed) {
         return;
       }
@@ -663,7 +761,7 @@ export class InventoryComponent implements OnInit {
       }));
 
     if (!rows.length) {
-      this.alertService.error('Debes agregar al menos un item valido.');
+      this.alertService.error('Agrega al menos un producto válido.');
       return null;
     }
 
@@ -720,7 +818,7 @@ export class InventoryComponent implements OnInit {
 
     const invalid = rows.find((row: any) => !Number.isFinite(row.quantity) || row.quantity === 0);
     if (invalid) {
-      this.alertService.error('Todas las cantidades deben ser validas y distintas de cero.');
+      this.alertService.error('Todas las cantidades deben ser válidas y distintas de cero.');
       return null;
     }
 
@@ -819,8 +917,8 @@ export class InventoryComponent implements OnInit {
         return 'Escribe una cantidad positiva. Este movimiento descuenta producto por uso interno.';
       case 'Ajuste':
         return this.isLiteMode
-          ? 'Indica el stock objetivo después del conteo físico.'
-          : 'Puedes usar positivo o negativo segun la correccion que necesites hacer.';
+          ? 'Escribe cuántas unidades contaste: el sistema ajusta la diferencia.'
+          : 'Usa un número positivo para sumar o negativo para restar.';
       default:
         return '';
     }

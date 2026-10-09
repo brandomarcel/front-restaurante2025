@@ -1,26 +1,15 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostListener, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { Router } from '@angular/router';
-import {
-  AbstractControl,
-  FormBuilder,
-  FormGroup,
-  FormsModule,
-  ReactiveFormsModule,
-  ValidationErrors,
-  ValidatorFn,
-  Validators
-} from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
-import { catchError, debounceTime, distinctUntilChanged, finalize, of, Subject, switchMap, takeUntil } from 'rxjs';
-import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
+import { finalize, Subject } from 'rxjs';
 import { MenuService } from 'src/app/modules/layout/services/menu.service';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { CategoryService } from 'src/app/services/category.service';
-import { CustomersService } from 'src/app/services/customers.service';
 import { OrdersService } from 'src/app/services/orders.service';
 import { PaymentsService } from 'src/app/services/payments.service';
 import { PosSaleService } from 'src/app/services/pos-sale.service';
@@ -40,11 +29,26 @@ import { BarcodeScanInputComponent } from 'src/app/shared/components/barcode-sca
 import { ProductSearchModalComponent } from 'src/app/shared/components/product-search-modal/product-search-modal.component';
 import { formatVariantAttributes } from 'src/app/shared/utils/product-variants.utils';
 import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
+import {
+  FINAL_CONSUMER_INVOICE_LIMIT, exceedsFinalConsumerLimit, extractApiError, extractCashOpeningName,
+  extractOrderId, extractOrderInvoice, liteItemsFromCart, mapLitePayment, normalizeBackendEnvironment,
+  orderItemsFromCart, readLiteInvoiceResponse
+} from './pos-sale.rules';
+import { PosProductCardComponent } from './ui/pos-product-card.component';
+import { PosCartLinesComponent } from './ui/pos-cart-lines.component';
+import { PosTotalsComponent } from './ui/pos-totals.component';
+import { PosPrintModalComponent } from './ui/pos-print-modal.component';
+import { PosShortcutsHelpComponent } from './ui/pos-shortcuts-help.component';
+import { PosCustomerPickerComponent } from './ui/pos-customer-picker.component';
 
 @Component({
   selector: 'app-pos-caja',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, ProductVariantPickerComponent, BarcodeScanInputComponent, ProductSearchModalComponent, DecimalInputDirective],
+  imports: [
+    CommonModule, FormsModule, RouterLink, FontAwesomeModule, NgSelectModule, ProductVariantPickerComponent,
+    BarcodeScanInputComponent, ProductSearchModalComponent, DecimalInputDirective,
+    PosProductCardComponent, PosCartLinesComponent, PosTotalsComponent, PosPrintModalComponent, PosShortcutsHelpComponent, PosCustomerPickerComponent
+  ],
   templateUrl: './pos-caja.component.html',
   styles: [':host { display: block; height: 100%; min-height: 0; }']
 })
@@ -56,7 +60,6 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   @ViewChild(ProductSearchModalComponent) productSearchModal?: ProductSearchModalComponent;
   ambiente = '';
   showPaymentModal = false;
-  showCustomerModal = false;
   showPrintModal = false;
   showReceivablesModal = false;
   showCollectionModal = false;
@@ -80,12 +83,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   favoriteProducts: any[] = [];
   categories: any[] = [];
   payments: any[] = [];
-  filteredCustomers: any[] = [];
 
-  identificationCustomer = '';
-  customerSearchTerm = '';
-  isCustomerSearchOpen = false;
-  customerSearchLoading = false;
   customer: any = null;
   alias = '';
   searchTerm = '';
@@ -114,21 +112,15 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   private today = '';
   private readonly url = environment.URL;
   private readonly favoritesStorageKey = 'pos_caja_favorites_v1';
-  private readonly customerSearch$ = new Subject<string>();
   private readonly destroy$ = new Subject<void>();
   private favoriteProductKeys = new Set<string>();
 
-  submitted = false;
-  clienteForm!: FormGroup;
-  identificationTypes = VARIABLE_CONSTANTS.IDENTIFICATION_TYPE;
 
   constructor(
     public menuService: MenuService,
-    private customersService: CustomersService,
     private productsService: ProductsService,
     private categoryService: CategoryService,
     private paymentsService: PaymentsService,
-    private fb: FormBuilder,
     private ordersService: OrdersService,
     private posSaleService: PosSaleService,
     private invoicesService: InvoicesService,
@@ -169,8 +161,9 @@ export class PosCajaComponent implements OnInit, OnDestroy {
         break;
       case 'Escape':
         if (this.showPrintModal) { this.closePrintModal(); }
+        else if (this.showCollectionModal) { this.showCollectionModal = false; }
+        else if (this.showReceivablesModal) { this.closeReceivables(); }
         else if (this.showPaymentModal) { this.showPaymentModal = false; this.refocusScanner(); }
-        else if (this.showCustomerModal) { this.cerrarModal(); }
         else if (this.showShortcutsHelp) { this.showShortcutsHelp = false; this.refocusScanner(); }
         break;
     }
@@ -187,18 +180,12 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.ambiente = this.backendEnvironment();
     this.today = this.buildEcuadorIsoDate();
     this.loadFavorites();
-    this.initClienteForm();
-    this.initCustomerSearch();
     this.loadInitialData();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-  }
-
-  get f() {
-    return this.clienteForm.controls;
   }
 
   get subtotal(): number {
@@ -262,10 +249,6 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     return this.capabilities.needsPosTerminalSelection;
   }
 
-  get activePosTerminals(): any[] {
-    return this.capabilities.activePosTerminals;
-  }
-
   /** Preferencia visual del POS configurada fuera del frontend; adapta solo presentación, nunca lógica de venta. */
   get isRetailPos(): boolean {
     return this.capabilities.isRetailPos;
@@ -275,12 +258,6 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   cartLineAttributes(item: any): string {
     const label = formatVariantAttributes(item);
     return label === '—' ? '' : label;
-  }
-
-  onSelectPosTerminal(terminalName: string): void {
-    const terminal = this.activePosTerminals.find((item: any) => String(item?.name || '') === terminalName);
-    if (!terminal) return;
-    this.capabilities.setActivePosTerminal(terminal);
   }
 
   goToPosTerminalSettings(): void {
@@ -450,178 +427,6 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     });
   }
 
-  findByIdentificationCustomer(): void {
-    const identification = this.identificationCustomer?.trim() || this.customerSearchTerm?.trim();
-    if (!identification || (identification.length !== 10 && identification.length !== 13)) {
-      toast.warning('La identificacion debe tener 10 o 13 digitos.');
-      return;
-    }
-
-    this.spinner.show();
-    this.customersService.get_cliente_by_identificacion(identification).pipe(
-      finalize(() => this.spinner.hide())
-    ).subscribe({
-      next: (res: any) => {
-        this.customer = res?.data || res?.message?.data || (res?.message && typeof res.message === 'object' ? res.message : res) || null;
-        if (this.customer) {
-          this.selectCustomer(this.customer);
-          return;
-        }
-        this.openCustomerCreateFromIdentification(identification);
-      },
-      error: () => {
-        this.customer = null;
-        this.openCustomerCreateFromIdentification(identification);
-      }
-    });
-  }
-
-  selectFinalConsumer(): void {
-    this.identificationCustomer = '9999999999999';
-    this.customerSearchTerm = this.identificationCustomer;
-    this.findByIdentificationCustomer();
-  }
-
-  onCustomerSearchChange(term: string): void {
-    this.customerSearchTerm = term || '';
-    const digits = this.customerSearchTerm.replace(/\D/g, '');
-    this.identificationCustomer = digits.length === this.customerSearchTerm.trim().length ? digits : '';
-    if (this.customerSearchTerm.trim().length < 2) {
-      this.filteredCustomers = [];
-      this.customerSearchLoading = false;
-    }
-    this.isCustomerSearchOpen = this.customerSearchTerm.trim().length >= 2;
-    this.customerSearch$.next(this.customerSearchTerm);
-  }
-
-  openCustomerSearch(): void {
-    this.isCustomerSearchOpen = this.customerSearchTerm.trim().length >= 2;
-    if (this.isCustomerSearchOpen && this.filteredCustomers.length === 0) {
-      this.customerSearch$.next(this.customerSearchTerm);
-    }
-  }
-
-  closeCustomerSearchSoon(): void {
-    setTimeout(() => {
-      this.isCustomerSearchOpen = false;
-    }, 150);
-  }
-
-  openCustomerModalFromSearch(): void {
-    const digits = this.customerSearchTerm.trim().replace(/\D/g, '');
-    if (digits.length === 10 || digits.length === 13) {
-      this.clienteForm.patchValue({
-        num_identificacion: digits,
-        tipo_identificacion: digits.length === 10 ? '05 - Cedula' : '04 - RUC'
-      }, { emitEvent: false });
-      this.clienteForm.get('num_identificacion')?.updateValueAndValidity();
-    }
-    this.showCustomerModal = true;
-    this.isCustomerSearchOpen = false;
-  }
-
-  searchCustomerFromInput(): void {
-    const term = this.customerSearchTerm.trim();
-    if (!term) {
-      toast.warning('Escribe nombre, cedula, RUC, telefono o correo del cliente.');
-      return;
-    }
-
-    if (this.filteredCustomers.length === 1) {
-      this.selectCustomer(this.filteredCustomers[0]);
-      return;
-    }
-
-    const digits = term.replace(/\D/g, '');
-    if ((digits.length === 10 || digits.length === 13) && digits === term) {
-      this.identificationCustomer = digits;
-      this.findByIdentificationCustomer();
-      return;
-    }
-
-    if (this.filteredCustomers.length > 1) {
-      this.isCustomerSearchOpen = true;
-      return;
-    }
-
-    this.searchCustomerSuggestionsNow(term);
-  }
-
-  selectFirstCustomerSuggestion(): void {
-    if (this.filteredCustomers.length) {
-      this.selectCustomer(this.filteredCustomers[0]);
-      return;
-    }
-    this.searchCustomerFromInput();
-  }
-
-  selectCustomer(customer: any): void {
-    this.customer = customer;
-    this.identificationCustomer = customer?.num_identificacion || '';
-    this.customerSearchTerm = this.formatCustomerSearchLabel(customer);
-    this.filteredCustomers = [];
-    this.isCustomerSearchOpen = false;
-    // Cliente listo: el cajero sigue con los productos, así que el foco
-    // vuelve al escáner en vez de quedarse en el buscador de cliente.
-    this.refocusScanner();
-  }
-
-  clearCustomerSelection(): void {
-    this.identificationCustomer = '';
-    this.customerSearchTerm = '';
-    this.customer = null;
-    this.filteredCustomers = [];
-    this.isCustomerSearchOpen = false;
-  }
-
-  private searchCustomerSuggestionsNow(term: string): void {
-    if (term.trim().length < 2) {
-      toast.warning('Escribe al menos 2 caracteres para buscar.');
-      return;
-    }
-
-    this.customerSearchLoading = true;
-    this.customersService.searchClientes(term, 8).pipe(
-      finalize(() => this.customerSearchLoading = false),
-      catchError(() => of([]))
-    ).subscribe((customers: any[]) => {
-      this.filteredCustomers = customers;
-      if (customers.length === 1) {
-        this.selectCustomer(customers[0]);
-        return;
-      }
-      if (customers.length > 1) {
-        this.isCustomerSearchOpen = true;
-        return;
-      }
-      this.isCustomerSearchOpen = true;
-      toast.info('No hay coincidencias. Si es cliente nuevo, usa el boton +.');
-    });
-  }
-
-
-  guardarCliente(): void {
-    this.submitted = true;
-    if (this.clienteForm.invalid) return;
-
-    this.spinner.show();
-    this.customersService.create(this.clienteForm.getRawValue()).pipe(
-      finalize(() => this.spinner.hide())
-    ).subscribe({
-      next: (res: any) => {
-        toast.success('Cliente creado exitosamente.');
-        this.customer = Array.isArray(res) ? res[0] : (res?.data || res?.message?.data || res?.message || res);
-        this.identificationCustomer = this.customer?.num_identificacion || '';
-        this.customerSearchTerm = this.formatCustomerSearchLabel(this.customer);
-        this.cerrarModal();
-      },
-      error: (err) => {
-        const apiMessage = this.extractApiError(err);
-        toast.error(apiMessage || 'Error al crear el cliente.');
-      }
-    });
-  }
-
   applyFilters(): void {
     const term = this.normalize(this.searchTerm);
     const selectedCat = this.normalize(this.selectedCategory);
@@ -779,15 +584,8 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const TYPE_IDENTIFICATION_CF = '07 - Consumidor Final';
-    const UMBRAL = 50;
-    const customerType = String(this.customer?.tipo_identificacion || this.customer?.identification_type || '').trim();
-    const customerNumber = String(this.customer?.num_identificacion || this.customer?.identification_number || '').trim();
-    const isConsumidorFinal = customerType === TYPE_IDENTIFICATION_CF
-      || /consumidor final/i.test(customerType)
-      || customerNumber === '9999999999999';
-    if (isConsumidorFinal && typePago === 'Factura' && this.total > UMBRAL) {
-      toast.error(`No se puede emitir una factura a CONSUMIDOR FINAL por un valor superior a USD ${UMBRAL} IVA incluido. Seleccione un cliente identificado.`);
+    if (exceedsFinalConsumerLimit(this.customer, this.total, typePago)) {
+      toast.error(`No se puede emitir una factura a CONSUMIDOR FINAL por un valor superior a USD ${FINAL_CONSUMER_INVOICE_LIMIT} IVA incluido. Seleccione un cliente identificado.`);
       return;
     }
 
@@ -844,14 +642,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       delivery_address: this.deliveryAddress,
       delivery_phone: this.deliveryPhone,
       fecha: this.today,
-      items: this.cartService.cart.map(item => ({
-        product: item.name ?? item.nombre,
-        qty: item.quantity,
-        rate: item.price,
-        discount_percentage: Number(item.discount_percentage || 0),
-        discount_amount: Number(item.discount_amount || 0),
-        tax_rate: item.tax_value
-      }))
+      items: orderItemsFromCart(this.cartService.cart)
     };
 
     const result = await this.alertService.confirm('Desea crear la orden?', 'Confirmacion');
@@ -864,7 +655,6 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       this.spinner.hide();
     })).subscribe({
       next: (res: any) => {
-        console.log('res', res);
         toast.success('Orden creada.');
         this.pendingOrderId = res?.message?.name || null;
         this.clearPage();
@@ -979,28 +769,11 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
-  cerrarModal(): void {
-    this.showCustomerModal = false;
-    this.submitted = false;
-    this.clienteForm.reset({
-      nombre: '',
-      num_identificacion: '',
-      tipo_identificacion: '05 - Cédula',
-      correo: '',
-      telefono: '',
-      direccion: ''
-    });
-    this.refocusScanner();
-  }
-
   clearPage(): void {
     this.cartService.clear();
+    // El selector de cliente se reinicia solo al recibir `customer = null`.
     this.customer = null;
-    this.customerSearchTerm = '';
-    this.filteredCustomers = [];
-    this.isCustomerSearchOpen = false;
     this.alias = '';
-    this.identificationCustomer = '';
     this.amountReceived = null;
     this.change = 0;
     this.paymentRows = [{ method: '', amount: 0 }];
@@ -1018,25 +791,8 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.barcodeScanInput?.focus();
   }
 
-  identificacionLengthValidator(): ValidatorFn {
-    return (control: AbstractControl): ValidationErrors | null => {
-      const tipo = this.clienteForm?.get('tipo_identificacion')?.value;
-      const valor = `${control.value || ''}`;
-      if (!valor) return null;
-      if (String(tipo).slice(0, 2) === '05' && valor.length !== 10) return { cedulaInvalida: true };
-      if (String(tipo).slice(0, 2) === '04' && valor.length !== 13) return { rucInvalido: true };
-      return null;
-    };
-  }
-
-  getMaxLength(): number {
-    const tipo = this.clienteForm?.get('tipo_identificacion')?.value;
-    return String(tipo)?.slice(0, 2) === '05' ? 10 : 13;
-  }
-
   trackByProductId = (_: number, p: any) => p?.id || p?._id || p?.codigo || p?.name || p?.nombre;
   trackByFavorite = (_: number, p: any) => this.getProductKey(p);
-  trackByCustomerId = (_: number, c: any) => c?.name || c?.num_identificacion || _;
 
   canAddProduct(product: any): boolean {
     return this.cartService.canAddProduct(product);
@@ -1083,70 +839,10 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     return Number(item?.quantity || 0);
   }
 
-  private initClienteForm(): void {
-    this.clienteForm = this.fb.group({
-      nombre: ['', [Validators.required]],
-      num_identificacion: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(13)]],
-      tipo_identificacion: ['05 - Cédula', [Validators.required]],
-      correo: ['', [Validators.required, Validators.email]],
-      telefono: ['', [Validators.required]],
-      direccion: ['', [Validators.required]]
-    });
-
-    this.clienteForm.get('tipo_identificacion')?.valueChanges.subscribe(() => {
-      this.clienteForm.patchValue({ num_identificacion: '' });
-      this.clienteForm.get('num_identificacion')?.updateValueAndValidity();
-    });
-
-    this.clienteForm.get('num_identificacion')?.setValidators([
-      Validators.required,
-      this.identificacionLengthValidator()
-    ]);
-  }
-
   private loadInitialData(): void {
     this.loadProducts();
     this.loadCategory();
     this.loadMethodPayment();
-  }
-
-  private formatCustomerSearchLabel(customer: any): string {
-    const name = customer?.nombre || 'Cliente';
-    const identification = customer?.num_identificacion ? ` - ${customer.num_identificacion}` : '';
-    return `${name}${identification}`;
-  }
-
-  private initCustomerSearch(): void {
-    this.customerSearch$.pipe(
-      debounceTime(250),
-      distinctUntilChanged(),
-      switchMap((term: string) => {
-        const query = term.trim();
-        if (query.length < 2) {
-          return of([]);
-        }
-        this.customerSearchLoading = true;
-        return this.customersService.searchClientes(query, 8).pipe(
-          catchError(() => of([])),
-          finalize(() => this.customerSearchLoading = false)
-        );
-      }),
-      takeUntil(this.destroy$)
-    ).subscribe((customers: any[]) => {
-      this.filteredCustomers = customers;
-      this.isCustomerSearchOpen = this.customerSearchTerm.trim().length >= 2;
-    });
-  }
-
-  private openCustomerCreateFromIdentification(identification: string): void {
-    const tipoIdentificacion = identification.length === 10 ? '05 - Cedula' : '04 - RUC';
-    this.clienteForm.patchValue({
-      num_identificacion: identification,
-      tipo_identificacion: tipoIdentificacion
-    }, { emitEvent: false });
-    this.clienteForm.get('num_identificacion')?.updateValueAndValidity();
-    this.showCustomerModal = true;
-    toast.error('Cliente no encontrado con esa identificacion.');
   }
 
   private buildOrderPayload(typePago: 'Nota Venta' | 'Factura') {
@@ -1168,14 +864,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       delivery_phone: this.deliveryPhone,
       fecha: this.today,
       status: typePago === 'Factura' ? 'Cerrada' : 'Ingresada',
-      items: this.cartService.cart.map(item => ({
-        product: item.name ?? item.nombre,
-        qty: item.quantity,
-        rate: item.price,
-        discount_percentage: Number(item.discount_percentage || 0),
-        discount_amount: Number(item.discount_amount || 0),
-        tax_rate: item.tax_value
-      })),
+      items: orderItemsFromCart(this.cartService.cart),
       payments: paymentResult.payments
     };
   }
@@ -1201,15 +890,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       business,
       pos_terminal: terminal || undefined,
       customer: this.customer?.name || undefined,
-      items: this.cartService.cart.map((item: any) => ({
-        item: item.name ?? item.nombre,
-        item_code: item.codigo ?? item.item_code ?? item.name ?? item.nombre,
-        qty: Number(item.quantity || 0),
-        rate: Number(item.price || 0),
-        discount_percentage: Number(item.discount_percentage || 0),
-        discount_amount: Number(item.discount_amount || 0),
-        tax_rate: Number(item.tax_value || 0)
-      })),
+      items: liteItemsFromCart(this.cartService.cart),
       payments: paymentResult.payments.map((row) => {
         const selected = findPaymentMethod(this.payments, row.formas_de_pago);
         const litePayment = this.mapLitePayment(selected, row.formas_de_pago);
@@ -1227,42 +908,9 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     return payload;
   }
 
-  /**
-   * El catálogo de métodos puede llegar con nombres en español, códigos SRI
-   * o aliases del DocType. El contrato de FacturADA Lite, en cambio, espera
-   * siempre el par canónico payment_method/payment_code.
-   */
-  private mapLitePayment(payment: any, fallback = ''): { payment_method: 'CASH' | 'CARD' | 'TRANSFER' | 'OTHER'; payment_code: '01' | '19' | '20' } | null {
-    const raw = payment || {};
-    const value = [
-      raw.payment_method,
-      raw.method,
-      raw.nombre,
-      raw.description,
-      raw.name,
-      fallback || this.paymentMethod
-    ].filter(Boolean).join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
-    const code = String(raw.payment_code || raw.codigo || raw.forma_pago || '').trim();
-
-    if (/(^|\s)(CASH|EFECTIVO)(\s|$)/.test(value) || code === '01') {
-      // OTHER también utiliza el código 01, por eso se comprueba explícitamente
-      // antes de aplicar el fallback por código.
-      if (/(^|\s)(OTHER|OTRO|OTROS)(\s|$)/.test(value)) {
-        return { payment_method: 'OTHER', payment_code: '01' };
-      }
-      return { payment_method: 'CASH', payment_code: '01' };
-    }
-    if (/(CARD|TARJETA|CREDITO|CREDIT|DEBITO|DEBIT)/.test(value) || code === '19') {
-      return { payment_method: 'CARD', payment_code: '19' };
-    }
-    if (/(TRANSFER|TRANSFERENCIA|DEPOSITO|DEPOSIT)/.test(value) || code === '20') {
-      return { payment_method: 'TRANSFER', payment_code: '20' };
-    }
-    if (/(OTHER|OTRO|OTROS)/.test(value)) {
-      return { payment_method: 'OTHER', payment_code: '01' };
-    }
-
-    return null;
+  /** Ver `mapLitePayment` en pos-sale.rules: el método seleccionado en pantalla es el respaldo. */
+  private mapLitePayment(payment: any, fallback = ''): ReturnType<typeof mapLitePayment> {
+    return mapLitePayment(payment, fallback || this.paymentMethod);
   }
 
   /**
@@ -1335,7 +983,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.collectionsService.getCurrentCashOpening().subscribe({
       next: (response: any) => {
         this.checkingCashOpening = false;
-        const cashOpening = this.getCashOpeningName(response);
+        const cashOpening = extractCashOpeningName(response);
         if (!cashOpening) {
           this.handleMissingCashOpening();
           return;
@@ -1348,13 +996,6 @@ export class PosCajaComponent implements OnInit, OnDestroy {
         this.handleMissingCashOpening();
       }
     });
-  }
-
-  private getCashOpeningName(response: any): string {
-    const message = response?.message ?? response ?? {};
-    const data = message?.data ?? response?.data ?? message;
-    const opening = data?.cash_opening ?? data?.apertura ?? data?.opening ?? (data?.name ? data : null);
-    return typeof opening === 'string' ? opening.trim() : String(opening?.name || '').trim();
   }
 
   private handleMissingCashOpening(): void {
@@ -1371,17 +1012,9 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   private backendEnvironment(): string {
-    const value = this.capabilities.business?.tax_profile?.environment
+    return normalizeBackendEnvironment(this.capabilities.business?.tax_profile?.environment
       ?? this.capabilities.business?.environment
-      ?? this.capabilities.business?.ambiente;
-    const normalized = String(value ?? '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim()
-      .toUpperCase();
-    if (normalized.includes('PROD')) return 'Produccion';
-    if (normalized.includes('PRUEB') || normalized === 'TEST') return 'Pruebas';
-    return '';
+      ?? this.capabilities.business?.ambiente);
   }
 
   private submitPosSaleNote(payload: any): void {
@@ -1397,7 +1030,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
         this.clearPage();
         toast.success('Nota de venta creada en borrador.');
       },
-      error: (err: any) => toast.error(this.extractApiError(err) || 'No se pudo crear la nota de venta.')
+      error: (err: any) => toast.error(extractApiError(err) || 'No se pudo crear la nota de venta.')
     });
   }
 
@@ -1409,9 +1042,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       this.spinner.hide();
     })).subscribe({
       next: (response: any) => {
-        const body = response?.message ?? response ?? {};
-        const data = body?.data ?? response?.data ?? {};
-        const emission = body?.emission ?? data?.emission ?? response?.emission ?? data;
+        const { body, data, emission, invoiceName } = readLiteInvoiceResponse(response);
         const state = response?.state || body?.state || data?.state || liteEmissionState(emission);
         const messages = [
           ...liteEmissionMessages(emission),
@@ -1419,19 +1050,6 @@ export class PosCajaComponent implements OnInit, OnDestroy {
           ...liteEmissionMessages(body),
           ...liteEmissionMessages(response)
         ].filter(Boolean);
-        const invoiceName = String(
-          response?.invoiceName
-            || body?.invoiceName
-            || data?.name
-            || data?.invoice_name
-            || data?.invoice?.name
-            || (typeof data?.invoice === 'string' ? data.invoice : '')
-            || data?.lite_invoice?.name
-            || (typeof data?.lite_invoice === 'string' ? data.lite_invoice : '')
-            || emission?.invoice_name
-            || body?.invoice_name
-            || ''
-        ).trim();
 
         if (!invoiceName) {
           toast.error(messages[0] || 'La factura no devolvió un identificador válido.');
@@ -1464,8 +1082,47 @@ export class PosCajaComponent implements OnInit, OnDestroy {
         // o deba reintentarse. El RIDE oficial podrá descargarse cuando exista.
         this.openInvoicePrintModal(invoiceName);
       },
-      error: (error: any) => toast.error(this.extractApiError(error) || 'No se pudo emitir la factura.')
+      error: (error: any) => toast.error(extractApiError(error) || 'No se pudo emitir la factura.')
     });
+  }
+
+  closeReceivables(): void {
+    this.showReceivablesModal = false;
+    this.refocusScanner();
+  }
+
+  closeShortcutsHelp(): void {
+    this.showShortcutsHelp = false;
+    this.refocusScanner();
+  }
+
+  /** El chip de ambiente se muestra en verde solo en Producción. */
+  get isProductionEnvironment(): boolean {
+    return normalizeBackendEnvironment(this.currentFiscalLocation?.environment || this.ambiente) === 'Produccion';
+  }
+
+  /**
+   * Con una sola forma de pago su monto siempre es el total (misma regla que
+   * `abrirModalPago` y `confirmarPago`): si un descuento cambia el total dentro
+   * del cobro, el monto se resincroniza para no dejar el cobro descuadrado.
+   */
+  onCartChanged(): void {
+    if (this.showPaymentModal && this.paymentRows.length === 1) {
+      this.paymentRows[0].amount = this.total;
+      this.calcularCambio();
+    }
+  }
+
+  get cartItemsCount(): number {
+    return this.cartService.cart.reduce((count, item) => count + (Number(item?.quantity) || 0), 0);
+  }
+
+  /** Por qué no se puede cobrar todavía; vacío cuando ya se puede. */
+  get checkoutHint(): string {
+    if (this.genericMode && this.posTerminalBlockMessage) return this.posTerminalBlockMessage;
+    if (!this.cartService.cart.length) return 'Agrega productos para cobrar.';
+    if (!this.customer) return 'Selecciona un cliente para cobrar.';
+    return '';
   }
 
   openReceivables(): void {
@@ -1487,7 +1144,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
           const message = response?.message ?? response ?? {};
           this.receivables = Array.isArray(message?.data) ? message.data : [];
         },
-        error: (error: any) => toast.error(this.extractApiError(error) || 'No se pudo cargar la cartera.')
+        error: (error: any) => toast.error(extractApiError(error) || 'No se pudo cargar la cartera.')
       });
   }
 
@@ -1549,7 +1206,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
           this.loadReceivables();
           window.dispatchEvent(new CustomEvent('facturada:restaurant-data-changed'));
         },
-        error: (error: any) => toast.error(this.extractApiError(error) || 'No se pudo registrar el abono.')
+        error: (error: any) => toast.error(extractApiError(error) || 'No se pudo registrar el abono.')
       });
     };
     // También en los abonos posteriores el efectivo exige caja abierta. El
@@ -1588,7 +1245,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
         toast.success('Nota de venta cobrada.');
         this.printPosSaleNote(name);
       },
-      error: (err: any) => toast.error(this.extractApiError(err) || 'No se pudo cobrar la nota de venta.')
+      error: (err: any) => toast.error(extractApiError(err) || 'No se pudo cobrar la nota de venta.')
     });
   }
 
@@ -1618,7 +1275,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
           toast.info('La nota fue enviada a facturación.');
         }
       },
-      error: (err: any) => toast.error(this.extractApiError(err) || 'No se pudo facturar la nota de venta.')
+      error: (err: any) => toast.error(extractApiError(err) || 'No se pudo facturar la nota de venta.')
     });
   }
 
@@ -1637,7 +1294,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
         this.refreshProductsSilently();
         toast.success('Nota de venta anulada.');
       },
-      error: (err: any) => toast.error(this.extractApiError(err) || 'No se pudo anular la nota de venta.')
+      error: (err: any) => toast.error(extractApiError(err) || 'No se pudo anular la nota de venta.')
     });
   }
 
@@ -1676,7 +1333,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       this.spinner.hide();
     })).subscribe({
       next: (res: any) => {
-        const orderId = String(res?.message?.data?.name ?? res?.message?.name ?? res?.data?.name ?? '').trim();
+        const orderId = extractOrderId(res);
         if (!orderId) {
           toast.error('No se recibio numero de orden.');
           return;
@@ -1688,7 +1345,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
           this.router.navigate(['/dashboard/orders', orderId]);
           return;
         }
-        this.openPrintModal(orderId, this.extractOrderInvoice(res));
+        this.openPrintModal(orderId, extractOrderInvoice(res));
       }
     });
   }
@@ -1737,43 +1394,9 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     }
   }
 
-  private extractOrderInvoice(response: any): string | null {
-    const raw = response?.message?.data?.invoice
-      ?? response?.message?.invoice
-      ?? response?.data?.invoice
-      ?? response?.message?.data?.lite_invoice
-      ?? response?.message?.lite_invoice
-      ?? response?.data?.lite_invoice
-      ?? null;
-    const name = typeof raw === 'string'
-      ? raw
-      : (raw?.name ?? raw?.invoice_name ?? raw?.id ?? '');
-    return String(name || '').trim() || null;
-  }
-
   private buildEcuadorIsoDate(): string {
     const date = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Guayaquil' }));
     return date.toISOString();
-  }
-
-  private extractApiError(err: any): string | null {
-    if (err?.error?._server_messages) {
-      try {
-        const messages = JSON.parse(err.error._server_messages);
-        const mensaje = JSON.parse(messages[0]);
-        return this.stripHtml(mensaje.message);
-      } catch {
-        return null;
-      }
-    }
-    if (err?.error?.message) return err.error.message;
-    return null;
-  }
-
-  private stripHtml(html: string): string {
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    return div.textContent || div.innerText || '';
   }
 
   private toNumber(v: any): number {

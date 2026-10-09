@@ -8,11 +8,12 @@ import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { InventoryService } from 'src/app/services/inventory.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
+import { InventoryNavComponent } from 'src/app/shared/components/inventory-nav/inventory-nav.component';
 
 @Component({
   selector: 'app-lite-inventory-transfer',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, DecimalInputDirective],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, DecimalInputDirective, InventoryNavComponent],
   templateUrl: './lite-inventory-transfer.component.html'
 })
 export class LiteInventoryTransferComponent implements OnInit {
@@ -87,6 +88,33 @@ export class LiteInventoryTransferComponent implements OnInit {
   get targetWarehouseOptions(): any[] {
     const source = String(this.form?.get('source_warehouse')?.value || '');
     return this.warehouses.filter((warehouse: any) => String(warehouse?.name || '') !== source);
+  }
+
+  get sourceWarehouseName(): string {
+    return this.warehouseName(this.form?.get('source_warehouse')?.value);
+  }
+
+  get targetWarehouseName(): string {
+    return this.warehouseName(this.form?.get('target_warehouse')?.value);
+  }
+
+  get bothWarehousesSelected(): boolean {
+    const value = this.form?.getRawValue();
+    return !!value?.source_warehouse && !!value?.target_warehouse && value.source_warehouse !== value.target_warehouse;
+  }
+
+  private warehouseName(id: unknown): string {
+    const warehouse = this.warehouses.find((item: any) => String(item?.name || '') === String(id || ''));
+    return warehouse?.warehouse_name || warehouse?.name || '';
+  }
+
+  /** Invierte origen y destino. Vacía el traslado: el stock disponible cambia con el origen. */
+  swapWarehouses(): void {
+    const { source_warehouse: source, target_warehouse: target } = this.form.getRawValue();
+    if (!source && !target) return;
+    this.form.get('target_warehouse')?.setValue('', { emitEvent: false });
+    this.form.get('source_warehouse')?.setValue(target || '');
+    this.form.get('target_warehouse')?.setValue(source || '');
   }
 
   get items(): FormArray {

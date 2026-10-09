@@ -8,6 +8,7 @@ import { LiteDocumentSequencesComponent } from 'src/app/pages/lite-document-sequ
 import { LitePosTerminalsComponent } from 'src/app/pages/lite-pos-terminals/lite-pos-terminals.component';
 import { LiteWarehousesComponent } from 'src/app/pages/lite-warehouses/lite-warehouses.component';
 import { LiteInventoryTransferComponent } from 'src/app/pages/lite-warehouses/lite-inventory-transfer.component';
+import { LiteApiIntegrationComponent } from 'src/app/pages/lite-api-integration/lite-api-integration.component';
 
 /**
  * Settings Lite uses dedicated setup endpoints for establishments while the
@@ -44,7 +45,7 @@ const routes: Routes = [
   { path: 'lite/readiness', component: CompanyComponent, ...management },
   {
     path: 'lite/api',
-    component: CompanyComponent,
+    component: LiteApiIntegrationComponent,
     canActivate: [RoleAccessGuard],
     data: {
       featureKey: 'api',
@@ -54,13 +55,13 @@ const routes: Routes = [
   },
   {
     path: 'lite/api-clients',
-    component: CompanyComponent,
+    component: LiteApiIntegrationComponent,
     canActivate: [RoleAccessGuard],
     data: { permissionKey: 'business.settings.manage', featureKey: 'api' }
   },
   {
     path: 'lite/api-logs',
-    component: CompanyComponent,
+    component: LiteApiIntegrationComponent,
     canActivate: [RoleAccessGuard],
     data: { permissionKey: 'business.settings.manage', featureKey: 'api' }
   },

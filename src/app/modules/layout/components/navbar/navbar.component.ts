@@ -7,11 +7,13 @@ import { MenuService } from '../../services/menu.service';
 import { ProfileMenuComponent } from './profile-menu/profile-menu.component';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
+import { PosTerminalSwitcherComponent } from 'src/app/shared/components/pos-terminal-switcher/pos-terminal-switcher.component';
+
 @Component({
   selector: 'app-navbar',
   templateUrl: './navbar.component.html',
   styleUrls: ['./navbar.component.css'],
-  imports: [NgIf, NgFor, NgClass, RouterLink, AngularSvgIconModule, ProfileMenuComponent],
+  imports: [NgIf, NgFor, NgClass, RouterLink, AngularSvgIconModule, ProfileMenuComponent, PosTerminalSwitcherComponent],
 })
 export class NavbarComponent implements OnInit, OnDestroy {
   currentTitle = 'Panel principal';

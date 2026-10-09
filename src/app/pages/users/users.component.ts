@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, DoCheck, OnInit } from '@angular/core';
+import { Component, DoCheck, HostListener, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize, forkJoin } from 'rxjs';
 import { toast } from 'ngx-sonner';
+import { AlertService } from 'src/app/core/services/alert.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { CompanyService } from 'src/app/services/company.service';
@@ -33,6 +34,7 @@ export class UsersComponent implements OnInit, DoCheck {
   loading = false;
   saving = false;
   submitted = false;
+  showPassword = false;
   error = '';
 
   search = '';
@@ -47,7 +49,8 @@ export class UsersComponent implements OnInit, DoCheck {
     private readonly usersService: UserService,
     private readonly capabilities: CompanyCapabilitiesService,
     private readonly companyService: CompanyService,
-    private readonly frappeError: FrappeErrorService
+    private readonly frappeError: FrappeErrorService,
+    private readonly alertService: AlertService
   ) {}
 
   ngOnInit(): void {
@@ -92,12 +95,75 @@ export class UsersComponent implements OnInit, DoCheck {
     return this.capabilities.hasPermission('*') || this.capabilities.usersModuleVisible;
   }
 
+  /** Conteos del negocio completo (no de lo filtrado): sirven también como filtro rápido. */
   get activeCount(): number {
-    return this.filtered.filter((item) => this.isActive(item)).length;
+    return this.users.filter((item) => this.isActive(item)).length;
   }
 
   get inactiveCount(): number {
-    return this.filtered.length - this.activeCount;
+    return this.users.length - this.activeCount;
+  }
+
+  get hasActiveFilters(): boolean {
+    return !!this.search.trim() || this.roleFilter !== 'all' || this.statusFilter !== 'all';
+  }
+
+  /** Alta de un usuario Frappe nuevo (no se eligió uno existente ni se está editando). */
+  get isNewUserFlow(): boolean {
+    return !this.selectedUser && !this.selectedFrappeUser;
+  }
+
+  /** Correo escrito con formato válido: con él ya se puede crear un usuario nuevo. */
+  get typedEmailLooksValid(): boolean {
+    return !!this.form?.get('user')?.valid;
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (!this.mostrarModal || this.saving) return;
+    if (this.frappeUsers.length) {
+      this.frappeUsers = [];
+      return;
+    }
+    this.closeModal();
+  }
+
+  setStatusFilter(value: 'all' | 'Activo' | 'Inactivo'): void {
+    this.statusFilter = this.statusFilter === value ? 'all' : value;
+    this.applyFilters();
+  }
+
+  clearFilters(): void {
+    this.search = '';
+    this.roleFilter = 'all';
+    this.statusFilter = 'all';
+    this.applyFilters();
+  }
+
+  /** Vuelve a la búsqueda después de haber elegido un usuario existente. */
+  clearSelectedFrappeUser(): void {
+    if (this.selectedUser) return;
+    this.selectedFrappeUser = null;
+    this.form.get('user')?.setValue('');
+    this.form.get('first_name')?.setValue('');
+    this.frappeUsers = [];
+  }
+
+  initials(user: FacturadaBusinessUser): string {
+    const name = this.fullName(user).replace(/@.*/, '');
+    const parts = name.split(/[\s._-]+/).filter(Boolean);
+    return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || '?';
+  }
+
+  /** Etiqueta legible del rol de una asignación, usando el catálogo del backend si existe. */
+  roleDisplay(user: FacturadaBusinessUser): string {
+    const value = this.normalized(this.roleName(user));
+    const match = this.roles.find((role) => this.normalized(this.roleValue(role)) === value);
+    return match ? this.roleLabel(match) : this.roleName(user);
+  }
+
+  roleDescription(role: FacturadaBusinessRole): string {
+    return String(role?.['description'] || role?.['descripcion'] || '');
   }
 
   /**
@@ -232,6 +298,7 @@ export class UsersComponent implements OnInit, DoCheck {
     this.selectedUser = null;
     this.selectedFrappeUser = null;
     this.submitted = false;
+    this.showPassword = false;
     this.form.reset({ user: '', first_name: '', last_name: '', new_password: '', business_role: this.assignableRoles[0] ? this.roleValue(this.assignableRoles[0]) : '', status: 'Activo', is_default: false });
     this.frappeUsers = [];
     this.mostrarModal = true;
@@ -259,6 +326,7 @@ export class UsersComponent implements OnInit, DoCheck {
   closeModal(): void {
     this.mostrarModal = false;
     this.submitted = false;
+    this.showPassword = false;
     this.selectedUser = null;
     this.selectedFrappeUser = null;
     this.form.get('user')?.enable();
@@ -381,17 +449,24 @@ export class UsersComponent implements OnInit, DoCheck {
 
   deactivate(user: FacturadaBusinessUser): void {
     if (!this.canManageUsers || !user.name || !this.activeBusinessId || !this.isActive(user)) return;
-    if (!window.confirm(`¿Desactivar la asignación de ${this.fullName(user)} en ${this.activeBusinessName}?`)) return;
-    this.saving = true;
-    this.usersService.deactivateBusinessUser(user.name, this.activeBusinessId)
-      .pipe(finalize(() => { this.saving = false; }))
-      .subscribe({
-        next: () => {
-          toast.success('La asignación fue desactivada. El usuario Frappe no fue eliminado.');
-          this.refreshDataAndContext();
-        },
-        error: (error) => toast.error(this.readError(error))
-      });
+    const name = user.name;
+    const business = this.activeBusinessId;
+    this.alertService.confirm(
+      `${this.fullName(user)} ya no podrá entrar a ${this.activeBusinessName}. Su cuenta no se elimina y puedes reactivarla cuando quieras.`,
+      'Quitar acceso'
+    ).then((result) => {
+      if (!result.isConfirmed || business !== this.activeBusinessId) return;
+      this.saving = true;
+      this.usersService.deactivateBusinessUser(name, business)
+        .pipe(finalize(() => { this.saving = false; }))
+        .subscribe({
+          next: () => {
+            toast.success('La asignación fue desactivada. El usuario Frappe no fue eliminado.');
+            this.refreshDataAndContext();
+          },
+          error: (error) => toast.error(this.readError(error))
+        });
+    });
   }
 
   private refreshDataAndContext(): void {

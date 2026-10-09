@@ -8,11 +8,13 @@ import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabi
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { InventoryService } from 'src/app/services/inventory.service';
+import { InventoryNavComponent } from 'src/app/shared/components/inventory-nav/inventory-nav.component';
+import { isActiveFiscalRecord } from 'src/app/core/utils/fiscal-setup';
 
 @Component({
   selector: 'app-lite-warehouses',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, InventoryNavComponent],
   templateUrl: './lite-warehouses.component.html'
 })
 export class LiteWarehousesComponent implements OnInit {
@@ -206,6 +208,24 @@ export class LiteWarehousesComponent implements OnInit {
       },
       error: (err) => toast.error(this.readError(err))
     });
+  }
+
+  isActive(warehouse: any): boolean {
+    return isActiveFiscalRecord(warehouse);
+  }
+
+  get activeWarehousesCount(): number {
+    return this.warehouses.filter((warehouse) => this.isActive(warehouse)).length;
+  }
+
+  /** Terminales POS activos que venden desde esta bodega. */
+  terminalsFor(warehouse: any): any[] {
+    const id = String(warehouse?.name || '');
+    return this.capabilities.activePosTerminals.filter((terminal: any) => String(terminal?.warehouse || '') === id);
+  }
+
+  terminalName(terminal: any): string {
+    return String(terminal?.terminal_name || terminal?.name || 'Terminal');
   }
 
   establishmentLabel(id: string): string {

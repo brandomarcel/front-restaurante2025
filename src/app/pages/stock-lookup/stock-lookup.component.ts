@@ -6,6 +6,7 @@ import { catchError } from 'rxjs/operators';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { BarcodeScanInputComponent } from 'src/app/shared/components/barcode-scan-input/barcode-scan-input.component';
+import { InventoryNavComponent } from 'src/app/shared/components/inventory-nav/inventory-nav.component';
 
 interface StockLookupRow {
   item: string;
@@ -18,7 +19,7 @@ interface StockLookupRow {
 @Component({
   selector: 'app-stock-lookup',
   standalone: true,
-  imports: [CommonModule, FormsModule, BarcodeScanInputComponent],
+  imports: [CommonModule, FormsModule, BarcodeScanInputComponent, InventoryNavComponent],
   templateUrl: './stock-lookup.component.html'
 })
 export class StockLookupComponent {
@@ -102,6 +103,12 @@ export class StockLookupComponent {
 
   stockFor(row: StockLookupRow, warehouse: any): number {
     return row.stockByWarehouse[String(warehouse?.name || '')] ?? 0;
+  }
+
+  /** true para la bodega con más stock del producto: es a donde conviene enviar al cliente o desde donde trasladar. */
+  isBestWarehouse(row: StockLookupRow, warehouse: any): boolean {
+    const stock = this.stockFor(row, warehouse);
+    return stock > 0 && stock === Math.max(...this.warehouses.map((item: any) => this.stockFor(row, item)));
   }
 
   limpiar(): void {

@@ -54,10 +54,11 @@ export class RemissionGuideDetailComponent implements OnInit {
     this.fetch(name);
   }
 
-  fetch(name: string): void {
-    this.spinner.show();
+  /** `silent` refresca sin bloquear la pantalla (actualizaciones en tiempo real). */
+  fetch(name: string, silent = false): void {
+    if (!silent) this.spinner.show();
     this.loadFailed = false;
-    this.svc.getDetail(name).pipe(finalize(() => this.spinner.hide())).subscribe({
+    this.svc.getDetail(name).pipe(finalize(() => { if (!silent) this.spinner.hide(); })).subscribe({
       next: (res: any) => { this.guide = res; },
       error: (err) => {
         this.loadFailed = !this.guide;

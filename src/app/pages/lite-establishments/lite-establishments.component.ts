@@ -7,12 +7,13 @@ import { toast } from 'ngx-sonner';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { CompanyService } from 'src/app/services/company.service';
-import { IconActionButtonComponent } from 'src/app/shared/components/icon-action-button/icon-action-button.component';
+import { Router } from '@angular/router';
+import { FiscalSetupHeaderComponent } from 'src/app/shared/components/fiscal-setup-header/fiscal-setup-header.component';
 
 @Component({
   selector: 'app-lite-establishments',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, IconActionButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, FiscalSetupHeaderComponent],
   templateUrl: './lite-establishments.component.html'
 })
 export class LiteEstablishmentsComponent implements OnInit, DoCheck {
@@ -32,7 +33,8 @@ export class LiteEstablishmentsComponent implements OnInit, DoCheck {
     private readonly fb: FormBuilder,
     private readonly companyService: CompanyService,
     private readonly capabilities: CompanyCapabilitiesService,
-    private readonly frappeError: FrappeErrorService
+    private readonly frappeError: FrappeErrorService,
+    private readonly router: Router
   ) {}
 
   ngOnInit(): void {
@@ -84,6 +86,36 @@ export class LiteEstablishmentsComponent implements OnInit, DoCheck {
 
   get activeCount(): number {
     return this.establishments.filter((item) => this.isActive(item)).length;
+  }
+
+  get inactiveCount(): number {
+    return this.establishments.length - this.activeCount;
+  }
+
+  readonly statusFilters: { value: 'Activo' | 'Inactivo' | 'all'; label: string }[] = [
+    { value: 'Activo', label: 'Activos' },
+    { value: 'Inactivo', label: 'Inactivos' },
+    { value: 'all', label: 'Todos' }
+  ];
+
+  statusFilterCount(value: 'Activo' | 'Inactivo' | 'all'): number {
+    if (value === 'all') return this.establishments.length;
+    return value === 'Activo' ? this.activeCount : this.inactiveCount;
+  }
+
+  /** Puntos activos conocidos por el setup del negocio para este establecimiento. */
+  pointsCount(establishment: any): number {
+    return this.capabilities.activeEmissionPointsFor(establishment?.name).length;
+  }
+
+  /**
+   * Abre los puntos de emisión filtrados por este establecimiento. Se usa un
+   * query param y no la selección guardada, porque esa selección es la que se
+   * usa para facturar y no debe cambiar solo por navegar la configuración.
+   */
+  goToEmissionPoints(establishment: any): void {
+    if (!establishment?.name || !this.isActive(establishment)) return;
+    this.router.navigate(['/settings/lite/emission-points'], { queryParams: { establishment: establishment.name } });
   }
 
   get visibleEstablishments(): any[] {

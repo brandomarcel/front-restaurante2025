@@ -1,6 +1,6 @@
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { CommonModule } from '@angular/common';
-import { Component, DoCheck, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AngularSvgIconModule } from 'angular-svg-icon';
@@ -49,7 +49,7 @@ interface ProfileItem {
   ],
   standalone: true,
 })
-export class ProfileMenuComponent implements OnInit, DoCheck {
+export class ProfileMenuComponent implements OnInit {
   private utilsService = inject(UtilsService);
 
   ambiente$ = this.utilsService.ambiente$;
@@ -87,7 +87,6 @@ export class ProfileMenuComponent implements OnInit, DoCheck {
   public changingBusiness = false;
   /** Valor propio del select: evita que el DOM vuelva al primer option. */
   public selectedBusinessId = '';
-  public selectedTerminalId = '';
 
   constructor(
     public themeService: ThemeService,
@@ -147,12 +146,6 @@ export class ProfileMenuComponent implements OnInit, DoCheck {
     this.authService.logout().subscribe();
   }
 
-  ngDoCheck(): void {
-    const terminal = this.capabilities.activePosTerminal;
-    const next = String(terminal?.name || '').trim();
-    if (next !== this.selectedTerminalId) this.selectedTerminalId = next;
-  }
-
   get hasMultipleBusinesses(): boolean {
     return this.capabilities.businesses.length > 1;
   }
@@ -166,50 +159,6 @@ export class ProfileMenuComponent implements OnInit, DoCheck {
       String(item?.name || item?.business || '').trim() === this.activeBusinessId
     ) || this.capabilities.activeBusiness;
     return business?.business_name || business?.businessname || business?.name || 'Empresa activa';
-  }
-
-  get visiblePosTerminals(): any[] {
-    const terminals = this.capabilities.posTerminals.filter((item: any) => String(item?.status || 'Activo').trim().toUpperCase() === 'ACTIVO');
-    const selected = this.capabilities.activePosTerminal;
-    if (selected && !terminals.some((item: any) => String(item?.name || '') === String(selected?.name || ''))) {
-      return [selected, ...terminals];
-    }
-    return terminals;
-  }
-
-  terminalLabel(terminal: any): string {
-    const name = String(terminal?.terminal_name || terminal?.name || 'Terminal');
-    const establishment = String(terminal?.establishment_code || '').trim();
-    const point = String(terminal?.emission_point_code || '').trim();
-    const establishmentName = String(terminal?.establishment_name || '').trim();
-    return `${name} · ${establishment || '—'}-${point || '—'} · ${establishmentName || 'Sin establecimiento'}`;
-  }
-
-  get terminalAccessMessage(): string {
-    if (this.capabilities.terminalAccessRequired && !this.capabilities.hasTerminalAccess) {
-      return 'No tiene un terminal POS activo asignado. Contacte al administrador.';
-    }
-    if (this.capabilities.requiresTerminalSelection && !this.capabilities.activePosTerminal) {
-      return 'Seleccione un terminal POS para facturar.';
-    }
-    return '';
-  }
-
-  changeTerminal(value: string): void {
-    const terminalId = String(value || '').trim();
-    const terminal = this.visiblePosTerminals.find((item: any) => String(item?.name || '').trim() === terminalId);
-    if (!terminalId || !terminal || !this.capabilities.setActivePosTerminal(terminal)) {
-      this.selectedTerminalId = String(this.capabilities.activePosTerminal?.name || '').trim();
-      return;
-    }
-    this.selectedTerminalId = terminalId;
-    this.isOpen = false;
-    // En modo "Por Bodega" cada terminal apunta a una bodega distinta, y las
-    // pantallas de productos/inventario ya cargaron su stock filtrado por la
-    // bodega del terminal anterior. Igual que al cambiar de negocio, la forma
-    // segura de que todo (stock, ubicación fiscal, carrito) quede consistente
-    // con el nuevo terminal es recargar la pantalla actual.
-    window.location.reload();
   }
 
   changeBusiness(value: string): void {

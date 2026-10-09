@@ -1,159 +1,183 @@
-<main class="app-container space-y-4">
-  <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg md:px-5">
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <p class="text-[11px] font-semibold uppercase tracking-wider text-primary-foreground/70">Infraestructura tributaria</p>
-        <h1 class="mt-1 text-lg font-bold md:text-xl">1. Establecimientos</h1>
-        <p class="mt-1 text-xs text-primary-foreground/80">{{ activeBusinessName }} · {{ activeBusinessId || 'Sin negocio seleccionado' }}</p>
-      </div>
-      <div class="flex items-center gap-2"><span class="rounded-full bg-card/20 px-3 py-1 text-[11px] font-semibold">Paso 1 de 3</span><button type="button" class="btn bg-card !px-3 !py-2 !text-xs !text-primary hover:!bg-muted" (click)="openCreate()" [disabled]="!canManage || loading">+ Nuevo establecimiento</button></div>
+<main class="app-container space-y-3">
+  <app-fiscal-setup-header step="establishments" title="Establecimientos"
+    description="La matriz y cada sucursal desde donde tu negocio emite comprobantes. Su código de 3 dígitos es la primera parte del número de cada factura.">
+    <button headerActions *ngIf="canManage" type="button" class="btn btn-primary !text-xs" (click)="openCreate()"
+      [disabled]="loading || !activeBusinessId">+ Nuevo establecimiento</button>
+    <ng-container help>
+      <p>Un <b class="text-foreground">establecimiento</b> es un local registrado en el SRI: tu matriz (normalmente <b class="font-mono">001</b>) y cada sucursal (<b class="font-mono">002</b>, <b class="font-mono">003</b>…).</p>
+      <p>El código aparece al inicio del número del comprobante: <span class="font-mono text-foreground"><b class="text-primary">001</b>-001-000000123</span>.</p>
+      <p>Después de crearlo, agrégale al menos un punto de emisión.</p>
+    </ng-container>
+  </app-fiscal-setup-header>
+
+  <div *ngIf="!canManage" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+    Modo lectura: solo Administrador o Gerente pueden crear o modificar establecimientos.
+  </div>
+
+  <div *ngIf="establishments.length" class="flex flex-wrap items-center justify-between gap-2">
+    <div class="inline-flex rounded-lg border border-border bg-card p-0.5 shadow-sm" role="radiogroup" aria-label="Filtrar por estado">
+      <button *ngFor="let filter of statusFilters" type="button" role="radio" [attr.aria-checked]="statusFilter === filter.value"
+        class="rounded-md px-3 py-1 text-[11px] font-semibold transition"
+        [ngClass]="statusFilter === filter.value ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+        (click)="statusFilter = filter.value">
+        {{ filter.label }} <span class="opacity-70">{{ statusFilterCount(filter.value) }}</span>
+      </button>
     </div>
+  </div>
+
+  <section *ngIf="error && !loading" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800" role="alert">{{ error }}</section>
+
+  <section *ngIf="loading" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
+    <div *ngFor="let _ of [1, 2, 3]" class="h-44 animate-pulse rounded-xl bg-muted"></div>
   </section>
 
-  <section class="grid gap-3 md:grid-cols-2">
-    <div class="rounded-xl border border-indigo-100 bg-indigo-50/70 p-4"><p class="text-xs font-bold text-indigo-900">¿Para qué sirve?</p><p class="mt-1 text-xs leading-5 text-indigo-800">Crea la matriz o las sucursales que emitirán comprobantes. El código debe tener tres dígitos, por ejemplo <b>001</b>.</p></div>
-    <div class="rounded-xl border border-border bg-card p-4"><p class="text-xs font-bold text-foreground">Siguiente paso</p><p class="mt-1 text-xs leading-5 text-muted-foreground">Después de crear un establecimiento, configura su <b>punto de emisión</b> y luego la secuencia.</p></div>
-  </section>
-
-  <section class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 shadow-sm md:p-4">
-    <div class="flex items-center gap-3">
-      <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-lg text-indigo-600">⌂</div>
-      <div>
-      <p class="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">Rol actual</p>
-      <p class="text-sm font-semibold text-foreground">{{ roleLabel }}</p>
-      <p class="mt-1 text-[11px] text-muted-foreground">{{ canManage ? 'Puede administrar establecimientos' : 'Modo lectura' }}</p>
+  <section *ngIf="!loading && visibleEstablishments.length" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    <article *ngFor="let establishment of visibleEstablishments; trackBy: trackBy"
+      class="flex flex-col rounded-xl border bg-card shadow-sm transition"
+      [ngClass]="isActive(establishment) ? 'border-border hover:border-primary/40 hover:shadow-md' : 'border-dashed border-border opacity-70'">
+      <div class="flex items-start gap-3 p-4">
+        <div class="flex h-12 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <span class="text-[9px] font-bold uppercase leading-none opacity-70">Cód.</span>
+          <span class="font-mono text-lg font-black leading-tight">{{ establishment.establishment_code || '—' }}</span>
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <h2 class="truncate text-sm font-bold text-foreground">{{ establishment.establishment_name || establishment.name || '—' }}</h2>
+            <span *ngIf="isMain(establishment)" class="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">Matriz</span>
+          </div>
+          <span class="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+            [ngClass]="isActive(establishment) ? 'bg-emerald-100 text-emerald-800' : 'bg-muted text-muted-foreground'">
+            <span class="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true"></span>{{ establishment.status || 'Activo' }}
+          </span>
+        </div>
       </div>
-    </div>
-    <div class="flex items-center gap-2"><div class="rounded-lg bg-emerald-50 px-4 py-2 text-center text-xs text-emerald-700"><b class="block text-lg">{{ activeCount }}</b>Activos</div><select class="select !w-auto" [(ngModel)]="statusFilter"><option value="Activo">Activos</option><option value="Inactivo">Inactivos</option><option value="all">Todos</option></select></div>
+
+      <dl class="space-y-1 border-t border-border px-4 py-3 text-xs">
+        <ng-container *ngIf="isLiteBusiness; else erpData">
+          <div class="flex gap-2"><dt class="w-16 shrink-0 text-muted-foreground">Dirección</dt><dd class="min-w-0 truncate text-foreground" [title]="establishment.address || ''">{{ establishment.address || 'Sin dirección' }}</dd></div>
+          <div class="flex gap-2"><dt class="w-16 shrink-0 text-muted-foreground">Teléfono</dt><dd class="text-foreground">{{ establishment.phone || '—' }}</dd></div>
+          <div class="flex gap-2"><dt class="w-16 shrink-0 text-muted-foreground">Correo</dt><dd class="min-w-0 truncate text-foreground" [title]="establishment.email || ''">{{ establishment.email || '—' }}</dd></div>
+        </ng-container>
+        <ng-template #erpData>
+          <div class="flex gap-2"><dt class="w-16 shrink-0 text-muted-foreground">Dirección</dt><dd class="min-w-0 truncate font-mono text-foreground">{{ establishment.address_link || '—' }}</dd></div>
+          <div class="flex gap-2"><dt class="w-16 shrink-0 text-muted-foreground">Contacto</dt><dd class="min-w-0 truncate font-mono text-foreground">{{ establishment.contact || '—' }}</dd></div>
+        </ng-template>
+      </dl>
+
+      <div class="mt-auto flex items-center justify-between gap-2 border-t border-border px-4 py-2.5">
+        <button *ngIf="isActive(establishment)" type="button" class="text-left text-xs font-semibold text-primary hover:underline"
+          (click)="goToEmissionPoints(establishment)">
+          {{ pointsCount(establishment) === 0 ? 'Agregar punto de emisión' : (pointsCount(establishment) + (pointsCount(establishment) === 1 ? ' punto de emisión' : ' puntos de emisión')) }} →
+        </button>
+        <span *ngIf="!isActive(establishment)" class="text-[11px] text-muted-foreground">Inactivo: no emite comprobantes</span>
+        <div *ngIf="canManage" class="flex shrink-0 gap-1">
+          <button type="button" class="btn btn-ghost !px-2 !py-1 !text-[11px]" [disabled]="saving" (click)="openEdit(establishment)">Editar</button>
+          <button *ngIf="isActive(establishment)" type="button" class="btn btn-ghost !px-2 !py-1 !text-[11px] !text-red-700"
+            [disabled]="saving" (click)="deactivate(establishment)">Desactivar</button>
+        </div>
+      </div>
+    </article>
   </section>
 
-  <section *ngIf="error && !loading" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">{{ error }}</section>
-  <section *ngIf="loading" class="app-card p-8 text-center text-sm text-muted-foreground">Cargando establecimientos…</section>
-
-  <section *ngIf="!loading && visibleEstablishments.length" class="app-table-wrap">
-    <table class="app-table text-xs">
-      <thead class="app-thead">
-        <tr>
-          <th class="app-th">Código</th>
-          <th class="app-th">Establecimiento</th>
-          <th class="app-th">Datos del establecimiento</th>
-          <th class="app-th">Estado</th>
-          <th class="app-th text-center">Principal</th>
-          <th class="app-th text-right" *ngIf="canManage">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let establishment of visibleEstablishments; trackBy: trackBy" class="app-tr">
-          <td class="app-td font-semibold text-foreground">{{ establishment.establishment_code || '—' }}</td>
-          <td class="app-td">
-            <span class="font-semibold text-foreground">{{ establishment.establishment_name || establishment.name || '—' }}</span>
-          </td>
-          <td class="app-td text-muted-foreground">
-            <span class="block">{{ (isLiteBusiness ? establishment.address : establishment.address_link) || 'Sin dirección configurada' }}</span>
-            <span *ngIf="isLiteBusiness" class="mt-0.5 block text-[11px]">{{ establishment.phone || 'Sin teléfono' }}<span *ngIf="establishment.email"> · {{ establishment.email }}</span></span>
-            <span *ngIf="!isLiteBusiness" class="mt-0.5 block text-[11px]">{{ establishment.contact || 'Sin contacto ERPNext' }}</span>
-          </td>
-          <td class="app-td"><span class="inline-flex rounded-full px-2 py-1 text-[11px] font-semibold" [ngClass]="isActive(establishment) ? 'bg-emerald-50 text-emerald-700' : 'bg-muted text-muted-foreground'">{{ establishment.status || '—' }}</span></td>
-          <td class="app-td text-center"><span *ngIf="isMain(establishment)" class="inline-flex rounded-full bg-violet-50 px-2 py-1 text-[11px] font-semibold text-violet-700">Principal</span><span *ngIf="!isMain(establishment)" class="text-muted-foreground/70">—</span></td>
-          <td class="app-td" *ngIf="canManage">
-            <div class="flex justify-end gap-2">
-              <app-icon-action-button variant="edit" [disabled]="saving" (action)="openEdit(establishment)"></app-icon-action-button>
-              <app-icon-action-button variant="delete" tone="warn" label="Desactivar" [disabled]="saving || !isActive(establishment)" (action)="deactivate(establishment)"></app-icon-action-button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section *ngIf="!loading && !visibleEstablishments.length && !error" class="app-card p-8 text-center">
-    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-xl text-indigo-600">＋</div>
-    <h2 class="mt-3 text-sm font-semibold text-foreground">Aún no hay establecimientos</h2>
-    <p class="mt-1 text-xs text-muted-foreground">Crea el establecimiento principal para continuar con puntos de emisión y secuencias.</p>
-    <button *ngIf="canManage && !establishments.length" type="button" class="btn btn-primary mt-4" (click)="openCreate()">Crear el primero</button>
+  <section *ngIf="!loading && !visibleEstablishments.length && !error" class="rounded-xl border border-dashed border-border bg-card px-4 py-10 text-center">
+    <ng-container *ngIf="!establishments.length; else filteredEmpty">
+      <p class="font-mono text-3xl font-black text-primary/30">001</p>
+      <h2 class="mt-2 text-sm font-bold text-foreground">Crea tu primer establecimiento</h2>
+      <p class="mx-auto mt-1 max-w-md text-xs text-muted-foreground">Normalmente es tu matriz, con código 001. Es el primer paso para poder emitir facturas.</p>
+      <button *ngIf="canManage" type="button" class="btn btn-primary mt-4 !text-xs" (click)="openCreate()">Crear establecimiento</button>
+    </ng-container>
+    <ng-template #filteredEmpty>
+      <p class="text-sm font-semibold text-foreground">No hay establecimientos {{ statusFilter === 'Inactivo' ? 'inactivos' : 'activos' }}.</p>
+      <button type="button" class="btn btn-outline mt-3 !text-xs" (click)="statusFilter = 'all'">Ver todos</button>
+    </ng-template>
   </section>
 
   <div *ngIf="modalOpen" class="app-modal-backdrop">
-    <section class="app-modal !max-w-2xl overflow-hidden !rounded-2xl !border-border !bg-card !shadow-2xl" role="dialog" aria-modal="true">
-      <header class="border-b border-border px-4 py-3 md:px-5">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <h2 class="text-base font-bold text-foreground">{{ editing ? 'Editar establecimiento' : 'Crear establecimiento' }}</h2>
-            <p class="mt-0.5 text-xs text-muted-foreground">El negocio activo se envía automáticamente y no puede cambiarse desde este formulario.</p>
-          </div>
-          <button type="button" class="btn btn-ghost !px-2" (click)="closeModal()" aria-label="Cerrar">×</button>
+    <section class="app-modal !max-w-2xl overflow-hidden !rounded-2xl !border-border !bg-card !shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="establishment-modal-title">
+      <header class="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
+        <div>
+          <h2 id="establishment-modal-title" class="text-base font-bold text-foreground">{{ editing ? 'Editar establecimiento' : 'Nuevo establecimiento' }}</h2>
+          <p class="mt-0.5 text-xs text-muted-foreground">Se registra en {{ activeBusinessName }}.</p>
         </div>
+        <button type="button" class="btn btn-ghost !px-2" (click)="closeModal()" aria-label="Cerrar">×</button>
       </header>
 
-      <form [formGroup]="form" (ngSubmit)="save()" class="space-y-4 p-4 md:p-5">
-        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div>
-            <label class="mb-1 block text-xs font-semibold text-foreground/80">Código del establecimiento</label>
-            <input class="input" formControlName="establishment_code" maxlength="3" inputmode="numeric" placeholder="001" />
-            <p *ngIf="submitted && form.get('establishment_code')?.hasError('required')" class="field-error">Ingrese el código.</p>
-            <p *ngIf="submitted && form.get('establishment_code')?.hasError('pattern')" class="field-error">Debe tener exactamente 3 dígitos.</p>
+      <form [formGroup]="form" (ngSubmit)="save()" class="space-y-5 p-5">
+        <fieldset class="space-y-3">
+          <legend class="text-[11px] font-bold uppercase tracking-wide text-primary">Identificación SRI</legend>
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-[140px_minmax(0,1fr)]">
+            <div>
+              <label for="establishment-code" class="mb-1 block text-xs font-semibold text-foreground/80">Código</label>
+              <input id="establishment-code" class="input text-center font-mono text-base font-bold tracking-widest" formControlName="establishment_code"
+                maxlength="3" inputmode="numeric" placeholder="001" />
+              <p *ngIf="submitted && form.get('establishment_code')?.hasError('required')" class="field-error">Ingresa el código.</p>
+              <p *ngIf="submitted && form.get('establishment_code')?.hasError('pattern')" class="field-error">Deben ser 3 dígitos.</p>
+            </div>
+            <div>
+              <label for="establishment-name" class="mb-1 block text-xs font-semibold text-foreground/80">Nombre</label>
+              <input id="establishment-name" class="input" formControlName="establishment_name" placeholder="Matriz, Sucursal Norte…" />
+              <p *ngIf="submitted && form.get('establishment_name')?.invalid" class="field-error">Ingresa el nombre.</p>
+            </div>
           </div>
-          <div>
-            <label class="mb-1 block text-xs font-semibold text-foreground/80">Nombre</label>
-            <input class="input" formControlName="establishment_name" placeholder="Matriz" />
-            <p *ngIf="submitted && form.get('establishment_name')?.invalid" class="field-error">Ingrese el nombre.</p>
-          </div>
-          <div>
-            <label class="mb-1 block text-xs font-semibold text-foreground/80">Estado</label>
-            <select class="select" formControlName="status"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select>
-          </div>
-          <ng-container *ngIf="isLiteBusiness; else erpIntegration">
-            <div class="md:col-span-2">
-              <label class="mb-1 block text-xs font-semibold text-foreground/80">Dirección</label>
-              <input class="input" formControlName="address" placeholder="Av. Principal y Calle Uno" />
-              <p class="mt-1 text-[11px] text-muted-foreground/70">Dirección física de esta sucursal.</p>
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-semibold text-foreground/80">Teléfono</label>
-              <input class="input" formControlName="phone" inputmode="tel" placeholder="0999999999" />
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-semibold text-foreground/80">Correo</label>
-              <input class="input" type="email" formControlName="email" placeholder="sucursal@empresa.com" />
-              <p *ngIf="submitted && form.get('email')?.hasError('email')" class="field-error">Ingrese un correo válido.</p>
-            </div>
-          </ng-container>
-          <ng-template #erpIntegration>
-            <div class="md:col-span-2 rounded-xl border border-sky-100 bg-sky-50/60 p-3">
-              <p class="text-xs font-semibold text-sky-800">Integración ERPNext</p>
-              <p class="mt-1 text-[11px] text-sky-700">Use los identificadores reales de documentos ERPNext. Estos campos no aplican a negocios Lite.</p>
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-semibold text-foreground/80">Dirección ERPNext</label>
-              <input class="input" formControlName="address_link" placeholder="ADDR-00001" />
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-semibold text-foreground/80">Contacto ERPNext</label>
-              <input class="input" formControlName="contact" placeholder="CONT-00001" />
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-semibold text-foreground/80">Bodega</label>
-              <input class="input" formControlName="warehouse" placeholder="Bodega Principal - EMP" />
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-semibold text-foreground/80">Centro de costo</label>
-              <input class="input" formControlName="cost_center" placeholder="Principal - EMP" />
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-semibold text-foreground/80">Perfil POS</label>
-              <input class="input" formControlName="pos_profile" placeholder="Caja Principal" />
-            </div>
-          </ng-template>
-        </div>
+          <p class="rounded-lg bg-muted/50 px-3 py-2 text-[11px] text-muted-foreground">
+            Así se verá en tus comprobantes:
+            <span class="font-mono font-semibold text-foreground"><b class="text-primary">{{ form.get('establishment_code')?.value || '___' }}</b>-001-000000001</span>
+          </p>
+        </fieldset>
 
-        <label class="flex cursor-pointer items-start gap-2 rounded-xl border border-border p-3 text-sm">
-          <input class="mt-0.5" type="checkbox" formControlName="is_main" />
-          <span><b class="block text-foreground/80">Establecimiento principal</b><span class="text-xs text-muted-foreground">Solo puede existir un principal activo. El backend valida duplicados y estados.</span></span>
-        </label>
+        <fieldset *ngIf="isLiteBusiness; else erpIntegration" class="space-y-3">
+          <legend class="text-[11px] font-bold uppercase tracking-wide text-primary">Datos de contacto</legend>
+          <div>
+            <label for="establishment-address" class="mb-1 block text-xs font-semibold text-foreground/80">Dirección</label>
+            <input id="establishment-address" class="input" formControlName="address" placeholder="Av. Principal y Calle Uno" />
+            <p class="mt-1 text-[11px] text-muted-foreground">Se imprime en el RIDE como dirección del establecimiento.</p>
+          </div>
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label for="establishment-phone" class="mb-1 block text-xs font-semibold text-foreground/80">Teléfono</label>
+              <input id="establishment-phone" class="input" formControlName="phone" inputmode="tel" placeholder="0999999999" />
+            </div>
+            <div>
+              <label for="establishment-email" class="mb-1 block text-xs font-semibold text-foreground/80">Correo</label>
+              <input id="establishment-email" class="input" type="email" formControlName="email" placeholder="sucursal@empresa.com" />
+              <p *ngIf="submitted && form.get('email')?.hasError('email')" class="field-error">Ingresa un correo válido.</p>
+            </div>
+          </div>
+        </fieldset>
+        <ng-template #erpIntegration>
+          <fieldset class="space-y-3">
+            <legend class="text-[11px] font-bold uppercase tracking-wide text-primary">Integración ERPNext</legend>
+            <p class="text-[11px] text-muted-foreground">Usa los identificadores reales de los documentos ERPNext.</p>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div><label for="erp-address" class="mb-1 block text-xs font-semibold text-foreground/80">Dirección ERPNext</label><input id="erp-address" class="input" formControlName="address_link" placeholder="ADDR-00001" /></div>
+              <div><label for="erp-contact" class="mb-1 block text-xs font-semibold text-foreground/80">Contacto ERPNext</label><input id="erp-contact" class="input" formControlName="contact" placeholder="CONT-00001" /></div>
+              <div><label for="erp-warehouse" class="mb-1 block text-xs font-semibold text-foreground/80">Bodega</label><input id="erp-warehouse" class="input" formControlName="warehouse" placeholder="Bodega Principal - EMP" /></div>
+              <div><label for="erp-cost-center" class="mb-1 block text-xs font-semibold text-foreground/80">Centro de costo</label><input id="erp-cost-center" class="input" formControlName="cost_center" placeholder="Principal - EMP" /></div>
+              <div><label for="erp-pos-profile" class="mb-1 block text-xs font-semibold text-foreground/80">Perfil POS</label><input id="erp-pos-profile" class="input" formControlName="pos_profile" placeholder="Caja Principal" /></div>
+            </div>
+          </fieldset>
+        </ng-template>
 
-        <footer class="flex justify-end gap-2 border-t border-border pt-3">
+        <fieldset class="space-y-2">
+          <legend class="text-[11px] font-bold uppercase tracking-wide text-primary">Estado</legend>
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-border p-3 text-xs has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+              <input class="mt-0.5" type="checkbox" formControlName="is_main" />
+              <span><b class="block text-foreground">Es la matriz</b><span class="text-muted-foreground">Solo puede haber una matriz activa.</span></span>
+            </label>
+            <div>
+              <label for="establishment-status" class="mb-1 block text-xs font-semibold text-foreground/80">Disponibilidad</label>
+              <select id="establishment-status" class="select" formControlName="status">
+                <option value="Activo">Activo · puede emitir</option>
+                <option value="Inactivo">Inactivo · no emite</option>
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
+        <footer class="flex justify-end gap-2 border-t border-border pt-4">
           <button type="button" class="btn btn-outline" (click)="closeModal()" [disabled]="saving">Cancelar</button>
-          <button type="submit" class="btn btn-primary" [disabled]="saving">{{ saving ? 'Guardando…' : 'Guardar establecimiento' }}</button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving">{{ saving ? 'Guardando…' : (editing ? 'Guardar cambios' : 'Crear establecimiento') }}</button>
         </footer>
       </form>
     </section>

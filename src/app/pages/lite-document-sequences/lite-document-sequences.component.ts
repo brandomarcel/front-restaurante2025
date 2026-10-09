@@ -7,12 +7,17 @@ import { toast } from 'ngx-sonner';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { CompanyService } from 'src/app/services/company.service';
-import { IconActionButtonComponent } from 'src/app/shared/components/icon-action-button/icon-action-button.component';
+import { ActivatedRoute, RouterModule } from '@angular/router';
+import { FiscalSetupHeaderComponent } from 'src/app/shared/components/fiscal-setup-header/fiscal-setup-header.component';
+import {
+  FISCAL_DOCUMENTS, FISCAL_ENVIRONMENTS, FiscalDocumentType, FiscalEnvironment,
+  fiscalDocumentNumber, fiscalEnvironmentLabel, fiscalSeries, sequentialNumber
+} from 'src/app/core/utils/fiscal-setup';
 
 @Component({
   selector: 'app-lite-document-sequences',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, IconActionButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, FiscalSetupHeaderComponent],
   templateUrl: './lite-document-sequences.component.html'
 })
 export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
@@ -27,29 +32,16 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
   consecutiveError = '';
   selectedEstablishmentId = '';
   selectedEmissionPointId = '';
-  environmentFilter: 'all' | 'Pruebas' | 'Produccion' = 'all';
-  documentFilter: 'all' | 'Factura' | 'Nota de Credito' | 'Guia de Remision' = 'all';
+  showHistory = false;
 
-  readonly documentTypes = ['Factura', 'Nota de Credito', 'Guia de Remision'];
-  readonly environments = ['Pruebas', 'Produccion'];
   /**
    * Cada tipo documental tiene su propia serie SRI (Factura 01, Nota de
    * Crédito 04, Guía de Remisión 06): el mismo establecimiento y punto de
-   * emisión llevan tres consecutivos independientes, nunca uno compartido.
+   * emisión llevan consecutivos independientes, nunca uno compartido.
    */
-  readonly sriCodes: Record<string, string> = {
-    'FACTURA': '01',
-    'NOTA DE CREDITO': '04',
-    'GUIA DE REMISION': '06'
-  };
-  readonly sequenceMatrix = [
-    { documentType: 'Factura', environment: 'Pruebas', label: 'Factura · Pruebas' },
-    { documentType: 'Factura', environment: 'Produccion', label: 'Factura · Producción' },
-    { documentType: 'Nota de Credito', environment: 'Pruebas', label: 'Nota de crédito · Pruebas' },
-    { documentType: 'Nota de Credito', environment: 'Produccion', label: 'Nota de crédito · Producción' },
-    { documentType: 'Guia de Remision', environment: 'Pruebas', label: 'Guía de remisión · Pruebas' },
-    { documentType: 'Guia de Remision', environment: 'Produccion', label: 'Guía de remisión · Producción' }
-  ] as const;
+  readonly documents = FISCAL_DOCUMENTS;
+  readonly environmentColumns = FISCAL_ENVIRONMENTS;
+  readonly environmentLabel = fiscalEnvironmentLabel;
 
   private loadedBusiness = '';
   private loadedCombination = '';
@@ -59,8 +51,18 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
     private readonly fb: FormBuilder,
     private readonly companyService: CompanyService,
     private readonly capabilities: CompanyCapabilitiesService,
-    private readonly frappeError: FrappeErrorService
+    private readonly frappeError: FrappeErrorService,
+    private readonly route: ActivatedRoute
   ) {}
+
+  /** Ubicación pedida al llegar desde Puntos de emisión (no cambia la selección para facturar). */
+  private get requestedLocation(): { establishment: string; point: string } {
+    const params = this.route.snapshot.queryParamMap;
+    return {
+      establishment: String(params.get('establishment') || '').trim(),
+      point: String(params.get('point') || '').trim()
+    };
+  }
 
   ngOnInit(): void {
     this.form = this.fb.group({
@@ -144,19 +146,54 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
     return this.sequences.filter((item) => this.isActive(item)).length;
   }
 
-  get invoiceCount(): number {
-    return this.sequences.filter((item) => this.normalize(item?.document_type) === 'FACTURA').length;
+  /** Serie fiscal de la ubicación seleccionada (001-002). */
+  get selectedSeries(): string {
+    return fiscalSeries(this.selectedEstablishment?.establishment_code, this.selectedEmissionPoint?.emission_point_code);
   }
 
-  get creditNoteCount(): number {
-    return this.sequences.filter((item) => this.normalize(item?.document_type) === 'NOTA DE CREDITO').length;
+  /** Secuencias que no se muestran en la matriz (por ejemplo, inactivas reemplazadas). */
+  get historySequences(): any[] {
+    const shown = new Set(this.documents.flatMap((document) =>
+      this.environmentColumns.map((environment) => this.sequenceFor(document.type, environment.value)?.name)));
+    return this.sequences.filter((sequence) => !shown.has(sequence?.name));
   }
 
-  get visibleSequences(): any[] {
-    return this.sequences.filter((sequence) =>
-      (this.environmentFilter === 'all' || this.normalizeEnvironment(sequence?.environment) === this.environmentFilter)
-      && (this.documentFilter === 'all' || this.normalize(sequence?.document_type) === this.normalize(this.documentFilter))
+  /** Número completo del próximo comprobante (001-002-000000026). */
+  nextDocumentNumber(sequence: any): string {
+    return fiscalDocumentNumber(
+      sequence?.establishment_code || this.selectedEstablishment?.establishment_code,
+      sequence?.emission_point_code || this.selectedEmissionPoint?.emission_point_code,
+      this.nextValue(sequence)
     );
+  }
+
+  /** Vista previa del próximo número mientras se edita el consecutivo. */
+  get formPreviewNumber(): string {
+    return fiscalDocumentNumber(
+      this.selectedEstablishment?.establishment_code || this.editing?.establishment_code,
+      this.selectedEmissionPoint?.emission_point_code || this.editing?.emission_point_code,
+      sequentialNumber(this.form?.get('current_number')?.value) + 1
+    );
+  }
+
+  get formDocumentType(): string {
+    return this.documentTypeLabel(this.editing?.document_type || this.form?.get('document_type')?.value);
+  }
+
+  get formEnvironment(): string {
+    return fiscalEnvironmentLabel(this.editing?.environment || this.form?.get('environment')?.value);
+  }
+
+  selectFormDocumentType(type: FiscalDocumentType): void {
+    if (!this.editing) this.form.patchValue({ document_type: type });
+  }
+
+  selectFormEnvironment(environment: FiscalEnvironment): void {
+    if (!this.editing) this.form.patchValue({ environment });
+  }
+
+  isProfileEnvironment(environment: string): boolean {
+    return environment === this.profileEnvironment;
   }
 
   onEstablishmentChange(value: unknown): void {
@@ -293,11 +330,6 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
     return `${sequence?.document_type || 'Documento'} · ${sequence?.environment || '—'}`;
   }
 
-  /** Código SRI del tipo documental (01 Factura, 04 Nota de Crédito, 06 Guía de Remisión). */
-  sriCode(documentType: unknown): string {
-    return this.sriCodes[this.normalize(documentType)] || '—';
-  }
-
   documentTypeLabel(documentType: unknown): string {
     const key = this.normalize(documentType);
     if (key === 'FACTURA') return 'Factura';
@@ -324,11 +356,13 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
    * que una respuesta amplia del backend haga aparecer una secuencia ajena.
    */
   sequenceFor(documentType: string, environment: string): any | null {
-    return this.sequences.find((sequence) =>
+    const matches = this.sequences.filter((sequence) =>
       this.matchesSelectedLocation(sequence)
       && this.normalize(sequence?.document_type) === this.normalize(documentType)
       && this.normalizeEnvironment(sequence?.environment) === this.normalizeEnvironment(environment)
-    ) || null;
+    );
+    // Si conviven una secuencia activa y otras inactivas, la activa es la que numera.
+    return matches.find((sequence) => this.isActive(sequence)) || matches[0] || null;
   }
 
   sequenceState(sequence: any | null): 'ready' | 'blocked' | 'missing' {
@@ -336,20 +370,16 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
     return this.canEmit(sequence) ? 'ready' : 'blocked';
   }
 
-  sequenceStateLabel(sequence: any | null): string {
-    const state = this.sequenceState(sequence);
-    if (state === 'ready') return 'Lista para emitir';
-    if (state === 'blocked') return 'Requiere revisión';
-    return 'Sin configurar';
+  nextNumber(sequence: any): string {
+    return this.formatNumber(this.nextValue(sequence));
   }
 
-  nextNumber(sequence: any): string {
+  private nextValue(sequence: any): number {
     const backendNext = this.numberValue(sequence?.next_number);
     const current = this.numberValue(sequence?.current_number);
-    const next = sequence?.next_number !== undefined && sequence?.next_number !== null && backendNext > 0
+    return sequence?.next_number !== undefined && sequence?.next_number !== null && backendNext > 0
       ? backendNext
       : current + 1;
-    return this.formatNumber(next);
   }
 
   formatNumber(value: unknown): string {
@@ -370,10 +400,18 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
       this.error = '';
       this.modalOpen = false;
       this.editing = null;
+      const requested = this.requestedLocation;
       const establishment = this.capabilities.selectedLiteEstablishment;
       const point = this.capabilities.selectedLiteEmissionPoint;
-      if (establishment) this.selectedEstablishmentId = String(establishment.name || '');
-      if (point && this.selectedEstablishmentId) this.selectedEmissionPointId = String(point.name || '');
+      const requestedIsValid = this.activeEstablishments.some((item: any) => String(item?.name || '') === requested.establishment)
+        && this.capabilities.activeEmissionPointsFor(requested.establishment).some((item: any) => String(item?.name || '') === requested.point);
+      if (requestedIsValid) {
+        this.selectedEstablishmentId = requested.establishment;
+        this.selectedEmissionPointId = requested.point;
+      } else {
+        if (establishment) this.selectedEstablishmentId = String(establishment.name || '');
+        if (point && this.selectedEstablishmentId) this.selectedEmissionPointId = String(point.name || '');
+      }
       this.loadSequences();
       return;
     }

@@ -50,8 +50,9 @@ export class CreditNoteDetailPageComponent implements OnInit {
     this.fetch(id);
   }
 
-  fetch(id: string): void {
-    this.invoice = null;
+  /** `silent` conserva el documento visible mientras se refresca (actualizaciones en tiempo real). */
+  fetch(id: string, silent = false): void {
+    if (!silent) this.invoice = null;
     this.error = '';
     const name = String(id ?? '').trim();
     if (!name) {
@@ -60,16 +61,18 @@ export class CreditNoteDetailPageComponent implements OnInit {
       return;
     }
 
-    this.loading = true;
+    this.loading = !silent;
     // The service already unwraps response.message.data and normalizes the document.
     this.liteInvoicesSvc.getLiteCreditNoteDetail(name)
       .pipe(finalize(() => { this.loading = false; }))
       .subscribe({
         next: (document: any) => {
+          if (silent && !document?.name) return;
           this.invoice = document?.name ? document : null;
           if (!this.invoice) this.error = 'Nota de crédito no encontrada';
         },
         error: (err) => {
+          if (silent) { toast.error(this.backendError(err, 'No se pudo actualizar la nota de crédito')); return; }
           this.error = err?.status === 403
             ? 'No tienes permiso para consultar esta nota de crédito.'
             : this.backendError(err, 'No se pudo cargar la nota de crédito');
@@ -270,7 +273,7 @@ export class CreditNoteDetailPageComponent implements OnInit {
   electronicDocumentUpdated(document: any): void {
     if (document.name !== this.invoice?.name) this.router.navigate(['/dashboard/credit-note', document.name]);
     this.invoice = document;
-    this.fetch(document.name);
+    this.fetch(document.name, true);
   }
 
   retryEmission(): void {

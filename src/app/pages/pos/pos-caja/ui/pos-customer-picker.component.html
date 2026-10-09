@@ -1,0 +1,94 @@
+<section class="rounded-lg border border-primary/15 bg-primary/5 px-2.5 py-2">
+  <div class="mb-1 flex items-center justify-between gap-2">
+    <span class="text-[10px] font-bold uppercase tracking-wide text-primary">Cliente</span>
+    <div class="flex items-center gap-1">
+      <button type="button" (click)="openCustomerModalFromSearch()" class="inline-flex h-6 items-center gap-1 rounded-md border border-primary/25 bg-card px-1.5 text-[10px] font-semibold text-primary"
+        title="Registrar cliente nuevo" aria-label="Registrar cliente nuevo">
+        <fa-icon icon="user-plus"></fa-icon> Nuevo
+      </button>
+      <button *ngIf="customer" type="button" (click)="clearCustomerSelection()" class="h-6 rounded-md border border-border bg-card px-1.5 text-[10px] font-semibold text-muted-foreground hover:text-red-700">Cambiar</button>
+    </div>
+  </div>
+
+  <div *ngIf="!customer" class="space-y-1.5">
+    <div class="relative">
+      <input type="search" [(ngModel)]="customerSearchTerm" (ngModelChange)="onCustomerSearchChange($event)" (focus)="openCustomerSearch()"
+        (blur)="closeCustomerSearchSoon()" (keyup.enter)="selectFirstCustomerSuggestion()" placeholder="Nombre, cédula o RUC" aria-label="Buscar cliente"
+        [attr.aria-expanded]="isCustomerSearchOpen" aria-autocomplete="list" autocomplete="off"
+        class="h-8 w-full rounded-md border border-primary/20 bg-card px-2 text-[11px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+      <div *ngIf="isCustomerSearchOpen" class="absolute left-0 right-0 top-full z-30 mt-1 max-h-56 overflow-y-auto rounded-lg border border-border bg-card shadow-lg" role="listbox">
+        <div *ngIf="customerSearchLoading" class="px-2.5 py-2 text-[11px] text-muted-foreground">Buscando clientes…</div>
+        <button *ngFor="let c of filteredCustomers; trackBy: trackByCustomerId" type="button" role="option" (mousedown)="selectCustomer(c)"
+          class="flex w-full flex-col border-b border-border px-2.5 py-1.5 text-left text-[11px] last:border-b-0 hover:bg-primary/5">
+          <span class="truncate font-semibold text-foreground">{{ c?.nombre }}</span>
+          <span class="truncate text-[10px] text-muted-foreground">{{ c?.num_identificacion }} · {{ c?.telefono || c?.correo || 'Sin contacto' }}</span>
+        </button>
+        <div *ngIf="!customerSearchLoading && filteredCustomers.length === 0" class="px-2.5 py-2 text-[11px] text-muted-foreground">
+          Sin coincidencias. <button type="button" (mousedown)="openCustomerModalFromSearch()" class="font-semibold text-primary">Registrar cliente</button>
+        </div>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-1.5">
+      <button type="button" (click)="selectFinalConsumer()" class="h-7 rounded-md border border-primary/20 bg-card text-[11px] font-semibold text-primary">Consumidor final</button>
+      <button type="button" (click)="searchCustomerFromInput()" class="h-7 rounded-md bg-primary text-[11px] font-semibold text-primary-foreground">Buscar</button>
+    </div>
+  </div>
+
+  <div *ngIf="customer" class="min-w-0">
+    <p class="truncate text-xs font-bold text-foreground">{{ customer?.nombre || 'Cliente seleccionado' }}</p>
+    <p class="truncate text-[10px] text-muted-foreground">{{ customer?.num_identificacion || '—' }}<span *ngIf="customer?.correo"> · {{ customer.correo }}</span></p>
+  </div>
+</section>
+
+<!-- ================= NUEVO CLIENTE ================= -->
+<div *ngIf="showCustomerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-3" role="dialog" aria-modal="true" aria-labelledby="pos-customer-title">
+  <div class="relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-xl bg-card p-5 text-xs shadow-lg">
+    <button type="button" class="absolute right-3 top-2 text-lg text-muted-foreground hover:text-foreground" (click)="cerrarModal()" aria-label="Cerrar">×</button>
+    <h3 id="pos-customer-title" class="mb-3 text-base font-semibold text-foreground">Nuevo cliente</h3>
+
+    <form [formGroup]="clienteForm" (ngSubmit)="guardarCliente()" class="space-y-3">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+        <div>
+          <label for="pos-customer-type" class="mb-1 block font-semibold text-foreground/80">Tipo</label>
+          <select id="pos-customer-type" formControlName="tipo_identificacion" class="select text-xs">
+            <option *ngFor="let item of identificationTypes" [value]="item.value">{{ item.label }}</option>
+          </select>
+          <div *ngIf="f['tipo_identificacion'].invalid && submitted" class="field-error">Selecciona un tipo válido.</div>
+        </div>
+        <div>
+          <label for="pos-customer-id" class="mb-1 block font-semibold text-foreground/80">Identificación</label>
+          <input id="pos-customer-id" [attr.maxlength]="getMaxLength()" type="text" inputmode="numeric" formControlName="num_identificacion" class="input font-mono text-xs" />
+          <div *ngIf="f['num_identificacion'].errors?.['required'] && submitted" class="field-error">Campo requerido.</div>
+          <div *ngIf="f['num_identificacion'].errors?.['cedulaInvalida'] && submitted" class="field-error">La cédula debe tener 10 dígitos.</div>
+          <div *ngIf="f['num_identificacion'].errors?.['rucInvalido'] && submitted" class="field-error">El RUC debe tener 13 dígitos.</div>
+        </div>
+      </div>
+      <div>
+        <label for="pos-customer-name" class="mb-1 block font-semibold text-foreground/80">Nombre o razón social</label>
+        <input id="pos-customer-name" type="text" formControlName="nombre" class="input text-xs uppercase" oninput="this.value = this.value.toUpperCase()" />
+        <div *ngIf="f['nombre'].invalid && submitted" class="field-error">Campo requerido.</div>
+      </div>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <label for="pos-customer-email" class="mb-1 block font-semibold text-foreground/80">Correo</label>
+          <input id="pos-customer-email" type="email" formControlName="correo" class="input text-xs" />
+          <div *ngIf="f['correo'].invalid && submitted" class="field-error">Correo inválido.</div>
+        </div>
+        <div>
+          <label for="pos-customer-phone" class="mb-1 block font-semibold text-foreground/80">Teléfono</label>
+          <input id="pos-customer-phone" maxlength="10" type="tel" formControlName="telefono" class="input text-xs" />
+          <div *ngIf="f['telefono'].invalid && submitted" class="field-error">Teléfono inválido.</div>
+        </div>
+      </div>
+      <div>
+        <label for="pos-customer-address" class="mb-1 block font-semibold text-foreground/80">Dirección</label>
+        <input id="pos-customer-address" type="text" formControlName="direccion" class="input text-xs" />
+        <div *ngIf="f['direccion'].invalid && submitted" class="field-error">Dirección inválida.</div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" class="btn btn-outline" (click)="cerrarModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary min-h-[40px]">Guardar cliente</button>
+      </div>
+    </form>
+  </div>
+</div>

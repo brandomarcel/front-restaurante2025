@@ -1,165 +1,149 @@
-<main class="app-container density-compact space-y-3 pb-6">
-  <section class="rounded-2xl border border-border bg-card p-4 shadow-sm">
-    <p class="text-[10px] font-black uppercase tracking-[.14em] text-primary">Inventario · Bodegas</p>
-    <h1 class="mt-1 text-xl font-black text-foreground">Traslado de inventario</h1>
-    <p class="mt-1 text-xs text-muted-foreground">Mueve stock de una bodega a otra. El backend valida que exista existencia suficiente en la bodega de origen.</p>
-  </section>
+<main class="app-container space-y-3 pb-6">
+  <app-inventory-nav active="transfer" />
 
-  <div *ngIf="error" class="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
-    {{ error }}
-  </div>
+  <header class="rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
+    <h1 class="text-lg font-bold text-foreground">Trasladar stock entre bodegas</h1>
+    <p class="text-xs text-muted-foreground">Mueve mercadería de una bodega a otra. Se registra una salida en el origen y una entrada en el destino.</p>
+  </header>
 
-  <div *ngIf="warehouses.length < 2" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
-    Necesitas al menos dos bodegas activas para poder trasladar inventario.
-  </div>
+  <div *ngIf="error" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800" role="alert">{{ error }}</div>
 
-  <section *ngIf="warehouses.length >= 2" class="rounded-2xl border border-border bg-card p-4 shadow-sm">
-    <form [formGroup]="form" (ngSubmit)="trasladar()" class="space-y-4">
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div>
-          <label class="mb-1 block text-xs font-semibold text-foreground/80">Bodega origen</label>
-          <select class="select" formControlName="source_warehouse">
-            <option value="">Selecciona una bodega</option>
-            <option *ngFor="let warehouse of sourceWarehouseOptions" [value]="warehouse.name">{{ warehouse.warehouse_name || warehouse.name }}</option>
-          </select>
-          <p *ngIf="submitted && form.get('source_warehouse')?.invalid" class="field-error">Selecciona la bodega de origen.</p>
-        </div>
-        <div>
-          <label class="mb-1 block text-xs font-semibold text-foreground/80">Bodega destino</label>
-          <select class="select" formControlName="target_warehouse">
-            <option value="">Selecciona una bodega</option>
-            <option *ngFor="let warehouse of targetWarehouseOptions" [value]="warehouse.name">{{ warehouse.warehouse_name || warehouse.name }}</option>
-          </select>
-          <p *ngIf="submitted && form.get('target_warehouse')?.invalid" class="field-error">Selecciona la bodega de destino.</p>
-        </div>
-        <div>
-          <label class="mb-1 block text-xs font-semibold text-foreground/80">Fecha</label>
-          <input type="date" class="input" formControlName="posting_date" />
-        </div>
-      </div>
-
-      <p *ngIf="sameWarehouseSelected" class="rounded-lg bg-destructive/10 px-3 py-2 text-[11px] font-semibold text-destructive">
-        La bodega de origen y destino deben ser distintas.
-      </p>
-
+  <section *ngIf="lastResult" class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900" role="status">
+    <div class="flex flex-wrap items-start justify-between gap-2">
       <div>
-        <label class="mb-1 block text-xs font-semibold text-foreground/80">Notas (opcional)</label>
-        <textarea class="input" rows="2" formControlName="notes" placeholder="Motivo del traslado"></textarea>
+        <p class="text-sm font-bold">✓ Traslado registrado</p>
+        <p *ngIf="lastResult.transfer_id" class="mt-0.5 text-xs">Referencia <span class="font-mono font-semibold">{{ lastResult.transfer_id }}</span></p>
       </div>
-
-      <p *ngIf="!sourceSelected" class="rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700">
-        Selecciona primero la bodega de origen para ver qué productos hay y cuánto stock tienen ahí.
-      </p>
-
-      <ng-container *ngIf="sourceSelected">
-        <!-- Catálogo: lo que hay en la bodega origen, para buscar y agregar al traslado. -->
-        <section class="rounded-xl border border-border bg-muted/40 p-3">
-          <div class="mb-2 flex items-center justify-between gap-2">
-            <h3 class="text-xs font-bold text-foreground">Productos disponibles en origen</h3>
-            <input class="input !w-56 !py-1.5 !text-xs" placeholder="Buscar por nombre o código…" [(ngModel)]="productSearch" [ngModelOptions]="{standalone: true}" />
-          </div>
-
-          <p *ngIf="loadingSource" class="text-[11px] text-muted-foreground">Cargando stock de la bodega origen…</p>
-
-          <div *ngIf="!loadingSource" class="max-h-[360px] overflow-y-auto rounded-lg border border-border bg-card">
-            <table class="app-table text-xs">
-              <thead class="app-thead sticky top-0">
-                <tr>
-                  <th class="app-th">Producto</th>
-                  <th class="app-th text-right">Disponible</th>
-                  <th class="app-th text-right">En destino</th>
-                  <th class="app-th text-right">Cantidad</th>
-                  <th class="app-th text-center">Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let product of filteredProducts" class="app-tr" [ngClass]="availableStock(product.name || product.codigo) <= 0 ? 'opacity-50' : ''">
-                  <td class="app-td">
-                    <span class="block font-semibold text-foreground">{{ product.nombre }}</span>
-                    <span class="block text-[10px] text-muted-foreground">{{ product.codigo }}</span>
-                  </td>
-                  <td class="app-td text-right font-bold" [ngClass]="availableStock(product.name || product.codigo) > 0 ? 'text-emerald-600' : 'text-destructive'">
-                    {{ availableStock(product.name || product.codigo) }}
-                  </td>
-                  <td class="app-td text-right text-muted-foreground">{{ targetStock(product.name || product.codigo) }}</td>
-                  <td class="app-td text-right">
-                    <input
-                      type="number"
-                      min="0.0001"
-                      step="0.01"
-                      class="input !h-8 !w-24 text-right"
-                      placeholder="0"
-                      [disabled]="availableStock(product.name || product.codigo) <= 0"
-                      [ngModel]="catalogQty[product.name || product.codigo]"
-                      (ngModelChange)="catalogQty[product.name || product.codigo] = $event"
-                      [ngModelOptions]="{standalone: true}"
-                    />
-                  </td>
-                  <td class="app-td text-center">
-                    <button
-                      type="button"
-                      class="btn !px-3 !py-1 !text-[11px]"
-                      [ngClass]="isInCart(product.name || product.codigo) ? 'btn-outline' : 'btn-primary'"
-                      [disabled]="availableStock(product.name || product.codigo) <= 0"
-                      (click)="agregarAlCarrito(product)"
-                    >
-                      {{ isInCart(product.name || product.codigo) ? 'Sumar (' + cartQtyFor(product.name || product.codigo) + ')' : 'Agregar' }}
-                    </button>
-                  </td>
-                </tr>
-                <tr *ngIf="!filteredProducts.length">
-                  <td colspan="5" class="app-td py-6 text-center text-muted-foreground">No hay productos que coincidan con la búsqueda.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <!-- Carrito: lo que efectivamente se va a trasladar. -->
-        <section class="rounded-xl border border-border bg-card p-3">
-          <div class="mb-2 flex items-center justify-between">
-            <h3 class="text-xs font-bold text-foreground">Productos en este traslado</h3>
-            <span class="text-[11px] text-muted-foreground">{{ items.length }} producto(s) · {{ totalUnitsInCart }} unidad(es)</span>
-          </div>
-
-          <div *ngIf="!items.length" class="rounded-lg border border-dashed border-border p-4 text-center text-[11px] text-muted-foreground">
-            Aún no agregaste productos. Búscalos arriba y presiona "Agregar".
-          </div>
-
-          <div *ngIf="items.length" formArrayName="items" class="space-y-1.5">
-            <div *ngFor="let group of items.controls; let i = index" [formGroupName]="i"
-              class="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-2.5 py-1.5">
-              <span class="min-w-0 flex-1 truncate text-xs font-semibold text-foreground">{{ productLabel(group.get('item')?.value) }}</span>
-              <span class="text-[11px] text-muted-foreground">Disp: {{ availableStock(group.get('item')?.value) }}</span>
-              <input type="text" inputmode="decimal" appDecimalInput min="0.0001" step="0.01" class="input !h-8 !w-24 text-right" formControlName="qty" />
-              <button type="button" class="btn btn-outline !px-2.5 !py-1 !text-[11px]" (click)="removeItem(i)">Quitar</button>
-              <p *ngIf="lineExceedsAvailable(group)" class="w-full text-[11px] font-semibold text-destructive">
-                Supera el stock disponible en origen ({{ availableStock(group.get('item')?.value) }}).
-              </p>
-            </div>
-          </div>
-          <p *ngIf="submitted && !items.length" class="field-error mt-2">Agrega al menos un producto con cantidad mayor a cero.</p>
-          <p *ngIf="hasInsufficientStockLines" class="field-error mt-2">Hay productos que superan el stock disponible en la bodega origen.</p>
-        </section>
-      </ng-container>
-
-      <footer class="flex justify-end border-t border-border pt-3">
-        <button type="submit" class="btn btn-primary" [disabled]="saving || loading">{{ saving ? 'Trasladando…' : 'Trasladar inventario' }}</button>
-      </footer>
-    </form>
-  </section>
-
-  <section *ngIf="lastResult" class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-    <p class="font-bold">Traslado registrado correctamente.</p>
-    <p *ngIf="lastResult.transfer_id" class="mt-1 text-xs">ID: {{ lastResult.transfer_id }}</p>
-    <p *ngIf="lastResult.movements?.length" class="mt-2 text-[11px] text-emerald-700">
-      Cada producto genera dos movimientos: una salida en la bodega origen y una entrada en la bodega destino.
-    </p>
-    <ul *ngIf="lastResult.movements?.length" class="mt-1 space-y-1 text-xs">
+      <button type="button" class="text-xs font-semibold underline" (click)="lastResult = null">Cerrar</button>
+    </div>
+    <ul *ngIf="lastResult.movements?.length" class="mt-2 space-y-0.5 text-xs">
       <li *ngFor="let movement of lastResult.movements">
-        <span class="font-semibold">{{ movement.item_name || movement.item }}</span>
-        — {{ movementLabel(movement) }}: {{ movement.quantity ?? movement.qty }}
+        <b>{{ movement.item_name || movement.item }}</b> — {{ movementLabel(movement) }}: {{ movement.quantity ?? movement.qty }}
       </li>
     </ul>
   </section>
+
+  <div *ngIf="warehouses.length < 2" class="rounded-xl border border-dashed border-border bg-card px-4 py-10 text-center">
+    <p class="text-sm font-bold text-foreground">Necesitas al menos dos bodegas activas</p>
+    <p class="mt-1 text-xs text-muted-foreground">Crea otra bodega para poder mover stock entre ellas.</p>
+  </div>
+
+  <form *ngIf="warehouses.length >= 2" [formGroup]="form" (ngSubmit)="trasladar()" class="space-y-3">
+    <!-- Paso 1: origen y destino -->
+    <section class="rounded-xl border border-border bg-card p-4 shadow-sm">
+      <p class="mb-2 text-[11px] font-bold uppercase tracking-wide text-primary">1 · ¿Desde dónde y hacia dónde?</p>
+      <div class="grid grid-cols-1 items-end gap-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_160px]">
+        <div>
+          <label for="transfer-source" class="mb-1 block text-xs font-semibold text-foreground/80">Sale de</label>
+          <select id="transfer-source" class="select" formControlName="source_warehouse">
+            <option value="">Elige la bodega de origen</option>
+            <option *ngFor="let warehouse of sourceWarehouseOptions" [value]="warehouse.name">{{ warehouse.warehouse_name || warehouse.name }}</option>
+          </select>
+          <p *ngIf="submitted && form.get('source_warehouse')?.invalid" class="field-error">Elige el origen.</p>
+        </div>
+        <button type="button" class="btn btn-ghost mx-auto !px-3 md:mb-0.5" (click)="swapWarehouses()" title="Intercambiar origen y destino" aria-label="Intercambiar origen y destino">⇄</button>
+        <div>
+          <label for="transfer-target" class="mb-1 block text-xs font-semibold text-foreground/80">Llega a</label>
+          <select id="transfer-target" class="select" formControlName="target_warehouse">
+            <option value="">Elige la bodega de destino</option>
+            <option *ngFor="let warehouse of targetWarehouseOptions" [value]="warehouse.name">{{ warehouse.warehouse_name || warehouse.name }}</option>
+          </select>
+          <p *ngIf="submitted && form.get('target_warehouse')?.invalid" class="field-error">Elige el destino.</p>
+        </div>
+        <div>
+          <label for="transfer-date" class="mb-1 block text-xs font-semibold text-foreground/80">Fecha</label>
+          <input id="transfer-date" type="date" class="input" formControlName="posting_date" />
+        </div>
+      </div>
+      <p *ngIf="sameWarehouseSelected" class="mt-2 text-[11px] font-semibold text-red-700">El origen y el destino deben ser distintos.</p>
+    </section>
+
+    <div *ngIf="!sourceSelected" class="rounded-xl border border-dashed border-border bg-card px-4 py-8 text-center text-xs text-muted-foreground">
+      Elige la bodega de origen para ver qué productos puedes trasladar.
+    </div>
+
+    <div *ngIf="sourceSelected" class="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <!-- Paso 2: catálogo -->
+      <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+        <div class="flex flex-col gap-2 border-b border-border p-3 sm:flex-row sm:items-center sm:justify-between">
+          <p class="text-[11px] font-bold uppercase tracking-wide text-primary">2 · Elige los productos de {{ sourceWarehouseName }}</p>
+          <input class="input !h-8 !text-xs sm:!w-56" type="search" placeholder="Buscar por nombre o código…" aria-label="Buscar producto"
+            [(ngModel)]="productSearch" [ngModelOptions]="{standalone: true}" />
+        </div>
+
+        <p *ngIf="loadingSource" class="p-6 text-center text-xs text-muted-foreground">Cargando stock de {{ sourceWarehouseName }}…</p>
+
+        <ul *ngIf="!loadingSource" class="max-h-[460px] divide-y divide-border overflow-y-auto">
+          <li *ngFor="let product of filteredProducts" class="flex flex-wrap items-center gap-3 px-3 py-2.5"
+            [class.opacity-50]="availableStock(product.name || product.codigo) <= 0">
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-xs font-semibold text-foreground">{{ product.nombre }}</p>
+              <p class="text-[10px] text-muted-foreground">
+                <span class="font-mono">{{ product.codigo }}</span> ·
+                Disponible <b [ngClass]="availableStock(product.name || product.codigo) > 0 ? 'text-emerald-700' : 'text-red-700'">{{ availableStock(product.name || product.codigo) }}</b>
+                <span *ngIf="bothWarehousesSelected"> · En destino {{ targetStock(product.name || product.codigo) }}</span>
+              </p>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <input type="number" min="0.0001" step="0.01" class="input no-spinner !h-8 !w-20 text-right text-xs" placeholder="Cant."
+                [attr.aria-label]="'Cantidad de ' + product.nombre"
+                [disabled]="availableStock(product.name || product.codigo) <= 0"
+                [ngModel]="catalogQty[product.name || product.codigo]" (ngModelChange)="catalogQty[product.name || product.codigo] = $event"
+                [ngModelOptions]="{standalone: true}" (keyup.enter)="agregarAlCarrito(product)" />
+              <button type="button" class="btn !px-3 !py-1 !text-[11px]"
+                [ngClass]="isInCart(product.name || product.codigo) ? 'btn-outline' : 'btn-primary'"
+                [disabled]="availableStock(product.name || product.codigo) <= 0" (click)="agregarAlCarrito(product)">
+                {{ isInCart(product.name || product.codigo) ? 'Sumar' : 'Agregar' }}
+              </button>
+            </div>
+          </li>
+          <li *ngIf="!filteredProducts.length" class="px-4 py-8 text-center text-xs text-muted-foreground">
+            {{ productSearch ? 'Ningún producto coincide con la búsqueda.' : 'Esta bodega no tiene productos con stock.' }}
+          </li>
+        </ul>
+      </section>
+
+      <!-- Paso 3: resumen -->
+      <aside class="space-y-3 lg:sticky lg:top-3 lg:self-start">
+        <section class="rounded-xl border border-border bg-card shadow-sm">
+          <div class="border-b border-border p-3">
+            <p class="text-[11px] font-bold uppercase tracking-wide text-primary">3 · Revisa y confirma</p>
+            <p class="mt-1 text-xs text-foreground">
+              <b>{{ sourceWarehouseName || 'Origen' }}</b> <span class="text-muted-foreground">→</span> <b>{{ targetWarehouseName || 'Destino' }}</b>
+            </p>
+          </div>
+
+          <div *ngIf="!items.length" class="px-3 py-6 text-center text-[11px] text-muted-foreground">
+            Aún no agregaste productos. Escribe una cantidad y pulsa "Agregar".
+          </div>
+
+          <ul *ngIf="items.length" formArrayName="items" class="max-h-[300px] divide-y divide-border overflow-y-auto">
+            <li *ngFor="let group of items.controls; let i = index" [formGroupName]="i" class="px-3 py-2">
+              <div class="flex items-center gap-2">
+                <span class="min-w-0 flex-1 truncate text-xs font-semibold text-foreground" [title]="productLabel(group.get('item')?.value)">{{ productLabel(group.get('item')?.value) }}</span>
+                <input type="text" inputmode="decimal" appDecimalInput min="0.0001" step="0.01" class="input !h-8 !w-20 text-right text-xs" formControlName="qty"
+                  [attr.aria-label]="'Cantidad a trasladar de ' + productLabel(group.get('item')?.value)" />
+                <button type="button" class="text-sm text-muted-foreground hover:text-red-700" (click)="removeItem(i)" aria-label="Quitar producto">×</button>
+              </div>
+              <p *ngIf="lineExceedsAvailable(group)" class="mt-0.5 text-[10px] font-semibold text-red-700">Solo hay {{ availableStock(group.get('item')?.value) }} disponibles.</p>
+            </li>
+          </ul>
+
+          <div class="space-y-2 border-t border-border p-3">
+            <div class="flex justify-between text-xs">
+              <span class="text-muted-foreground">{{ items.length }} producto(s)</span>
+              <span class="font-bold text-foreground">{{ totalUnitsInCart }} unidad(es)</span>
+            </div>
+            <textarea class="input text-xs" rows="2" formControlName="notes" placeholder="Motivo del traslado (opcional)" aria-label="Motivo del traslado"></textarea>
+            <p *ngIf="submitted && !items.length" class="field-error">Agrega al menos un producto.</p>
+            <p *ngIf="hasInsufficientStockLines" class="field-error">Hay cantidades mayores al stock disponible.</p>
+            <button type="submit" class="btn btn-primary w-full"
+              [disabled]="saving || loading || !items.length || hasInsufficientStockLines || !bothWarehousesSelected">
+              {{ saving ? 'Trasladando…' : 'Confirmar traslado' }}
+            </button>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </form>
 </main>

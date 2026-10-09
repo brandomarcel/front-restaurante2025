@@ -70,27 +70,6 @@
       </div>
     }
 
-    @if (visiblePosTerminals.length || capabilities.terminalAccessRequired) {
-      <div class="mb-2 rounded-lg border border-border bg-muted/40 p-2.5">
-        <label class="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted-foreground" for="active-pos-terminal">
-          Terminal POS
-        </label>
-        <select
-          id="active-pos-terminal"
-          class="input h-auto min-h-8 w-full text-[11px]"
-          [(ngModel)]="selectedTerminalId"
-          [ngModelOptions]="{ standalone: true }"
-          [disabled]="!visiblePosTerminals.length"
-          (ngModelChange)="changeTerminal($event)">
-          <option value="">{{ capabilities.requiresTerminalSelection ? 'Seleccione un terminal' : 'Sin terminal seleccionado' }}</option>
-          @for (terminal of visiblePosTerminals; track terminal.name) {
-            <option [value]="terminal.name">{{ terminalLabel(terminal) }}</option>
-          }
-        </select>
-        <p *ngIf="terminalAccessMessage" class="mt-1 text-[10px] font-semibold text-amber-700">{{ terminalAccessMessage }}</p>
-      </div>
-    }
-
     <button
       type="button"
       (click)="toggleThemeMode()"

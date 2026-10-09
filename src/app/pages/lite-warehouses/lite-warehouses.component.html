@@ -1,162 +1,168 @@
-<main class="app-container density-compact space-y-3 pb-6">
-  <section class="rounded-2xl border border-border bg-card p-4 shadow-sm">
-    <p class="text-[10px] font-black uppercase tracking-[.14em] text-primary">Configuración · Inventario</p>
-    <h1 class="mt-1 text-xl font-black text-foreground">Inventario por bodega</h1>
-    <p class="mt-1 text-xs text-muted-foreground">Permite manejar stock independiente por local. No afecta a los negocios que usan inventario simple.</p>
-  </section>
+<main class="app-container space-y-3 pb-6">
+  <app-inventory-nav active="warehouses" />
 
-  <div *ngIf="error" class="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
-    {{ error }}
-  </div>
+  <header class="rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 class="text-lg font-bold text-foreground">Bodegas y modo de inventario</h1>
+        <p class="text-xs text-muted-foreground">Decide si el negocio maneja un solo stock o uno por cada local, y administra sus bodegas.</p>
+      </div>
+      <button *ngIf="canManage" type="button" class="btn btn-primary !text-xs" (click)="openCreate()">+ Nueva bodega</button>
+    </div>
+  </header>
+
+  <div *ngIf="error" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800" role="alert">{{ error }}</div>
+  <div *ngIf="!canManage" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">Modo lectura: solo un administrador puede cambiar el modo o las bodegas.</div>
 
   <ng-container *ngIf="!error">
     <!-- Modo de inventario -->
-    <section class="rounded-2xl border border-border bg-card p-4 shadow-sm">
-      <h2 class="text-sm font-bold text-foreground">Modo de inventario</h2>
-      <p class="mt-1 text-xs text-muted-foreground">
-        <b class="text-foreground/80">Simple:</b> un solo stock global para todo el negocio.
-        <b class="ml-2 text-foreground/80">Por bodega:</b> cada local maneja su propio stock; las ventas de un terminal solo descuentan de su bodega asignada.
-      </p>
-
-      <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <button type="button" class="rounded-xl border p-3 text-left transition"
-          [ngClass]="inventoryMode === 'Simple' ? 'border-primary bg-primary/5' : 'border-border bg-muted/40 hover:border-primary/40'"
+    <section class="rounded-xl border border-border bg-card p-4 shadow-sm">
+      <h2 class="text-sm font-bold text-foreground">¿Cómo controlas el stock?</h2>
+      <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2" role="radiogroup" aria-label="Modo de inventario">
+        <button type="button" role="radio" [attr.aria-checked]="inventoryMode === 'Simple'"
+          class="relative rounded-xl border-2 p-4 text-left transition disabled:cursor-default"
+          [ngClass]="inventoryMode === 'Simple' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'"
           [disabled]="!canManage || savingMode" (click)="cambiarModo('Simple')">
-          <div class="flex items-center justify-between">
-            <span class="text-sm font-bold text-foreground">Simple</span>
-            <span *ngIf="inventoryMode === 'Simple'" class="badge badge-green">Activo</span>
-          </div>
-          <p class="mt-1 text-[11px] text-muted-foreground">Stock global, sin bodegas.</p>
+          <span *ngIf="inventoryMode === 'Simple'" class="absolute right-3 top-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">En uso</span>
+          <p class="text-sm font-bold text-foreground">Simple</p>
+          <p class="mt-1 text-xs text-muted-foreground">Un único stock para todo el negocio. Cualquier caja vende del mismo inventario.</p>
+          <p class="mt-2 text-[11px] text-foreground/80"><b>Ideal para:</b> un solo local o bodega.</p>
         </button>
-
-        <button type="button" class="rounded-xl border p-3 text-left transition"
-          [ngClass]="inventoryMode === 'Por Bodega' ? 'border-primary bg-primary/5' : 'border-border bg-muted/40 hover:border-primary/40'"
+        <button type="button" role="radio" [attr.aria-checked]="inventoryMode === 'Por Bodega'"
+          class="relative rounded-xl border-2 p-4 text-left transition disabled:cursor-default"
+          [ngClass]="inventoryMode === 'Por Bodega' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'"
           [disabled]="!canManage || savingMode" (click)="cambiarModo('Por Bodega')">
-          <div class="flex items-center justify-between">
-            <span class="text-sm font-bold text-foreground">Por bodega</span>
-            <span *ngIf="inventoryMode === 'Por Bodega'" class="badge badge-green">Activo</span>
-          </div>
-          <p class="mt-1 text-[11px] text-muted-foreground">Stock independiente por local/terminal.</p>
+          <span *ngIf="inventoryMode === 'Por Bodega'" class="absolute right-3 top-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">En uso</span>
+          <p class="text-sm font-bold text-foreground">Por bodega</p>
+          <p class="mt-1 text-xs text-muted-foreground">Cada bodega tiene su propio stock. Cada terminal POS vende solo de la bodega que tiene asignada.</p>
+          <p class="mt-2 text-[11px] text-foreground/80"><b>Ideal para:</b> varias sucursales o una bodega central y locales.</p>
         </button>
       </div>
 
-      <div *ngIf="inventoryMode === 'Simple'" class="mt-3 space-y-1 text-[11px]">
-        <p *ngIf="!hasDefaultActiveWarehouse" class="font-semibold text-amber-600">
-          Para activar "Por bodega" primero crea una bodega activa y márcala como predeterminada.
-        </p>
-        <p *ngIf="hasDefaultActiveWarehouse && terminalsWithoutWarehouse.length" class="font-semibold text-amber-600">
-          {{ terminalsWithoutWarehouse.length }} terminal(es) POS activo(s) todavía no tienen bodega asignada. Asígnala en Terminales POS antes de activar el modo.
-        </p>
+      <!-- Requisitos para activar Por bodega -->
+      <div *ngIf="inventoryMode === 'Simple'" class="mt-4 rounded-lg border border-border bg-muted/30 p-3">
+        <p class="text-xs font-bold text-foreground">Para activar "Por bodega" necesitas:</p>
+        <ul class="mt-2 space-y-1.5 text-xs">
+          <li class="flex items-start gap-2">
+            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
+              [ngClass]="hasDefaultActiveWarehouse ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground'">{{ hasDefaultActiveWarehouse ? '✓' : '1' }}</span>
+            <span [ngClass]="hasDefaultActiveWarehouse ? 'text-muted-foreground' : 'text-foreground'">Una bodega activa marcada como <b>predeterminada</b>.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
+              [ngClass]="!terminalsWithoutWarehouse.length ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground'">{{ !terminalsWithoutWarehouse.length ? '✓' : '2' }}</span>
+            <span [ngClass]="!terminalsWithoutWarehouse.length ? 'text-muted-foreground' : 'text-foreground'">
+              Todas las terminales POS con una bodega asignada.
+              <ng-container *ngIf="terminalsWithoutWarehouse.length">
+                Faltan: <b>{{ terminalsWithoutWarehouse.length }}</b>
+                <a routerLink="/settings/lite/pos-terminals" class="ml-1 font-semibold text-primary hover:underline">Asignar en Terminales POS →</a>
+              </ng-container>
+            </span>
+          </li>
+        </ul>
+        <p *ngIf="canActivateWarehouseMode" class="mt-2 text-[11px] font-semibold text-emerald-700">Todo listo: ya puedes activar "Por bodega".</p>
       </div>
-
-      <p *ngIf="!canManage" class="mt-3 text-[11px] text-muted-foreground">Solo un administrador puede cambiar el modo de inventario.</p>
     </section>
 
-    <!-- Lista de bodegas -->
-    <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-      <div class="flex items-center justify-between border-b border-border px-4 py-3">
-        <div>
-          <h2 class="text-sm font-black text-foreground">Bodegas</h2>
-          <p class="text-xs text-muted-foreground">{{ warehouses.length }} registrada(s).</p>
-        </div>
-        <div class="flex gap-2">
-          <a *ngIf="canTransfer && inventoryMode === 'Por Bodega' && warehouses.length >= 2" routerLink="/settings/lite/warehouses/transfer" class="btn btn-outline !text-xs">Traslado de inventario</a>
-          <button *ngIf="canManage" type="button" class="btn btn-primary !text-xs" (click)="openCreate()">+ Bodega</button>
-        </div>
+    <!-- Bodegas -->
+    <section class="space-y-2">
+      <div class="flex items-center justify-between px-1">
+        <h2 class="text-sm font-bold text-foreground">Bodegas <span class="font-normal text-muted-foreground">· {{ activeWarehousesCount }} activa(s) de {{ warehouses.length }}</span></h2>
+        <a *ngIf="canTransfer && inventoryMode === 'Por Bodega' && activeWarehousesCount >= 2" routerLink="/settings/lite/warehouses/transfer" class="text-xs font-semibold text-primary hover:underline">Trasladar stock →</a>
       </div>
 
-      <div *ngIf="loading" class="px-4 py-8 text-center text-sm text-muted-foreground">Cargando…</div>
-
-      <div *ngIf="!loading && !warehouses.length" class="px-4 py-8 text-center text-sm text-muted-foreground">
-        No hay bodegas registradas todavía.
+      <div *ngIf="loading" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
+        <div *ngFor="let _ of [1, 2, 3]" class="h-36 animate-pulse rounded-xl bg-muted"></div>
       </div>
 
-      <div *ngIf="!loading && warehouses.length" class="app-table-wrap">
-        <table class="app-table text-xs">
-          <thead class="app-thead">
-            <tr>
-              <th class="app-th">Bodega</th>
-              <th class="app-th">Establecimiento</th>
-              <th class="app-th text-center">Predeterminada</th>
-              <th class="app-th">Estado</th>
-              <th class="app-th">Notas</th>
-              <th class="app-th text-center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let warehouse of warehouses; trackBy: trackByWarehouse" class="app-tr">
-              <td class="app-td font-semibold text-foreground">{{ warehouse.warehouse_name || warehouse.name }}</td>
-              <td class="app-td">{{ warehouse.establishment ? establishmentLabel(warehouse.establishment) : '—' }}</td>
-              <td class="app-td text-center">
-                <span *ngIf="warehouse.is_default" class="badge badge-blue">Predeterminada</span>
-                <span *ngIf="!warehouse.is_default" class="text-muted-foreground/70">—</span>
-              </td>
-              <td class="app-td">
-                <span class="badge" [ngClass]="warehouse.status === 'Activo' ? 'badge-green' : 'badge-red'">{{ warehouse.status || 'Activo' }}</span>
-              </td>
-              <td class="app-td max-w-[220px] truncate">{{ warehouse.notes || '—' }}</td>
-              <td class="app-td text-center">
-                <button *ngIf="canManage" type="button" class="btn btn-outline !px-2.5 !py-1 !text-[11px]" (click)="openEdit(warehouse)">Editar</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div *ngIf="!loading && !warehouses.length" class="rounded-xl border border-dashed border-border bg-card px-4 py-10 text-center">
+        <p class="text-sm font-bold text-foreground">Todavía no hay bodegas</p>
+        <p class="mx-auto mt-1 max-w-md text-xs text-muted-foreground">Crea al menos una y márcala como predeterminada. En modo Simple no son obligatorias.</p>
+        <button *ngIf="canManage" type="button" class="btn btn-primary mt-4 !text-xs" (click)="openCreate()">Crear bodega</button>
+      </div>
+
+      <div *ngIf="!loading && warehouses.length" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <article *ngFor="let warehouse of warehouses; trackBy: trackByWarehouse" class="flex flex-col rounded-xl border bg-card shadow-sm"
+          [ngClass]="isActive(warehouse) ? 'border-border' : 'border-dashed border-border opacity-70'">
+          <div class="p-4">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <h3 class="truncate text-sm font-bold text-foreground">{{ warehouse.warehouse_name || warehouse.name }}</h3>
+              <span *ngIf="warehouse.is_default" class="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">Predeterminada</span>
+            </div>
+            <span class="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+              [ngClass]="isActive(warehouse) ? 'bg-emerald-100 text-emerald-800' : 'bg-muted text-muted-foreground'">
+              <span class="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true"></span>{{ warehouse.status || 'Activo' }}
+            </span>
+            <dl class="mt-3 space-y-1 text-xs">
+              <div class="flex gap-2"><dt class="w-24 shrink-0 text-muted-foreground">Establecimiento</dt><dd class="min-w-0 truncate text-foreground">{{ warehouse.establishment ? establishmentLabel(warehouse.establishment) : 'Sin vincular' }}</dd></div>
+              <div class="flex gap-2"><dt class="w-24 shrink-0 text-muted-foreground">Venden desde aquí</dt>
+                <dd class="min-w-0 text-foreground">
+                  <ng-container *ngIf="terminalsFor(warehouse).length; else noTerminals">
+                    <span *ngFor="let terminal of terminalsFor(warehouse); let last = last">{{ terminalName(terminal) }}{{ last ? '' : ', ' }}</span>
+                  </ng-container>
+                  <ng-template #noTerminals><span class="text-muted-foreground">Ninguna terminal</span></ng-template>
+                </dd>
+              </div>
+              <div *ngIf="warehouse.notes" class="flex gap-2"><dt class="w-24 shrink-0 text-muted-foreground">Notas</dt><dd class="min-w-0 line-clamp-2 text-foreground">{{ warehouse.notes }}</dd></div>
+            </dl>
+          </div>
+          <div *ngIf="canManage" class="mt-auto flex justify-end border-t border-border px-4 py-2">
+            <button type="button" class="btn btn-ghost !px-2 !py-1 !text-[11px]" (click)="openEdit(warehouse)">Editar</button>
+          </div>
+        </article>
       </div>
     </section>
   </ng-container>
 
   <!-- Crear/editar bodega -->
   <div *ngIf="modalOpen" class="app-modal-backdrop">
-    <section class="app-modal !max-w-lg overflow-hidden !rounded-2xl !border-border !bg-card !shadow-2xl" role="dialog" aria-modal="true">
-      <header class="border-b border-border px-4 py-3 md:px-5">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <h2 class="text-base font-bold text-foreground">{{ editing ? 'Editar bodega' : 'Nueva bodega' }}</h2>
-            <p class="mt-0.5 text-xs text-muted-foreground">Cada bodega puede vincularse a un establecimiento y asignarse a uno o más terminales POS.</p>
-          </div>
-          <button type="button" class="btn btn-ghost !px-2" (click)="closeModal()" aria-label="Cerrar">×</button>
+    <section class="app-modal !max-w-lg overflow-hidden !rounded-2xl !border-border !bg-card !shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="warehouse-modal-title">
+      <header class="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
+        <div>
+          <h2 id="warehouse-modal-title" class="text-base font-bold text-foreground">{{ editing ? 'Editar bodega' : 'Nueva bodega' }}</h2>
+          <p class="mt-0.5 text-xs text-muted-foreground">Un lugar físico donde guardas mercadería: un local, una bodega central o un depósito.</p>
         </div>
+        <button type="button" class="btn btn-ghost !px-2" (click)="closeModal()" aria-label="Cerrar">×</button>
       </header>
 
-      <form [formGroup]="form" (ngSubmit)="guardar()" class="space-y-4 p-4 md:p-5">
+      <form [formGroup]="form" (ngSubmit)="guardar()" class="space-y-4 p-5">
         <div>
-          <label class="mb-1 block text-xs font-semibold text-foreground/80">Nombre de la bodega</label>
-          <input class="input" formControlName="warehouse_name" placeholder="Local Centro" />
-          <p *ngIf="submitted && form.get('warehouse_name')?.invalid" class="field-error">Ingresa un nombre para la bodega.</p>
+          <label for="warehouse-name" class="mb-1 block text-xs font-semibold text-foreground/80">Nombre</label>
+          <input id="warehouse-name" class="input" formControlName="warehouse_name" placeholder="Local Centro, Bodega principal…" />
+          <p *ngIf="submitted && form.get('warehouse_name')?.invalid" class="field-error">Ingresa un nombre.</p>
         </div>
 
         <div>
-          <label class="mb-1 block text-xs font-semibold text-foreground/80">Establecimiento (opcional)</label>
-          <select class="select" formControlName="establishment">
+          <label for="warehouse-establishment" class="mb-1 block text-xs font-semibold text-foreground/80">Establecimiento <span class="font-normal text-muted-foreground">(opcional)</span></label>
+          <select id="warehouse-establishment" class="select" formControlName="establishment">
             <option value="">Sin vincular</option>
-            <option *ngFor="let establishment of activeEstablishments" [value]="establishment.name">
-              {{ establishment.establishment_code }} - {{ establishment.establishment_name || establishment.name }}
-            </option>
+            <option *ngFor="let establishment of activeEstablishments" [value]="establishment.name">{{ establishment.establishment_code }} · {{ establishment.establishment_name || establishment.name }}</option>
           </select>
+          <p class="mt-1 text-[11px] text-muted-foreground">Sirve para saber a qué local pertenece la bodega.</p>
         </div>
 
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-border p-3 text-xs has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+            <input class="mt-0.5" type="checkbox" formControlName="is_default" />
+            <span><b class="block text-foreground">Predeterminada</b><span class="text-muted-foreground">Se usa cuando no se indica otra bodega.</span></span>
+          </label>
           <div>
-            <label class="mb-1 block text-xs font-semibold text-foreground/80">Estado</label>
-            <select class="select" formControlName="status">
-              <option value="Activo">Activo</option>
-              <option value="Inactivo">Inactivo</option>
+            <label for="warehouse-status" class="mb-1 block text-xs font-semibold text-foreground/80">Disponibilidad</label>
+            <select id="warehouse-status" class="select" formControlName="status">
+              <option value="Activo">Activa</option>
+              <option value="Inactivo">Inactiva</option>
             </select>
           </div>
-          <label class="inline-flex items-center gap-2 self-end pb-2 text-xs font-medium text-foreground/80">
-            <input type="checkbox" formControlName="is_default" />
-            Bodega predeterminada
-          </label>
         </div>
 
         <div>
-          <label class="mb-1 block text-xs font-semibold text-foreground/80">Notas</label>
-          <textarea class="input" rows="2" formControlName="notes" placeholder="Notas internas (opcional)"></textarea>
+          <label for="warehouse-notes" class="mb-1 block text-xs font-semibold text-foreground/80">Notas <span class="font-normal text-muted-foreground">(opcional)</span></label>
+          <textarea id="warehouse-notes" class="input" rows="2" formControlName="notes" placeholder="Notas internas"></textarea>
         </div>
 
-        <footer class="-mx-4 -mb-4 flex justify-end gap-2 border-t border-border bg-muted/30 px-4 py-3 md:-mx-5 md:-mb-5 md:px-5">
+        <footer class="flex justify-end gap-2 border-t border-border pt-4">
           <button type="button" class="btn btn-outline" (click)="closeModal()" [disabled]="savingWarehouse">Cancelar</button>
-          <button type="submit" class="btn btn-primary" [disabled]="savingWarehouse">{{ savingWarehouse ? 'Guardando…' : 'Guardar bodega' }}</button>
+          <button type="submit" class="btn btn-primary" [disabled]="savingWarehouse">{{ savingWarehouse ? 'Guardando…' : (editing ? 'Guardar cambios' : 'Crear bodega') }}</button>
         </footer>
       </form>
     </section>

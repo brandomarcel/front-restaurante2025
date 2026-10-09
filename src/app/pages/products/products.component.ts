@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnInit, inject } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
@@ -11,11 +11,14 @@ import { CategoryService } from 'src/app/services/category.service';
 import { InventoryService } from 'src/app/services/inventory.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { TaxesService } from 'src/app/services/taxes.service';
-import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 import { IconActionButtonComponent } from 'src/app/shared/components/icon-action-button/icon-action-button.component';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
 import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
+import { ListStateComponent } from 'src/app/shared/components/list-state/list-state.component';
+import { ClickOutsideDirective } from 'src/app/shared/directives/click-outside.directive';
+import { debouncedCallback } from 'src/app/shared/utils/debounced-callback';
+import { ProductImportModalComponent } from './ui/product-import-modal.component';
 import {
   getInventoryUnit,
   hasInventoryControl,
@@ -29,18 +32,12 @@ import {
   getVariantAttributeDefinitions,
   VariantAttributeDefinition,
 } from 'src/app/shared/utils/product-variants.utils';
-import {
-  ProductImportConfirmResult,
-  ProductImportMode,
-  ProductImportPreview,
-  ProductImportRow,
-} from 'src/app/models/product-import';
 
 type StockEditMode = 'absolute' | 'delta';
 
 @Component({
   selector: 'app-products',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonComponent, AppPaginationComponent, IconActionButtonComponent, DecimalInputDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, AppPaginationComponent, IconActionButtonComponent, DecimalInputDirective, ListStateComponent, ProductImportModalComponent, ClickOutsideDirective],
   templateUrl: './products.component.html',
   styleUrl: './products.component.css'
 })
@@ -62,6 +59,11 @@ export class ProductsComponent implements OnInit {
   taxes: any[] = [];
 
   private _searchTerm = '';
+  /** La búsqueda espera a que el usuario deje de escribir: no consulta en cada tecla. */
+  private readonly searchSoon = debouncedCallback(inject(DestroyRef), () => {
+    this.page = 1;
+    this.cargarProductos();
+  });
   categoriaFiltro = '';
   /**
    * `get_productos` no tiene un modo "todos": siempre hay que pedir
@@ -72,6 +74,10 @@ export class ProductsComponent implements OnInit {
   estadoFiltro: 'Activo' | 'Inactivo' = 'Activo';
   soloBajoStock = false;
 
+  /** El listado muestra su propio esqueleto de carga; el spinner global queda para guardar. */
+  loading = false;
+  /** Producto cuyo menú "más acciones" está abierto en la lista. */
+  rowMenu: string | null = null;
   mostrarModal = false;
   submitted = false;
   productoEditando: Product | null = null;
@@ -93,16 +99,8 @@ export class ProductsComponent implements OnInit {
   totalProducts = 0;
   totalPages = 1;
 
-  // --- Carga masiva de productos ---
+  // --- Carga masiva de productos (ver ProductImportModalComponent) ---
   showImportModal = false;
-  importMode: ProductImportMode = 'create_only';
-  importFile: File | null = null;
-  importDownloading = false;
-  importValidating = false;
-  importConfirming = false;
-  importError = '';
-  importPreview: ProductImportPreview | null = null;
-  importResult: ProductImportConfirmResult | null = null;
 
   // --- Variantes de producto ---
   variantesModalVisible = false;
@@ -183,8 +181,70 @@ export class ProductsComponent implements OnInit {
 
   set searchTerm(value: string) {
     this._searchTerm = value || '';
-    this.page = 1;
-    this.cargarProductos();
+    this.searchSoon();
+  }
+
+  /** Filtros distintos a la vista por defecto (activos, todas las categorías). */
+  get hasActiveFilters(): boolean {
+    return !!this._searchTerm.trim() || !!this.categoriaFiltro || this.estadoFiltro !== 'Activo' || this.soloBajoStock;
+  }
+
+  get isEditingWithVariants(): boolean {
+    return (this.productoEditando?.variant_count || 0) > 0;
+  }
+
+  /** Esc cierra la ventana que esté encima: formulario de variante, lista de variantes o producto. */
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.rowMenu) {
+      this.rowMenu = null;
+    } else if (this.varianteFormVisible) {
+      this.cerrarFormVariante();
+    } else if (this.variantesModalVisible) {
+      this.cerrarVariantes();
+    } else if (this.mostrarModal) {
+      this.cerrarModal();
+    }
+  }
+
+  toggleRowMenu(product: Product): void {
+    this.rowMenu = this.rowMenu === product.name ? null : product.name;
+  }
+
+  closeRowMenu(product: Product): void {
+    if (this.rowMenu === product.name) this.rowMenu = null;
+  }
+
+  setEstado(value: 'Activo' | 'Inactivo'): void {
+    if (this.estadoFiltro === value) return;
+    this.estadoFiltro = value;
+    this.actualizarProductosFiltrados();
+  }
+
+  toggleBajoStock(): void {
+    this.soloBajoStock = !this.soloBajoStock;
+    this.actualizarProductosFiltrados();
+  }
+
+  isActiveProduct(product: Partial<Product> | null | undefined): boolean {
+    return toInventoryBool(product?.isactive);
+  }
+
+  /** Nombre visible de la categoría; los datos viejos pueden traer el nombre en vez del id. */
+  categoryLabel(product: Partial<Product>): string {
+    const id = product?.categoria || product?.category;
+    if (!id) return '';
+    const match = this.categories.find((c) => c.name === id);
+    return String(match?.category_name || match?.nombre || id);
+  }
+
+  /** "IVA 15%": usa el nombre si ya es legible (Lite) y si no lo arma con la tarifa. */
+  taxLabel(tax: any): string {
+    const name = String(tax?.name ?? '').trim();
+    if (/iva|%/i.test(name)) return name;
+    const value = tax?.value ?? tax?.rate ?? tax?.tax_rate;
+    if (value === undefined || value === null || value === '') return name || '—';
+    return `IVA ${value}%`;
   }
 
   get inventoryControlledCount(): number {
@@ -204,7 +264,7 @@ export class ProductsComponent implements OnInit {
   }
 
   cargarProductos() {
-    this.spinner.show();
+    this.loading = true;
     const offset = (this.page - 1) * this.pageSize;
     // Siempre explícito: el backend no tiene un modo que devuelva activos e
     // inactivos juntos, así que nunca se omite `isactive`.
@@ -229,11 +289,12 @@ export class ProductsComponent implements OnInit {
         this.productosFiltradosList = [...this.productos];
       },
       error: (error: any) => {
+        this.loading = false;
         const mensaje = this.frappeErrorService.handle(error);
         this.alertService.error(mensaje);
       },
       complete: () => {
-        this.spinner.hide();
+        this.loading = false;
       }
     });
   }
@@ -295,173 +356,10 @@ export class ProductsComponent implements OnInit {
       return;
     }
     this.showImportModal = true;
-    this.resetImportState();
   }
 
   cerrarImportModal(): void {
     this.showImportModal = false;
-    this.resetImportState();
-  }
-
-  private resetImportState(): void {
-    this.importMode = 'create_only';
-    this.importFile = null;
-    this.importPreview = null;
-    this.importResult = null;
-    this.importError = '';
-  }
-
-  /** Cambiar el archivo o el modo invalida cualquier previsualización anterior: hay que validar de nuevo. */
-  onImportModeChange(): void {
-    this.importPreview = null;
-    this.importResult = null;
-    this.importError = '';
-  }
-
-  onImportFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files && input.files.length ? input.files[0] : null;
-    input.value = '';
-
-    if (!file) return;
-    if (!/\.xlsx$/i.test(file.name)) {
-      this.alertService.error('El archivo debe tener extensión .xlsx.');
-      return;
-    }
-
-    this.importFile = file;
-    this.importPreview = null;
-    this.importResult = null;
-    this.importError = '';
-  }
-
-  descargarPlantillaImportacion(): void {
-    this.importDownloading = true;
-    this.productsService.downloadProductImportTemplate().pipe(
-      finalize(() => this.importDownloading = false)
-    ).subscribe({
-      next: (blob: Blob) => {
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = 'plantilla-carga-masiva-productos.xlsx';
-        document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-        URL.revokeObjectURL(url);
-      },
-      error: (err) => this.alertService.error(this.frappeErrorService.handle(err) || 'No se pudo descargar la plantilla.')
-    });
-  }
-
-  validarImportacion(): void {
-    if (!this.importFile || this.importValidating) return;
-
-    this.importValidating = true;
-    this.importError = '';
-    this.importResult = null;
-    this.productsService.previewProductImport(this.importMode, this.importFile).pipe(
-      finalize(() => this.importValidating = false)
-    ).subscribe({
-      next: (preview: ProductImportPreview) => {
-        console.log('Import preview:', preview);
-        this.importPreview = preview;
-        if (!preview?.summary?.total) {
-          toast.warning('El archivo no tiene filas para importar.');
-        } else if (preview.summary.invalid > 0) {
-          toast.warning(`${preview.summary.invalid} fila(s) con error. Corrígelas antes de confirmar.`);
-        } else {
-          toast.success('Archivo validado sin errores.');
-        }
-      },
-      error: (err) => {
-        this.importPreview = null;
-        this.importError = this.frappeErrorService.handle(err) || 'No se pudo validar el archivo.';
-      }
-    });
-  }
-
-  /**
-   * Atributos legibles de la fila. El backend puede devolver `atributos` como
-   * texto plano ("Color=Negro,Talla=M") o ya parseado en un arreglo de
-   * objetos `{attribute, value}` (el mismo formato que usa el formulario de
-   * variantes) — hay que soportar ambos, nunca convertir el arreglo a string
-   * directamente o se muestra "[object Object]".
-   */
-  importRowAttributes(row: ProductImportRow): string {
-    const source: any = row.atributos ?? row.attributes;
-    if (!source) return '';
-    if (Array.isArray(source)) {
-      return source
-        .map((item: any) => {
-          if (item && typeof item === 'object') {
-            const attr = String(item.attribute ?? item.atributo ?? item.name ?? '').trim();
-            const value = String(item.value ?? item.valor ?? '').trim();
-            return attr && value ? `${attr}: ${value}` : '';
-          }
-          return String(item ?? '').trim();
-        })
-        .filter(Boolean)
-        .join(' · ');
-    }
-    const raw = String(source).trim();
-    if (!raw) return '';
-    return raw.split(',').map((pair) => pair.trim().replace('=', ': ')).filter(Boolean).join(' · ');
-  }
-
-  importRowMinimumStock(row: ProductImportRow): number | null {
-    const value = row.stock_minimo ?? row.minimum_stock;
-    return value === undefined || value === null ? null : Number(value);
-  }
-
-  /**
-   * Un producto agrupador (no es variante, pero otras filas del mismo
-   * archivo lo referencian como `parent_code`) nunca maneja stock propio: el
-   * stock real vive en cada variante. Mostrarlo igual que una fila normal
-   * confunde al usuario ("¿por qué este producto tiene stock 0?").
-   */
-  isImportGrouperRow(row: ProductImportRow): boolean {
-    if (!this.importPreview || row.is_variant) return false;
-    return this.importPreview.rows.some((item) => item.parent_code === row.code && item.is_variant);
-  }
-
-  get importHasVariants(): boolean {
-    return !!this.importPreview?.rows?.some((row) => row.is_variant);
-  }
-
-  get canConfirmImport(): boolean {
-    return !!this.importFile
-      && !!this.importPreview?.can_confirm
-      && !this.importValidating
-      && !this.importConfirming;
-  }
-
-  confirmarImportacion(): void {
-    // Nunca importar con errores pendientes, aunque `can_confirm` viniera mal.
-    if (!this.canConfirmImport || !this.importFile || (this.importPreview?.summary?.invalid ?? 0) > 0) return;
-
-    this.importConfirming = true;
-    this.importError = '';
-    // Se reutiliza el mismo File ya validado; no se reconstruye ningún JSON.
-    this.productsService.confirmProductImport(this.importMode, this.importFile).pipe(
-      finalize(() => this.importConfirming = false)
-    ).subscribe({
-      next: (result: ProductImportConfirmResult) => {
-        this.importResult = result;
-        toast.success(
-          `Importación completa: ${result.created} creado(s), ${result.updated} actualizado(s)` +
-          (result.stock_movements ? `, ${result.stock_movements} movimiento(s) de stock` : '') + '.'
-        );
-        this.importFile = null;
-        this.importPreview = null;
-        // El resumen de inventario vive en la pantalla de Inventario; se
-        // recarga solo al entrar ahí, no hace falta duplicarlo acá.
-        this.cargarProductos();
-      },
-      error: (err) => {
-        this.importError = this.frappeErrorService.handle(err) || 'No se pudo confirmar la importación.';
-      }
-    });
   }
 
   abrirModal(producto: Product | null = null) {
@@ -660,9 +558,10 @@ export class ProductsComponent implements OnInit {
 
   /**
    * Reactivar/desactivar directo desde la lista, sin abrir el formulario
-   * completo. "Eliminar" en este catálogo es un borrado lógico (deja el
-   * producto en `isactive = 0` para no romper facturas/órdenes históricas),
-   * así que necesita una forma igual de directa para revertirlo.
+   * completo. Desactivar es la forma segura de retirar un producto: deja de
+   * venderse pero se conserva para facturas y órdenes históricas. "Eliminar"
+   * (`delete_producto`) borra el registro y el backend lo rechaza si ya tiene
+   * documentos que lo referencian.
    */
   toggleActivo(producto: Product): void {
     if (!this.canManageProducts) {
@@ -703,7 +602,10 @@ export class ProductsComponent implements OnInit {
       return;
     }
 
-    this.alertService.confirm('Se eliminara el producto seleccionado.', 'Confirmar').then((result) => {
+    this.alertService.confirm(
+      'Se borrará definitivamente. Si ya se vendió o facturó, el sistema no lo permitirá: en ese caso desactívalo.',
+      'Eliminar producto'
+    ).then((result) => {
       if (!result.isConfirmed) {
         return;
       }
@@ -870,11 +772,6 @@ export class ProductsComponent implements OnInit {
     }
 
     return payload;
-  }
-
-  getNameCategory(categoryId?: string | null): string {
-    const document = this.categories.find((d) => d.name === categoryId);
-    return document?.nombre || categoryId || '—';
   }
 
   hasInventory(product: Partial<Product> | null | undefined): boolean {
@@ -1241,7 +1138,8 @@ export class ProductsComponent implements OnInit {
           this.alertService.error(this.frappeErrorService.handle(result.stockError) || 'La variante se creó, pero no se pudo registrar el stock inicial.');
           toast.success('Variante creada');
         } else {
-          toast.success(this.varianteEditando
+          // `isCreate` se captura antes de guardar: cerrarFormVariante() ya limpió varianteEditando.
+          toast.success(!isCreate
             ? 'Variante actualizada con exito'
             : (stockInicial > 0 ? 'Variante creada con stock inicial registrado' : 'Variante creada con exito'));
         }

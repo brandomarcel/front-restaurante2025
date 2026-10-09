@@ -1,0 +1,167 @@
+<div class="app-modal-backdrop">
+  <section class="app-modal !w-[95vw] !max-w-5xl overflow-hidden !rounded-2xl !border-border !bg-card !p-0 !shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="import-title">
+    <header class="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
+      <div>
+        <h2 id="import-title" class="text-base font-bold text-foreground">Carga masiva de productos</h2>
+        <p class="mt-0.5 text-xs text-muted-foreground">Crea o actualiza muchos productos a la vez desde un Excel.</p>
+      </div>
+      <button type="button" class="btn btn-ghost !px-2" (click)="close()" aria-label="Cerrar" [disabled]="importConfirming">×</button>
+    </header>
+
+    <div class="max-h-[75vh] space-y-4 overflow-y-auto p-5">
+      <!-- Resultado final -->
+      <div *ngIf="importResult" class="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4" role="status">
+        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-white" aria-hidden="true">✓</span>
+        <div class="text-xs text-emerald-900">
+          <p class="text-sm font-bold">Importación completa</p>
+          <p class="mt-0.5">
+            <b>{{ importResult.created }}</b> creado(s) · <b>{{ importResult.updated }}</b> actualizado(s)<ng-container *ngIf="importResult.stock_movements"> · <b>{{ importResult.stock_movements }}</b> movimiento(s) de stock</ng-container>.
+          </p>
+          <p class="mt-1 text-emerald-800/80">Puedes cerrar esta ventana o cargar otro archivo.</p>
+        </div>
+      </div>
+
+      <!-- Paso 1 y 2 -->
+      <ol class="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <li class="rounded-xl border border-border p-4">
+          <p class="flex items-center gap-2 text-xs font-bold text-foreground">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">1</span>Descarga la plantilla y llénala
+          </p>
+          <p class="mt-1.5 text-[11px] text-muted-foreground">Usa siempre la plantilla oficial: tiene las columnas que el sistema espera.</p>
+          <p *ngIf="!inventoryEnabled" class="mt-1 text-[11px] text-amber-700">La columna "stock_inicial" solo aplica si el negocio tiene Inventario habilitado.</p>
+          <button type="button" class="btn btn-outline mt-3 !text-xs" [disabled]="importDownloading" (click)="descargarPlantillaImportacion()">
+            {{ importDownloading ? 'Descargando…' : '⬇ Descargar plantilla .xlsx' }}
+          </button>
+        </li>
+
+        <li class="rounded-xl border border-border p-4">
+          <p class="flex items-center gap-2 text-xs font-bold text-foreground">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">2</span>Sube el archivo
+          </p>
+          <div class="mt-2 inline-flex rounded-lg border border-border bg-muted/40 p-0.5" role="radiogroup" aria-label="Qué hacer con códigos que ya existen">
+            <button *ngFor="let mode of modes" type="button" role="radio" [attr.aria-checked]="importMode === mode.value"
+              class="rounded-md px-2.5 py-1 text-[11px] font-semibold transition"
+              [ngClass]="importMode === mode.value ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+              (click)="setMode(mode.value)">{{ mode.label }}</button>
+          </div>
+          <p class="mt-1 text-[11px] text-muted-foreground">
+            <ng-container *ngFor="let mode of modes"><ng-container *ngIf="mode.value === importMode">{{ mode.help }}</ng-container></ng-container>
+          </p>
+
+          <label *ngIf="!importFile; else fileChosen" (dragover)="$event.preventDefault()" (drop)="onFileDropped($event)"
+            class="mt-3 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 px-3 py-4 text-center transition hover:border-primary/50 hover:bg-primary/5">
+            <span class="text-xs font-semibold text-foreground">Arrastra el Excel aquí o <span class="text-primary underline">elígelo</span></span>
+            <span class="mt-0.5 text-[10px] text-muted-foreground">Solo archivos .xlsx</span>
+            <input type="file" accept=".xlsx" class="sr-only" (change)="onImportFileSelected($event)" />
+          </label>
+          <ng-template #fileChosen>
+            <div class="mt-3 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+              <span class="text-base" aria-hidden="true">📄</span>
+              <span class="min-w-0 flex-1 truncate text-xs font-semibold text-foreground" [title]="importFile?.name">{{ importFile?.name }}</span>
+              <button type="button" class="btn btn-ghost !px-2 !py-0.5 !text-[11px]" (click)="removeFile()" [disabled]="importValidating || importConfirming">Cambiar</button>
+            </div>
+            <button type="button" class="btn btn-primary mt-2 w-full !text-xs" [disabled]="importValidating" (click)="validarImportacion()">
+              {{ importValidating ? 'Revisando el archivo…' : (importPreview ? 'Volver a revisar' : 'Revisar archivo') }}
+            </button>
+          </ng-template>
+        </li>
+      </ol>
+
+      <div *ngIf="importError" class="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive" role="alert">
+        {{ importError }}
+      </div>
+
+      <!-- Paso 3: revisión -->
+      <section *ngIf="importPreview" class="space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p class="flex items-center gap-2 text-xs font-bold text-foreground">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">3</span>Revisa y confirma
+          </p>
+          <div class="flex flex-wrap gap-1.5 text-[11px] font-semibold">
+            <span class="rounded-full bg-muted px-2.5 py-1 text-foreground">{{ importPreview.summary.total }} filas</span>
+            <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-800">{{ importPreview.summary.valid }} correctas</span>
+            <span class="rounded-full px-2.5 py-1" [ngClass]="importPreview.summary.invalid ? 'bg-red-100 text-red-800' : 'bg-muted text-muted-foreground'">{{ importPreview.summary.invalid }} con error</span>
+          </div>
+        </div>
+
+        <div *ngIf="importPreview.summary.invalid" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-800">
+          Corrige las filas con error en tu Excel y vuelve a subirlo. No se importa nada mientras haya errores.
+        </div>
+        <div *ngIf="importHasVariants" class="rounded-lg border border-sky-500/20 bg-sky-500/5 px-3 py-2 text-[11px] text-sky-800">
+          Este archivo incluye productos con variantes: el <b>stock se controla en cada variante</b> (fila con atributos como "Color: Negro"), nunca en el producto principal que las agrupa.
+        </div>
+
+        <div *ngIf="importPreview.summary.invalid" class="inline-flex rounded-lg border border-border bg-muted/40 p-0.5" role="radiogroup" aria-label="Filas a mostrar">
+          <button type="button" role="radio" [attr.aria-checked]="rowsFilter === 'errors'" class="rounded-md px-2.5 py-1 text-[11px] font-semibold"
+            [ngClass]="rowsFilter === 'errors' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'" (click)="rowsFilter = 'errors'">Solo errores</button>
+          <button type="button" role="radio" [attr.aria-checked]="rowsFilter === 'all'" class="rounded-md px-2.5 py-1 text-[11px] font-semibold"
+            [ngClass]="rowsFilter === 'all' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'" (click)="rowsFilter = 'all'">Todas</button>
+        </div>
+
+        <div class="app-table-wrap max-h-[45vh]">
+          <table class="app-table text-xs">
+            <thead class="app-thead">
+              <tr>
+                <th class="app-th w-12">Fila</th>
+                <th class="app-th min-w-[240px]">Producto</th>
+                <th class="app-th">Categoría</th>
+                <th class="app-th text-right">Precio</th>
+                <th class="app-th text-right">Stock</th>
+                <th class="app-th min-w-[220px]">Resultado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of visibleRows; trackBy: trackByRow" class="app-tr" [ngClass]="row.errors.length ? 'bg-destructive/5' : ''">
+                <td class="app-td font-mono text-muted-foreground">{{ row.row_number }}</td>
+                <td class="app-td">
+                  <p class="font-semibold leading-snug text-foreground">{{ row.name || '—' }}</p>
+                  <p class="font-mono text-[10px] text-muted-foreground">
+                    {{ row.code || '—' }}<ng-container *ngIf="row.barcode || row.codigo_barras"> · {{ row.barcode || row.codigo_barras }}</ng-container><ng-container *ngIf="row.type"> · {{ row.type }}</ng-container>
+                  </p>
+                  <span *ngIf="row.is_variant" class="mt-1 inline-block max-w-full rounded-md bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-semibold leading-snug text-violet-700">
+                    ↳ Variante de {{ row.parent_code || '—' }}<ng-container *ngIf="importRowAttributes(row)"> · {{ importRowAttributes(row) }}</ng-container>
+                  </span>
+                  <span *ngIf="isImportGrouperRow(row)" class="mt-1 inline-block max-w-full rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-snug text-muted-foreground">
+                    Producto principal (agrupador, sin stock propio)
+                  </span>
+                </td>
+                <td class="app-td">{{ row.category || '—' }}</td>
+                <td class="app-td whitespace-nowrap text-right">{{ row.price != null ? (row.price | currency) : '—' }}</td>
+                <td class="app-td whitespace-nowrap text-right">
+                  <ng-container *ngIf="isImportGrouperRow(row); else stockCell"><span class="text-muted-foreground">No aplica</span></ng-container>
+                  <ng-template #stockCell>
+                    <ng-container *ngIf="row.track_stock; else noStock">
+                      {{ row.stock_initial ?? 0 }}
+                      <span *ngIf="importRowMinimumStock(row) !== null" class="block text-[10px] text-muted-foreground">mín. {{ importRowMinimumStock(row) }}</span>
+                    </ng-container>
+                    <ng-template #noStock><span class="text-muted-foreground">Sin control</span></ng-template>
+                  </ng-template>
+                </td>
+                <td class="app-td">
+                  <span *ngIf="!row.errors.length" class="badge badge-green">{{ row.status || 'Correcta' }}</span>
+                  <ul *ngIf="row.errors.length" class="list-disc space-y-0.5 pl-4 text-[11px] text-destructive">
+                    <li *ngFor="let error of row.errors">{{ error }}</li>
+                  </ul>
+                </td>
+              </tr>
+              <tr *ngIf="!visibleRows.length"><td colspan="6" class="app-td py-6 text-center text-muted-foreground">No hay filas para mostrar.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <footer class="flex items-center justify-between gap-2 border-t border-border px-5 py-3">
+      <p class="hidden text-[11px] text-muted-foreground sm:block">
+        <ng-container *ngIf="!importPreview">Revisa el archivo antes de importar: nada se guarda hasta que confirmes.</ng-container>
+        <ng-container *ngIf="importPreview && canConfirmImport">Todo correcto. Se importarán {{ importPreview.summary.valid }} fila(s).</ng-container>
+      </p>
+      <div class="ml-auto flex gap-2">
+        <button type="button" class="btn btn-outline" (click)="close()" [disabled]="importConfirming">{{ importResult ? 'Cerrar' : 'Cancelar' }}</button>
+        <button *ngIf="importPreview" type="button" class="btn btn-primary" [disabled]="!canConfirmImport" (click)="confirmarImportacion()">
+          {{ importConfirming ? 'Importando…' : 'Importar ' + importPreview.summary.valid + ' fila(s)' }}
+        </button>
+      </div>
+    </footer>
+  </section>
+</div>

@@ -209,6 +209,14 @@ export class Menu {
           permissionKey: 'inventory.read',
         },
         {
+          icon: 'assets/icons/tablericons/building-store.svg',
+          label: 'Bodegas',
+          route: '/settings/lite/warehouses',
+          featureKey: 'inventory',
+          permissionKey: 'business.settings.manage',
+          hideInApiOnly: true,
+        },
+        {
           icon: 'assets/icons/tablericons/category.svg',
           label: 'Categorias',
           route: '/dashboard/categories',
@@ -274,7 +282,7 @@ export class Menu {
           permissionKey: 'business.settings.manage',
         },
         {
-          icon: 'assets/icons/heroicons/outline/building-storefront.svg',
+          icon: 'assets/icons/tablericons/receipt-2.svg',
           label: 'Puntos de emisión',
           route: '/settings/lite/emission-points',
           featureKeys: ['direct_invoice', 'billing', 'generic_pos', 'api'],
@@ -282,7 +290,7 @@ export class Menu {
         },
         {
           icon: 'assets/icons/heroicons/outline/clipboard-document-list.svg',
-          label: 'Secuencias de documentos',
+          label: 'Secuencias',
           route: '/settings/lite/sequences',
           featureKeys: ['direct_invoice', 'billing', 'generic_pos', 'api'],
           permissionKey: 'business.settings.manage',
@@ -296,15 +304,7 @@ export class Menu {
           hideInApiOnly: true,
         },
         {
-          icon: 'assets/icons/tablericons/repeat.svg',
-          label: 'Inventario por bodega',
-          route: '/settings/lite/warehouses',
-          featureKey: 'inventory',
-          permissionKey: 'business.settings.manage',
-          hideInApiOnly: true,
-        },
-        {
-          icon: 'assets/icons/tablericons/file-invoice.svg',
+          icon: 'assets/icons/tablericons/arrows-shuffle-2.svg',
           label: 'Integración API',
           route: '/settings/lite/api',
           featureKey: 'api',

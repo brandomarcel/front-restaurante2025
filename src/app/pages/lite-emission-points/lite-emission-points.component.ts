@@ -7,12 +7,14 @@ import { toast } from 'ngx-sonner';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { CompanyService } from 'src/app/services/company.service';
-import { IconActionButtonComponent } from 'src/app/shared/components/icon-action-button/icon-action-button.component';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { FiscalSetupHeaderComponent } from 'src/app/shared/components/fiscal-setup-header/fiscal-setup-header.component';
+import { fiscalDocumentNumber, fiscalSeries } from 'src/app/core/utils/fiscal-setup';
 
 @Component({
   selector: 'app-lite-emission-points',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, IconActionButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, FiscalSetupHeaderComponent],
   templateUrl: './lite-emission-points.component.html'
 })
 export class LiteEmissionPointsComponent implements OnInit, DoCheck {
@@ -37,8 +39,19 @@ export class LiteEmissionPointsComponent implements OnInit, DoCheck {
     private readonly fb: FormBuilder,
     private readonly companyService: CompanyService,
     private readonly capabilities: CompanyCapabilitiesService,
-    private readonly frappeError: FrappeErrorService
+    private readonly frappeError: FrappeErrorService,
+    private readonly router: Router,
+    private readonly route: ActivatedRoute
   ) {}
+
+  /** Establecimiento pedido al llegar desde la pantalla de establecimientos. */
+  private get requestedEstablishmentId(): string {
+    return String(this.route.snapshot.queryParamMap.get('establishment') || '').trim();
+  }
+
+  private isActiveEstablishmentId(id: string): boolean {
+    return !!id && this.activeEstablishments.some((item: any) => String(item?.name || '').trim() === id);
+  }
 
   ngOnInit(): void {
     this.form = this.fb.group({
@@ -95,6 +108,35 @@ export class LiteEmissionPointsComponent implements OnInit, DoCheck {
   get visiblePoints(): any[] {
     if (this.statusFilter === 'all') return this.points;
     return this.points.filter((point) => this.isActive(point) === (this.statusFilter === 'Activo'));
+  }
+
+  readonly statusFilters: { value: 'Activo' | 'Inactivo' | 'all'; label: string }[] = [
+    { value: 'Activo', label: 'Activos' },
+    { value: 'Inactivo', label: 'Inactivos' },
+    { value: 'all', label: 'Todos' }
+  ];
+
+  statusFilterCount(value: 'Activo' | 'Inactivo' | 'all'): number {
+    if (value === 'all') return this.points.length;
+    return value === 'Activo' ? this.activeCount : this.points.length - this.activeCount;
+  }
+
+  /** Serie fiscal establecimiento-punto (001-002). */
+  series(point: any): string {
+    return fiscalSeries(point?.establishment_code || this.selectedEstablishment?.establishment_code, point?.emission_point_code);
+  }
+
+  /** Ejemplo del primer número que tendría un comprobante emitido desde este punto. */
+  sampleNumber(code: unknown): string {
+    return fiscalDocumentNumber(this.selectedEstablishment?.establishment_code, code || '___', 1);
+  }
+
+  /** Abre las secuencias de este punto sin cambiar la selección usada para facturar. */
+  goToSequences(point: any): void {
+    if (!point?.name || !this.isActive(point)) return;
+    this.router.navigate(['/settings/lite/sequences'], {
+      queryParams: { establishment: this.selectedEstablishmentId, point: point.name }
+    });
   }
 
   get pendingSequenceCount(): number {
@@ -221,9 +263,11 @@ export class LiteEmissionPointsComponent implements OnInit, DoCheck {
     // el componente ya se haya renderizado. Toma la selección persistida por
     // negocio cuando aparece, sin elegir arbitrariamente el primer registro.
     if (!this.selectedEstablishmentId) {
-      const selected = this.capabilities.selectedLiteEstablishment;
-      const selectedId = String(selected?.name || '').trim();
-      if (selectedId && this.activeEstablishments.some((item: any) => String(item?.name || '').trim() === selectedId)) {
+      const requested = this.requestedEstablishmentId;
+      const selectedId = this.isActiveEstablishmentId(requested)
+        ? requested
+        : String(this.capabilities.selectedLiteEstablishment?.name || '').trim();
+      if (this.isActiveEstablishmentId(selectedId)) {
         this.selectedEstablishmentId = selectedId;
         if (this.loadedEstablishment !== selectedId) this.loadPoints();
       }
@@ -294,10 +338,12 @@ export class LiteEmissionPointsComponent implements OnInit, DoCheck {
         this.capabilities.setLiteSetupState(setup);
         this.setupLoadedBusiness = business;
 
-        const selected = this.capabilities.selectedLiteEstablishment;
-        if (selected && this.activeEstablishments.some((item: any) => String(item?.name || '') === String(selected.name || ''))) {
-          this.selectedEstablishmentId = String(selected.name);
-        }
+        const requested = this.requestedEstablishmentId;
+        const selected = String(this.capabilities.selectedLiteEstablishment?.name || '').trim();
+        if (this.isActiveEstablishmentId(requested)) this.selectedEstablishmentId = requested;
+        else if (this.isActiveEstablishmentId(selected)) this.selectedEstablishmentId = selected;
+        // Con un único establecimiento no tiene sentido pedir que lo elijan.
+        else if (this.activeEstablishments.length === 1) this.selectedEstablishmentId = String(this.activeEstablishments[0].name);
         this.loadPoints();
       },
       error: (error) => {

@@ -6,7 +6,6 @@ import { NgxSpinnerService } from 'ngx-spinner';
 import { catchError, finalize, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { OnlyNumbersDirective } from 'src/app/core/directives/only-numbers.directive';
 import { CompanyService } from 'src/app/services/company.service';
-import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 import { AlertService } from '../../core/services/alert.service';
 import { UtilsService } from '../../core/services/utils.service';
 import { CompanyCapabilitiesService, CompanyPlan } from 'src/app/core/services/company-capabilities.service';
@@ -28,7 +27,7 @@ type LiteSettingsTab = 'general' | 'tax-profile' | 'certificate' | 'plan' | 'est
 
 @Component({
   selector: 'app-company',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, OnlyNumbersDirective, ButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, OnlyNumbersDirective],
   templateUrl: './company.component.html',
   styleUrl: './company.component.scss'
 })
@@ -131,14 +130,6 @@ export class CompanyComponent implements OnInit, DoCheck {
     return this.apiConfiguration?.enabled === true;
   }
 
-  get apiConfigurationCanView(): boolean {
-    return !this.apiConfigurationAccessDenied && this.apiConfiguration?.can_view !== false;
-  }
-
-  get apiClients(): any[] {
-    return Array.isArray(this.apiConfiguration?.clients) ? this.apiConfiguration.clients : [];
-  }
-
   /** Recarga el contexto del negocio activo y reemplaza por completo la vista API. */
   loadApiConfiguration(): void {
     const business = String(this.capabilities.activeBusinessId || localStorage.getItem('active_business') || '').trim();
@@ -190,29 +181,6 @@ export class CompanyComponent implements OnInit, DoCheck {
           : (this.readBackendError(error) || 'No se pudo cargar la configuración API.');
       }
     });
-  }
-
-  async copyApiValue(value: unknown, label: string): Promise<void> {
-    const text = String(value ?? '').trim();
-    if (!text || typeof navigator === 'undefined' || !navigator.clipboard) return;
-    try {
-      await navigator.clipboard.writeText(text);
-      this.alertService.success(`${label} copiada correctamente.`);
-    } catch {
-      this.alertService.error(`No se pudo copiar la ${label.toLowerCase()}.`);
-    }
-  }
-
-  apiEnvironmentClass(environment: unknown): string {
-    return String(environment || '').trim().toUpperCase() === 'PRODUCCION'
-      ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-      : 'bg-amber-100 text-amber-700 border-amber-200';
-  }
-
-  apiStatusClass(status: unknown): string {
-    return String(status || '').trim().toUpperCase() === 'ACTIVO'
-      ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-      : 'bg-slate-100 text-slate-600 border-slate-200';
   }
 
   get activeSettingsTitle(): string {
@@ -506,6 +474,57 @@ export class CompanyComponent implements OnInit, DoCheck {
   get liteSetupNeedsCertificate(): boolean {
     return !this.certificateConfigured
       || this.hasLiteSetupMissing('certificate', 'electronic_certificate', 'signature', 'certificate_reference');
+  }
+
+  /**
+   * Pasos mínimos para emitir. Cada paso se considera completo solo si el
+   * backend no lo reporta como pendiente y existe el dato en el contexto.
+   */
+  get setupSteps(): { label: string; hint: string; done: boolean; route: string }[] {
+    const establishments = this.capabilities.activeEstablishments;
+    const hasPoints = establishments.some((item: any) => this.capabilities.activeEmissionPointsFor(item).length > 0);
+    return [
+      { label: 'Datos tributarios', hint: 'Razón social, RUC y régimen', done: !this.hasLiteSetupMissing('tax_profile'), route: '/settings/lite/tax-profile' },
+      { label: 'Firma electrónica', hint: 'Archivo .p12 o .pfx vigente', done: !this.liteSetupNeedsCertificate && !this.certificateIsBlocking, route: '/settings/lite/certificate' },
+      { label: 'Establecimiento', hint: 'Tu matriz o sucursal', done: !this.hasLiteSetupMissing('establishment') && establishments.length > 0, route: '/settings/lite/establishments' },
+      { label: 'Punto de emisión', hint: 'La caja que emite', done: !this.hasLiteSetupMissing('emission_point') && hasPoints, route: '/settings/lite/emission-points' },
+      { label: 'Secuencia de factura', hint: 'La numeración oficial', done: !this.hasLiteSetupMissing('invoice_sequence', 'sequence') && this.capabilities.sequences.length > 0, route: '/settings/lite/sequences' }
+    ];
+  }
+
+  get completedSetupSteps(): number {
+    return this.setupSteps.filter((step) => step.done).length;
+  }
+
+  /** Secciones editables: solo en ellas se muestra la barra de guardar. */
+  get showSaveBar(): boolean {
+    if (!this.isLiteMode) return true;
+    return this.canEditLiteSetup && this.showSettingsSection('tax-profile', 'certificate');
+  }
+
+  get settingsNav(): { group: string; items: { label: string; route: string; active: boolean; status?: 'ok' | 'warn' }[] }[] {
+    const tab = this.activeSettingsTab;
+    const certificateOk = !this.liteSetupNeedsCertificate && !this.certificateIsBlocking;
+    const company = {
+      group: 'Empresa',
+      items: [
+        { label: 'Resumen', route: '/settings/lite', active: tab === 'general' || tab === 'readiness', status: this.effectiveLiteSetupReady ? 'ok' as const : 'warn' as const },
+        { label: 'Datos tributarios', route: '/settings/lite/tax-profile', active: tab === 'tax-profile', status: this.hasLiteSetupMissing('tax_profile') ? 'warn' as const : undefined },
+        { label: 'Firma electrónica', route: '/settings/lite/certificate', active: tab === 'certificate', status: certificateOk ? 'ok' as const : 'warn' as const },
+        { label: 'Plan', route: '/settings/lite/plan', active: tab === 'plan', status: this.planIsInactive ? 'warn' as const : undefined }
+      ]
+    };
+    const emission = {
+      group: 'Emisión e integraciones',
+      items: [
+        { label: 'Establecimientos', route: '/settings/lite/establishments', active: false },
+        { label: 'Puntos de emisión', route: '/settings/lite/emission-points', active: false },
+        { label: 'Secuencias', route: '/settings/lite/sequences', active: false },
+        ...(this.capabilities.isEnabled('pos_terminal') ? [{ label: 'Terminales POS', route: '/settings/lite/pos-terminals', active: false }] : []),
+        ...(this.capabilities.isEnabled('api') ? [{ label: 'Integración API', route: '/settings/lite/api', active: false }] : [])
+      ]
+    };
+    return this.canEditLiteSetup ? [company, emission] : [emission];
   }
 
   hasLiteSetupMissing(...keys: string[]): boolean {

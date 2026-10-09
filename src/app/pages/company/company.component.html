@@ -1,906 +1,398 @@
-<div class="company-settings flex flex-col">
-  <div class="app-card settings-shell">
-    <div class="app-card-body">
-      <div class="settings-hero">
-        <div class="min-w-0">
-          <p class="settings-kicker">CENTRO DE CONFIGURACIÓN</p>
-          <h2 class="app-page-title">{{ isLiteMode ? 'Configuración FacturADA' : 'Configuración de la empresa' }}</h2>
-          <p class="settings-subtitle">{{ isLiteMode ? activeSettingsTitle + ' · datos protegidos y sincronizados con tu negocio.' : 'Administra los datos operativos de tu empresa.' }}</p>
-        </div>
-        <app-button *ngIf="activeSettingsTab !== 'api'"
-          impact="bold"
-          tone="light"
-          shape="rounded"
-          size="medium"
-          shadow="small"
-          [disabled]="isSaving || isLoadingCompany || !canEditLiteSetup"
-          (click)="save()">
-          {{ isSaving ? 'Guardando...' : (isLiteMode ? 'Guardar configuración' : 'Guardar') }}
-        </app-button>
+<div class="app-container space-y-3 pb-20">
+  <!-- Cabecera con la empresa activa -->
+  <header class="flex flex-col gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex min-w-0 items-center gap-3">
+      <div class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/10 text-lg font-black text-primary">
+        <img *ngIf="activeBusiness?.logo || logoPreview" [src]="logoPreview || activeBusiness?.logo" alt="Logo de la empresa" class="h-full w-full object-contain" />
+        <span *ngIf="!activeBusiness?.logo && !logoPreview">{{ (activeBusiness?.business_name || activeBusiness?.businessname || f['businessname'].value || 'E').slice(0, 1) }}</span>
       </div>
+      <div class="min-w-0">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-primary">Configuración</p>
+        <h1 class="truncate text-lg font-bold text-foreground">{{ activeBusiness?.business_name || activeBusiness?.businessname || f['businessname'].value || 'Mi empresa' }}</h1>
+        <p class="text-[11px] text-muted-foreground">RUC <span class="font-mono">{{ f['ruc'].value || '—' }}</span> · Ambiente {{ ambiente === 'PRODUCCION' ? 'Producción' : 'Pruebas' }}</p>
+      </div>
+    </div>
+    <span *ngIf="isLiteMode" class="inline-flex items-center gap-1.5 self-start rounded-full px-3 py-1 text-xs font-semibold sm:self-auto"
+      [ngClass]="effectiveLiteSetupReady ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'">
+      <span class="h-2 w-2 rounded-full bg-current" aria-hidden="true"></span>
+      {{ effectiveLiteSetupReady ? 'Lista para facturar' : 'Configuración pendiente' }}
+    </span>
+  </header>
 
-      <form [formGroup]="form" (ngSubmit)="save()" class="settings-form-grid grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs"
-        [class.form-busy]="isSaving || isLoadingCompany">
-        <div *ngIf="isLiteMode && activeBusiness" class="settings-business-bar lg:col-span-2">
-          <div class="settings-business-avatar">
-            <img *ngIf="activeBusiness.logo" [src]="activeBusiness.logo" alt="Logo de empresa" />
-            <span *ngIf="!activeBusiness.logo">{{ (activeBusiness.business_name || activeBusiness.businessname || activeBusiness.name || 'E').slice(0, 1) }}</span>
-          </div>
-          <div class="min-w-0">
-            <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Empresa activa</p>
-            <p class="truncate text-sm font-bold text-foreground">{{ activeBusiness.business_name || activeBusiness.businessname || activeBusiness.name }}</p>
-          </div>
-          <span class="settings-ready-chip" [ngClass]="effectiveLiteSetupReady ? 'is-ready' : 'is-pending'">{{ effectiveLiteSetupReady ? 'Lista para emitir' : 'Configuración pendiente' }}</span>
+  <div *ngIf="isLiteMode && !canEditLiteSetup" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+    Solo Administrador o Gerente pueden modificar la configuración de la empresa.
+  </div>
+
+  <div class="grid grid-cols-1 gap-3" [ngClass]="{ 'lg:grid-cols-[220px_minmax(0,1fr)]': isLiteMode }">
+    <!-- Navegación -->
+    <nav *ngIf="isLiteMode" aria-label="Secciones de configuración" class="lg:sticky lg:top-3 lg:self-start">
+      <div class="flex gap-3 overflow-x-auto rounded-xl border border-border bg-card p-2 shadow-sm lg:flex-col lg:gap-4">
+        <div *ngFor="let group of settingsNav" class="flex shrink-0 gap-1 lg:flex-col">
+          <p class="hidden px-2 pt-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground lg:block">{{ group.group }}</p>
+          <a *ngFor="let item of group.items" [routerLink]="item.route" [attr.aria-current]="item.active ? 'page' : null"
+            class="flex items-center justify-between gap-2 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-semibold transition"
+            [ngClass]="item.active ? 'bg-primary text-primary-foreground' : 'text-foreground/80 hover:bg-muted'">
+            {{ item.label }}
+            <span *ngIf="item.status" class="h-2 w-2 shrink-0 rounded-full" [ngClass]="item.status === 'ok' ? 'bg-emerald-500' : 'bg-amber-400'"
+              [attr.aria-label]="item.status === 'ok' ? 'Completo' : 'Requiere atención'"></span>
+            <span *ngIf="!item.status && !item.active && group.group !== 'Empresa'" class="text-muted-foreground" aria-hidden="true">→</span>
+          </a>
         </div>
-        <nav *ngIf="isLiteMode" aria-label="Secciones de configuración Lite" class="settings-tabs lg:col-span-2">
-          <ng-container *ngIf="canEditLiteSetup">
-            <a routerLink="/settings/lite" class="settings-tab" [class.is-active]="activeSettingsTab === 'general'">General</a>
-            <a routerLink="/settings/lite/tax-profile" class="settings-tab" [class.is-active]="activeSettingsTab === 'tax-profile'">Perfil tributario</a>
-            <a routerLink="/settings/lite/certificate" class="settings-tab" [class.is-active]="activeSettingsTab === 'certificate'">Firma electrónica</a>
-            <a routerLink="/settings/lite/plan" class="settings-tab" [class.is-active]="activeSettingsTab === 'plan'">Plan actual</a>
-            <a routerLink="/settings/lite/establishments" class="settings-tab" [class.is-active]="activeSettingsTab === 'establishments'">Establecimientos</a>
-            <a routerLink="/settings/lite/emission-points" class="settings-tab" [class.is-active]="activeSettingsTab === 'emission-points'">Puntos de emisión</a>
-            <a routerLink="/settings/lite/sequences" class="settings-tab" [class.is-active]="activeSettingsTab === 'sequences'">Secuencias</a>
-            <a *ngIf="capabilities.isEnabled('pos_terminal')" routerLink="/settings/lite/pos-terminals" class="settings-tab" [class.is-active]="activeSettingsTab === 'pos-terminals'">Terminales fiscales</a>
-            <a routerLink="/settings/lite/readiness" class="settings-tab" [class.is-active]="activeSettingsTab === 'readiness'">Preparación</a>
-          </ng-container>
-          <a *ngIf="capabilities.isEnabled('api')" routerLink="/settings/lite/api" class="settings-tab" [class.is-active]="activeSettingsTab === 'api'">Integración API</a>
-        </nav>
-        <div *ngIf="isLiteMode && !canEditLiteSetup && activeSettingsTab !== 'api'" class="lg:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          Solo Administrador o Gerente pueden modificar la configuración tributaria.
-        </div>
-        <div *ngIf="isLiteMode && effectiveLiteSetupReady !== true && showSettingsSection('general')" class="settings-help-strip lg:col-span-2 rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 text-xs text-indigo-950">
-          <div class="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p class="font-bold">Ruta recomendada de configuración</p>
-              <p class="mt-1 text-[11px] text-indigo-800">Completa estos pasos en orden para poder emitir sin contratiempos.</p>
-            </div>
-            <a routerLink="/settings/lite/readiness" class="rounded-lg bg-card px-3 py-1.5 text-[11px] font-bold text-indigo-700 shadow-sm ring-1 ring-indigo-100 hover:bg-indigo-50">Ver guía completa</a>
-          </div>
-          <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-5">
-            <a routerLink="/settings/lite/tax-profile" class="settings-help-step"><span>1</span><strong>Perfil tributario</strong></a>
-            <a routerLink="/settings/lite/certificate" class="settings-help-step"><span>2</span><strong>Firma electrónica</strong></a>
-            <a routerLink="/settings/lite/establishments" class="settings-help-step"><span>3</span><strong>Establecimiento</strong></a>
-            <a routerLink="/settings/lite/emission-points" class="settings-help-step"><span>4</span><strong>Punto de emisión</strong></a>
-            <a routerLink="/settings/lite/sequences" class="settings-help-step"><span>5</span><strong>Secuencia</strong></a>
-          </div>
-        </div>
-        <div *ngIf="isLiteMode && effectiveLiteSetupReady === false && showSettingsSection('general', 'readiness')"
-          class="settings-guidance lg:col-span-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+      </div>
+    </nav>
+
+    <form [formGroup]="form" (ngSubmit)="save()" class="min-w-0 space-y-3 text-xs" [class.pointer-events-none]="isSaving || isLoadingCompany" [class.opacity-70]="isSaving || isLoadingCompany">
+
+      <!-- ===================== RESUMEN ===================== -->
+      <ng-container *ngIf="isLiteMode && showSettingsSection('general', 'readiness')">
+        <section class="rounded-xl border border-border bg-card p-4 shadow-sm">
           <div class="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <p class="font-bold">Configuración Lite pendiente</p>
-              <p class="mt-1 text-amber-800">Completa los datos pendientes para habilitar la emisión de facturas.</p>
+              <h2 class="text-sm font-bold text-foreground">{{ effectiveLiteSetupReady ? 'Tu empresa está lista para facturar' : 'Completa estos pasos para empezar a facturar' }}</h2>
+              <p class="mt-0.5 text-muted-foreground">{{ completedSetupSteps }} de {{ setupSteps.length }} pasos completos.</p>
             </div>
-            <span class="rounded-full border border-amber-300 bg-card px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
-              Asistente de configuración
-            </span>
           </div>
-          <p *ngIf="liteSetupMissingLabel" class="mt-2 font-semibold text-amber-800">
-            Pendiente: {{ liteSetupMissingLabel }}.
-          </p>
-          <div class="settings-checklist mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            <a *ngIf="hasLiteSetupMissing('tax_profile')" href="#perfil-tributario" class="settings-check-item">
-              <span class="settings-check-icon">1</span>
-              <span><strong>Perfil tributario</strong><small>Completa los datos fiscales.</small></span>
-            </a>
-            <a *ngIf="liteSetupNeedsCertificate" routerLink="/settings/lite/certificate" class="settings-check-item">
-              <span class="settings-check-icon">2</span>
-              <span><strong>Firma electrónica</strong><small>Carga tu archivo .p12 o .pfx.</small></span>
-            </a>
-            <a *ngIf="hasLiteSetupMissing('establishment')" routerLink="/settings/lite/establishments" class="settings-check-item">
-              <span class="settings-check-icon">3</span>
-              <span><strong>Establecimiento</strong><small>Crea una sede activa.</small></span>
-            </a>
-            <a *ngIf="hasLiteSetupMissing('emission_point')" routerLink="/settings/lite/emission-points" class="settings-check-item">
-              <span class="settings-check-icon">4</span>
-              <span><strong>Punto de emisión</strong><small>Configura una caja activa.</small></span>
-            </a>
-            <a *ngIf="hasLiteSetupMissing('invoice_sequence', 'sequence')" routerLink="/settings/lite/sequences" class="settings-check-item">
-              <span class="settings-check-icon">5</span>
-              <span><strong>Secuencia</strong><small>Define el consecutivo oficial.</small></span>
-            </a>
+          <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" [attr.aria-valuenow]="completedSetupSteps" aria-valuemin="0" [attr.aria-valuemax]="setupSteps.length">
+            <div class="h-full rounded-full transition-all" [ngClass]="completedSetupSteps === setupSteps.length ? 'bg-emerald-500' : 'bg-primary'"
+              [style.width.%]="(completedSetupSteps / setupSteps.length) * 100"></div>
           </div>
+          <ol class="mt-4 space-y-1.5">
+            <li *ngFor="let step of setupSteps; let i = index">
+              <a [routerLink]="step.route" class="flex items-center gap-3 rounded-lg border px-3 py-2.5 transition hover:border-primary/40"
+                [ngClass]="step.done ? 'border-border' : 'border-amber-200 bg-amber-50/50'">
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                  [ngClass]="step.done ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-amber-950'">{{ step.done ? '✓' : i + 1 }}</span>
+                <span class="min-w-0 flex-1">
+                  <span class="block font-semibold text-foreground">{{ step.label }}</span>
+                  <span class="block text-[11px] text-muted-foreground">{{ step.hint }}</span>
+                </span>
+                <span class="shrink-0 text-[11px] font-semibold" [ngClass]="step.done ? 'text-muted-foreground' : 'text-primary'">{{ step.done ? 'Revisar' : 'Completar' }} →</span>
+              </a>
+            </li>
+          </ol>
+          <p *ngIf="liteSetupMissingLabel && !effectiveLiteSetupReady" class="mt-3 text-[11px] text-muted-foreground">El sistema indica como pendiente: {{ liteSetupMissingLabel }}.</p>
+        </section>
+
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <a routerLink="/settings/lite/certificate" class="rounded-xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/40">
+            <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Firma electrónica</p>
+            <p class="mt-1 text-sm font-bold text-foreground">{{ certificateConfigured ? certificateStatusLabel : 'Sin cargar' }}</p>
+            <p class="text-[11px] text-muted-foreground">
+              {{ certificateDaysRemaining === null ? 'Sube tu archivo .p12 o .pfx.' : (certificateDaysRemaining >= 0 ? 'Vence en ' + certificateDaysRemaining + ' días (' + formatCertificateDate(certInfo?.validTo) + ').' : 'Venció el ' + formatCertificateDate(certInfo?.validTo) + '.') }}
+            </p>
+          </a>
+          <a routerLink="/settings/lite/plan" class="rounded-xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/40">
+            <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Plan</p>
+            <p class="mt-1 text-sm font-bold text-foreground">{{ hasCurrentPlan ? planName : 'Sin plan activo' }}</p>
+            <p class="text-[11px] text-muted-foreground">{{ hasCurrentPlan ? 'Comprobantes: ' + planVoucherUsageLabel + ' · Restantes: ' + planRemainingLabel : 'Pide al administrador del sistema que asigne una suscripción.' }}</p>
+          </a>
         </div>
-        <div *ngIf="!isLiteMode || showSettingsSection('general', 'tax-profile')" class="settings-column settings-column--primary">
-       
+      </ng-container>
 
-          <div *ngIf="!isLiteMode || showSettingsSection('general')" class="rounded-lg border border-border bg-card shadow-sm">
-            <div class="px-4 py-3 border-b">
-              <h3 class="text-sm font-semibold">Logo de la Empresa</h3>
-            </div>
-
-            <div class="p-4 space-y-3">
+      <!-- ===================== DATOS TRIBUTARIOS ===================== -->
+      <ng-container *ngIf="!isLiteMode || showSettingsSection('tax-profile')">
+        <section class="rounded-xl border border-border bg-card shadow-sm">
+          <header class="border-b border-border px-4 py-3">
+            <h2 class="text-sm font-bold text-foreground">Identidad de la empresa</h2>
+            <p class="text-muted-foreground">Así aparece tu empresa en los comprobantes (RIDE).</p>
+          </header>
+          <div class="grid grid-cols-1 gap-4 p-4 lg:grid-cols-[180px_minmax(0,1fr)]">
+            <!-- Logo -->
+            <div>
+              <p class="mb-1 font-semibold text-foreground/80">Logo</p>
               <input #logoInput type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" class="sr-only" (change)="onLogoSelected($event)" />
-
-              <div class="dropzone" [class.dropzone--active]="isDraggingLogo" role="button" tabindex="0"
-                aria-label="Zona para soltar o seleccionar el logo" (click)="logoInput.click()"
+              <div class="dropzone flex aspect-square flex-col items-center justify-center gap-1 p-2 text-center" [class.dropzone--active]="isDraggingLogo"
+                role="button" tabindex="0" aria-label="Seleccionar o soltar el logo" (click)="logoInput.click()"
                 (keydown.enter)="logoInput.click()" (keydown.space)="logoInput.click()"
                 (dragover)="onLogoDragOver($event)" (dragleave)="onLogoDragLeave($event)" (drop)="onLogoDrop($event)">
-                <div class="text-center pointer-events-none">
-                  <div class="text-[12px] font-medium">Arrastra el logo aqui</div>
-                  <div class="text-[11px] text-muted-foreground">o haz clic para seleccionar (max 2MB)</div>
-                </div>
+                <img *ngIf="logoPreview" [src]="logoPreview" alt="Logo" class="max-h-24 max-w-full object-contain" />
+                <ng-container *ngIf="!logoPreview">
+                  <span class="text-[11px] font-semibold text-foreground">Arrastra tu logo</span>
+                  <span class="text-[10px] text-muted-foreground">o haz clic · PNG/JPG hasta 2 MB</span>
+                </ng-container>
               </div>
-
-              <div class="flex items-center gap-2">
-                <div class="flex-1">
-                  <input class="input h-8 text-[11px]" [value]="logoFileName || 'Ningun archivo seleccionado'"
-                    readonly />
-                </div>
-                <button type="button" class="btn btn-ghost btn-sm" (click)="removeLogo()"
-                  [disabled]="!logoPreview && !logoFileName">Quitar</button>
-              </div>
-
-              <div *ngIf="logoPreview" class="mt-2 flex items-center gap-2">
-                <span class="text-[11px] text-muted-foreground">Vista previa</span>
-                <img [src]="logoPreview" alt="Logo" class="logo-preview" />
-              </div>
-            </div>
-          </div>
-
-          <div *ngIf="!isLiteMode || showSettingsSection('tax-profile')" class="rounded-lg border border-border bg-card shadow-sm">
-            <div class="px-4 py-3 border-b">
-              <h3 class="text-sm font-semibold">SRI</h3>
+              <button *ngIf="logoPreview || logoFileName" type="button" class="mt-1 text-[11px] font-semibold text-red-700 hover:underline" (click)="removeLogo()">Quitar logo</button>
             </div>
 
-            <div class="p-4 space-y-4">
-              <label *ngIf="!isLiteMode" class="inline-flex items-center cursor-pointer relative">
-                <input type="checkbox" class="sr-only peer" formControlName="ambiente" (change)="cambiarAmbiente()"
-                  [disabled]="isSaving || isLoadingCompany || isLiteMode" />
-                <div class="w-11 h-6 bg-muted rounded-full peer-checked:bg-green-600 transition-colors"></div>
-                <div
-                  class="absolute w-5 h-5 bg-card rounded-full transform translate-x-1 top-0.5 left-0.5 peer-checked:translate-x-5 transition-transform">
-                </div>
-                <span class="ml-3 text-sm font-semibold"
-                  [ngClass]="ambiente === 'PRODUCCION' ? 'text-green-700' : 'text-yellow-700'">
-                  Ambiente: {{ ambiente }}
-                </span>
-              </label>
-
-              <div *ngIf="!isLiteMode" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-<div>
-                  <label class="block font-medium mb-1">Codigo Establecimiento</label>
-                  <input appOnlyNumbers type="text" maxlength="3" class="input" formControlName="establishmentcode"
-                    [class.border-red-500]="f['establishmentcode'].invalid && submitted" />
-                  <small *ngIf="f['establishmentcode'].errors?.['required'] && submitted" class="text-red-600">Campo
-                    requerido</small>
-                  <small *ngIf="f['establishmentcode'].errors?.['pattern'] && submitted" class="text-red-600">3
-                    digitos</small>
-                </div>
-<div>
-                  <label class="block font-medium mb-1">Punto Emision</label>
-                  <input appOnlyNumbers type="text" maxlength="3" class="input" formControlName="emissionpoint"
-                    [class.border-red-500]="f['emissionpoint'].invalid && submitted" />
-                  <small *ngIf="f['emissionpoint'].errors?.['required'] && submitted" class="text-red-600">Campo
-                    requerido</small>
-                  <small *ngIf="f['emissionpoint'].errors?.['pattern'] && submitted" class="text-red-600">3
-                    digitos</small>
-                </div>
-              </div>
-
-              <div *ngIf="isLiteMode" class="rounded-xl border border-border bg-card p-3 space-y-2">
-                <label for="lite-environment" class="block font-semibold text-foreground">Ambiente activo de emisión</label>
-                <select id="lite-environment" class="input" [value]="previewEnvironment"
-                  (change)="onLiteEnvironmentSelected($any($event.target).value)"
-                  [disabled]="isSaving || isLoadingCompany || !canEditLiteSetup">
-                  <option value="PRUEBAS">Pruebas</option>
-                  <option value="PRODUCCION">Producción</option>
-                </select>
-                <p class="text-xs text-muted-foreground">Este valor se guarda en el perfil tributario del negocio. Establecimientos y puntos no se duplican por ambiente; las secuencias sí.</p>
-                <p class="text-xs font-medium text-muted-foreground">Ambiente guardado actualmente: {{ ambiente === 'PRODUCCION' ? 'Producción' : 'Pruebas' }}</p>
-                <p *ngIf="previewEnvironment !== ambiente" class="text-xs font-semibold text-amber-700" role="status">Cambio pendiente de guardar.</p>
-              </div>
-
-              <div *ngIf="!isLiteMode">
-                <label class="block font-medium mb-1">URL del servicio FacturADA</label>
-                <input type="text" class="input" formControlName="service_base_url"
-                  placeholder="URL del servicio de emisión" />
-                <p class="mt-1 text-[11px] text-muted-foreground">Configuración disponible únicamente para instalaciones no Lite.</p>
-              </div>
-
-              <div *ngIf="isLiteMode" class="rounded-xl border border-border bg-muted/40 p-3">
-                <div class="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <h4 class="text-sm font-semibold text-foreground">Disponibilidad para emitir</h4>
-                    <p class="mt-0.5 text-[11px] text-muted-foreground">Factura · {{ previewEnvironment === 'PRODUCCION' ? 'Producción' : 'Pruebas' }}</p>
-                  </div>
-                  <a routerLink="/settings/lite/sequences" class="text-[11px] font-bold text-primary hover:underline">Administrar secuencias</a>
-                </div>
-                <p class="mt-2 text-xs text-muted-foreground">El establecimiento y el punto se seleccionan en Nueva factura, según las secuencias activas del ambiente guardado.</p>
-                <div *ngIf="canEditLiteSetup" class="mt-4 flex flex-wrap justify-end gap-2">
-                  <button type="button" *ngIf="previewEnvironment !== ambiente" (click)="onLiteEnvironmentSelected(ambiente)"
-                    [disabled]="isSaving || isLoadingCompany" class="rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-semibold text-muted-foreground disabled:opacity-50">Descartar cambio</button>
-                  <button type="button" (click)="saveLiteEnvironment()"
-                    [disabled]="isSaving || isLoadingCompany || !hasPendingLiteEmissionConfiguration"
-                    class="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Guardar ambiente</button>
-                </div>
-              </div>
-
-              <div *ngIf="!isLiteMode">
-                <h4 class="text-sm font-semibold text-foreground/80 mt-1">Secuencias</h4>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                  <div>
-                    <label class="block font-medium mb-1">Secuencial Factura (PRODUCCION)</label>
-                    <input type="number" class="input no-spinner" formControlName="invoiceseq_prod"
-                      [class.border-red-500]="f['invoiceseq_prod'].invalid && submitted" />
-                    <small *ngIf="f['invoiceseq_prod'].invalid && submitted" class="text-red-600">Campo
-                      requerido</small>
-                  </div>
-                  <div>
-                    <label class="block font-medium mb-1">Secuencial Factura (PRUEBAS)</label>
-                    <input type="number" class="input no-spinner" formControlName="invoiceseq_pruebas"
-                      [class.border-red-500]="f['invoiceseq_pruebas'].invalid && submitted" />
-                    <small *ngIf="f['invoiceseq_pruebas'].invalid && submitted" class="text-red-600">Campo
-                      requerido</small>
-                  </div>
-                  <div>
-                    <label class="block font-medium mb-1">Secuencial Nota de Credito (PRODUCCION)</label>
-                    <input type="number" class="input no-spinner" formControlName="ncseq_prod"
-                      [class.border-red-500]="f['ncseq_prod'].invalid && submitted" />
-                    <small *ngIf="f['ncseq_prod'].invalid && submitted" class="text-red-600">Campo requerido</small>
-                  </div>
-
-                  <div>
-                    <label class="block font-medium mb-1">Secuencial Nota de Credito (PRUEBAS)</label>
-                    <input type="number" class="input no-spinner" formControlName="ncseq_pruebas"
-                      [class.border-red-500]="f['ncseq_pruebas'].invalid && submitted" />
-                    <small *ngIf="f['ncseq_pruebas'].invalid && submitted" class="text-red-600">Campo
-                      requerido</small>
-                  </div>
-
-                  <div>
-                    <label class="block font-medium mb-1">Obligado a llevar Contabilidad</label>
-                    <select class="input" formControlName="obligado_a_llevar_contabilidad">
-                      <option value="NO">No</option>
-                      <option value="SI">Si</option>
-                    </select>
-                    <small *ngIf="f['obligado_a_llevar_contabilidad'].invalid && submitted" class="text-red-600">Campo
-                      requerido</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-
-             <div *ngIf="!isLiteMode || showSettingsSection('tax-profile')" class="rounded-lg border border-border bg-card shadow-sm">
-            <div class="px-4 py-3 border-b">
-              <h3 class="text-sm font-semibold">Campos adicionales de facturación</h3>
-            </div>
-
-            <div class="p-4 space-y-4">
-              <div *ngIf="f['provider_ruc'].value; else providerRucNotConfigured">
-                <label class="block font-medium mb-1">RUC del proveedor del sistema</label>
-                <input appOnlyNumbers type="text" maxlength="13" class="input bg-muted cursor-not-allowed"
-                  formControlName="provider_ruc"
-                  readonly aria-readonly="true"
-                  tabindex="-1" />
-              </div>
-              <ng-template #providerRucNotConfigured>
-                <p class="text-sm text-muted-foreground">RUC del proveedor no configurado.</p>
-              </ng-template>
-            </div>
-          </div>
-
-          <div *ngIf="false" id="firma-electronica" class="settings-signature-card rounded-lg border border-border bg-card shadow-sm settings-anchor-target">
-            <div class="px-4 py-3 border-b flex items-center justify-between">
-              <div>
-                <h3 class="text-sm font-semibold">Firma electrónica SRI</h3>
-                <p class="mt-0.5 text-[11px] text-muted-foreground">Necesaria para enviar comprobantes al SRI.</p>
-              </div>
-              <span class="rounded-full border px-2 py-0.5 text-[10px] font-bold" [ngClass]="certificateConfigured ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'">
-                {{ certificateConfigured ? certificateStatusLabel : 'Pendiente' }}
-              </span>
-            </div>
-
-            <div class="p-4 space-y-4">
-              <div *ngIf="!certificateConfigured" class="settings-certificate-help rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-[11px] text-amber-900">
-                <p class="font-bold">Aún falta cargar la firma electrónica</p>
-                <ol class="mt-2 list-decimal space-y-1 pl-4">
-                  <li>Selecciona el archivo privado con extensión <strong>.p12</strong> o <strong>.pfx</strong>.</li>
-                  <li>Escribe la contraseña del certificado.</li>
-                  <li>Pulsa <strong>Guardar configuración</strong> para validarlo.</li>
-                </ol>
-                <p class="mt-2 text-amber-800">El backend validará la contraseña y la vigencia. Nunca guardamos la contraseña en el navegador.</p>
-              </div>
-              <div *ngIf="certificateConfigured && certificateIsBlocking" class="settings-certificate-help rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-[11px] text-red-800">
-                <p class="font-bold">La firma requiere atención</p>
-                <p class="mt-1">{{ certInfo?.lastError || 'Revisa el estado del certificado y carga uno vigente si es necesario.' }}</p>
-              </div>
-              <input #firmaInput type="file" accept=".p12,.pfx" class="sr-only" (change)="onFirmaSelected($event)" />
-
-              <div class="dropzone" [class.dropzone--active]="isDraggingFirma" role="button" tabindex="0"
-                aria-label="Zona para soltar o seleccionar archivo .p12 o .pfx" (click)="firmaInput.click()"
-                (keydown.enter)="firmaInput.click()" (keydown.space)="firmaInput.click()"
-                (dragover)="onFirmaDragOver($event)" (dragleave)="onFirmaDragLeave($event)"
-                (drop)="onFirmaDrop($event)">
-                <div class="text-center pointer-events-none">
-                  <div class="text-[12px] font-medium">Arrastra tu certificado .p12 o .pfx aqui</div>
-                  <div class="text-[11px] text-muted-foreground">o haz clic para seleccionar (max 5MB)</div>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-2">
-                <div class="flex-1">
-                  <input class="input h-8 text-[11px]"
-                    [value]="firmaFileName || (form.value.urlfirma ? (form.value.urlfirma | slice: form.value.urlfirma.lastIndexOf('/')+1) : 'Ningun archivo seleccionado')"
-                    readonly />
-                </div>
-                <button type="button" class="btn btn-ghost btn-sm" (click)="removeFirma()"
-                  [disabled]="!firmaFileName && !form.value.urlfirma">Quitar</button>
-              </div>
-
-              <div class="relative">
-                <label class="block font-medium mb-1">
-                  Clave de la firma
-                  <span *ngIf="requiresCertificatePassword" class="text-red-600">*</span>
-                </label>
-                <input [type]="showClave ? 'text' : 'password'" id="clave" class="input pr-16" formControlName="clave"
-                  [class.border-red-500]="f['clave'].invalid && submitted" placeholder="••••••••"
-                  autocomplete="new-password" />
-
-                <button type="button"
-                  class="absolute right-2 top-1/2 -translate-y-1/2 mt-3 text-[12px] text-indigo-600"
-                  (click)="showClave = !showClave">
-                  {{ showClave ? 'Ocultar' : 'Mostrar' }}
-                </button>
-
-                <small *ngIf="f['clave'].invalid && submitted" class="text-red-600">
-                  Campo requerido al cargar un certificado nuevo
-                </small>
-              </div>
-
-              <div class="rounded-lg border border-border bg-muted/40 px-3 py-2 text-[11px]">
-                <span class="font-semibold text-foreground/80">Certificado configurado:</span>
-                <span class="ml-1 font-bold" [ngClass]="certificateConfigured ? 'text-emerald-700' : 'text-muted-foreground'">
-                  {{ certificateConfigured ? 'Sí' : 'No' }}
-                </span>
-              </div>
-
-              <div class="rounded-lg border border-border bg-muted/40 px-3 py-2">
-                <div class="flex flex-wrap items-center gap-2">
-                  <span class="text-[11px] font-semibold text-foreground/80">Estado del certificado</span>
-                  <span class="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-                    [ngClass]="certificateStatusClasses">
-                    {{ certificateStatusLabel }}
-                  </span>
-                </div>
-                <p *ngIf="certificateIsBlocking" class="mt-1 text-[11px] font-semibold text-red-700">
-                  {{ certInfo?.lastError || 'La emisión de facturas está bloqueada hasta corregir el certificado.' }}
-                </p>
-              </div>
-
-              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label class="block font-medium mb-1">Válida desde</label>
-                  <input class="input" [value]="formatCertificateDate(certInfo?.validFrom)" readonly placeholder="Pendiente de validar">
-                </div>
-                <div>
-                  <label class="block font-medium mb-1">Válida hasta</label>
-                  <input class="input" [value]="formatCertificateDate(certInfo?.validTo)" readonly placeholder="Pendiente de validar">
-                </div>
-                <div>
-                  <label class="block font-medium mb-1">Días restantes</label>
-                  <input class="input" [value]="certificateDaysRemaining === null ? 'Pendiente de validar' : certificateDaysRemaining" readonly>
-                </div>
-                <div>
-                  <label class="block font-medium mb-1">Titular</label>
-                  <input class="input" [value]="certInfo?.subject || ''" readonly placeholder="Pendiente de validar">
-                </div>
-                <div>
-                  <label class="block font-medium mb-1">Emisor</label>
-                  <input class="input" [value]="certInfo?.issuer || ''" readonly placeholder="Pendiente de validar">
-                </div>
-                <div>
-                  <label class="block font-medium mb-1">Número de serie</label>
-                  <input class="input" [value]="certInfo?.serialNumber || ''" readonly placeholder="Pendiente de validar">
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        <div *ngIf="!isLiteMode || showSettingsSection('general', 'tax-profile', 'certificate', 'plan')" class="settings-column settings-column--secondary">
-          <div *ngIf="!isLiteMode || showSettingsSection('plan')" class="rounded-xl border border-border bg-card shadow-sm">
-            <div class="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
-              <div>
-                <h3 class="text-sm font-bold text-foreground">Plan actual</h3>
-                <p class="text-[11px] text-muted-foreground">Resumen informativo de la suscripción asignada.</p>
-              </div>
-              <span
-                class="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-                [ngClass]="planStatusClasses">
-                {{ hasCurrentPlan ? planStatus : 'Sin plan' }}
-              </span>
-            </div>
-
-            <div class="p-4">
-              <ng-container *ngIf="hasCurrentPlan; else noActivePlan">
-                <div
-                  *ngIf="planIsInactive"
-                  class="mb-3 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-[11px] font-semibold text-orange-700">
-                  El plan no está activo.
-                </div>
-
-                <div class="mb-3 rounded-xl bg-primary/5 p-3 ring-1 ring-primary/10">
-                  <p class="text-[10px] font-bold uppercase tracking-wide text-primary">Nombre del plan</p>
-                  <p class="mt-1 text-base font-black text-foreground">{{ planName }}</p>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2 text-[11px]">
-                  <div class="rounded-lg border border-border bg-muted/40 p-2.5">
-                    <p class="font-bold uppercase tracking-wide text-muted-foreground">Vigente desde</p>
-                    <p class="mt-1 font-black text-foreground">{{ formatPlanDate(currentPlan?.start_date) }}</p>
-                  </div>
-                  <div class="rounded-lg border border-border bg-muted/40 p-2.5">
-                    <p class="font-bold uppercase tracking-wide text-muted-foreground">Vigente hasta</p>
-                    <p class="mt-1 font-black text-foreground">{{ formatPlanDate(currentPlan?.end_date) }}</p>
-                  </div>
-                  <div class="rounded-lg border border-border bg-muted/40 p-2.5">
-                    <p class="font-bold uppercase tracking-wide text-muted-foreground">Comprobantes</p>
-                    <p class="mt-1 font-black text-foreground">{{ planVoucherUsageLabel }}</p>
-                  </div>
-                  <div class="rounded-lg border border-border bg-muted/40 p-2.5">
-                    <p class="font-bold uppercase tracking-wide text-muted-foreground">Restantes</p>
-                    <p class="mt-1 font-black text-foreground">{{ planRemainingLabel }}</p>
-                  </div>
-                  <div class="col-span-2 rounded-lg border border-border bg-muted/40 p-2.5">
-                    <p class="font-bold uppercase tracking-wide text-muted-foreground">Modalidad de consumo</p>
-                    <p class="mt-1 font-black text-foreground">{{ planConsumptionLabel }}</p>
-                  </div>
-                  <div *ngIf="shouldShowAutoRenew" class="col-span-2 rounded-lg border border-border bg-muted/40 p-2.5">
-                    <p class="font-bold uppercase tracking-wide text-muted-foreground">Renovación automática</p>
-                    <p class="mt-1 font-black text-foreground">{{ autoRenewLabel }}</p>
-                  </div>
-                </div>
-              </ng-container>
-
-              <ng-template #noActivePlan>
-                <div class="rounded-xl border border-dashed border-border bg-muted/40 p-4 text-center">
-                  <p class="text-sm font-black text-foreground">Sin plan activo</p>
-                  <p class="mt-1 text-[11px] text-muted-foreground">El administrador del sistema debe asignar una suscripción.</p>
-                </div>
-              </ng-template>
-            </div>
-          </div>
-
-          <div *ngIf="!isLiteMode || showSettingsSection('general', 'tax-profile')" class="rounded-lg border border-border bg-card shadow-sm">
-            <div class="flex items-center justify-between px-4 py-3 border-b">
-              <h3 class="text-sm font-semibold">Datos de la Empresa</h3>
-            </div>
-
-            <div class="settings-company-fields p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div>
-                <label class="block font-medium mb-1">Razon Social</label>
-                <input type="text" class="input" formControlName="businessname"
-                  [class.border-red-500]="f['businessname'].invalid && submitted" />
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div class="sm:col-span-2">
+                <label for="company-name" class="mb-1 block font-semibold text-foreground/80">Razón social</label>
+                <input id="company-name" type="text" class="input" formControlName="businessname" [class.border-red-500]="f['businessname'].invalid && submitted" />
                 <small *ngIf="f['businessname'].invalid && submitted" class="text-red-600">Campo requerido</small>
               </div>
-
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label class="block font-medium mb-1">RUC</label>
-                  <input appOnlyNumbers type="text" maxlength="13" class="input no-spinner bg-muted cursor-not-allowed"
-                    formControlName="ruc" readonly aria-readonly="true" tabindex="-1" [disabled]="true"
-                    [class.border-red-500]="f['ruc'].invalid && submitted" />
-                  <small *ngIf="f['ruc'].errors?.['required'] && submitted" class="text-red-600">Campo
-                    requerido</small>
-                  <small *ngIf="f['ruc'].errors?.['pattern'] && submitted" class="text-red-600">Debe tener 13
-                    digitos</small>
-                </div>
-
-                <div>
-                  <label class="block font-medium mb-1">Telefono</label>
-                  <input type="text" class="input" formControlName="phone"
-                    [class.border-red-500]="f['phone'].invalid && submitted" />
-                  <small *ngIf="f['phone'].invalid && submitted" class="text-red-600">Campo requerido</small>
-                </div>
-              </div>
-
               <div>
-                <label class="block font-medium mb-1">Tipo de operación</label>
-                <select class="input" formControlName="business_mode"
-                  [disabled]="true"
-                  aria-readonly="true"
-                  [class.border-red-500]="f['business_mode'].invalid && submitted">
+                <label for="company-ruc" class="mb-1 block font-semibold text-foreground/80">RUC</label>
+                <input id="company-ruc" appOnlyNumbers type="text" maxlength="13" class="input cursor-not-allowed bg-muted font-mono"
+                  formControlName="ruc" readonly aria-readonly="true" tabindex="-1" />
+                <small *ngIf="f['ruc'].errors?.['pattern'] && submitted" class="text-red-600">Debe tener 13 dígitos</small>
+              </div>
+              <div>
+                <label for="company-phone" class="mb-1 block font-semibold text-foreground/80">Teléfono</label>
+                <input id="company-phone" type="text" class="input" formControlName="phone" [class.border-red-500]="f['phone'].invalid && submitted" />
+                <small *ngIf="f['phone'].invalid && submitted" class="text-red-600">Campo requerido</small>
+              </div>
+              <div class="sm:col-span-2">
+                <label for="company-address" class="mb-1 block font-semibold text-foreground/80">Dirección matriz</label>
+                <input id="company-address" type="text" class="input" formControlName="address" [class.border-red-500]="f['address'].invalid && submitted" />
+                <small *ngIf="f['address'].invalid && submitted" class="text-red-600">Campo requerido</small>
+              </div>
+              <div>
+                <label for="company-email" class="mb-1 block font-semibold text-foreground/80">Correo</label>
+                <input id="company-email" type="email" class="input" formControlName="email" [class.border-red-500]="f['email'].invalid && submitted" />
+                <small *ngIf="f['email'].errors?.['required'] && submitted" class="text-red-600">Campo requerido</small>
+                <small *ngIf="f['email'].errors?.['email'] && submitted" class="text-red-600">Correo inválido</small>
+              </div>
+              <div>
+                <label for="company-mode" class="mb-1 block font-semibold text-foreground/80">Tipo de operación</label>
+                <select id="company-mode" class="input pointer-events-none bg-muted" formControlName="business_mode" aria-readonly="true" tabindex="-1">
                   <option value="RESTAURANTE">Restaurante / POS</option>
                   <option value="FACTURADOR">Facturador</option>
                   <option value="FACTURADA_LITE">FacturADA Lite</option>
                 </select>
-                <p class="mt-1 text-[11px] text-muted-foreground">
-                  Solo lectura. Este valor lo define el administrador del sistema.
-                </p>
-                <small *ngIf="f['business_mode'].invalid && submitted" class="text-red-600">Campo requerido</small>
+                <p class="mt-1 text-[10px] text-muted-foreground">Lo define el administrador del sistema.</p>
               </div>
-
-              <div>
-                <label class="block font-medium mb-1">Direccion</label>
-                <input type="text" class="input" formControlName="address"
-                  [class.border-red-500]="f['address'].invalid && submitted" />
-                <small *ngIf="f['address'].invalid && submitted" class="text-red-600">Campo requerido</small>
-              </div>
-
-              <div>
-                <label class="block font-medium mb-1">Email</label>
-                <input type="email" class="input" formControlName="email"
-                  [class.border-red-500]="f['email'].invalid && submitted" />
-                <small *ngIf="f['email'].errors?.['required'] && submitted" class="text-red-600">Campo
-                  requerido</small>
-                <small *ngIf="f['email'].errors?.['email'] && submitted" class="text-red-600">Correo
-                  invalido</small>
-              </div>
-
-              <ng-container *ngIf="isLiteMode">
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <label class="inline-flex items-center gap-2 text-[11px] font-medium text-foreground/80">
-                    <input type="checkbox" formControlName="obliged_accounting" readonly aria-readonly="true"/>
-                    Obligado a llevar contabilidad
-                  </label>
-                  <div>
-                    <label class="mb-1 block font-medium">Contribuyente especial</label>
-                    <input type="text" class="input bg-muted/40" formControlName="special_taxpayer_number"
-                      readonly aria-readonly="true" placeholder="No configurado" />
-                  </div>
-                  <div>
-                    <label class="mb-1 block font-medium">Régimen tributario <span class="text-red-500">*</span></label>
-                    <select class="input" formControlName="tax_regime"
-                      [class.border-red-500]="f['tax_regime'].invalid && (submitted || f['tax_regime'].touched)"
-                      readonly aria-readonly="true"
-                      >
-                      <option value="Régimen General">Régimen General</option>
-                      <option value="RIMPE Emprendedor">RIMPE Emprendedor</option>
-                      <option value="RIMPE Negocio Popular">RIMPE Negocio Popular</option>
-                    </select>
-                    <small *ngIf="f['tax_regime'].invalid && (submitted || f['tax_regime'].touched)" class="text-red-600">
-                      Selecciona un régimen tributario.
-                    </small>
-                  </div>
-                  <label class="inline-flex items-center gap-2 text-[11px] font-medium text-foreground/80">
-                    <input type="checkbox" formControlName="withholding_agent" readonly aria-readonly="true"/>
-                    Agente de retención
-                  </label>
-                  <div>
-                    <label class="mb-1 block font-medium">Tipo de emisión</label>
-                    <input type="text" class="input" formControlName="emission_type" placeholder="Normal" readonly aria-readonly="true" />
-                  </div>
-
-                </div>
-              </ng-container>
             </div>
           </div>
+        </section>
 
-          <div *ngIf="!isLiteMode || showSettingsSection('certificate')" id="firma-electronica" class="settings-signature-card rounded-lg border border-border bg-card shadow-sm settings-anchor-target">
-            <div class="px-4 py-3 border-b flex items-center justify-between">
-              <div>
-                <h3 class="text-sm font-semibold">Firma electrónica SRI</h3>
-                <p class="mt-0.5 text-[11px] text-muted-foreground">Necesaria para enviar comprobantes al SRI.</p>
-              </div>
-              <span class="rounded-full border px-2 py-0.5 text-[10px] font-bold" [ngClass]="certificateConfigured ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'">
-                {{ certificateConfigured ? certificateStatusLabel : 'Pendiente' }}
+        <section *ngIf="isLiteMode" class="rounded-xl border border-border bg-card shadow-sm">
+          <header class="border-b border-border px-4 py-3">
+            <h2 class="text-sm font-bold text-foreground">Información tributaria</h2>
+            <p class="text-muted-foreground">Datos de tu RUC que se imprimen en cada comprobante.</p>
+          </header>
+          <div class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
+            <div>
+              <label for="company-regime" class="mb-1 block font-semibold text-foreground/80">Régimen tributario <span class="text-red-500">*</span></label>
+              <select id="company-regime" class="input" formControlName="tax_regime" [class.border-red-500]="f['tax_regime'].invalid && (submitted || f['tax_regime'].touched)">
+                <option value="Régimen General">Régimen General</option>
+                <option value="RIMPE Emprendedor">RIMPE Emprendedor</option>
+                <option value="RIMPE Negocio Popular">RIMPE Negocio Popular</option>
+              </select>
+              <small *ngIf="f['tax_regime'].invalid && (submitted || f['tax_regime'].touched)" class="text-red-600">Selecciona un régimen tributario.</small>
+            </div>
+            <div>
+              <label for="company-special" class="mb-1 block font-semibold text-foreground/80">Contribuyente especial</label>
+              <input id="company-special" type="text" class="input bg-muted/40" formControlName="special_taxpayer_number" readonly aria-readonly="true" placeholder="No aplica" />
+            </div>
+            <div>
+              <label for="company-emission-type" class="mb-1 block font-semibold text-foreground/80">Tipo de emisión</label>
+              <input id="company-emission-type" type="text" class="input bg-muted/40" formControlName="emission_type" placeholder="Normal" readonly aria-readonly="true" />
+            </div>
+            <div class="flex flex-col justify-end gap-2">
+              <label class="inline-flex items-center gap-2 font-medium text-foreground/80">
+                <input type="checkbox" formControlName="obliged_accounting" aria-readonly="true" /> Obligado a llevar contabilidad
+              </label>
+              <label class="inline-flex items-center gap-2 font-medium text-foreground/80">
+                <input type="checkbox" formControlName="withholding_agent" aria-readonly="true" /> Agente de retención
+              </label>
+            </div>
+            <div *ngIf="f['provider_ruc'].value" class="sm:col-span-2">
+              <label for="company-provider-ruc" class="mb-1 block font-semibold text-foreground/80">RUC del proveedor del sistema</label>
+              <input id="company-provider-ruc" type="text" class="input cursor-not-allowed bg-muted font-mono" formControlName="provider_ruc" readonly aria-readonly="true" tabindex="-1" />
+            </div>
+          </div>
+        </section>
+
+        <!-- Ambiente (Lite): se guarda por separado -->
+        <section *ngIf="isLiteMode" class="rounded-xl border border-border bg-card shadow-sm">
+          <header class="border-b border-border px-4 py-3">
+            <h2 class="text-sm font-bold text-foreground">Ambiente de emisión</h2>
+            <p class="text-muted-foreground">Pruebas no tiene validez tributaria. Usa Producción cuando estés listo para facturar de verdad.</p>
+          </header>
+          <div class="space-y-3 p-4">
+            <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Ambiente de emisión">
+              <button *ngFor="let option of [{ value: 'PRUEBAS', label: 'Pruebas', hint: 'Para probar sin validez tributaria' }, { value: 'PRODUCCION', label: 'Producción', hint: 'Comprobantes válidos ante el SRI' }]"
+                type="button" role="radio" [attr.aria-checked]="previewEnvironment === option.value"
+                class="rounded-lg border-2 p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60"
+                [ngClass]="previewEnvironment === option.value ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'"
+                [disabled]="isSaving || isLoadingCompany || !canEditLiteSetup"
+                (click)="onLiteEnvironmentSelected(option.value)">
+                <span class="block text-sm font-bold text-foreground">{{ option.label }}
+                  <span *ngIf="ambiente === option.value" class="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">Actual</span>
+                </span>
+                <span class="block text-[11px] text-muted-foreground">{{ option.hint }}</span>
+              </button>
+            </div>
+            <p class="text-[11px] text-muted-foreground">Establecimientos y puntos de emisión son los mismos en ambos ambientes; las <a routerLink="/settings/lite/sequences" class="font-semibold text-primary hover:underline">secuencias</a> son distintas.</p>
+            <div *ngIf="previewEnvironment !== ambiente && canEditLiteSetup" class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2 text-amber-900" role="status">
+              <span class="font-semibold">Cambiarás a {{ previewEnvironment === 'PRODUCCION' ? 'Producción' : 'Pruebas' }}.</span>
+              <span class="flex gap-2">
+                <button type="button" class="btn btn-outline !px-3 !py-1 !text-[11px]" (click)="onLiteEnvironmentSelected(ambiente)" [disabled]="isSaving || isLoadingCompany">Descartar</button>
+                <button type="button" class="btn btn-primary !px-3 !py-1 !text-[11px]" (click)="saveLiteEnvironment()" [disabled]="isSaving || isLoadingCompany || !hasPendingLiteEmissionConfiguration">Guardar ambiente</button>
               </span>
             </div>
+          </div>
+        </section>
 
-            <div class="p-4 space-y-4">
-              <div *ngIf="!certificateConfigured" class="settings-certificate-help rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-[11px] text-amber-900">
-                <p class="font-bold">Aún falta cargar la firma electrónica</p>
-                <ol class="mt-2 list-decimal space-y-1 pl-4">
-                  <li>Selecciona el archivo privado con extensión <strong>.p12</strong> o <strong>.pfx</strong>.</li>
-                  <li>Escribe la contraseña del certificado.</li>
-                  <li>Pulsa <strong>Guardar configuración</strong> para validarlo.</li>
-                </ol>
-                <p class="mt-2 text-amber-800">El backend validará la contraseña y la vigencia. Nunca guardamos la contraseña en el navegador.</p>
+        <!-- Configuración clásica (no Lite) -->
+        <section *ngIf="!isLiteMode" class="rounded-xl border border-border bg-card shadow-sm">
+          <header class="border-b border-border px-4 py-3">
+            <h2 class="text-sm font-bold text-foreground">SRI</h2>
+          </header>
+          <div class="space-y-4 p-4">
+            <label class="relative inline-flex cursor-pointer items-center">
+              <input type="checkbox" class="peer sr-only" formControlName="ambiente" (change)="cambiarAmbiente()" />
+              <div class="h-6 w-11 rounded-full bg-muted transition-colors peer-checked:bg-green-600"></div>
+              <div class="absolute left-0.5 top-0.5 h-5 w-5 translate-x-1 transform rounded-full bg-card transition-transform peer-checked:translate-x-5"></div>
+              <span class="ml-3 text-sm font-semibold" [ngClass]="ambiente === 'PRODUCCION' ? 'text-green-700' : 'text-yellow-700'">Ambiente: {{ ambiente }}</span>
+            </label>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label class="mb-1 block font-medium">Código establecimiento</label>
+                <input appOnlyNumbers type="text" maxlength="3" class="input" formControlName="establishmentcode" [class.border-red-500]="f['establishmentcode'].invalid && submitted" />
+                <small *ngIf="f['establishmentcode'].errors?.['required'] && submitted" class="text-red-600">Campo requerido</small>
+                <small *ngIf="f['establishmentcode'].errors?.['pattern'] && submitted" class="text-red-600">3 dígitos</small>
               </div>
-              <div *ngIf="certificateConfigured && certificateIsBlocking" class="settings-certificate-help rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-[11px] text-red-800">
-                <p class="font-bold">La firma requiere atención</p>
-                <p class="mt-1">{{ certInfo?.lastError || 'Revisa el estado del certificado y carga uno vigente si es necesario.' }}</p>
+              <div>
+                <label class="mb-1 block font-medium">Punto de emisión</label>
+                <input appOnlyNumbers type="text" maxlength="3" class="input" formControlName="emissionpoint" [class.border-red-500]="f['emissionpoint'].invalid && submitted" />
+                <small *ngIf="f['emissionpoint'].errors?.['required'] && submitted" class="text-red-600">Campo requerido</small>
+                <small *ngIf="f['emissionpoint'].errors?.['pattern'] && submitted" class="text-red-600">3 dígitos</small>
               </div>
-              <input #firmaInput type="file" accept=".p12,.pfx" class="sr-only" (change)="onFirmaSelected($event)" />
-
-              <div class="dropzone" [class.dropzone--active]="isDraggingFirma" role="button" tabindex="0"
-                aria-label="Zona para soltar o seleccionar archivo .p12 o .pfx" (click)="firmaInput.click()"
-                (keydown.enter)="firmaInput.click()" (keydown.space)="firmaInput.click()"
-                (dragover)="onFirmaDragOver($event)" (dragleave)="onFirmaDragLeave($event)"
-                (drop)="onFirmaDrop($event)">
-                <div class="text-center pointer-events-none">
-                  <div class="text-[12px] font-medium">Arrastra tu certificado .p12 o .pfx aqui</div>
-                  <div class="text-[11px] text-muted-foreground">o haz clic para seleccionar (max 5MB)</div>
-                </div>
+              <div class="sm:col-span-2">
+                <label class="mb-1 block font-medium">URL del servicio FacturADA</label>
+                <input type="text" class="input" formControlName="service_base_url" placeholder="URL del servicio de emisión" />
               </div>
-
-              <div class="flex items-center gap-2">
-                <div class="flex-1">
-                  <input class="input h-8 text-[11px]"
-                    [value]="firmaFileName || (form.value.urlfirma ? (form.value.urlfirma | slice: form.value.urlfirma.lastIndexOf('/')+1) : 'Ningun archivo seleccionado')"
-                    readonly />
-                </div>
-                <button type="button" class="btn btn-ghost btn-sm" (click)="removeFirma()"
-                  [disabled]="!firmaFileName && !form.value.urlfirma">Quitar</button>
+              <div><label class="mb-1 block font-medium">Secuencial Factura (Producción)</label><input type="number" class="input no-spinner" formControlName="invoiceseq_prod" [class.border-red-500]="f['invoiceseq_prod'].invalid && submitted" /></div>
+              <div><label class="mb-1 block font-medium">Secuencial Factura (Pruebas)</label><input type="number" class="input no-spinner" formControlName="invoiceseq_pruebas" [class.border-red-500]="f['invoiceseq_pruebas'].invalid && submitted" /></div>
+              <div><label class="mb-1 block font-medium">Secuencial Nota de crédito (Producción)</label><input type="number" class="input no-spinner" formControlName="ncseq_prod" [class.border-red-500]="f['ncseq_prod'].invalid && submitted" /></div>
+              <div><label class="mb-1 block font-medium">Secuencial Nota de crédito (Pruebas)</label><input type="number" class="input no-spinner" formControlName="ncseq_pruebas" [class.border-red-500]="f['ncseq_pruebas'].invalid && submitted" /></div>
+              <div>
+                <label class="mb-1 block font-medium">Obligado a llevar contabilidad</label>
+                <select class="input" formControlName="obligado_a_llevar_contabilidad"><option value="NO">No</option><option value="SI">Sí</option></select>
               </div>
-
-              <div class="relative">
-                <label class="block font-medium mb-1">
-                  Clave de la firma
-                  <span *ngIf="requiresCertificatePassword" class="text-red-600">*</span>
-                </label>
-                <input [type]="showClave ? 'text' : 'password'" id="clave" class="input pr-16" formControlName="clave"
-                  [class.border-red-500]="f['clave'].invalid && submitted" placeholder="••••••••"
-                  autocomplete="new-password" />
-
-                <button type="button"
-                  class="absolute right-2 top-1/2 -translate-y-1/2 mt-3 text-[12px] text-indigo-600"
-                  (click)="showClave = !showClave">
-                  {{ showClave ? 'Ocultar' : 'Mostrar' }}
-                </button>
-
-                <small *ngIf="f['clave'].invalid && submitted" class="text-red-600">
-                  Campo requerido al cargar un certificado nuevo
-                </small>
-              </div>
-
-              <div class="rounded-lg border border-border bg-muted/40 px-3 py-2 text-[11px]">
-                <span class="font-semibold text-foreground/80">Certificado configurado:</span>
-                <span class="ml-1 font-bold" [ngClass]="certificateConfigured ? 'text-emerald-700' : 'text-muted-foreground'">
-                  {{ certificateConfigured ? 'Sí' : 'No' }}
-                </span>
-              </div>
-
-              <div class="rounded-lg border border-border bg-muted/40 px-3 py-2">
-                <div class="flex flex-wrap items-center gap-2">
-                  <span class="text-[11px] font-semibold text-foreground/80">Estado del certificado</span>
-                  <span class="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-                    [ngClass]="certificateStatusClasses">
-                    {{ certificateStatusLabel }}
-                  </span>
-                </div>
-                <p *ngIf="certificateIsBlocking" class="mt-1 text-[11px] font-semibold text-red-700">
-                  {{ certInfo?.lastError || 'La emisión de facturas está bloqueada hasta corregir el certificado.' }}
-                </p>
-              </div>
-
-              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label class="block font-medium mb-1">Válida desde</label>
-                  <input class="input" [value]="formatCertificateDate(certInfo?.validFrom)" readonly placeholder="Pendiente de validar">
-                </div>
-                <div>
-                  <label class="block font-medium mb-1">Válida hasta</label>
-                  <input class="input" [value]="formatCertificateDate(certInfo?.validTo)" readonly placeholder="Pendiente de validar">
-                </div>
-                <div>
-                  <label class="block font-medium mb-1">Días restantes</label>
-                  <input class="input" [value]="certificateDaysRemaining === null ? 'Pendiente de validar' : certificateDaysRemaining" readonly>
-                </div>
-                <div>
-                  <label class="block font-medium mb-1">Titular</label>
-                  <input class="input" [value]="certInfo?.subject || ''" readonly placeholder="Pendiente de validar">
-                </div>
-                <div>
-                  <label class="block font-medium mb-1">Emisor</label>
-                  <input class="input" [value]="certInfo?.issuer || ''" readonly placeholder="Pendiente de validar">
-                </div>
-                <div>
-                  <label class="block font-medium mb-1">Número de serie</label>
-                  <input class="input" [value]="certInfo?.serialNumber || ''" readonly placeholder="Pendiente de validar">
-                </div>
+              <div *ngIf="f['provider_ruc'].value">
+                <label class="mb-1 block font-medium">RUC del proveedor del sistema</label>
+                <input type="text" class="input cursor-not-allowed bg-muted" formControlName="provider_ruc" readonly aria-readonly="true" tabindex="-1" />
               </div>
             </div>
           </div>
-
-          
-        </div>
-
-        <section *ngIf="isLiteMode && showSettingsSection('readiness', 'api')" class="lg:col-span-2 grid grid-cols-1 gap-5 xl:grid-cols-3">
-          <article *ngIf="showSettingsSection('general', 'establishments')" class="settings-summary-card rounded-lg border border-border bg-card shadow-sm">
-            <header class="border-b border-border px-4 py-3">
-              <h3 class="text-sm font-semibold text-foreground">Establecimientos</h3>
-              <p class="mt-0.5 text-[11px] text-muted-foreground">Datos configurados para la empresa activa.</p>
-            </header>
-            <div class="p-3">
-              <div *ngIf="liteEstablishments.length; else noEstablishments" class="space-y-2">
-                <div *ngFor="let establishment of liteEstablishments" class="rounded-lg border border-border bg-muted/40 p-2.5 text-[11px]">
-                  <div class="flex items-start justify-between gap-2">
-                    <p class="font-bold text-foreground">{{ establishment.establishment_name || establishment.name }}</p>
-                    <span class="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                      [ngClass]="establishment.status === 'Activo' ? 'bg-emerald-100 text-emerald-700' : 'bg-muted text-muted-foreground'">
-                      {{ establishment.status || 'Sin estado' }}
-                    </span>
-                  </div>
-                  <p class="mt-1 text-muted-foreground">Código: <span class="font-semibold">{{ establishment.establishment_code || '—' }}</span><span *ngIf="establishment.is_main"> · Principal</span></p>
-                </div>
-              </div>
-              <ng-template #noEstablishments><p class="py-3 text-center text-[11px] text-muted-foreground">No hay establecimientos configurados.</p></ng-template>
-              <div class="mt-3 flex items-center justify-between gap-2 rounded-md bg-muted/40 px-2 py-1.5 text-[10px] text-muted-foreground">
-                <span>Resumen de la empresa activa.</span>
-                <a routerLink="/settings/lite/establishments" class="font-bold text-primary hover:underline">Administrar</a>
-              </div>
-            </div>
-          </article>
-
-          <article *ngIf="showSettingsSection('general', 'emission-points')" class="settings-summary-card rounded-lg border border-border bg-card shadow-sm">
-            <header class="border-b border-border px-4 py-3">
-              <h3 class="text-sm font-semibold text-foreground">Puntos de emisión</h3>
-              <p class="mt-0.5 text-[11px] text-muted-foreground">Solo pertenecen al negocio seleccionado.</p>
-            </header>
-            <div class="p-3">
-              <div *ngIf="liteEmissionPoints.length; else noEmissionPoints" class="space-y-2">
-                <div *ngFor="let point of liteEmissionPoints" class="rounded-lg border border-border bg-muted/40 p-2.5 text-[11px]">
-                  <div class="flex items-start justify-between gap-2">
-                    <p class="font-bold text-foreground">{{ point.emission_point_name || point.name }}</p>
-                    <span class="rounded-full px-2 py-0.5 text-[10px] font-bold" [ngClass]="point.is_default ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'">{{ point.is_default ? 'Predeterminado' : (point.status || 'Sin estado') }}</span>
-                  </div>
-                  <p class="mt-1 text-muted-foreground">{{ point.emission_point_code || '—' }} · {{ establishmentLabel(point.establishment) }}</p>
-                </div>
-              </div>
-              <ng-template #noEmissionPoints><p class="py-3 text-center text-[11px] text-muted-foreground">No hay puntos de emisión configurados.</p></ng-template>
-              <div class="mt-3 flex items-center justify-between gap-2 rounded-md bg-muted/40 px-2 py-1.5 text-[10px] text-muted-foreground">
-                <span>Filtrados por negocio y establecimiento.</span>
-                <a routerLink="/settings/lite/emission-points" class="font-bold text-primary hover:underline">Administrar</a>
-              </div>
-            </div>
-          </article>
-
-          <article *ngIf="showSettingsSection('general', 'sequences')" class="settings-summary-card rounded-lg border border-border bg-card shadow-sm">
-            <header class="border-b border-border px-4 py-3">
-              <h3 class="text-sm font-semibold text-foreground">Secuencias oficiales</h3>
-              <p class="mt-0.5 text-[11px] text-muted-foreground">Secuencias de la ubicación seleccionada, separadas por documento y ambiente.</p>
-            </header>
-            <div class="p-3">
-              <div *ngIf="selectedLiteSequences.length; else noSequences" class="space-y-2">
-                <div *ngFor="let sequence of selectedLiteSequences" class="rounded-lg border border-border bg-muted/40 p-2.5 text-[11px]">
-                  <div class="flex items-start justify-between gap-2">
-                    <p class="font-bold text-foreground">{{ sequence.document_type || 'Documento' }} · {{ sequence.environment || '—' }}</p>
-                    <span class="rounded-full px-2 py-0.5 text-[10px] font-bold" [ngClass]="sequence.status === 'Activo' ? 'bg-emerald-100 text-emerald-700' : 'bg-muted text-muted-foreground'">{{ sequence.status || 'Sin estado' }}</span>
-                  </div>
-                  <p class="mt-1 text-muted-foreground">{{ establishmentLabel(sequence.establishment) }} · {{ emissionPointLabel(sequence.emission_point) }}</p>
-                  <p class="mt-1 text-muted-foreground">Secuencial actual: <span class="font-mono font-bold text-foreground">{{ formatSequenceNumber(sequence.current_number) }}</span></p>
-                  <p class="mt-1 text-muted-foreground">Próximo número estimado: <span class="font-mono font-bold text-foreground">{{ formatNextSequenceNumber(sequence.current_number) }}</span></p>
-                </div>
-              </div>
-              <ng-template #noSequences><p class="py-3 text-center text-[11px] text-muted-foreground">No hay secuencias para el establecimiento y punto de emisión seleccionados.</p></ng-template>
-              <div class="mt-3 flex items-center justify-between gap-2 rounded-md bg-muted/40 px-2 py-1.5 text-[10px] text-muted-foreground">
-                <span>El consecutivo oficial lo asigna FacturADA.</span>
-                <a routerLink="/settings/lite/sequences" class="font-bold text-primary hover:underline">Administrar</a>
-              </div>
-            </div>
-          </article>
-
-          <article *ngIf="capabilities.isEnabled('billing') && showSettingsSection('general')" class="settings-summary-card rounded-lg border border-border bg-card shadow-sm">
-            <header class="border-b border-border px-4 py-3">
-              <h3 class="text-sm font-semibold text-foreground">Terminales fiscales</h3>
-              <p class="mt-0.5 text-[11px] text-muted-foreground">Cajas asignadas para emitir en este negocio.</p>
-            </header>
-            <div class="p-3">
-              <div *ngIf="capabilities.posTerminals.length; else noPosTerminals" class="space-y-2">
-                <div *ngFor="let terminal of capabilities.posTerminals" class="rounded-lg border border-border bg-muted/40 p-2.5 text-[11px]">
-                  <div class="flex items-start justify-between gap-2">
-                    <p class="font-bold text-foreground">{{ terminal.terminal_name || terminal.name }}</p>
-                    <span class="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                      [ngClass]="terminal.status === 'Activo' ? 'bg-emerald-100 text-emerald-700' : 'bg-muted text-muted-foreground'">
-                      {{ terminal.status || 'Sin estado' }}
-                    </span>
-                  </div>
-                  <p class="mt-1 text-muted-foreground">
-                    {{ terminal.establishment_code || '—' }}-{{ terminal.emission_point_code || '—' }}
-                    <span *ngIf="terminal.establishment_name"> · {{ terminal.establishment_name }}</span>
-                  </p>
-                </div>
-              </div>
-              <ng-template #noPosTerminals><p class="py-3 text-center text-[11px] text-muted-foreground">No hay terminales POS configurados.</p></ng-template>
-              <div class="mt-3 flex items-center justify-between gap-2 rounded-md bg-muted/40 px-2 py-1.5 text-[10px] text-muted-foreground">
-                <span>La caja seleccionada se usa al facturar.</span>
-                <a routerLink="/settings/lite/pos-terminals" class="font-bold text-primary hover:underline">Administrar</a>
-              </div>
-            </div>
-          </article>
-
-          <article *ngIf="showSettingsSection('readiness')" class="settings-summary-card xl:col-span-3 rounded-lg border border-border bg-card shadow-sm">
-            <header class="border-b border-border px-4 py-3">
-              <h3 class="text-sm font-semibold text-foreground">Estado de preparación para emisión</h3>
-            </header>
-            <div class="p-4">
-              <div *ngIf="effectiveLiteSetupReady; else setupPending" class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-800">
-                La empresa tiene la configuración mínima lista para emitir comprobantes.
-              </div>
-              <ng-template #setupPending>
-                <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
-                  <p class="font-semibold">Aún falta completar configuración.</p>
-                  <p class="mt-1">{{ liteSetupMissingLabel || 'El backend aún no indicó los elementos pendientes.' }}</p>
-                </div>
-              </ng-template>
-            </div>
-          </article>
-
-          <article *ngIf="showSettingsSection('api')" class="settings-summary-card xl:col-span-3 rounded-lg border border-sky-200 bg-sky-50/40 shadow-sm">
-            <header class="flex flex-wrap items-center justify-between gap-3 border-b border-sky-100 px-4 py-3">
-              <div>
-                <p class="text-[10px] font-bold uppercase tracking-[.12em] text-sky-700">Configuración del negocio</p>
-                <h3 class="mt-0.5 text-base font-semibold text-foreground">Integración API</h3>
-              </div>
-              <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-sky-200 bg-card text-sky-700 shadow-sm transition hover:bg-sky-50 disabled:opacity-50"
-                aria-label="Actualizar integración API" title="Actualizar" [disabled]="apiConfigurationLoading" (click)="loadApiConfiguration()">
-                <span aria-hidden="true" class="text-lg leading-none">↻</span>
-              </button>
-            </header>
-
-            <div *ngIf="apiConfigurationLoading" class="px-4 py-8 text-center text-sm text-muted-foreground">
-              Cargando configuración API...
-            </div>
-
-            <div *ngIf="!apiConfigurationLoading && (apiConfigurationAccessDenied || apiConfiguration?.can_view === false)" class="m-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
-              <p class="font-semibold">Acceso restringido</p>
-              <p class="mt-1 text-xs">No tiene permisos para consultar las integraciones API de este negocio. Solicite acceso a un Administrador o Gerente.</p>
-            </div>
-
-            <div *ngIf="!apiConfigurationLoading && apiConfigurationError && !apiConfigurationAccessDenied" class="m-4 rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-800">
-              {{ apiConfigurationError }}
-            </div>
-
-            <div *ngIf="!apiConfigurationLoading && !apiConfigurationError && !apiConfigurationAccessDenied && !apiConfigurationEnabled" class="m-4 rounded-xl border border-border bg-card px-4 py-4 text-sm text-muted-foreground">
-              La integración API no está habilitada para este negocio.
-            </div>
-
-            <ng-container *ngIf="!apiConfigurationLoading && apiConfigurationEnabled && apiConfigurationCanView">
-              <div class="grid grid-cols-1 gap-4 border-b border-sky-100 p-4 md:grid-cols-2">
-                <label class="block">
-                  <span class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">URL base API</span>
-                  <div class="mt-1 flex gap-2">
-                    <input readonly [value]="apiConfiguration?.base_url || '—'" class="min-w-0 flex-1 rounded-lg border border-border bg-card px-3 py-2 text-xs text-foreground/80" />
-                    <button type="button" aria-label="Copiar URL base API" title="Copiar URL" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:bg-sky-50 hover:text-sky-700" (click)="copyApiValue(apiConfiguration?.base_url, 'URL base API')">
-                      <span aria-hidden="true">⧉</span>
-                    </button>
-                  </div>
-                </label>
-                <div>
-                  <span class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Autenticación</span>
-                  <p class="mt-1 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground/80">{{ apiConfiguration?.authentication || 'API Key + Secret Key' }}</p>
-                </div>
-              </div>
-
-              <div class="mx-4 mt-4 rounded-lg border border-sky-100 bg-card px-3 py-3 text-[11px] leading-5 text-muted-foreground">
-                <p><strong>API Key:</strong> identifica la integración y puede copiarse desde esta pantalla.</p>
-                <p><strong>Secret Key:</strong> se entrega únicamente por un canal seguro y no puede recuperarse ni mostrarse aquí.</p>
-                <p>El ambiente del API Client debe coincidir con el ambiente enviado al emitir documentos.</p>
-              </div>
-
-              <div *ngIf="apiClients.length === 0" class="m-4 rounded-xl border border-dashed border-border bg-card px-4 py-7 text-center text-sm text-muted-foreground">
-                No hay API Clients configurados para este negocio.
-              </div>
-
-              <div *ngIf="apiClients.length > 0" class="m-4 overflow-x-auto rounded-xl border border-border bg-card">
-                <table class="min-w-[760px] w-full text-left text-xs">
-                  <thead class="bg-muted/40 text-[10px] uppercase tracking-wide text-muted-foreground">
-                    <tr>
-                      <th class="px-3 py-3 font-bold">Nombre de integración</th>
-                      <th class="px-3 py-3 font-bold">Ambiente</th>
-                      <th class="px-3 py-3 font-bold">Estado</th>
-                      <th class="px-3 py-3 font-bold">API Key</th>
-                      <th class="px-3 py-3 text-right font-bold">Límite/min</th>
-                      <th class="px-3 py-3 font-bold">Última modificación</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-slate-100">
-                    <tr *ngFor="let client of apiClients">
-                      <td class="px-3 py-3 font-semibold text-foreground">{{ client.client_name || client.name || 'Integración API' }}</td>
-                      <td class="px-3 py-3"><span class="rounded-full border px-2 py-1 text-[10px] font-bold" [ngClass]="apiEnvironmentClass(client.environment)">{{ client.environment || '—' }}</span></td>
-                      <td class="px-3 py-3"><span class="rounded-full border px-2 py-1 text-[10px] font-bold" [ngClass]="apiStatusClass(client.status)">{{ client.status || '—' }}</span></td>
-                      <td class="px-3 py-3">
-                        <div class="flex min-w-[180px] items-center gap-2">
-                          <input readonly [value]="client.api_key || '—'" class="min-w-0 flex-1 rounded-md border border-border bg-muted/40 px-2 py-1.5 font-mono text-[11px] text-foreground/80" />
-                          <button *ngIf="client.api_key" type="button" aria-label="Copiar API Key" title="Copiar API Key" class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-card text-muted-foreground hover:bg-sky-50 hover:text-sky-700" (click)="copyApiValue(client.api_key, 'API Key')"><span aria-hidden="true">⧉</span></button>
-                        </div>
-                      </td>
-                      <td class="px-3 py-3 text-right font-semibold text-foreground/80">{{ client.rate_limit ?? '—' }}</td>
-                      <td class="px-3 py-3 whitespace-nowrap text-muted-foreground">{{ client.modified || '—' }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </ng-container>
-          </article>
         </section>
-      </form>
-    </div>
+      </ng-container>
+
+      <!-- ===================== FIRMA ELECTRÓNICA ===================== -->
+      <section *ngIf="!isLiteMode || showSettingsSection('certificate')" id="firma-electronica" class="rounded-xl border border-border bg-card shadow-sm">
+        <header class="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3">
+          <div>
+            <h2 class="text-sm font-bold text-foreground">Firma electrónica</h2>
+            <p class="text-muted-foreground">El archivo con el que FacturADA firma tus comprobantes ante el SRI.</p>
+          </div>
+          <span class="rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide" [ngClass]="certificateStatusClasses">{{ certificateStatusLabel }}</span>
+        </header>
+
+        <div class="space-y-4 p-4">
+          <!-- Estado -->
+          <div *ngIf="certificateConfigured && !certificateIsBlocking && certificateDaysRemaining !== null" class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div class="rounded-lg bg-muted/40 p-3">
+              <p class="text-[10px] uppercase text-muted-foreground">Días restantes</p>
+              <p class="text-2xl font-black" [ngClass]="certificateDaysRemaining < 30 ? 'text-amber-600' : 'text-foreground'">{{ certificateDaysRemaining }}</p>
+            </div>
+            <div class="rounded-lg bg-muted/40 p-3">
+              <p class="text-[10px] uppercase text-muted-foreground">Vence</p>
+              <p class="mt-1 font-bold text-foreground">{{ formatCertificateDate(certInfo?.validTo) }}</p>
+            </div>
+            <div class="col-span-2 rounded-lg bg-muted/40 p-3">
+              <p class="text-[10px] uppercase text-muted-foreground">Titular</p>
+              <p class="mt-1 truncate font-bold text-foreground" [title]="certInfo?.subject || ''">{{ certInfo?.subject || '—' }}</p>
+            </div>
+          </div>
+
+          <div *ngIf="!certificateConfigured" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-amber-900">
+            <p class="font-bold">Aún no has cargado tu firma electrónica</p>
+            <ol class="mt-1 list-decimal space-y-0.5 pl-4 text-[11px]">
+              <li>Sube el archivo <b>.p12</b> o <b>.pfx</b> que te entregó tu proveedor de firma.</li>
+              <li>Escribe su contraseña.</li>
+              <li>Pulsa <b>Guardar cambios</b>: verificaremos que sea válida y esté vigente.</li>
+            </ol>
+          </div>
+          <div *ngIf="certificateConfigured && certificateIsBlocking" class="rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-red-800" role="alert">
+            <p class="font-bold">No se puede facturar con esta firma</p>
+            <p class="mt-1 text-[11px]">{{ certInfo?.lastError || 'Revisa el estado del certificado y carga uno vigente.' }}</p>
+          </div>
+
+          <!-- Carga -->
+          <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div>
+              <p class="mb-1 font-semibold text-foreground/80">{{ certificateConfigured ? 'Reemplazar archivo' : 'Archivo de la firma' }}</p>
+              <input #firmaInput type="file" accept=".p12,.pfx" class="sr-only" (change)="onFirmaSelected($event)" />
+              <div class="dropzone px-3 py-5 text-center" [class.dropzone--active]="isDraggingFirma" role="button" tabindex="0"
+                aria-label="Seleccionar o soltar archivo .p12 o .pfx" (click)="firmaInput.click()"
+                (keydown.enter)="firmaInput.click()" (keydown.space)="firmaInput.click()"
+                (dragover)="onFirmaDragOver($event)" (dragleave)="onFirmaDragLeave($event)" (drop)="onFirmaDrop($event)">
+                <p class="text-[12px] font-semibold text-foreground">{{ firmaFileName || 'Arrastra tu archivo .p12 o .pfx' }}</p>
+                <p class="text-[11px] text-muted-foreground">{{ firmaFileName ? 'Listo para validar' : 'o haz clic para elegirlo · hasta 5 MB' }}</p>
+              </div>
+              <p *ngIf="!firmaFileName && form.value.urlfirma" class="mt-1 truncate text-[11px] text-muted-foreground">
+                Actual: {{ form.value.urlfirma | slice: form.value.urlfirma.lastIndexOf('/') + 1 }}
+              </p>
+              <button *ngIf="firmaFileName || form.value.urlfirma" type="button" class="mt-1 text-[11px] font-semibold text-red-700 hover:underline" (click)="removeFirma()">Quitar archivo</button>
+            </div>
+            <div>
+              <label for="clave" class="mb-1 block font-semibold text-foreground/80">
+                Contraseña de la firma <span *ngIf="requiresCertificatePassword" class="text-red-600">*</span>
+              </label>
+              <div class="relative">
+                <input [type]="showClave ? 'text' : 'password'" id="clave" class="input pr-20" formControlName="clave"
+                  [class.border-red-500]="f['clave'].invalid && submitted" placeholder="••••••••" autocomplete="new-password" />
+                <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-primary" (click)="showClave = !showClave">
+                  {{ showClave ? 'Ocultar' : 'Mostrar' }}
+                </button>
+              </div>
+              <small *ngIf="f['clave'].invalid && submitted" class="text-red-600">Necesaria al cargar un archivo nuevo.</small>
+              <p class="mt-1 text-[11px] text-muted-foreground">Solo se usa para validar la firma; nunca se guarda en este navegador.</p>
+            </div>
+          </div>
+
+          <details *ngIf="certificateConfigured" class="rounded-lg border border-border px-3 py-2">
+            <summary class="cursor-pointer font-semibold text-muted-foreground">Detalles del certificado</summary>
+            <dl class="mt-2 grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
+              <div class="flex gap-2"><dt class="w-24 shrink-0 text-muted-foreground">Válida desde</dt><dd class="text-foreground">{{ formatCertificateDate(certInfo?.validFrom) }}</dd></div>
+              <div class="flex gap-2"><dt class="w-24 shrink-0 text-muted-foreground">Válida hasta</dt><dd class="text-foreground">{{ formatCertificateDate(certInfo?.validTo) }}</dd></div>
+              <div class="flex gap-2"><dt class="w-24 shrink-0 text-muted-foreground">Emisor</dt><dd class="min-w-0 truncate text-foreground" [title]="certInfo?.issuer || ''">{{ certInfo?.issuer || '—' }}</dd></div>
+              <div class="flex gap-2"><dt class="w-24 shrink-0 text-muted-foreground">N.º de serie</dt><dd class="min-w-0 truncate font-mono text-foreground">{{ certInfo?.serialNumber || '—' }}</dd></div>
+            </dl>
+          </details>
+        </div>
+      </section>
+
+      <!-- ===================== PLAN ===================== -->
+      <section *ngIf="!isLiteMode || showSettingsSection('plan')" class="rounded-xl border border-border bg-card shadow-sm">
+        <header class="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
+          <div>
+            <h2 class="text-sm font-bold text-foreground">Plan</h2>
+            <p class="text-muted-foreground">Tu suscripción y el consumo de comprobantes.</p>
+          </div>
+          <span class="rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide" [ngClass]="planStatusClasses">{{ hasCurrentPlan ? planStatus : 'Sin plan' }}</span>
+        </header>
+        <div class="p-4">
+          <ng-container *ngIf="hasCurrentPlan; else noActivePlan">
+            <div *ngIf="planIsInactive" class="mb-3 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 font-semibold text-orange-800" role="alert">El plan no está activo: la emisión puede estar bloqueada.</div>
+            <p class="text-lg font-black text-foreground">{{ planName }}</p>
+            <p class="text-muted-foreground">{{ planConsumptionLabel }}</p>
+            <dl class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div class="rounded-lg bg-muted/40 p-3"><dt class="text-[10px] uppercase text-muted-foreground">Comprobantes</dt><dd class="mt-1 font-black text-foreground">{{ planVoucherUsageLabel }}</dd></div>
+              <div class="rounded-lg bg-muted/40 p-3"><dt class="text-[10px] uppercase text-muted-foreground">Restantes</dt><dd class="mt-1 font-black text-foreground">{{ planRemainingLabel }}</dd></div>
+              <div class="rounded-lg bg-muted/40 p-3"><dt class="text-[10px] uppercase text-muted-foreground">Desde</dt><dd class="mt-1 font-bold text-foreground">{{ formatPlanDate(currentPlan?.start_date) }}</dd></div>
+              <div class="rounded-lg bg-muted/40 p-3"><dt class="text-[10px] uppercase text-muted-foreground">Hasta</dt><dd class="mt-1 font-bold text-foreground">{{ formatPlanDate(currentPlan?.end_date) }}</dd></div>
+            </dl>
+            <p *ngIf="shouldShowAutoRenew" class="mt-3 text-muted-foreground">Renovación automática: <b class="text-foreground">{{ autoRenewLabel }}</b></p>
+          </ng-container>
+          <ng-template #noActivePlan>
+            <div class="rounded-lg border border-dashed border-border px-4 py-8 text-center">
+              <p class="text-sm font-bold text-foreground">Sin plan activo</p>
+              <p class="mt-1 text-muted-foreground">El administrador del sistema debe asignar una suscripción.</p>
+            </div>
+          </ng-template>
+        </div>
+      </section>
+
+      <!-- Barra de guardado -->
+      <div *ngIf="showSaveBar" class="sticky bottom-3 z-10 flex items-center justify-between gap-3 rounded-xl border border-border bg-card/95 px-4 py-2.5 shadow-lg backdrop-blur">
+        <p class="text-[11px] text-muted-foreground">{{ isLiteMode && showSettingsSection('certificate') ? 'Al guardar verificamos que la firma sea válida y esté vigente.' : 'Los cambios se aplican a todos los comprobantes nuevos.' }}</p>
+        <button type="submit" class="btn btn-primary !text-xs" [disabled]="isSaving || isLoadingCompany || !canEditLiteSetup">
+          {{ isSaving ? 'Guardando…' : 'Guardar cambios' }}
+        </button>
+      </div>
+    </form>
   </div>
 </div>

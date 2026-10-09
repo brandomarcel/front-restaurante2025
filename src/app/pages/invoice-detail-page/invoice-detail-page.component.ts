@@ -93,8 +93,9 @@ export class InvoiceDetailPageComponent implements OnInit {
     this.fetch(id);
   }
 
-  fetch(id: string) {
-    this.spinner.show();
+  /** `silent` refresca sin bloquear la pantalla (actualizaciones en tiempo real). */
+  fetch(id: string, silent = false) {
+    if (!silent) this.spinner.show();
     this.loadFailed = false;
     this.invoicesSvc.getInvoiceDetail(id).subscribe({
       next: (res: any) => {
@@ -624,7 +625,7 @@ export class InvoiceDetailPageComponent implements OnInit {
   electronicDocumentUpdated(document: any): void {
     if (document.name !== this.invoice?.name) this.router.navigate(['/dashboard/invoices', document.name]);
     this.invoice = document;
-    this.fetch(document.name);
+    this.fetch(document.name, true);
   }
   get liteProviderCode(): string {
     return String(this.invoice?.sri?.sri_code || this.invoice?.sri?.status_code || this.invoice?.sri?.code ||
