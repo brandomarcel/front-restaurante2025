@@ -1,4 +1,4 @@
-import { backendFlag, canRegenerateElectronicDocument, electronicDocumentLabel } from './electronic-document';
+import { backendFlag, canVerifyMissingSriDocument, canRegenerateElectronicDocument, electronicDocumentLabel, electronicStatusView } from './electronic-document';
 import { getLiteInvoiceAction } from './lite-invoice-actions';
 
 describe('Electronic document contract', () => {
@@ -34,5 +34,32 @@ describe('Electronic document contract', () => {
     const document = { status: 'Emitida', electronic: { access_key: 'key', manual_reviewed_at: '2026-10-01' } };
     expect(canRegenerateElectronicDocument(document)).toBeFalse();
     expect(canRegenerateElectronicDocument({ ...document, electronic: { ...document.electronic, regeneration_reason: 'Verificado', manual_review_required: '0' } })).toBeTrue();
+  });
+  it('closes a replaced original even when its historical status is still pending', () => {
+    for (const status of ['Emitida', 'En Revision', 'Error de Envio', 'Pendiente Emision', 'Rechazada']) {
+      for (const replacement of [{ regenerated_invoice: 'FLINV-NEW' }, { electronic: { regenerated_invoice: 'FLINV-NEW' } }]) {
+        const document = { status, access_key: 'key', manual_reviewed_at: '2026-10-01',
+          regeneration_reason: 'Verificado', ...replacement };
+        expect(getLiteInvoiceAction(document)).toBe('none');
+        expect(canVerifyMissingSriDocument(document)).toBeFalse();
+        expect(canRegenerateElectronicDocument(document)).toBeFalse();
+      }
+    }
+  });
+  it('retains consultation as the only action for SRI codes 43 and 70', () => {
+    for (const code of ['43', '70']) {
+      expect(getLiteInvoiceAction({ status: 'Error de Envio', emission: { sri_code: code } })).toBe('consult');
+      expect(getLiteInvoiceAction({ status: 'Emitida', regenerated_invoice: 'FLINV-NEW', emission: { sri_code: code } })).toBe('none');
+    }
+  });
+  it('derives a single label and tone for Lite and Restaurante badges', () => {
+    expect(electronicStatusView({ status: 'Autorizada' }, true)).toEqual({ label: 'Autorizada', tone: 'success' });
+    expect(electronicStatusView({ status: 'Rechazada', electronic: { authorization_status: 'NO_AUTORIZADO' } }, true))
+      .toEqual({ label: 'No autorizada', tone: 'danger' });
+    expect(electronicStatusView({ status: 'Emitida' }, true)).toEqual({ label: 'Autorización pendiente', tone: 'warning' });
+    expect(electronicStatusView({ status: 'Reemplazada' }, true).tone).toBe('neutral');
+    expect(electronicStatusView({ sri: { status: 'AUTORIZADO' } }, false)).toEqual({ label: 'Autorizada', tone: 'success' });
+    expect(electronicStatusView({ status: 'Emitida', sri: { provider_status: 'PROCESSING' } }, false).label).toBe('Procesando');
+    expect(electronicStatusView({}, false)).toEqual({ label: 'No informado', tone: 'neutral' });
   });
 });

@@ -301,9 +301,7 @@ export class CompanyComponent implements OnInit, DoCheck {
 
   get hasPendingLiteEmissionConfiguration(): boolean {
     if (!this.isLiteMode) return false;
-    return this.previewEnvironment !== this.ambiente
-      || this.selectedLiteEstablishmentCode !== this.savedLiteEstablishmentCode
-      || this.selectedLiteEmissionPointCode !== this.savedLiteEmissionPointCode;
+    return this.previewEnvironment !== this.ambiente;
   }
 
   get selectedLiteEstablishmentCode(): string {
@@ -596,49 +594,16 @@ export class CompanyComponent implements OnInit, DoCheck {
   }
 
   onLiteEstablishmentSelected(value: unknown): void {
-    const establishment = this.activeLiteEstablishments.find((item: any) => this.liteEstablishmentId(item) === String(value || '').trim());
-    if (!establishment) {
-      this.form.patchValue({ selected_establishment: '', selected_emission_point: '', establishmentcode: '', emissionpoint: '' }, { emitEvent: false });
-      this.capabilities.clearLiteDocumentSelection();
-      const business = String(this.capabilities.activeBusinessId || this.companyId || '').trim();
-      if (business) localStorage.removeItem(`lite_active_establishment:${business}`);
-      this.updateLiteInvoiceSequence(this.previewEnvironment);
-      return;
-    }
-    const points = this.capabilities.activeEmissionPointsFor(establishment);
-    const preferred = points.find((item: any) => this.normalizeCheck(item?.is_default)) || (points.length === 1 ? points[0] : null);
-    const establishmentId = this.liteEstablishmentId(establishment);
-    const pointId = preferred ? this.liteEmissionPointId(preferred) : '';
-    this.form.patchValue({
-      selected_establishment: establishmentId,
-      selected_emission_point: pointId,
-      establishmentcode: establishment.establishment_code || '',
-      establishment_name: establishment.establishment_name || '',
-      emissionpoint: preferred?.emission_point_code || '',
-      emission_point_name: preferred?.emission_point_name || ''
-    }, { emitEvent: false });
-    const business = String(this.capabilities.activeBusinessId || this.companyId || '').trim();
-    if (business) localStorage.setItem(`lite_active_establishment:${business}`, establishmentId);
-    this.capabilities.setLiteDocumentSelection(establishmentId, pointId);
+    if (!this.canEditLiteSetup || this.isSaving || this.isLoadingCompany) return;
+    if (!this.capabilities.selectLiteEstablishment(String(value || '').trim())) return;
+    this.patchLiteDocumentSelection();
     this.updateLiteInvoiceSequence(this.previewEnvironment);
   }
 
   onLiteEmissionPointSelected(value: unknown): void {
-    const establishment = this.selectedLiteEstablishment;
-    const point = this.activeLiteEmissionPoints.find((item: any) => this.liteEmissionPointId(item) === String(value || '').trim());
-    if (!establishment || !point) {
-      this.form.patchValue({ selected_emission_point: '', emissionpoint: '' }, { emitEvent: false });
-      this.capabilities.clearLiteDocumentSelection();
-      this.updateLiteInvoiceSequence(this.previewEnvironment);
-      return;
-    }
-    const pointId = this.liteEmissionPointId(point);
-    this.form.patchValue({
-      selected_emission_point: pointId,
-      emissionpoint: point.emission_point_code || '',
-      emission_point_name: point.emission_point_name || ''
-    }, { emitEvent: false });
-    this.capabilities.setLiteDocumentSelection(this.liteEstablishmentId(establishment), pointId);
+    if (!this.canEditLiteSetup || this.isSaving || this.isLoadingCompany) return;
+    if (!this.capabilities.selectLiteEmissionPoint(String(value || '').trim())) return;
+    this.patchLiteDocumentSelection();
     this.updateLiteInvoiceSequence(this.previewEnvironment);
   }
 
@@ -719,21 +684,11 @@ export class CompanyComponent implements OnInit, DoCheck {
 
   saveLiteEnvironment(): void {
     if (!this.canEditLiteSetup || this.isSaving || this.isLoadingCompany || !this.companyId) return;
-    if (!this.selectedLiteEstablishment || !this.selectedLiteEmissionPoint) {
-      this.alertService.error('Selecciona un establecimiento y un punto de emisión activos.');
-      return;
-    }
     const value = this.previewEnvironment;
     const target = this.normalizeEnvironment(value);
     const previous = this.ambiente;
     if (!this.hasPendingLiteEmissionConfiguration) {
       this.updateLiteInvoiceSequence(target);
-      return;
-    }
-
-    const sequence = this.findLiteInvoiceSequence(target);
-    if (!sequence) {
-      this.alertService.error('No existe una secuencia activa para este ambiente.');
       return;
     }
 
@@ -747,8 +702,8 @@ export class CompanyComponent implements OnInit, DoCheck {
 
     this.isSaving = true;
     this.alertService.confirm(
-      '¿Deseas guardar la configuración de emisión?',
-      `Ambiente: ${target === 'PRODUCCION' ? 'Producción' : 'Pruebas'}. Se guardarán también el establecimiento, punto y consecutivo de la secuencia seleccionada.`
+      '¿Deseas guardar el ambiente de emisión?',
+      `Ambiente: ${target === 'PRODUCCION' ? 'Producción' : 'Pruebas'}. El establecimiento y el punto se elegirán al facturar.`
     ).then((result) => {
       if (!result.isConfirmed) {
         this.isSaving = false;
@@ -1108,55 +1063,31 @@ export class CompanyComponent implements OnInit, DoCheck {
   }
 
   private findLiteInvoiceSequence(environment: 'PRUEBAS' | 'PRODUCCION'): any | null {
-    return this.capabilities.getLiteDocumentConfiguration('Factura', environment)?.sequence || null;
+    // Settings previews its selected location, even when a POS terminal is active.
+    return this.selectedLiteSequences.find((sequence: any) =>
+      (!sequence.business || sequence.business === this.capabilities.activeBusinessId)
+      && sequence.document_type === 'Factura'
+      && (!sequence.status || sequence.status === 'Activo')
+      && this.normalizeEnvironment(sequence.environment) === environment
+    ) || null;
   }
 
   private syncLiteDocumentSelection(): void {
-    const business = String(this.capabilities.activeBusinessId || this.companyId || '').trim();
-    const savedEstablishmentId = business
-      ? String(localStorage.getItem(`lite_active_establishment:${business}`) || '').trim()
-      : '';
-    const formEstablishmentId = String(this.form?.get('selected_establishment')?.value || '').trim();
-    // Al cargar el setup, el servicio central ya eligió tax_context o, si
-    // falta, el establecimiento is_main. Este respaldo evita que el combo
-    // quede vacío mientras Angular termina de sincronizar ese estado.
-    const capabilityEstablishment = this.capabilities.selectedLiteEstablishment;
-    const establishment = capabilityEstablishment
-      || this.activeLiteEstablishments.find((item: any) => this.normalizeCheck(item?.is_main))
-      || this.activeLiteEstablishments.find((item: any) => this.liteEstablishmentId(item) === savedEstablishmentId)
-      || this.activeLiteEstablishments.find((item: any) => this.liteEstablishmentId(item) === formEstablishmentId);
-    const points = establishment ? this.capabilities.activeEmissionPointsFor(establishment) : [];
-    const formPointId = String(this.form?.get('selected_emission_point')?.value || '').trim();
-    const capabilityPoint = capabilityEstablishment
-      && establishment
-      && this.liteEstablishmentId(establishment) === this.liteEstablishmentId(capabilityEstablishment)
-      ? this.capabilities.selectedLiteEmissionPoint
-      : null;
-    const point = capabilityPoint
-      || points.find((item: any) => this.normalizeCheck(item?.is_default))
-      || points.find((item: any) => this.liteEmissionPointId(item) === formPointId)
-      || (points.length === 1 ? points[0] : null);
+    this.capabilities.restoreLiteDocumentSelection();
+    this.patchLiteDocumentSelection();
+  }
+
+  private patchLiteDocumentSelection(): void {
+    const establishment = this.capabilities.selectedLiteEstablishment;
+    const point = this.capabilities.selectedLiteEmissionPoint;
     this.form.patchValue({
-      selected_establishment: establishment ? this.liteEstablishmentId(establishment) : '',
-      selected_emission_point: point ? this.liteEmissionPointId(point) : '',
+      selected_establishment: this.liteEstablishmentId(establishment),
+      selected_emission_point: this.liteEmissionPointId(point),
       establishmentcode: establishment?.establishment_code || '',
       establishment_name: establishment?.establishment_name || '',
       emissionpoint: point?.emission_point_code || '',
       emission_point_name: point?.emission_point_name || ''
     }, { emitEvent: false });
-    if (business && establishment) {
-      const establishmentId = this.liteEstablishmentId(establishment);
-      const pointId = point ? this.liteEmissionPointId(point) : '';
-      localStorage.setItem(`lite_active_establishment:${business}`, establishmentId);
-      // Mantener la misma selección que utilizan facturación, POS y el resto
-      // de la aplicación; el combo y el estado central no deben divergir.
-      this.capabilities.setLiteDocumentSelection(establishmentId, pointId);
-    } else {
-      // La UI no puede conservar un punto suelto: ambos controles deben
-      // pertenecer a la misma ubicación fiscal activa.
-      this.capabilities.clearLiteDocumentSelection();
-      if (business) localStorage.removeItem(`lite_active_establishment:${business}`);
-    }
   }
 
   private resetLiteEmissionView(): void {
@@ -1418,34 +1349,19 @@ export class CompanyComponent implements OnInit, DoCheck {
       payload.business = business;
     }
 
-    // El guardado general también respeta la configuración fiscal visible.
-    // Solo enviamos consecutivo cuando existe la secuencia validada; crear o
-    // modificar secuencias se mantiene exclusivamente en su propio módulo.
-    if (this.isLiteMode && this.selectedLiteEstablishmentCode && this.selectedLiteEmissionPointCode && this.hasValidLiteInvoiceSequence) {
-      payload.establishment_code = this.selectedLiteEstablishmentCode;
-      payload.emission_point_code = this.selectedLiteEmissionPointCode;
-      payload.current_number = this.liteSequenceCurrentNumber ?? 0;
-    }
+    // Fiscal defaults are saved by their dedicated action, never by general edits.
 
     return payload;
   }
 
-  /** Payload mínimo del contrato save_lite_setup para cambiar la ubicación
-   * principal o el ambiente. Los IDs internos no se envían a este endpoint. */
+  /** El ambiente pertenece al negocio; la ubicación se elige al facturar. */
   private buildLiteEmissionConfigurationPayload(environment: 'PRUEBAS' | 'PRODUCCION'): {
     business: string;
     environment: 'Pruebas' | 'Produccion';
-    establishment_code: string;
-    emission_point_code: string;
-    current_number: number;
   } {
-    const business = String(this.companyId || this.capabilities.businessId || localStorage.getItem('businessId') || '').trim();
     return {
-      business,
-      environment: this.toBackendEnvironment(environment),
-      establishment_code: this.selectedLiteEstablishmentCode,
-      emission_point_code: this.selectedLiteEmissionPointCode,
-      current_number: this.liteSequenceCurrentNumber ?? 0
+      business: String(this.companyId || this.capabilities.businessId || '').trim(),
+      environment: this.toBackendEnvironment(environment)
     };
   }
 

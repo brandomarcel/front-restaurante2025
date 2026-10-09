@@ -1,18 +1,18 @@
 {
   "/api": {
-    "target": "http://192.168.100.195:8002",
+    "target": "http://127.0.0.1:8002",
     "secure": false,
-    "changeOrigin": false,
+    "changeOrigin": true,
     "headers": {
       "X-Frappe-Site-Name": "facturada_core_simple_test"
     },
     "logLevel": "debug"
   },
   "/socket.io": {
-    "target": "http://192.168.100.195:9000",
+    "target": "http://127.0.0.1:9000",
     "ws": true,
     "secure": false,
-    "changeOrigin": false,
+    "changeOrigin": true,
     "headers": {
       "X-Frappe-Site-Name": "facturada_core_simple_test"
     },

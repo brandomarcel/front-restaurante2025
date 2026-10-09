@@ -13,33 +13,7 @@ import { PaymentsService } from 'src/app/services/payments.service';
 import { UtilsService } from 'src/app/core/services/utils.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
-type FilterType = 'date' | 'number' | 'text' | 'select' | 'payment';
-
-interface FilterOption {
-  label: string;
-  value: string | number;
-}
-
-interface ReportFilterDefinition {
-  key: string;
-  label: string;
-  type: FilterType;
-  required?: boolean;
-  placeholder?: string;
-  options?: FilterOption[];
-}
-
-interface ReportDefinition {
-  name: string;
-  title: string;
-  description: string;
-  badge: string;
-  accent: string;
-  defaultLimit: number;
-  visibleColumns: string[];
-  filters: ReportFilterDefinition[];
-  restaurantOnly?: boolean;
-}
+import { ReportDefinition, reportDefinitions } from './frappe-report-definitions';
 
 @Component({
   selector: 'app-frappe-reports',
@@ -48,122 +22,23 @@ interface ReportDefinition {
   templateUrl: './frappe-reports.component.html'
 })
 export class FrappeReportsComponent implements OnInit, OnDestroy {
-  reports: ReportDefinition[] = [
-    {
-      name: 'Orders Report',
-      title: 'Órdenes',
-      description: 'Ventas por orden, estado, tipo de consumo, factura y forma de pago.',
-      badge: 'Operación',
-      accent: 'from-indigo-500 to-violet-500',
-      defaultLimit: 50,
-      visibleColumns: [
-        'Orden',
-        'Fecha',
-        'Tipo Orden',
-        'Estado Orden',
-        'Documento',
-        'Factura',
-        'Estado SRI',
-        'Forma Pago Factura',
-        'Total'
-      ],
-      filters: [
-        { key: 'from_date', label: 'Desde', type: 'date', required: true },
-        { key: 'to_date', label: 'Hasta', type: 'date', required: true },
-        { key: 'estado', label: 'Documento', type: 'select', options: this.options(['Nota Venta', 'Factura']) },
-        { key: 'status', label: 'Estado orden', type: 'select', options: this.options(['Ingresada', 'Preparación', 'Cerrada']) },
-        { key: 'type_orden', label: 'Tipo orden', type: 'select', options: this.options(['Servirse', 'Llevar', 'Domicilio']) },
-        { key: 'payment_method', label: 'Forma de pago', type: 'payment' },
-        { key: 'limit', label: 'Límite', type: 'number' }
-      ],
-      restaurantOnly: true
-    },
-    {
-      name: 'Productos Más Vendidos',
-      title: 'Productos más vendidos',
-      description: 'Ranking de productos por cantidad, órdenes, subtotal, IVA y total.',
-      badge: 'Productos',
-      accent: 'from-emerald-500 to-teal-500',
-      defaultLimit: 50,
-      visibleColumns: [
-        'Producto',
-        'Código',
-        'Nombre Producto',
-        'Categoría',
-        'Cantidad Vendida',
-        'Órdenes',
-        'Total',
-        'Última Venta'
-      ],
-      filters: [
-        { key: 'from_date', label: 'Desde', type: 'date', required: true },
-        { key: 'to_date', label: 'Hasta', type: 'date', required: true },
-        { key: 'estado', label: 'Documento', type: 'select', options: this.options(['Nota Venta', 'Factura']) },
-        { key: 'type_orden', label: 'Tipo orden', type: 'select', options: this.options(['Servirse', 'Llevar', 'Domicilio']) },
-        { key: 'limit', label: 'Límite', type: 'number' }
-      ]
-    },
-    {
-      name: 'Comprobantes Electronicos',
-      title: 'Comprobantes electrónicos',
-      description: 'Facturas y notas de crédito con estado interno, SRI, plan y clave de acceso.',
-      badge: 'SRI',
-      accent: 'from-amber-500 to-orange-500',
-      defaultLimit: 100,
-      visibleColumns: [
-        'Tipo',
-        'Documento',
-        'Fecha Emisión',
-        'Total',
-        'Estado',
-        'Estado SRI',
-        'Secuencial'
-      ],
-      filters: [
-        { key: 'from_date', label: 'Desde', type: 'date', required: true },
-        { key: 'to_date', label: 'Hasta', type: 'date', required: true },
-        { key: 'tipo', label: 'Tipo', type: 'select', options: this.options(['Factura', 'Nota de Credito']) },
-        { key: 'status', label: 'Estado', type: 'select', options: this.options(['BORRADOR', 'AUTORIZADO', 'RECHAZADO', 'ERROR', 'ANULADA']) },
-        { key: 'einvoice_status', label: 'Estado SRI', type: 'select', options: this.options(['BORRADOR', 'EN COLA', 'FIRMADO', 'ENVIADO', 'AUTORIZADO', 'RECHAZADO', 'ERROR']) },
-        { key: 'limit', label: 'Límite', type: 'number' }
-      ]
-    },
-    {
-      name: 'Ventas por Forma de Pago',
-      title: 'Ventas por forma de pago',
-      description: 'Totales cobrados por método interno y código SRI.',
-      badge: 'Pagos',
-      accent: 'from-sky-500 to-blue-500',
-      defaultLimit: 100,
-      visibleColumns: [
-        'Forma de Pago',
-        'Nombre',
-        'Código SRI',
-        'Facturas',
-        'Total Cobrado',
-        'Promedio',
-        'Última Fecha'
-      ],
-      filters: [
-        { key: 'from_date', label: 'Desde', type: 'date', required: true },
-        { key: 'to_date', label: 'Hasta', type: 'date', required: true },
-        { key: 'payment_method', label: 'Forma de pago', type: 'payment' },
-        { key: 'einvoice_status', label: 'Estado SRI', type: 'select', options: this.options(['AUTORIZADO', 'BORRADOR', 'EN COLA', 'FIRMADO', 'ENVIADO', 'RECHAZADO', 'ERROR']) },
-        { key: 'limit', label: 'Límite', type: 'number' }
-      ]
-    }
-  ];
+  reports: ReportDefinition[] = reportDefinitions(false);
 
   selectedReportName = this.reports[0].name;
   filters: Record<string, any> = {};
   columns: FrappeReportColumn[] = [];
   rows: any[] = [];
+  private hasTotalRow = false;
   loading = false;
   exporting = false;
   errorMessage = '';
   payments: any[] = [];
 
   private routeSub?: Subscription;
+  private querySub?: Subscription;
+  private exportSub?: Subscription;
+  private paymentsSub?: Subscription;
+  private resultContext?: { business: string | null; report: string; filters: string };
 
   constructor(
     private route: ActivatedRoute,
@@ -175,14 +50,7 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    if (this.capabilities.features.restaurant === true) {
-      this.reports = [...this.restaurantReports(), ...this.reports.filter((report) => report.restaurantOnly !== true)];
-    } else {
-      // Orders Report pertenece exclusivamente al módulo Restaurante.
-      // No debe quedar disponible para negocios de facturación/API aunque se
-      // acceda a la pantalla mediante una ruta antigua o un enlace guardado.
-      this.reports = this.reports.filter((report) => report.restaurantOnly !== true);
-    }
+    this.reports = reportDefinitions(this.capabilities.features.restaurant === true);
     this.reports = this.reports.filter((report) => this.canViewReport(report));
     this.selectedReportName = this.reports[0]?.name || '';
     if (!this.canViewReports() || !this.reports.length) {
@@ -199,44 +67,11 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
     });
   }
 
-  private restaurantReports(): ReportDefinition[] {
-    return [
-      {
-        name: 'FacturADA Restaurant Orders',
-        title: 'Órdenes de restaurante',
-        description: 'Seguimiento por estado, tipo de consumo y forma de pago.',
-        badge: 'Restaurante',
-        accent: 'from-indigo-500 to-violet-500',
-        defaultLimit: 50,
-        visibleColumns: ['Orden', 'Fecha', 'Cliente', 'Tipo Orden', 'Estado Orden', 'Subtotal', 'IVA', 'Total'],
-        filters: [
-          { key: 'from_date', label: 'Desde', type: 'date', required: true },
-          { key: 'to_date', label: 'Hasta', type: 'date', required: true },
-          { key: 'status', label: 'Estado', type: 'select', options: this.options(['Ingresada', 'Preparacion', 'Lista', 'Cerrada', 'Cancelada']) },
-          { key: 'type_orden', label: 'Tipo', type: 'select', options: this.options(['Servirse', 'Llevar', 'Domicilio']) },
-          { key: 'limit', label: 'Límite', type: 'number' }
-        ]
-      },
-      {
-        name: 'FacturADA Restaurant Sales by Payment',
-        title: 'Ventas por forma de pago',
-        description: 'Cobros de restaurante agrupados por método de pago.',
-        badge: 'Pagos',
-        accent: 'from-emerald-500 to-teal-500',
-        defaultLimit: 100,
-        visibleColumns: ['Forma de Pago', 'Cantidad', 'Total', 'Fecha'],
-        filters: [
-          { key: 'from_date', label: 'Desde', type: 'date', required: true },
-          { key: 'to_date', label: 'Hasta', type: 'date', required: true },
-          { key: 'payment_method', label: 'Forma de pago', type: 'payment' },
-          { key: 'limit', label: 'Límite', type: 'number' }
-        ]
-      }
-    ];
-  }
-
   ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
+    this.querySub?.unsubscribe();
+    this.exportSub?.unsubscribe();
+    this.paymentsSub?.unsubscribe();
   }
 
   get selectedReport(): ReportDefinition {
@@ -245,6 +80,10 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
 
   get hasRows(): boolean {
     return this.rows.length > 0;
+  }
+
+  get recordCount(): number {
+    return Math.max(0, this.rows.length - (this.hasTotalRow ? 1 : 0));
   }
 
   get displayColumns(): FrappeReportColumn[] {
@@ -258,6 +97,13 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
   }
 
   selectReport(reportName: string, fetch = true): void {
+    this.querySub?.unsubscribe();
+    this.resultContext = undefined;
+    this.hasTotalRow = false;
+    if (reportName === 'Orders Report') reportName = 'FacturADA Restaurant Orders';
+    if (reportName === 'Ventas por Forma de Pago' && !this.reports.some(report => report.name === reportName)) {
+      reportName = 'FacturADA Restaurant Sales by Payment';
+    }
     const report = this.reports.find((item) => item.name === reportName) || this.reports[0] || this.emptyReport();
     this.selectedReportName = report.name;
     this.filters = this.buildDefaultFilters(report);
@@ -276,18 +122,29 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
     }
     if (!this.validateFilters()) return;
 
+    this.querySub?.unsubscribe();
+    const business = this.capabilities.activeBusinessId;
+    const report = this.selectedReport.name;
+    const filters = this.cleanFilters(this.filters);
+    this.resultContext = undefined;
+    this.hasTotalRow = false;
+    this.rows = [];
+    this.columns = [];
     this.loading = true;
     this.errorMessage = '';
     this.spinner.show();
 
-    this.reportSvc.run(this.selectedReport.name, this.cleanFilters(this.filters))
+    this.querySub = this.reportSvc.run(report, filters)
       .pipe(finalize(() => {
         this.loading = false;
         this.spinner.hide();
       }))
       .subscribe({
         next: (response) => {
+          if (business !== this.capabilities.activeBusinessId || report !== this.selectedReport.name) return;
+          this.resultContext = { business, report, filters: JSON.stringify(filters) };
           const message = response?.message || {};
+          this.hasTotalRow = Number(message['add_total_row']) === 1;
           this.rows = Array.isArray(message.result) ? message.result : [];
           this.columns = this.normalizeColumns(message.columns || []);
           if (!this.columns.length && this.rows.length && !Array.isArray(this.rows[0])) {
@@ -300,6 +157,7 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
           }
         },
         error: (error) => {
+          if (business !== this.capabilities.activeBusinessId || report !== this.selectedReport.name) return;
           this.columns = [];
           this.rows = [];
           this.errorMessage = this.readReportError(error);
@@ -314,10 +172,17 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
   }
 
   exportExcel(): void {
-    if (this.exporting || !this.canViewReports() || !this.canViewReport(this.selectedReport) || !this.validateFilters()) return;
+    if (this.loading || this.exporting || !this.canViewReports() || !this.canViewReport(this.selectedReport) || !this.validateFilters()) return;
+    const business = this.capabilities.activeBusinessId;
+    const report = this.selectedReport.name;
+    const filters = this.cleanFilters(this.filters);
+    if (!this.resultContext || this.resultContext.business !== business || this.resultContext.report !== report
+      || this.resultContext.filters !== JSON.stringify(filters)) {
+      toast.error('Consulta el reporte con los filtros actuales antes de exportar.');
+      return;
+    }
 
-    const visibleIndexes = this.getVisibleColumnIndexes();
-    if (!visibleIndexes.length) {
+    if (!this.columns.length) {
       toast.error('Consulta el reporte antes de exportar para identificar las columnas visibles.');
       return;
     }
@@ -325,14 +190,16 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
     this.exporting = true;
     this.spinner.show();
 
-    this.reportSvc.exportExcel(this.selectedReport.name, this.cleanFilters(this.filters), visibleIndexes)
+    const filename = this.buildExportFilename();
+    this.exportSub = this.reportSvc.exportExcel(report, filters)
       .pipe(finalize(() => {
         this.exporting = false;
         this.spinner.hide();
       }))
       .subscribe({
         next: (blob) => {
-          this.downloadBlob(blob, this.buildExportFilename());
+          if (business !== this.capabilities.activeBusinessId || report !== this.selectedReport.name) return;
+          this.downloadBlob(blob, filename);
           toast.success('Reporte exportado correctamente.');
         },
         error: (error) => {
@@ -353,6 +220,7 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
 
   isMoneyColumn(column: FrappeReportColumn): boolean {
     const type = String(column.fieldtype || '').toLowerCase();
+    if (['int', 'float', 'percent', 'check', 'date', 'datetime'].includes(type)) return false;
     const key = `${column.fieldname || ''} ${column.label || ''}`.toLowerCase();
     return type === 'currency' || /\b(total|subtotal|iva|promedio|cobrado|precio)\b/.test(key);
   }
@@ -371,6 +239,7 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
   formatCell(row: any, column: FrappeReportColumn, index: number): string {
     const value = this.getCell(row, column, index);
     if (value === null || value === undefined || value === '') return '—';
+    if (column.fieldtype === 'Check') return value === true || value === 1 || value === '1' ? 'Sí' : 'No';
     if (this.isDateColumn(column)) return this.formatDate(value);
     return String(value);
   }
@@ -387,7 +256,7 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
   }
 
   private loadPayments(): void {
-    this.paymentsSvc.getAll().subscribe({
+    this.paymentsSub = this.paymentsSvc.getAll().subscribe({
       next: (res: any[]) => {
         this.payments = (Array.isArray(res) ? res : []).map((payment: any) => ({
           ...payment,
@@ -406,29 +275,24 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
   }
 
   private canViewReport(report: ReportDefinition): boolean {
-    const features = this.capabilities.features;
     if (!this.canViewReports()) return false;
-    const anyPermission = (...permissions: string[]) => permissions.some((permission) => this.capabilities.hasPermission(permission));
-
-    if (report.name === 'Orders Report' || report.name === 'FacturADA Restaurant Orders') {
+    const scope = this.capabilities.reportScope;
+    if (scope === 'none' || (scope === 'billing' && report.category !== 'billing')
+      || (scope === 'operational' && report.category === 'billing')) return false;
+    const features = this.capabilities.features;
+    const anyPermission = (...permissions: string[]) => permissions.some(permission => this.capabilities.hasPermission(permission));
+    if (report.category === 'restaurant') {
       return features.restaurant === true && anyPermission('restaurant.orders.read', 'restaurant.manage');
     }
-    if (report.name === 'Productos Más Vendidos') {
-      return features.products === true && anyPermission('products.read', 'products.manage');
+    if (report.category === 'products') {
+      return features.billing === true && features.products === true && anyPermission('products.read', 'products.manage');
     }
-    if (report.name === 'Comprobantes Electronicos') {
-      return features.billing === true && anyPermission('billing.read', 'billing.manage');
-    }
-    if (report.name === 'Ventas por Forma de Pago' || report.name === 'FacturADA Restaurant Sales by Payment') {
-      return (features.billing === true && anyPermission('billing.read', 'billing.manage'))
-        || (features.restaurant === true && anyPermission('restaurant.orders.read', 'restaurant.manage'));
-    }
-    return false;
+    return features.billing === true && anyPermission('billing.read', 'billing.manage');
   }
 
   private emptyReport(): ReportDefinition {
     return {
-      name: '', title: 'Reportes', description: '', badge: '', accent: '', defaultLimit: 50,
+      name: '', title: 'Reportes', description: '', badge: '', accent: '', defaultLimit: 50, category: 'billing', route: '/report',
       visibleColumns: [], filters: []
     };
   }
@@ -460,6 +324,14 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
     );
     if (missing) {
       toast.error(`Completa el filtro ${missing.label}.`);
+      return false;
+    }
+    if (this.filters['from_date'] && this.filters['to_date'] && this.filters['from_date'] > this.filters['to_date']) {
+      toast.error('La fecha desde no puede ser mayor a la fecha hasta.');
+      return false;
+    }
+    if (this.filters['limit'] !== undefined && (!Number.isInteger(Number(this.filters['limit'])) || Number(this.filters['limit']) < 1)) {
+      toast.error('El límite debe ser un número entero mayor a cero.');
       return false;
     }
     return true;
@@ -515,12 +387,6 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
     return foundIndex >= 0 ? foundIndex : fallback;
   }
 
-  private getVisibleColumnIndexes(): number[] {
-    return this.displayColumns
-      .map((column, index) => this.getSourceColumnIndex(column, index))
-      .filter((index) => Number.isInteger(index) && index >= 0);
-  }
-
   private humanizeKey(value: string): string {
     return String(value || '')
       .replace(/_/g, ' ')
@@ -532,10 +398,6 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
     const match = text.match(/^(\d{4})-(\d{2})-(\d{2})(.*)$/);
     if (!match) return text;
     return `${match[3]}-${match[2]}-${match[1]}${match[4] || ''}`;
-  }
-
-  private options(values: string[]): FilterOption[] {
-    return values.map((value) => ({ label: value, value }));
   }
 
   private buildExportFilename(): string {

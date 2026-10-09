@@ -451,7 +451,7 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
   }
 
   private persistSelection(): void {
-    if (this.selectedEstablishmentId && this.selectedEmissionPointId) {
+    if (this.selectedEstablishmentId) {
       this.capabilities.setLiteDocumentSelection(this.selectedEstablishmentId, this.selectedEmissionPointId);
     } else {
       this.capabilities.clearLiteDocumentSelection();

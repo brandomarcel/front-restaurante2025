@@ -78,11 +78,13 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   private readonly customerSearch$ = new Subject<string>();
   private readonly destroy$ = new Subject<void>();
 
-  /** La misma vista compacta de venta sirve para POS genérico, sin crear órdenes. */
-  get isGenericPos(): boolean {
-    return this.capabilities.isEnabled('generic_pos');
-  }
   isEmitting = false;
+  isConfirmingEmission = false;
+  private lastInvoice?: { name: string; state: LiteEmissionState | null; business: string | null };
+
+  get previousInvoice(): { name: string; state: LiteEmissionState | null; business: string | null } | undefined {
+    return this.lastInvoice?.business === this.capabilities.activeBusinessId ? this.lastInvoice : undefined;
+  }
   emissionState: LiteEmissionState | null = null;
   emissionMessages: string[] = [];
   emissionInvoiceName = '';
@@ -115,6 +117,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     // backend. No reutilizar valores del navegador: pueden pertenecer a otra
     // empresa o a una configuración anterior.
     this.ambiente = this.getLiteEmissionEnvironment() || '';
+    this.ensureFiscalSelection();
     this.initializeForms();
     this.initCustomerSearch();
     this.loadInitialData();
@@ -277,6 +280,17 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       return;
     }
     this.paymentRows.splice(index, 1);
+    this.syncSinglePaymentAmount();
+  }
+
+  private syncSinglePaymentAmount(): void {
+    if (this.paymentRows.length === 1) this.paymentRows[0].amount = this.total;
+  }
+
+  completePaymentAmount(index: number): void {
+    const row = this.paymentRows[index];
+    if (!row?.method || this.paymentRows.length < 2 || this.paymentRemaining <= 0) return;
+    row.amount = roundMoney(roundMoney(row.amount) + this.paymentRemaining);
   }
 
   onPaymentRowMethodChange(index: number): void {
@@ -647,6 +661,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       it.iva = result.iva;
       it.total = result.total;
     });
+    this.syncSinglePaymentAmount();
   }
 
   // ------------------ Totales ------------------
@@ -668,6 +683,82 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
   get selectedPosTerminal(): any | null {
     return this.capabilities.activePosTerminal;
+  }
+
+  get canSelectFiscalLocation(): boolean {
+    return this.capabilities.features.billing === true && !this.capabilities.usesPosTerminalModel;
+  }
+
+  get fiscalSelectionLocked(): boolean {
+    return this.isEmitting || this.isConfirmingEmission || !!this.emissionInvoiceName;
+  }
+
+  get fiscalEstablishments(): any[] {
+    return this.capabilities.activeEstablishments.filter(establishment =>
+      this.invoicePointsFor(establishment.name).length > 0);
+  }
+
+  get selectedEstablishmentId(): string {
+    const id = this.capabilities.selectedLiteEstablishment?.name || '';
+    return this.fiscalEstablishments.some(item => item.name === id) ? id : '';
+  }
+
+  get fiscalEmissionPoints(): any[] {
+    return this.invoicePointsFor(this.selectedEstablishmentId);
+  }
+
+  get selectedEmissionPointId(): string {
+    const id = this.capabilities.selectedLiteEmissionPoint?.name || '';
+    return this.fiscalEmissionPoints.some(item => item.name === id) ? id : '';
+  }
+
+  private ensureFiscalSelection(): void {
+    if (!this.canSelectFiscalLocation) return;
+    this.capabilities.restoreLiteDocumentSelection();
+    if (!this.selectedEstablishmentId) {
+      this.capabilities.clearLiteDocumentSelection();
+      if (this.fiscalEstablishments.length === 1) this.selectFiscalEstablishment(this.fiscalEstablishments[0].name);
+    } else {
+      this.reconcileInvoicePoint();
+    }
+  }
+
+  selectFiscalEstablishment(name: string): void {
+    if (!this.canSelectFiscalLocation || this.fiscalSelectionLocked) return;
+    if (name && !this.fiscalEstablishments.some(item => item.name === name)) return;
+    this.capabilities.selectLiteEstablishment(name);
+    this.reconcileInvoicePoint();
+  }
+
+  selectFiscalEmissionPoint(name: string): void {
+    if (!this.canSelectFiscalLocation || this.fiscalSelectionLocked) return;
+    if (name && !this.fiscalEmissionPoints.some(item => item.name === name)) return;
+    this.capabilities.selectLiteEmissionPoint(name);
+  }
+
+  get invoiceEnvironment(): string {
+    return this.getLiteEmissionEnvironment();
+  }
+
+  private invoicePointsFor(establishment: string): any[] {
+    const environment = this.getLiteEmissionEnvironment();
+    if (!environment) return [];
+    return this.capabilities.activeEmissionPointsFor(establishment).filter(point =>
+      this.capabilities.hasActiveSequence('Factura', establishment, point.name, environment));
+  }
+
+  private reconcileInvoicePoint(): void {
+    if (this.selectedEmissionPointId) return;
+    this.capabilities.setLiteDocumentSelection(this.selectedEstablishmentId);
+    if (this.fiscalEmissionPoints.length === 1) {
+      this.capabilities.selectLiteEmissionPoint(this.fiscalEmissionPoints[0].name);
+    }
+  }
+
+  fiscalOptionLabel(record: any, kind: 'establishment' | 'emission_point'): string {
+    const code = record?.[`${kind}_code`] || record?.name || '—';
+    const name = record?.[`${kind}_name`];
+    return name ? `${code} · ${name}` : String(code);
   }
 
   get terminalAssignmentLabel(): string {
@@ -702,13 +793,12 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
   // ------------------ Factura ------------------
   finalizeInvoice(): void {
-    const emissionFeature = this.capabilities.isEnabled('generic_pos') ? 'generic_pos' : 'direct_invoice';
-    const planBlockMessage = this.capabilities.getPlanBlockMessage(emissionFeature);
+    const planBlockMessage = this.capabilities.getPlanBlockMessage('direct_invoice');
     if (planBlockMessage) {
       toast.error(planBlockMessage);
       return;
     }
-    if (this.isEmitting || this.emissionInvoiceName) {
+    if (this.isEmitting || this.isConfirmingEmission || this.emissionInvoiceName) {
       toast.info('Esta factura ya fue enviada. Usa las acciones de estado o reintento.');
       return;
     }
@@ -733,7 +823,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
         toast.error(terminalBlockMessage);
         return;
       }
-      if (!this.capabilities.isEnabled('direct_invoice') && !this.capabilities.isEnabled('generic_pos')) {
+      if (!this.capabilities.isEnabled('direct_invoice')) {
         toast.error('La facturación no está habilitada para este negocio.');
         return;
       }
@@ -748,9 +838,9 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       liteDocumentConfiguration = this.capabilities.getLiteDocumentConfiguration('Factura', emissionEnvironment);
       if (!liteDocumentConfiguration) {
         if (!this.capabilities.selectedLiteEstablishment) {
-          toast.error('Configure un establecimiento activo antes de emitir.');
+          toast.error(this.fiscalEstablishments.length ? 'Selecciona el establecimiento donde vas a facturar.' : 'Configure un establecimiento activo antes de emitir.');
         } else if (!this.capabilities.selectedLiteEmissionPoint) {
-          toast.error('Configure un punto de emisión activo para el establecimiento seleccionado.');
+          toast.error(this.fiscalEmissionPoints.length ? 'Selecciona un punto de emisión para el establecimiento elegido.' : 'Configure un punto de emisión activo para el establecimiento seleccionado.');
         } else {
           toast.error('No existe una secuencia activa para esta combinación de establecimiento, punto de emisión y ambiente.');
         }
@@ -872,9 +962,16 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       additional_fields: this.canUseAdditionalFields ? normalizeAdditionalFields(this.additionalFields.getRawValue()) : []
     };
 
-    this.alertService.confirm('¿Deseas emitir la factura?', 'Esta acción creará un documento legal.')
+    const business = this.capabilities.activeBusinessId;
+    this.isConfirmingEmission = true;
+    const confirmationMessage = `Vas a emitir una factura por $${total.toFixed(2)} para ${this.selectedCustomer?.nombre || customerName}.`;
+    this.alertService.confirm(confirmationMessage, 'Confirmar emisión de factura')
       .then(result => {
         if (!result.isConfirmed) return;
+        if (business !== this.capabilities.activeBusinessId) {
+          toast.error('La empresa cambió. Revisa la factura antes de emitir.');
+          return;
+        }
 
         const submitInvoice = () => {
           this.isEmitting = true;
@@ -911,7 +1008,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
                 this.alertService.confirm(`Factura ${inv || ''} autorizada.`, '¿Deseas imprimir el RIDE?', 'success')
                   .then(printResult => {
                     if (printResult.isConfirmed && inv) this.printInvoice(inv, 'ride');
-                    this.clearInvoiceForm();
+                    if (this.emissionInvoiceName === inv) this.clearInvoiceForm();
                   });
               } else if (this.emissionState === 'PROCESSING') {
                 toast.info('Comprobante recibido. Autorización pendiente.');
@@ -930,14 +1027,25 @@ export class InvoicingComponent implements OnInit, OnDestroy {
         // enviar el abono inicial. Transferencias/tarjetas se asocian a la
         // apertura si existe; no requieren bloquear la emisión.
         if (initialCollection?.payment_code === '01') {
+          this.isEmitting = true;
           this.collectionsSvc.getCurrentCashOpening().subscribe({
-            next: () => submitInvoice(),
-            error: (error: any) => toast.error(this.collectionCashError(error))
+            next: () => {
+              if (business !== this.capabilities.activeBusinessId) {
+                this.isEmitting = false;
+                toast.error('La empresa cambió. Revisa la factura antes de emitir.');
+                return;
+              }
+              submitInvoice();
+            },
+            error: (error: any) => {
+              this.isEmitting = false;
+              toast.error(this.collectionCashError(error));
+            }
           });
           return;
         }
         submitInvoice();
-      });
+      }).finally(() => this.isConfirmingEmission = false);
   }
 
   private collectionCashError(error: any): string {
@@ -947,14 +1055,15 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
   get canEmitInvoice(): boolean {
     return this.capabilities.hasPermission('billing.create')
-      && this.capabilities.canEmit()
+      && this.capabilities.isEnabled('direct_invoice')
+      && !this.capabilities.getPlanBlockMessage('direct_invoice')
       && !this.isEmitting
+      && !this.isConfirmingEmission
       && !this.emissionInvoiceName;
   }
 
   get invoicePlanBlockMessage(): string | null {
-    const emissionFeature = this.capabilities.isEnabled('generic_pos') ? 'generic_pos' : 'direct_invoice';
-    return this.capabilities.getPlanBlockMessage(emissionFeature);
+    return this.capabilities.getPlanBlockMessage('direct_invoice');
   }
 
   get canUseAdditionalFields(): boolean {
@@ -998,13 +1107,28 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     toast.error(message);
   }
 
+  startNewInvoice(): void {
+    if (this.isEmitting || this.isConfirmingEmission || !this.emissionInvoiceName) return;
+    this.clearInvoiceForm();
+  }
+
   private clearInvoiceForm(): void {
-    this.invoiceForm.reset({ paymentMethod: this.defaultPaymentMethodValue, selectedCustomer: null, alias: '', postingDate: this.utilsService.getSoloFechaEcuador() });
+    if (this.emissionInvoiceName) {
+      this.lastInvoice = { name: this.emissionInvoiceName, state: this.emissionState, business: this.capabilities.activeBusinessId };
+    }
+    this.additionalFields.clear();
+    this.invoiceForm.reset({
+      paymentMethod: this.defaultPaymentMethodValue, selectedCustomer: null, selectedProduct: null,
+      payment_condition: 'Contado', payment_due_date: '', initial_collection_method: '',
+      initial_collection_amount: 0, initial_collection_reference: '', initial_collection_notes: '',
+      alias: '', postingDate: this.utilsService.getSoloFechaEcuador()
+    });
+    this.onPaymentConditionChange();
+    this.paymentRows = [{ method: this.defaultPaymentMethodValue, amount: 0 }];
     this.cartItems = [];
     this.productSearchTerm = '';
     this.productSuggestions = [];
     this.isProductSearchOpen = false;
-    this.additionalFields.clear();
     this.clearSelectedCustomer();
     this.emissionState = null;
     this.emissionMessages = [];

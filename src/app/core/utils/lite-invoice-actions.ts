@@ -1,4 +1,4 @@
-import { backendFlag } from './electronic-document';
+import { backendFlag, isClosedElectronicDocument } from './electronic-document';
 
 export type LiteInvoiceAction = 'consult' | 'retry' | 'none';
 
@@ -16,6 +16,7 @@ function normalized(value: unknown): string {
  * otra vez el mismo documento mientras está en procesamiento.
  */
 export function getLiteInvoiceAction(invoice: any): LiteInvoiceAction {
+  if (isClosedElectronicDocument(invoice)) return 'none';
   const sri = invoice?.sri && typeof invoice.sri === 'object' ? invoice.sri : {};
   const electronic = invoice?.electronic && typeof invoice.electronic === 'object' ? invoice.electronic : {};
   const emission = invoice?.emission && typeof invoice.emission === 'object' ? invoice.emission : {};

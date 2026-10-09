@@ -8,6 +8,9 @@ import { RoleAccessGuard } from 'src/app/core/guards/role-access.guard';
 
 const routes: Routes = [
   { path: '', component: ReportsHomeComponent },
+  { path: 'ventas', component: FrappeReportsComponent, canActivate: [RoleAccessGuard], data: { defaultReport: 'FacturADA Lite Ventas', featureKey: 'billing', permissionKey: 'reports.view', anyPermissionKeys: ['billing.read', 'billing.manage'] } },
+  { path: 'ventas-por-fecha', component: FrappeReportsComponent, canActivate: [RoleAccessGuard], data: { defaultReport: 'Ventas por Fecha Lite', featureKey: 'billing', permissionKey: 'reports.view', anyPermissionKeys: ['billing.read', 'billing.manage'] } },
+  { path: 'cobros-restaurante', component: FrappeReportsComponent, canActivate: [RoleAccessGuard], data: { defaultReport: 'FacturADA Restaurant Sales by Payment', featureKey: 'restaurant', permissionKey: 'reports.view', anyPermissionKeys: ['restaurant.orders.read', 'restaurant.manage'] } },
   { path: 'orders', component: FrappeReportsComponent, canActivate: [RoleAccessGuard], data: { defaultReport: 'Orders Report', featureKey: 'restaurant', anyPermissionKeys: ['restaurant.orders.read', 'restaurant.manage'] } },
   { path: 'productos-mas-vendidos', component: FrappeReportsComponent, canActivate: [RoleAccessGuard], data: { defaultReport: 'Productos Más Vendidos', featureKey: 'products', anyPermissionKeys: ['products.read', 'products.manage'] } },
   { path: 'comprobantes-electronicos', component: FrappeReportsComponent, canActivate: [RoleAccessGuard], data: { defaultReport: 'Comprobantes Electronicos', featureKey: 'billing', anyPermissionKeys: ['billing.read', 'billing.manage'] } },

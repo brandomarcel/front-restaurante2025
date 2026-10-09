@@ -94,3 +94,4 @@ The Tailwind name and logos are trademarks of Tailwind Labs Inc.
 The Angular name and logos are trademarks of Google.
 
 CAMBIOS
+npx ng serve --host 0.0.0.0 --port 4200 --proxy-config src/proxy.conf.json

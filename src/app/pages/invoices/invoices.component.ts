@@ -1,24 +1,22 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, DestroyRef, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NgxSpinnerService } from 'ngx-spinner';
-import { EcuadorTimePipe } from '../../core/pipes/ecuador-time-pipe.pipe';
-import { ButtonComponent } from 'src/app/shared/components/button/button.component';
-import { Router, RouterModule } from '@angular/router';
-import { InvoicesService } from 'src/app/services/invoices.service';
-import { PrintService } from 'src/app/services/print.service';
-import { environment } from 'src/environments/environment';
+import { RouterModule } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { toast } from 'ngx-sonner';
+import { ButtonComponent } from 'src/app/shared/components/button/button.component';
+import { InvoicesService } from 'src/app/services/invoices.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
-import { liteEmissionMessages } from 'src/app/core/utils/lite-invoice-emission';
-import { canConsultLiteInvoice, canRetryLiteInvoice, getLiteInvoiceAction } from 'src/app/core/utils/lite-invoice-actions';
 import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
-import { electronicDocumentLabel } from 'src/app/core/utils/electronic-document';
+import { ElectronicStatusBadgeComponent } from 'src/app/shared/components/electronic-status-badge/electronic-status-badge.component';
+import { ListStateComponent } from 'src/app/shared/components/list-state/list-state.component';
+import { ELECTRONIC_STATUS_FILTERS, electronicStatusFilterOptions } from 'src/app/core/utils/electronic-document';
+import { debouncedCallback } from 'src/app/shared/utils/debounced-callback';
 
 @Component({
   selector: 'app-invoices',
   standalone: true,
-  imports: [CommonModule, FormsModule, EcuadorTimePipe, ButtonComponent,RouterModule, AppPaginationComponent],
+  imports: [CommonModule, FormsModule, ButtonComponent, RouterModule, AppPaginationComponent, ElectronicStatusBadgeComponent, ListStateComponent],
   templateUrl: './invoices.component.html',
   styleUrls: ['./invoices.component.css']
 })
@@ -29,35 +27,38 @@ export class InvoicesComponent implements OnInit {
   pageSize = 10;
   total = 0;
   totalPages = 1;
+  loading = false;
 
   _search = '';
   statusFiltro = '';
-  conOrdenFiltro: '' | 'con' | 'sin' = ''; // filtro por enlace a orden
 
-  mostrarModal = false;
-  invoiceSelected: any | null = null;
-  activeTab: 'info' | 'sri' | 'items' = 'info';
-  actionRunning = false;
-
-  private url = environment.URL; // si usas URL (como en orders); si usas apiUrl para imprimir, ajusta
+  private readonly searchBackend: () => void;
+  private request?: Subscription;
 
   constructor(
-    private svc: InvoicesService,           // o InvoicesService
-    private spinner: NgxSpinnerService,
-    private router: Router,
-    private printService: PrintService,
-    public capabilities: CompanyCapabilitiesService
-  ) {}
+    private svc: InvoicesService,
+    public capabilities: CompanyCapabilitiesService,
+    destroyRef: DestroyRef
+  ) {
+    this.searchBackend = debouncedCallback(destroyRef, () => {
+      this.page = 1;
+      this.loadInvoices();
+    });
+    destroyRef.onDestroy(() => this.request?.unsubscribe());
+  }
+
   ngOnInit(): void {
     this.loadInvoices();
   }
 
   loadInvoices(): void {
-    this.spinner.show();
+    // Cancela la petición anterior para que una respuesta lenta no pise un filtro más reciente.
+    this.request?.unsubscribe();
+    this.loading = true;
     const offset = (this.page - 1) * this.pageSize;
-    this.svc.getAllInvoices(this.pageSize, offset, this.statusFiltro || undefined, this._search).subscribe({
+    this.request = this.svc.getAllInvoices(this.pageSize, offset, this.statusFiltro || undefined, this._search).subscribe({
       next: (res: any) => {
-        const msg = res.message || res; // depende de tu proxy
+        const msg = res.message || res;
         this.invoices = msg.data || [];
         this.pageSize = Number(res?.limit ?? msg?.limit ?? this.pageSize) || this.pageSize;
         const responseOffset = Number(res?.offset ?? msg?.offset);
@@ -68,10 +69,10 @@ export class InvoicesComponent implements OnInit {
         const hasNext = Boolean(res?.hasNext ?? msg?.has_next ?? msg?.hasNext);
         this.totalPages = Math.max(1, Math.ceil(this.total / this.pageSize) || 1, hasNext ? this.page + 1 : 1);
         this.aplicarFiltros();
-        this.spinner.hide();
+        this.loading = false;
       },
       error: (err: any) => {
-        this.spinner.hide();
+        this.loading = false;
         toast.error(String(err?.error?.message || err?.message || 'No se pudieron cargar las facturas.'));
       }
     });
@@ -80,51 +81,50 @@ export class InvoicesComponent implements OnInit {
   get search(): string { return this._search; }
   set search(v: string) {
     this._search = v || '';
+    // Filtra al instante la página visible y consulta al backend al terminar de escribir.
+    this.aplicarFiltros();
+    this.searchBackend();
+  }
+
+  get hasActiveFilters(): boolean {
+    return !!this._search.trim() || !!this.statusFiltro;
+  }
+
+  get statusOptions(): { value: string; label: string }[] {
+    return electronicStatusFilterOptions(ELECTRONIC_STATUS_FILTERS, this.capabilities.isLiteMode);
+  }
+
+  onStatusChange(): void {
     this.page = 1;
     this.loadInvoices();
   }
 
   aplicarFiltros(): void {
-    const term = (this._search || '').toLowerCase();
-    let lista = Array.isArray(this.invoices) ? [...this.invoices] : [];
-
-    lista = lista.filter(inv => {
-      const byText = [
-        inv?.name,
-        inv?.sri?.number,
-        inv?.document_number,
-        inv?.sri?.access_key,
-        inv?.customer?.fullName,
-        inv?.customer?.num_identificacion,
-        inv?.customer_name,
-        inv?.customer_identification_number,
-        inv?.status,
-        inv?.sri?.status,
-        inv?.sri?.provider_status,
-        inv?.email_status
-      ].map(x => (x ?? '').toString().toLowerCase()).some(x => x.includes(term));
-
-      const hasOrder = !!inv?.order;
-      const byOrden =
-        this.conOrdenFiltro === '' ? true :
-        this.conOrdenFiltro === 'con' ? hasOrder :
-        !hasOrder;
-
-      return byText && byOrden;
-    });
-    this.invoicesFiltradas = lista;
+    const term = (this._search || '').trim().toLowerCase();
+    const lista = Array.isArray(this.invoices) ? this.invoices : [];
+    this.invoicesFiltradas = !term ? [...lista] : lista.filter(inv => [
+      inv?.name,
+      inv?.sri?.number,
+      inv?.document_number,
+      inv?.access_key,
+      inv?.sri?.access_key,
+      inv?.customer?.fullName,
+      inv?.customer?.num_identificacion,
+      inv?.customer_name,
+      inv?.customer_identification_number,
+      inv?.status,
+      inv?.sri?.status,
+      inv?.sri?.provider_status,
+      inv?.email_status
+    ].some(value => String(value ?? '').toLowerCase().includes(term)));
   }
 
   limpiarFiltros(): void {
     this._search = '';
     this.statusFiltro = '';
-    this.conOrdenFiltro = '';
     this.page = 1;
     this.loadInvoices();
   }
-
-  nextPage(): void { if (this.page < this.totalPages) { this.page++; this.loadInvoices(); } }
-  prevPage(): void { if (this.page > 1) { this.page--; this.loadInvoices(); } }
 
   onPaginationPage(page: number): void {
     if (page === this.page) return;
@@ -138,171 +138,16 @@ export class InvoicesComponent implements OnInit {
     this.loadInvoices();
   }
 
- // Abrir/Cerrar modal
-  openInvoiceDetail(inv: any) {
-    this.invoiceSelected = inv || null;
-    this.activeTab = 'info';
-    this.mostrarModal = true;
-  }
-  closeModal() { this.mostrarModal = false; }
-
-  // PDF de factura (usa tu PrintService)
-  getFacturaPdf() {
-    if (!this.capabilities.hasPermission('billing.read')) {
-      toast.error('No tienes permisos para descargar documentos.');
-      return;
-    }
-    const invoiceName = this.invoiceSelected?.name || this.invoiceSelected?.sri?.invoice;
-    if (!invoiceName) {
-      toast.error('Factura no disponible');
-      return;
-    }
-    const status = String(this.invoiceSelected?.sri?.status || this.invoiceSelected?.status || '').trim().toUpperCase();
-    const providerStatus = String(this.invoiceSelected?.sri?.provider_status || this.invoiceSelected?.provider_status || '').trim().toUpperCase();
-    if (this.capabilities.isLiteMode && !['AUTORIZADO', 'AUTORIZADA', 'AUTHORIZED'].includes(status) && providerStatus !== 'AUTHORIZED') {
-      toast.info('El RIDE oficial estará disponible cuando la factura sea autorizada.');
-      return;
-    }
-    if (this.capabilities.isLiteMode) {
-      this.printService.downloadLiteInvoicePdf(invoiceName, 'FACTURADA RIDE').subscribe({
-        next: (blob) => this.openPdfBlob(blob),
-        error: () => toast.error('No se pudo descargar el documento Lite.')
-      });
-      return;
-    }
-    const w = window.open(this.url + this.printService.getFacturaPdf(invoiceName), '_blank');
-    if (!w) toast.error('No se pudo abrir la ventana de impresión');
-  }
-
-  getTicketPdf() {
-    if (!this.capabilities.hasPermission('billing.read')) {
-      toast.error('No tienes permisos para descargar documentos.');
-      return;
-    }
-    const invoiceName = this.invoiceSelected?.name || this.invoiceSelected?.sri?.invoice;
-    if (!invoiceName) return;
-    if (this.capabilities.isLiteMode) {
-      this.printService.downloadLiteInvoicePdf(invoiceName, 'FacturADA Lite Ticket').subscribe({
-        next: (blob) => this.openPdfBlob(blob),
-        error: () => toast.error('No se pudo descargar el documento Lite.')
-      });
-      return;
-    }
-    const w = window.open(this.url + this.printService.getFacturaPdf(invoiceName), '_blank');
-    if (!w) toast.error('No se pudo abrir la ventana de impresión');
-  }
-
-  private openPdfBlob(blob: Blob): void {
-    const url = window.URL.createObjectURL(blob);
-    const popup = window.open(url, '_blank');
-    if (!popup) toast.error('No se pudo abrir el documento descargado.');
-    window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
-  }
-
-  // Reenviar/Regenerar factura (opcional, si tienes endpoint)
-  reenviarFactura() {
-    if (this.actionRunning) return;
-    if (!this.capabilities.hasPermission('billing.manage')) {
-      toast.error('No tienes permisos para consultar o reintentar emisiones.');
-      return;
-    }
-    const invoiceName = this.invoiceSelected?.name || this.invoiceSelected?.sri?.invoice;
-    if (!invoiceName) {
-      toast.error('Factura no disponible');
-      return;
-    }
-
-    if (!this.canRunSriAction) {
-      toast.info('Esta factura no está disponible para reintento ni consulta de estado.');
-      return;
-    }
-
-    const liteAction = this.capabilities.isLiteMode ? getLiteInvoiceAction(this.invoiceSelected) : 'retry';
-    this.actionRunning = true;
-    this.spinner.show();
-    const request$ = this.capabilities.isLiteMode
-      ? (liteAction === 'retry'
-        ? this.svc.retryLiteInvoice(invoiceName)
-        : this.svc.refreshLiteInvoiceStatus(invoiceName))
-      : this.svc.emit_existing_invoice_v2(invoiceName);
-    request$.subscribe({
-      next: (res: any) => {
-        if (res?.data && typeof res.data === 'object' && !Array.isArray(res.data)) {
-          this.invoiceSelected = { ...(this.invoiceSelected || {}), ...res.data };
-        }
-        const messages = [
-          ...liteEmissionMessages(res?.emission),
-          ...liteEmissionMessages(res?.data)
-        ].filter(Boolean);
-        toast.success(messages[0] || (this.capabilities.isLiteMode && liteAction === 'retry'
-          ? 'Reintento de emisión enviado.'
-          : 'Estado SRI actualizado'));
-        this.loadInvoices();
-        const replacementName = String(res?.invoiceName ?? res?.data?.name ?? '').trim();
-        this.closeModal();
-        if (replacementName && replacementName !== invoiceName) {
-          toast.info('La factura original fue reemplazada por una nueva emisión.');
-          this.router.navigate(['/dashboard/invoices', replacementName]);
-        }
-      },
-      error: (error) => {
-        const message = this.readActionError(error);
-        toast.error(message);
-        this.spinner.hide();
-        this.actionRunning = false;
-      },
-      complete: () => { this.spinner.hide(); this.actionRunning = false; }
-    });
-  }
-
-  irAOrden(orderName: string) {
-    if (!orderName) return;
-    this.router.navigate(['/dashboard/orders', orderName]);
-  }
-
-  getSriStatusLabel(status: string | undefined | null): string {
-    const value = String(status || '').trim().toUpperCase();
-    if (value === 'AUTORIZADO' || value === 'AUTORIZADA' || value === 'AUTHORIZED' || value === 'SRI_AUTHORIZED') return 'Autorizada';
-    if (value === 'REJECTED' || value === 'RECHAZADO' || value === 'RECHAZADA' || value === 'NOT_AUTHORIZED' || value === 'SRI_REJECTED') return 'Rechazada';
-    if (value === 'ERROR') return 'Error';
-    if (value === 'ERROR DE ENVIO' || value === 'ERROR DE ENVÍO') return 'Error de envío';
-    if (value === 'QUEUED' || value === 'EN COLA') return 'En cola';
-    if (value === 'PROCESSING' || value === 'ENVIADO' || value === 'FIRMADO') return 'En proceso';
-    if (value === 'PENDIENTE EMISION' || value === 'PENDIENTE EMISIÓN') return 'Pendiente emisión';
-    if (value === 'EMITIDA') return 'Emitida';
-    if (value === 'DRAFT' || value === 'BORRADOR') return 'Borrador';
-    if (value === 'REEMPLAZADA' || value === 'REPLACED') return 'Reemplazada';
-    if (value === 'ANULADA') return 'Anulada';
-    return value || '—';
-  }
-
-  getSriStatusBadge(status: string | undefined | null): string {
-    const value = String(status || '').trim().toUpperCase();
-    if (value === 'AUTORIZADO' || value === 'AUTORIZADA' || value === 'AUTHORIZED' || value === 'SRI_AUTHORIZED') return 'badge-green';
-    if (value === 'REJECTED' || value === 'RECHAZADO' || value === 'RECHAZADA' || value === 'ERROR' || value === 'ANULADA') return 'badge-red';
-    return 'badge-yellow';
-  }
-
-  getInvoiceStatusLabel(invoice: any): string {
-    if (this.capabilities.isLiteMode) return electronicDocumentLabel(invoice);
-    const status = String(invoice?.status || invoice?.sri?.status || '').trim().toUpperCase();
-    const provider = String(invoice?.sri?.provider_status || invoice?.provider_status || '').trim().toUpperCase();
-    const code = String(invoice?.sri?.sri_code || invoice?.sri?.status_code || invoice?.sri?.code || invoice?.sri_code || invoice?.status_code || invoice?.provider_status_code || '').trim().toUpperCase();
-    if (provider === 'AUTHORIZED') return 'Autorizada';
-    if (status === 'EMITIDA' && (['PROCESSING', 'RECEIVED', 'PENDING'].includes(provider) || code === '70')) return 'Procesando';
-    return this.getSriStatusLabel(status);
-  }
-
-  getInvoiceStatusBadge(invoice: any): string {
-    const label = this.getInvoiceStatusLabel(invoice);
-    if (label === 'Autorizada') return 'badge-green';
-    if (['Rechazada', 'Devuelta', 'No autorizada', 'Error', 'Error de envío', 'Anulada'].includes(label)) return 'badge-red';
-    if (label === 'Reemplazada') return 'badge-gray';
-    return 'badge-yellow';
+  trackByName(_: number, invoice: any): string {
+    return String(invoice?.name ?? '');
   }
 
   documentNumber(invoice: any): string {
     return String(invoice?.document_number ?? invoice?.sri?.number ?? '—');
+  }
+
+  accessKey(invoice: any): string {
+    return String(invoice?.access_key ?? invoice?.sri?.access_key ?? invoice?.electronic?.access_key ?? '');
   }
 
   postingDate(invoice: any): string {
@@ -317,50 +162,19 @@ export class InvoicesComponent implements OnInit {
     return String(invoice?.customer?.num_identificacion ?? invoice?.customer?.identification_number ?? invoice?.customer_identification_number ?? invoice?.identificacion_cliente ?? '—');
   }
 
+  invoiceTotal(invoice: any): number {
+    return Number(invoice?.total ?? invoice?.grand_total ?? 0) || 0;
+  }
+
   providerStatus(invoice: any): string {
-    return String(invoice?.sri?.provider_status ?? invoice?.electronic?.provider_status ?? invoice?.provider_status ?? '—');
+    return String(invoice?.sri?.provider_status ?? invoice?.electronic?.provider_status ?? invoice?.provider_status ?? '');
   }
 
   sriMessage(invoice: any): string {
-    return String(invoice?.sri?.sri_message ?? invoice?.electronic?.sri_message ?? invoice?.sri_message ?? invoice?.emission_error ?? '—');
+    return String(invoice?.sri?.sri_message ?? invoice?.electronic?.sri_message ?? invoice?.sri_message ?? invoice?.emission_error ?? '');
   }
 
   emailStatus(invoice: any): string {
     return String(invoice?.email?.status ?? invoice?.email_status ?? 'No enviado');
-  }
-
-  isLiteProcessing(invoice: any): boolean {
-    return this.capabilities.hasPermission('billing.manage') && canConsultLiteInvoice(invoice);
-  }
-
-  isLiteRetryable(invoice: any): boolean {
-    return this.capabilities.hasPermission('billing.manage') && canRetryLiteInvoice(invoice);
-  }
-
-  get sriActionLabel(): string {
-    if (this.capabilities.isLiteMode) return this.isLiteRetryable(this.invoiceSelected) ? 'Reintentar emisión' : 'Consultar autorización';
-    return 'Reenviar factura';
-  }
-
-  get canRunSriAction(): boolean {
-    if (!this.invoiceSelected || !this.capabilities.hasPermission('billing.manage')) return false;
-    const action = getLiteInvoiceAction(this.invoiceSelected);
-    // The legacy emit endpoint must never be used for a consultation.
-    return action === 'retry' || (this.capabilities.isLiteMode && action === 'consult');
-  }
-
-  private readActionError(error: any): string {
-    const raw = error?.error?._server_messages || error?.error?.message || error?.error?._error_message || error?.message;
-    let message = '';
-    try {
-      const parsed = typeof raw === 'string' && raw.trim().startsWith('[') ? JSON.parse(raw) : raw;
-      const first = Array.isArray(parsed) ? parsed[0] : parsed;
-      const value = typeof first === 'string' ? (() => { try { return JSON.parse(first); } catch { return first; } })() : first;
-      message = typeof value === 'string' ? value : value?.message || '';
-    } catch { message = String(raw || ''); }
-    if (message.toLowerCase().includes('solo se puede reenviar una factura con error')) {
-      return 'La factura ya fue enviada o autorizada. Usa Consultar autorización para obtener su resultado.';
-    }
-    return message || 'No se pudo completar la acción.';
   }
 }

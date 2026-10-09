@@ -92,11 +92,49 @@ para completar ese registro historico.
   una factura de reemplazo en el flujo existente de retry; seguir el `name`
   devuelto, sin asumir que sera el original.
 - Reemplazada o Anulada: presentar historial; no proponer emision del original.
-- Consultas periodicas: solo mientras siga pendiente y no requiera revision.
-  El scheduler del backend ya consulta cada 15 minutos; evitar peticiones en
-  paralelo. Detener al autorizar, rechazar, requerir revision o salir de la vista.
+- El backend programa consultas automaticas para PENDIENTE y UNKNOWN con clave.
+  El scheduler despacha trabajos vencidos cada minuto; los intervalos entre
+  consultas son aproximadamente 1, 3, 5 y luego 15 minutos, sujetos al worker.
+  No iniciar otro ciclo de consultas SRI desde el frontend. Actualizar el detalle
+  al recibir eventos o mediante una lectura del documento local.
+- En `documento.electronic` se agregan `automatic_query_active` (booleano),
+  `next_status_check_at`, `status_check_attempts` y `status_check_error`.
+  Los listados de facturas exponen esos campos en cada fila.
+  Mostrar "Consulta automatica programada" y la proxima fecha cuando este activa.
+  Los estados definitivos, anulados, reemplazados y revisados como inexistentes
+  no siguen consultandose automaticamente.
+- El limite por defecto es 30 minutos desde `pending_since`. Se configura en
+  el sitio con `facturada_sri_poll_review_after_minutes`. Al vencer, se activa
+  `manual_review_required`, se borra la proxima consulta y se notifica revision.
+- Eventos: `facturada_electronic_status_updated` y
+  `facturada_electronic_review_required`, publicados despues de confirmar la
+  transaccion en la sala del documento (`doctype`, `docname`). Suscribirse a esa
+  sala con el cliente Frappe autorizado y releer el detalle al recibirlos.
+  Los eventos incluyen nombre, negocio y tipo; no incluyen XML ni certificados.
+- Si ya hay una consulta en curso, el backend responde un error controlado.
+  Evitar doble clic, esperar y refrescar. Una consulta manual repetida dentro
+  de 10 segundos puede reutilizar el ultimo resultado guardado.
+- La factura numerada descuenta inventario antes de llamar al SRI, tanto desde
+  POS como desde facturacion directa o API externa. Un borrador no descuenta.
+  Un error, rechazo o espera del SRI no repone prendas ya vendidas. Consultar,
+  reintentar o regenerar conserva el movimiento existente sin duplicarlo.
+- Al autorizar, el flujo automatico guarda XML, cuota y correo, y verifica
+  inventario de forma idempotente para documentos historicos, como
+  el manual. Si falla el inventario, la autorizacion se conserva y se muestra
+  una observacion en `status_check_error` para revisar el movimiento pendiente.
 
 ## Excepcion manual: factura antigua inexistente en SRI
+
+La original con `status=Reemplazada` o `regenerated_invoice` queda cerrada,
+incluso si conserva un estado electronico antiguo pendiente. Ocultar consultar,
+reintentar, regenerar y revision de emision; mostrar "Abrir factura reemplazante"
+cuando exista el enlace. La consulta de estado devuelve informacion local con
+`emission.code=DOCUMENT_CLOSED`, sin llamar al proveedor ni mover inventario.
+Los trabajos automaticos tambien excluyen la original. `status` sigue siendo
+de solo lectura para usuarios normales: lo determina el backend. Excepcionalmente
+el usuario especial Frappe `Administrator` puede corregirlo en Desk. No confundir
+con el rol Administrador del negocio. El cambio manual no consulta SRI, no emite,
+no mueve inventario ni crea autorizacion o XML; es una correccion administrativa.
 
 Solo facturas/notas de credito. No implementar regeneracion masiva o automatica.
 Permitir Registrar verificacion SRI en Emitida, En Revision, Error de Envio o

@@ -127,9 +127,9 @@
             <td class="app-td">{{ display(row, 'user', 'usuario') }}</td>
             <td class="app-td">{{ display(row, 'cash_opening', 'apertura') }}</td>
             <td class="app-td text-right">{{ money(row, 'monto_apertura', 'opening_amount') | currency:'USD':'symbol':'1.2-2' }}</td>
-            <td class="app-td text-right">{{ money(row, 'efectivo_sistema', 'system_cash') | currency:'USD':'symbol':'1.2-2' }}</td>
+            <td class="app-td text-right">{{ money(row, 'cash_system', 'efectivo_sistema', 'system_cash') | currency:'USD':'symbol':'1.2-2' }}</td>
             <td class="app-td text-right">{{ money(row, 'efectivo_real', 'cash_counted') | currency:'USD':'symbol':'1.2-2' }}</td>
-            <td class="app-td text-right">{{ money(row, 'total_retiros', 'withdrawals', 'retiros') | currency:'USD':'symbol':'1.2-2' }}</td>
+            <td class="app-td text-right">{{ money(row, 'withdrawals_total', 'total_retiros', 'withdrawals', 'retiros') | currency:'USD':'symbol':'1.2-2' }}</td>
             <td class="app-td text-right font-black" [ngClass]="diferenciaClass(money(row, 'diferencia', 'difference'))">{{ money(row, 'diferencia', 'difference') | currency:'USD':'symbol':'1.2-2' }}</td>
             <td class="app-td"><span class="badge" [ngClass]="statusBadgeClass(display(row, 'status', 'estado'))">{{ display(row, 'status', 'estado') }}</span></td>
             <td class="app-td max-w-[220px] truncate">{{ display(row, 'notes', 'observaciones', 'observation') }}</td>

@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
-import { EcuadorTimePipe } from 'src/app/core/pipes/ecuador-time-pipe.pipe';
 import { InvoicesService } from 'src/app/services/invoices.service';
 import { environment } from 'src/environments/environment';
 import { toast } from 'ngx-sonner';
@@ -12,25 +11,29 @@ import { finalize } from 'rxjs';
 import { canConsultLiteInvoice, canRetryLiteInvoice } from 'src/app/core/utils/lite-invoice-actions';
 import { ElectronicStatusPanelComponent } from 'src/app/shared/components/electronic-status-panel/electronic-status-panel.component';
 import { electronicDocumentLabel } from 'src/app/core/utils/electronic-document';
+import { ElectronicStatusBadgeComponent } from 'src/app/shared/components/electronic-status-badge/electronic-status-badge.component';
+import { DocumentAction, DocumentActionsComponent } from 'src/app/shared/components/document-actions/document-actions.component';
+
+type DetailTab = 'general' | 'electronic';
+
 @Component({
   selector: 'app-credit-note-detail-page',
   standalone: true,
-  imports: [CommonModule,
-    RouterModule,
-    // EcuadorTimePipe,
-    FontAwesomeModule, ElectronicStatusPanelComponent],
-  templateUrl: './credit-note-detail-page.component.html',
-  styleUrl: './credit-note-detail-page.component.css'
+  imports: [CommonModule, RouterModule, FontAwesomeModule, ElectronicStatusPanelComponent, ElectronicStatusBadgeComponent, DocumentActionsComponent],
+  templateUrl: './credit-note-detail-page.component.html'
 })
 export class CreditNoteDetailPageComponent implements OnInit {
-  activeDetailTab: 'general' | 'electronic' = 'general';
+  activeDetailTab: DetailTab = 'general';
+  readonly detailTabs: { id: DetailTab; label: string }[] = [
+    { id: 'general', label: 'Información general' },
+    { id: 'electronic', label: 'Estado SRI' }
+  ];
   invoice: any = null;
   loading = true;
   error = '';
   documentLoading = false;
   emailLoading = false;
   actionLoading = false;
-  reissueDate = '';
 
   private baseUrl = environment.URL;
 
@@ -184,15 +187,12 @@ export class CreditNoteDetailPageComponent implements OnInit {
     return electronicDocumentLabel(this.invoice);
   }
 
-  selectDetailTab(tab: 'general' | 'electronic'): void {
+  selectDetailTab(tab: DetailTab): void {
     this.activeDetailTab = tab;
   }
 
-  get statusBadge(): string {
-    const st = String(this.invoice?.status || this.invoice?.sri?.status || '').trim().toUpperCase();
-    if (st === 'AUTHORIZED' || st === 'AUTORIZADA' || st === 'AUTORIZADO') return 'badge-green';
-    if (st === 'REJECTED' || st === 'RECHAZADA' || st === 'RECHAZADO' || st === 'NOT_AUTHORIZED' || st === 'ERROR') return 'badge-red';
-    return 'badge-yellow';
+  retryLoad(): void {
+    this.fetch(this.route.snapshot.paramMap.get('id')!);
   }
 
   get providerStatus(): string {
@@ -201,10 +201,6 @@ export class CreditNoteDetailPageComponent implements OnInit {
 
   get providerCode(): string {
     return String(this.invoice?.sri?.sri_code || this.invoice?.sri?.status_code || this.invoice?.electronic?.sri_code || this.invoice?.electronic?.codigo_sri || this.invoice?.sri_code || this.invoice?.codigo_sri || this.invoice?.status_code || '').trim().toUpperCase();
-  }
-
-  get hasAccessKeyRegistered(): boolean {
-    return this.providerCode === '43' || this.sriMessage.toUpperCase().includes('CLAVE ACCESO REGISTRADA');
   }
 
   get canConsultAuthorization(): boolean {
@@ -221,9 +217,54 @@ export class CreditNoteDetailPageComponent implements OnInit {
       this.capabilities.hasPermission('billing.manage') && canRetryLiteInvoice(this.invoice);
   }
 
-  get canReissue(): boolean {
-    // Replacement/date handling belongs to retry_lite_invoice under the current contract.
-    return false;
+  /** Las reglas de visibilidad siguen en los getters `can*`; aquí solo se ordenan para la UI. */
+  get documentActions(): DocumentAction[] {
+    if (!this.invoice || this.loading) return [];
+    const actions: DocumentAction[] = [];
+    if (this.canConsultAuthorization) {
+      actions.push({ id: 'consult', label: this.actionLoading ? 'Consultando…' : 'Consultar autorización',
+        shortLabel: 'Consultar SRI', title: 'Consulta el resultado en el SRI sin volver a emitir', variant: 'warn',
+        disabled: this.documentLoading, run: () => this.consultAuthorization() });
+    }
+    if (this.canRetry) {
+      actions.push({ id: 'retry', label: this.actionLoading ? 'Procesando…' : 'Reintentar envío', shortLabel: 'Reintentar',
+        variant: 'warn', disabled: this.actionLoading, run: () => this.retryEmission() });
+    }
+    if (this.capabilities.hasPermission('billing.read')) {
+      actions.push({ id: 'pdf', label: 'Descargar PDF', shortLabel: 'PDF', title: 'Descargar nota de crédito',
+        variant: 'primary', icon: ['fas', 'download'], disabled: this.documentLoading, run: () => this.getFacturaPdf() });
+    }
+    if (this.isAuthorized && this.capabilities.hasPermission('billing.read')) {
+      actions.push({ id: 'xml', label: 'XML', title: 'Descargar XML autorizado', variant: 'outline',
+        disabled: this.documentLoading, run: () => this.downloadXml() });
+    }
+    if (this.isAuthorized && this.capabilities.hasPermission('billing.manage')) {
+      actions.push({ id: 'email', label: this.emailLoading ? 'Enviando…' : 'Enviar por correo',
+        shortLabel: this.emailLoading ? 'Enviando…' : 'Correo', title: 'Enviar la nota al correo del cliente',
+        variant: 'outline', disabled: this.emailLoading, run: () => this.sendEmail() });
+    }
+    return actions;
+  }
+
+  get documentNumber(): string {
+    return this.invoice?.document_number || this.invoice?.sri?.number || this.invoice?.name || '—';
+  }
+
+  get items(): any[] {
+    return Array.isArray(this.invoice?.items) ? this.invoice.items : [];
+  }
+
+  itemSubtotal(item: any): number {
+    return Number(item?.subtotal ?? (Number(item?.quantity ?? 0) * Number(item?.price ?? 0))) || 0;
+  }
+
+  itemTotal(item: any): number {
+    const subtotal = this.itemSubtotal(item);
+    return Number(item?.total ?? (subtotal + subtotal * (Number(item?.tax_rate ?? 0) / 100))) || 0;
+  }
+
+  itemDiscount(item: any): number {
+    return Number(item?.discount_amount ?? item?.total_discount ?? 0) || 0;
   }
 
   electronicDocumentUpdated(document: any): void {
@@ -252,23 +293,6 @@ export class CreditNoteDetailPageComponent implements OnInit {
         this.fetch(name);
       },
       error: (error) => toast.error(this.backendError(error, 'No se pudo reintentar la emisión.'))
-    });
-  }
-
-  reissueWithNewDate(): void {
-    const name = this.invoice?.name;
-    if (!name || !this.canReissue || this.actionLoading) return;
-    const date = window.prompt('Fecha de emisión (YYYY-MM-DD), opcional:', this.reissueDate || new Date().toISOString().slice(0, 10));
-    if (date === null) return;
-    this.reissueDate = date.trim();
-    this.actionLoading = true;
-    this.liteInvoicesSvc.reissueLiteInvoice(name, this.reissueDate).pipe(finalize(() => { this.actionLoading = false; })).subscribe({
-      next: (response: any) => {
-        const newName = String(response?.invoiceName || response?.invoice_name || response?.data?.name || '').trim();
-        toast.success(newName ? `Nueva nota generada: ${newName}` : 'Nueva nota de crédito generada.');
-        this.router.navigate(['/dashboard/credit-note', newName || name]);
-      },
-      error: (error) => toast.error(this.backendError(error, 'No se pudo reemitir la nota.'))
     });
   }
 

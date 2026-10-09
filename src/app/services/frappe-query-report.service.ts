@@ -46,6 +46,7 @@ export class FrappeQueryReportService {
     ].join('&');
 
     return this.http.get<FrappeQueryReportResponse>(`${this.runUrl}?${query}`, {
+      withCredentials: true,
       context: new HttpContext().set(REQUIRE_AUTH, true)
     }).pipe(
       catchError((error) => {
@@ -58,7 +59,7 @@ export class FrappeQueryReportService {
     );
   }
 
-  exportExcel(reportName: string, filters: Record<string, any>, visibleIdx: number[] = []): Observable<Blob> {
+  exportExcel(reportName: string, filters: Record<string, any>, visibleRowIndexes: number[] = []): Observable<Blob> {
     const accessError = this.reportAccessError();
     if (accessError) return throwError(() => accessError);
     const cleanFilters = this.cleanFilters(filters);
@@ -69,7 +70,7 @@ export class FrappeQueryReportService {
     body.append('filters', JSON.stringify(cleanFilters));
     body.append('applied_filters', JSON.stringify(cleanFilters));
     body.append('custom_columns', JSON.stringify([]));
-    body.append('visible_idx', JSON.stringify(visibleIdx));
+    body.append('visible_idx', JSON.stringify(visibleRowIndexes));
     body.append('include_indentation', '0');
     body.append('include_filters', '1');
     body.append('include_hidden_columns', '0');
@@ -94,14 +95,12 @@ export class FrappeQueryReportService {
     const source = { ...(filters || {}) };
     delete source['company'];
     delete source['company_id'];
-    if (!source['business']) {
-      const business = this.capabilities.activeBusinessId
+    const business = this.capabilities.activeBusinessId
         || this.capabilities.businessId
         || localStorage.getItem('active_business')
         || localStorage.getItem('businessId')
         || '';
-      if (business) source['business'] = business;
-    }
+    if (business) source['business'] = business;
     return Object.entries(source).reduce((acc, [key, value]) => {
       if (
         value !== null &&

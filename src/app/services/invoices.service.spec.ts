@@ -97,10 +97,10 @@ describe('InvoicesService (FacturADA Lite)', () => {
     req.flush({ message: { data: { name: 'FLINV-1' } } });
   });
 
-  it('sends the Lite invoice email request with the invoice name', () => {
+  it('sends the Lite invoice email request with the invoice name and active business', () => {
     service.sendLiteInvoiceEmail('FLINV-1').subscribe();
     const req = http.expectOne((request) => request.url.includes('send_lite_invoice_email'));
-    expect(req.request.body).toEqual({ invoice_name: 'FLINV-1' });
+    expect(req.request.body).toEqual({ invoice_name: 'FLINV-1', business: 'FBU-00001' });
     req.flush({ message: { data: { email: { status: 'Enviado' } } } });
   });
 

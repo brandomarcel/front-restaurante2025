@@ -20,17 +20,26 @@ import { InvoiceCollectionsService } from 'src/app/services/invoice-collections.
 import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 import { ElectronicStatusPanelComponent } from 'src/app/shared/components/electronic-status-panel/electronic-status-panel.component';
 import { electronicDocumentLabel } from 'src/app/core/utils/electronic-document';
+import { ElectronicStatusBadgeComponent } from 'src/app/shared/components/electronic-status-badge/electronic-status-badge.component';
+import { DocumentAction, DocumentActionsComponent } from 'src/app/shared/components/document-actions/document-actions.component';
+
+type DetailTab = 'general' | 'electronic' | 'collections';
 
 @Component({
   selector: 'app-invoice-detail-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, FontAwesomeModule, ReactiveFormsModule, NgxSpinnerComponent, DecimalInputDirective, ElectronicStatusPanelComponent],
-  templateUrl: './invoice-detail-page.component.html',
-  styleUrl: './invoice-detail-page.component.css'
+  imports: [CommonModule, RouterModule, FontAwesomeModule, ReactiveFormsModule, NgxSpinnerComponent, DecimalInputDirective, ElectronicStatusPanelComponent, ElectronicStatusBadgeComponent, DocumentActionsComponent],
+  templateUrl: './invoice-detail-page.component.html'
 })
 export class InvoiceDetailPageComponent implements OnInit {
-  activeDetailTab: 'general' | 'electronic' | 'collections' = 'general';
+  activeDetailTab: DetailTab = 'general';
+  readonly detailTabs: { id: DetailTab; label: string }[] = [
+    { id: 'general', label: 'Información general' },
+    { id: 'electronic', label: 'Estado SRI' },
+    { id: 'collections', label: 'Cartera y abonos' }
+  ];
   invoice: any = null;
+  loadFailed = false;
   additionalFields: AdditionalFieldPayload[] = [];
   motivosAnulacion: string[] = [
     'Devolución de mercadería o servicio',
@@ -86,9 +95,9 @@ export class InvoiceDetailPageComponent implements OnInit {
 
   fetch(id: string) {
     this.spinner.show();
+    this.loadFailed = false;
     this.invoicesSvc.getInvoiceDetail(id).subscribe({
       next: (res: any) => {
-        console.log('response invoice detail', res);
         this.invoice = res?.data && typeof res.data === 'object' && !Array.isArray(res.data)
           ? res.data
           : (res?.message?.data || (res?.message && typeof res.message === 'object' && !Array.isArray(res.message) && (res.message.name || res.message.invoice_name) ? res.message : res));
@@ -106,7 +115,8 @@ export class InvoiceDetailPageComponent implements OnInit {
         this.spinner.hide();
       },
       error: (err) => {
-this.spinner.hide();
+        this.spinner.hide();
+        this.loadFailed = !this.invoice;
         toast.error(this.getActionError(err));
       }
     });
@@ -141,7 +151,11 @@ this.spinner.hide();
       || this.capabilities.hasPermission('billing.create');
   }
 
-  selectDetailTab(tab: 'general' | 'electronic' | 'collections'): void {
+  retryLoad(): void {
+    this.fetch(this.route.snapshot.paramMap.get('id')!);
+  }
+
+  selectDetailTab(tab: DetailTab): void {
     this.activeDetailTab = tab;
     if (tab === 'collections') this.loadCollections();
   }
@@ -617,14 +631,6 @@ this.spinner.hide();
       this.invoice?.electronic?.sri_code || this.invoice?.electronic?.codigo_sri || this.invoice?.sri_code ||
       this.invoice?.sri_status_code || this.invoice?.status_code || this.invoice?.provider_status_code || '').trim().toUpperCase();
   }
-  get hasAccessKeyRegistered(): boolean {
-    return this.liteProviderCode === '43' || this.sriMessages.some((message) => message.toUpperCase().includes('CLAVE ACCESO REGISTRADA'));
-  }
-  get isAuthorizationPending(): boolean {
-    return this.liteProviderCode === '70' || this.hasAccessKeyRegistered ||
-      ['PROCESSING', 'RECEIVED', 'PENDING'].includes(this.liteProviderStatus) ||
-      this.invoiceStatusRaw === 'EMITIDA';
-  }
   get providerStatusLabel(): string {
     const status = this.liteProviderStatus;
     if (!status && this.liteProviderCode === '70') return 'Pendiente (SRI 70)';
@@ -828,6 +834,79 @@ this.spinner.hide();
     toast.success(messages[0] || successMessage);
   }
 
+  get isSaleNote(): boolean {
+    return this.invoice?.type === 'Nota Venta';
+  }
+
+  get canDownloadRide(): boolean {
+    return this.capabilities.hasPermission('billing.read') && !this.isSaleNote && (!this.capabilities.isLiteMode || this.isLiteAuthorized);
+  }
+
+  get canDownloadTicket(): boolean {
+    return this.capabilities.isLiteMode && this.capabilities.hasPermission('billing.read') && !this.isSaleNote;
+  }
+
+  get canDownloadXml(): boolean {
+    return this.capabilities.isLiteMode && this.capabilities.hasPermission('billing.read') && this.isLiteAuthorized;
+  }
+
+  /** Las reglas de visibilidad siguen en los getters `can*`; aquí solo se ordenan para la UI. */
+  get documentActions(): DocumentAction[] {
+    const actions: DocumentAction[] = [];
+    if (this.canResend) {
+      actions.push({ id: 'resend', label: this.sriActionLabel, shortLabel: 'Reenviar', title: this.sriActionLabel,
+        variant: 'warn', disabled: this.liteActionRunning, run: () => this.reenviarFactura() });
+    }
+    if (this.canConsultAuthorization) {
+      actions.push({ id: 'consult', label: 'Consultar autorización', shortLabel: 'Consultar SRI',
+        title: 'Consulta el resultado en el SRI sin volver a emitir', variant: 'warn',
+        disabled: this.liteActionRunning, run: () => this.consultarEstadoSri() });
+    }
+    if (this.canRetryLite) {
+      actions.push({ id: 'retry', label: 'Reintentar emisión', shortLabel: 'Reintentar', title: 'Reintentar emisión',
+        variant: 'warn', disabled: this.liteActionRunning, run: () => this.retryLiteInvoice() });
+    }
+    if (this.canDownloadRide) {
+      actions.push({ id: 'ride', label: 'RIDE', shortLabel: 'RIDE', title: 'Descargar RIDE', variant: 'primary',
+        icon: ['fas', 'download'], disabled: this.documentActionRunning, run: () => this.getFacturaPdf() });
+    }
+    if (this.canDownloadTicket) {
+      actions.push({ id: 'ticket', label: 'Ticket', shortLabel: 'Ticket', title: 'Descargar ticket', variant: 'outline',
+        disabled: this.documentActionRunning, run: () => this.getTicketPdf() });
+    }
+    if (this.canDownloadXml) {
+      actions.push({ id: 'xml', label: 'XML', shortLabel: 'XML', title: 'Descargar XML autorizado', variant: 'outline',
+        disabled: this.documentActionRunning, run: () => this.downloadLiteXml() });
+    }
+    if (this.canSendEmail) {
+      const label = this.emailActionRunning ? 'Enviando…' : 'Enviar por correo';
+      actions.push({ id: 'email', label, shortLabel: this.emailActionRunning ? 'Enviando…' : 'Correo',
+        title: 'Enviar la factura al correo del cliente', variant: 'outline',
+        disabled: this.emailActionRunning, run: () => this.sendLiteInvoiceEmail() });
+    }
+    return actions;
+  }
+
+  copyAccessKey(): void {
+    const key = String(this.invoice?.sri?.access_key || '').trim();
+    if (!key) return;
+    if (!navigator.clipboard) {
+      toast.error('El navegador no permite copiar; selecciona la clave manualmente.');
+      return;
+    }
+    navigator.clipboard.writeText(key)
+      .then(() => toast.success('Clave de acceso copiada.'))
+      .catch(() => toast.error('No se pudo copiar la clave de acceso.'));
+  }
+
+  itemName(item: any): string {
+    return item?.productName || item?.item_name || item?.nombre || item?.name || item?.item || item?.product || 'Producto';
+  }
+
+  itemDiscount(item: any): number {
+    return Number(item?.discount_amount ?? item?.total_discount ?? 0) || 0;
+  }
+
   itemSubtotal(item: any): number {
     const quantity = Number(item?.quantity ?? item?.qty ?? 0);
     const price = Number(item?.price ?? item?.rate ?? 0);
@@ -838,33 +917,6 @@ this.spinner.hide();
     const subtotal = this.itemSubtotal(item);
     const taxRate = Number(item?.tax_rate || 0);
     return Number(item?.total ?? item?.net_total ?? (subtotal + (subtotal * (taxRate / 100))));
-  }
-
-  get sriStatus(): string {
-    if (this.capabilities.isLiteMode) return electronicDocumentLabel(this.invoice);
-    if (this.capabilities.isLiteMode && (this.liteProviderCode === '70' || this.liteProviderCode === '43' || this.hasAccessKeyRegistered ||
-      (this.invoiceStatusRaw === 'EMITIDA' && ['PROCESSING', 'RECEIVED', 'PENDING'].includes(this.liteProviderStatus)))) {
-      return 'En proceso';
-    }
-    return this.getSriStatusLabel(this.invoiceStatusRaw);
-  }
-
-  getSriStatusLabel(status: string | undefined | null): string {
-    const value = String(status || '').trim().toUpperCase();
-    if (value === 'AUTORIZADO' || value === 'AUTORIZADA' || value === 'AUTHORIZED' || value === 'SRI_AUTHORIZED') return 'AUTORIZADO';
-    if (value === 'REJECTED' || value === 'RECHAZADO' || value === 'RECHAZADA' || value === 'NOT_AUTHORIZED' || value === 'SRI_REJECTED') return 'Rechazada';
-    if (value === 'ERROR') return 'Error';
-    if (value === 'QUEUED' || value === 'EN COLA') return 'En cola';
-    if (value === 'PROCESSING' || value === 'ENVIADO' || value === 'FIRMADO') return 'En proceso';
-    if (value === 'DRAFT' || value === 'BORRADOR') return 'Borrador';
-    return value || '—';
-  }
-
-  getSriStatusBadge(status: string | undefined | null): string {
-    const value = String(status || '').trim().toUpperCase();
-    if (value === 'AUTORIZADO' || value === 'AUTORIZADA' || value === 'AUTHORIZED' || value === 'SRI_AUTHORIZED') return 'badge-green';
-    if (value === 'REJECTED' || value === 'RECHAZADO' || value === 'RECHAZADA' || value === 'ERROR' || value === 'ANULADA') return 'badge-red';
-    return 'badge-yellow';
   }
 
   private getActionError(err: any): string {

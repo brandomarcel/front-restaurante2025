@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { DashboardComponent } from './dashboard.component';
-import { NftComponent } from './pages/nft/nft.component';
+import { DashboardHomeComponent } from './pages/home/dashboard-home.component';
 import { PosComponent } from 'src/app/pages/pos/pos.component';
 import { CustomersComponent } from 'src/app/pages/customers/customers.component';
 import { ProductsComponent } from 'src/app/pages/products/products.component';
@@ -38,7 +38,7 @@ const routes: Routes = [
     component: DashboardComponent,
     children: [
       { path: '', redirectTo: 'main', pathMatch: 'full' },
-      { path: 'main', component: NftComponent, canActivate: [RoleAccessGuard], data: { allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'] } },
+      { path: 'main', component: DashboardHomeComponent, canActivate: [RoleAccessGuard], data: { allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO', 'MESERO'] } },
       // { path: 'pos', component: PosComponent },
       { path: 'pos', component: PosShellComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { featureKey: 'restaurant', requiredFeatures: ['orders', 'pos'], anyPermissionKeys: ['restaurant.orders.create', 'billing.create'], liteBlocked: true } },
       { path: 'pos-generic', component: PosCajaComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { featureKey: 'generic_pos', requiredFeatures: ['generic_pos', 'billing', 'pos'], readOnlyFeature: true, permissionKey: 'billing.create' } },

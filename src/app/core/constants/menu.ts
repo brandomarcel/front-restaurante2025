@@ -12,7 +12,7 @@ export class Menu {
           icon: 'assets/icons/tablericons/chart-donut-3.svg',
           label: 'Dashboard',
           route: '/dashboard/main',
-          allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO'],
+          allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO', 'FACTURACION', 'USUARIO', 'MESERO'],
         },
         {
           icon: 'assets/icons/tablericons/building-store.svg',

@@ -1,0 +1,41 @@
+<section class="mb-3 overflow-hidden rounded-xl bg-gradient-to-r px-3 py-3 text-white shadow-sm lg:px-4" [ngClass]="gradientClasses">
+  <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+    <div class="min-w-0">
+      <div class="mb-2 flex min-w-0 items-center gap-2.5">
+        <div class="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-card/15 ring-1 ring-white/25">
+          <img *ngIf="logo; else initialTemplate" [src]="logo" alt="Logo de la empresa" class="h-full w-full object-contain p-1" />
+          <ng-template #initialTemplate>
+            <span class="text-sm font-black text-white">{{ initial }}</span>
+          </ng-template>
+        </div>
+        <p class="min-w-0 truncate text-sm font-black leading-tight text-white sm:text-base">{{ businessName }}</p>
+      </div>
+
+      <div class="mb-1.5 flex flex-wrap items-center gap-1.5">
+        <span class="rounded-md bg-card/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">{{ modeLabel }}</span>
+        <span class="rounded-md bg-card/15 px-2 py-0.5 text-[10px] font-semibold">{{ today | date:'dd/MM/yyyy' }}</span>
+        <span *ngIf="signature" class="rounded-md px-2 py-0.5 text-[10px] font-semibold" [ngClass]="toneClasses[signature.tone]">
+          Firma: {{ signature.label }}
+        </span>
+        <span *ngIf="cashOpen !== null" class="rounded-md px-2 py-0.5 text-[10px] font-semibold"
+          [ngClass]="cashOpen ? toneClasses.success : toneClasses.danger">
+          Caja {{ cashOpen ? 'abierta' : 'sin apertura' }}
+        </span>
+      </div>
+
+      <h1 class="truncate text-lg font-bold leading-tight lg:text-xl">{{ title }}</h1>
+      <p class="mt-0.5 max-w-2xl text-[11px] text-white/80">{{ subtitle }} · Bienvenido, {{ userName }}</p>
+    </div>
+
+    <div *ngIf="plan" class="min-w-0 rounded-xl border border-white/15 bg-card/10 px-3 py-2.5 backdrop-blur-sm sm:min-w-[230px]">
+      <div class="flex items-center justify-between gap-3">
+        <p class="text-[9px] font-bold uppercase tracking-[.14em] text-white/65">Plan activo</p>
+        <span class="rounded-full bg-card/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">{{ plan.status }}</span>
+      </div>
+      <p class="mt-1 truncate text-sm font-black text-white">{{ plan.name }}</p>
+      <p class="mt-1 text-[10px] text-white/70">
+        {{ plan.unlimited ? 'Comprobantes ilimitados' : (plan.remaining + ' comprobantes disponibles') }}
+      </p>
+    </div>
+  </div>
+</section>

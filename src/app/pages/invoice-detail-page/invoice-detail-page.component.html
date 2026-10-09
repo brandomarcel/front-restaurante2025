@@ -2,203 +2,100 @@
   <p style="color: #f5ae1c">Cargando...</p>
 </ngx-spinner>
 
-<div class="app-container pb-20 md:pb-0">
-  <section class="mb-3 rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
+<div class="app-container" [ngClass]="{ 'pb-20 md:pb-0': documentActions.length }">
+  <section *ngIf="loadFailed" class="rounded-xl border border-border bg-card px-4 py-10 text-center shadow-sm" role="alert">
+    <p class="text-sm font-semibold text-foreground">No se pudo cargar la factura.</p>
+    <p class="mt-1 text-xs text-muted-foreground">Revisa tu conexión e inténtalo de nuevo.</p>
+    <div class="mt-3 flex justify-center gap-2">
+      <button type="button" class="btn btn-outline !text-xs" (click)="goBack()">Volver</button>
+      <button type="button" class="btn btn-primary !text-xs" (click)="retryLoad()">Reintentar</button>
+    </div>
+  </section>
+
+  <ng-container *ngIf="!loadFailed">
+  <header class="mb-3 rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
     <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
       <div class="flex min-w-0 items-center gap-2">
-        <button class="btn btn-ghost !px-2 !py-1 !text-[11px]" (click)="goBack()" aria-label="Volver a facturas">
+        <button type="button" class="btn btn-ghost !px-2 !py-1 !text-[11px]" (click)="goBack()" aria-label="Volver a facturas">
           <fa-icon icon="arrow-left"></fa-icon>
           <span class="hidden sm:inline">Atrás</span>
         </button>
 
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-2">
-            <h1 class="truncate text-base font-bold leading-tight text-foreground">
-              Factura {{ invoiceNumber }}
-            </h1>
-            <span class="badge" [ngClass]="getSriStatusBadge(invoiceStatusRaw)">
-              {{ sriStatus }}
-            </span>
+            <h1 class="truncate text-base font-bold leading-tight text-foreground">Factura {{ invoiceNumber }}</h1>
+            <app-electronic-status-badge *ngIf="invoice" [document]="invoice" />
             <span *ngIf="invoice?.type"
-              class="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-              {{ invoice?.type }}
-            </span>
+              class="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">{{ invoice?.type }}</span>
           </div>
 
           <div class="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
             <span>ID: <b class="font-semibold text-foreground/80">{{ invoice?.name || '—' }}</b></span>
-            <span *ngIf="invoice?.createdAt">Emisión: <b class="font-semibold text-foreground/80">{{
-                invoice?.createdAt}}</b></span>
+            <span *ngIf="invoice?.createdAt">Emisión: <b class="font-semibold text-foreground/80">{{ invoice?.createdAt }}</b></span>
             <span *ngIf="invoice?.order">Orden: <b class="font-semibold text-primary">{{ invoice?.order }}</b></span>
           </div>
         </div>
       </div>
 
-      <div class="hidden items-center gap-1.5 md:flex">
-        <button *ngIf="canAnnul" class="btn btn-warn !px-3 !py-1.5 !text-[11px]" (click)="openMotivo()"
-          [title]="'Crear nota de crédito'">
-          Anular
-        </button>
-
-        <button *ngIf="canResend" class="btn btn-warn !px-3 !py-1.5 !text-[11px]" (click)="reenviarFactura()">
-          {{ sriActionLabel }}
-        </button>
-        <button *ngIf="canConsultAuthorization" class="btn btn-warn !px-3 !py-1.5 !text-[11px]"
-          (click)="consultarEstadoSri()" [disabled]="liteActionRunning">
-          Consultar autorización
-        </button>
-        <button *ngIf="canRetryLite" class="btn btn-warn !px-3 !py-1.5 !text-[11px]" (click)="retryLiteInvoice()"
-          [disabled]="liteActionRunning">
-          Reintentar emisión
-        </button>
-
-        <button
-          *ngIf="capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta' && (!capabilities.isLiteMode || isLiteAuthorized)"
-          class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="getFacturaPdf()"
-          [disabled]="documentActionRunning">
-          <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>
-          RIDE
-        </button>
-        <button
-          *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta'"
-          class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="getTicketPdf()"
-          [disabled]="documentActionRunning">
-          Ticket
-        </button>
-        <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && isLiteAuthorized"
-          class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="downloadLiteXml()"
-          [disabled]="documentActionRunning">
-          XML
-        </button>
-        <button *ngIf="canSendEmail" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="sendLiteInvoiceEmail()"
-          [disabled]="emailActionRunning">
-          {{ emailActionRunning ? 'Enviando…' : 'Enviar por correo' }}
-        </button>
+      <div *ngIf="documentActions.length || canAnnul" class="hidden flex-wrap items-center gap-1.5 md:flex">
+        <app-document-actions [actions]="documentActions" />
+        <ng-container *ngIf="canAnnul">
+          <span class="mx-1 h-5 w-px bg-border" aria-hidden="true"></span>
+          <button type="button" class="btn btn-outline !border-red-300 !px-3 !py-1.5 !text-[11px] !text-red-700"
+            (click)="openMotivo()" title="Crear nota de crédito">Anular</button>
+        </ng-container>
       </div>
     </div>
-  </section>
+  </header>
 
   <nav class="mb-3 flex w-full gap-1 overflow-x-auto rounded-xl border border-border bg-card p-1.5 shadow-sm"
-    aria-label="Secciones del detalle de factura">
-    <button type="button" class="invoice-detail-tab" [class.is-active]="activeDetailTab === 'general'"
-      (click)="selectDetailTab('general')">
-      Información general
-    </button>
-    <button type="button" class="invoice-detail-tab" [class.is-active]="activeDetailTab === 'electronic'"
-      (click)="selectDetailTab('electronic')">
-      Estado SRI
-      <span class="ml-1 rounded-full px-1.5 py-0.5 text-[9px]" [ngClass]="getSriStatusBadge(invoiceStatusRaw)">{{
-        sriStatus }}</span>
-    </button>
-    <button type="button" class="invoice-detail-tab" [class.is-active]="activeDetailTab === 'collections'"
-      (click)="selectDetailTab('collections')">
-      Cartera y abonos
-      <span class="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] text-amber-800">{{ collectionStatus }}</span>
+    role="tablist" aria-label="Secciones del detalle de factura">
+    <button *ngFor="let tab of detailTabs" type="button" role="tab" [id]="'invoice-tab-' + tab.id"
+      [attr.aria-selected]="activeDetailTab === tab.id" aria-controls="invoice-tab-panel"
+      class="inline-flex min-h-[30px] items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[11px] font-bold text-muted-foreground transition hover:bg-muted hover:text-primary"
+      [ngClass]="{ '!bg-primary/10 !text-primary shadow-sm': activeDetailTab === tab.id }"
+      (click)="selectDetailTab(tab.id)">
+      {{ tab.label }}
+      <app-electronic-status-badge *ngIf="tab.id === 'electronic' && invoice" [document]="invoice" />
+      <span *ngIf="tab.id === 'collections'"
+        class="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] text-amber-800">{{ collectionStatus }}</span>
     </button>
   </nav>
 
   <div class="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
-    <main class="space-y-3">
-      <section *ngIf="activeDetailTab !== 'collections'"
-        class="rounded-xl border border-border bg-card p-2.5 shadow-sm">
+    <main id="invoice-tab-panel" role="tabpanel" [attr.aria-labelledby]="'invoice-tab-' + activeDetailTab" class="space-y-3">
+
+      <!-- Información general -->
+      <section *ngIf="activeDetailTab === 'general'" class="rounded-xl border border-border bg-card p-2.5 shadow-sm">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 class="text-[11px] font-bold uppercase tracking-wide text-primary">
-            {{ activeDetailTab === 'electronic' ? 'Estado SRI' : 'Cliente y facturación' }}
-          </h2>
-          <div class="flex flex-wrap items-center gap-1.5">
-            <span *ngIf="activeDetailTab === 'general'"
-              class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-              {{ invoice?.customer?.tipo_identificacion || 'Identificación' }}
-            </span>
-            <span class="badge" [ngClass]="getSriStatusBadge(invoiceStatusRaw)">
-              {{ sriStatus }}
-            </span>
-          </div>
+          <h2 class="text-[11px] font-bold uppercase tracking-wide text-primary">Cliente y facturación</h2>
+          <span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+            {{ invoice?.customer?.tipo_identificacion || 'Identificación' }}
+          </span>
         </div>
 
-        <div class="invoice-billing-grid grid gap-2 text-xs text-foreground/80"
-          [ngClass]="activeDetailTab === 'general' ? 'invoice-billing-grid--general' : 'invoice-billing-grid--electronic'">
-          <div *ngIf="activeDetailTab === 'general'" class="rounded-lg bg-muted/40 px-2.5 py-2">
-            <div class="grid gap-x-3 gap-y-1 sm:grid-cols-2 xl:grid-cols-4">
-              <div class="sm:col-span-2 xl:col-span-2">
-                <span class="text-[10px] font-bold uppercase text-muted-foreground">Cliente</span>
-                <p class="truncate font-bold text-foreground">{{ invoice?.customer?.fullName || invoice?.customer?.name
-                  || '—' }}</p>
-              </div>
-              <div>
-                <span class="text-[10px] font-bold uppercase text-muted-foreground">Cédula/RUC</span>
-                <p class="font-semibold">{{ invoice?.customer?.num_identificacion || '—' }}</p>
-              </div>
-              <div>
-                <span class="text-[10px] font-bold uppercase text-muted-foreground">Teléfono</span>
-                <p class="font-semibold">{{ invoice?.customer?.telefono || '—' }}</p>
-              </div>
-              <div class="sm:col-span-2">
-                <span class="text-[10px] font-bold uppercase text-muted-foreground">Correo</span>
-                <p class="truncate font-semibold">{{ invoice?.customer?.correo || '—' }}</p>
-              </div>
-              <div class="sm:col-span-2">
-                <span class="text-[10px] font-bold uppercase text-muted-foreground">Dirección</span>
-                <p class="truncate font-semibold">{{ invoice?.customer?.direccion || '—' }}</p>
-              </div>
-            </div>
+        <dl class="grid gap-x-3 gap-y-1 rounded-lg bg-muted/40 px-2.5 py-2 text-xs text-foreground/80 sm:grid-cols-2 xl:grid-cols-4">
+          <div class="sm:col-span-2">
+            <dt class="text-[10px] font-bold uppercase text-muted-foreground">Cliente</dt>
+            <dd class="truncate font-bold text-foreground">{{ invoice?.customer?.fullName || invoice?.customer?.name || '—' }}</dd>
           </div>
-
-          <div *ngIf="activeDetailTab === 'electronic'" class="rounded-lg bg-muted/40 px-2.5 py-2">
-            <div class="grid gap-x-3 gap-y-1 sm:grid-cols-2">
-              <div *ngIf="invoice?.sri?.access_key" class="sm:col-span-2">
-                <span class="text-[10px] font-bold uppercase text-muted-foreground">Clave de acceso</span>
-                <p class="truncate font-mono text-[11px] font-semibold text-blue-700">{{ invoice?.sri?.access_key }}</p>
-              </div>
-              <div>
-                <span class="text-[10px] font-bold uppercase text-muted-foreground">Número SRI</span>
-                <p class="font-bold text-foreground">{{ invoice?.sri?.number || '—' }}</p>
-              </div>
-              <div>
-                <span class="text-[10px] font-bold uppercase text-muted-foreground">Documento</span>
-                <p class="font-semibold">{{ invoice?.sri?.invoice || '—' }}</p>
-              </div>
-              <div>
-                <span class="text-[10px] font-bold uppercase text-muted-foreground">Establecimiento</span>
-                <p class="font-semibold">{{ invoice?.electronic?.establishment_code || invoice?.sri?.establishment_code
-                  || invoice?.establishment_code || '—' }}</p>
-              </div>
-              <div>
-                <span class="text-[10px] font-bold uppercase text-muted-foreground">Punto de emisión</span>
-                <p class="font-semibold">{{ invoice?.electronic?.emission_point_code ||
-                  invoice?.sri?.emission_point_code || invoice?.emission_point_code || '—' }}</p>
-              </div>
-              <div *ngIf="invoice?.sri?.authorization_datetime" class="sm:col-span-2">
-                <span class="text-[10px] font-bold uppercase text-muted-foreground">Autorización</span>
-                <p class="truncate font-semibold">{{ invoice?.sri?.authorization_datetime }}</p>
-              </div>
-              <div *ngIf="invoice?.sri?.authorization_number" class="sm:col-span-2">
-                <span class="text-[10px] font-bold uppercase text-muted-foreground">Número de autorización</span>
-                <p class="truncate font-semibold">{{ invoice?.sri?.authorization_number }}</p>
-              </div>
-
-            </div>
+          <div>
+            <dt class="text-[10px] font-bold uppercase text-muted-foreground">Cédula/RUC</dt>
+            <dd class="font-semibold">{{ invoice?.customer?.num_identificacion || '—' }}</dd>
           </div>
-        </div>
-
-        <app-electronic-status-panel *ngIf="activeDetailTab === 'electronic' && capabilities.isLiteMode" [document]="invoice" (updated)="electronicDocumentUpdated($event)" />
-        <div *ngIf="activeDetailTab === 'electronic'"
-          class="mt-2 grid gap-1.5 text-[11px] text-foreground/80 sm:grid-cols-3">
-          <div class="rounded-lg bg-muted/40 px-2.5 py-1.5">
-            <span class="font-bold uppercase text-muted-foreground">Estado FacturADA</span>
-            <p class="font-semibold">{{ facturaStatusLabel }}</p>
+          <div>
+            <dt class="text-[10px] font-bold uppercase text-muted-foreground">Teléfono</dt>
+            <dd class="font-semibold">{{ invoice?.customer?.telefono || '—' }}</dd>
           </div>
-          <div class="rounded-lg bg-muted/40 px-2.5 py-1.5">
-            <span class="font-bold uppercase text-muted-foreground">Estado proveedor</span>
-            <p class="font-semibold">{{ providerStatusLabel }}</p>
+          <div class="sm:col-span-2">
+            <dt class="text-[10px] font-bold uppercase text-muted-foreground">Correo</dt>
+            <dd class="truncate font-semibold" [title]="invoice?.customer?.correo || ''">{{ invoice?.customer?.correo || '—' }}</dd>
           </div>
-          <div class="rounded-lg bg-muted/40 px-2.5 py-1.5">
-            <span class="font-bold uppercase text-muted-foreground">Correo</span>
-            <p class="font-semibold">{{ emailStatusLabel }}</p>
-            <p *ngIf="emailInfo.sent_at" class="text-[10px] text-muted-foreground">{{ emailInfo.sent_at }}</p>
-            <p *ngIf="emailInfo.error" class="truncate text-red-600" [title]="emailInfo.error">{{ emailInfo.error }}</p>
+          <div class="sm:col-span-2">
+            <dt class="text-[10px] font-bold uppercase text-muted-foreground">Dirección</dt>
+            <dd class="truncate font-semibold" [title]="invoice?.customer?.direccion || ''">{{ invoice?.customer?.direccion || '—' }}</dd>
           </div>
-        </div>
+        </dl>
 
         <div *ngIf="canSeeAdditionalFields && additionalFields.length" class="mt-2 flex flex-wrap gap-1.5">
           <div *ngFor="let field of additionalFields"
@@ -207,48 +104,106 @@
             <span class="ml-1 font-semibold">{{ field.field_value || '—' }}</span>
           </div>
         </div>
-
-        <div *ngIf="activeDetailTab === 'electronic' && sriMessages.length === 1"
-          class="mt-2 rounded-lg bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
-          <span class="font-bold uppercase">Mensaje SRI:</span>
-          <span class="ml-1">{{ sriMessages[0] }}</span>
-        </div>
-        <details *ngIf="activeDetailTab === 'electronic' && sriMessages.length > 1"
-          class="mt-2 rounded-lg border border-border bg-muted/40 px-2.5 py-2 text-[11px]">
-          <summary class="cursor-pointer font-bold text-foreground/80">Ver mensajes tributarios ({{ sriMessages.length
-            }})</summary>
-          <ul class="mt-1 list-disc space-y-0.5 pl-4 text-muted-foreground">
-            <li *ngFor="let message of sriMessages">{{ message }}</li>
-          </ul>
-        </details>
       </section>
 
+      <!-- Estado SRI -->
+      <section *ngIf="activeDetailTab === 'electronic'" class="grid gap-3"
+        [ngClass]="{ 'lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]': capabilities.isLiteMode }">
+        <div class="space-y-2 rounded-xl border border-border bg-card p-2.5 shadow-sm">
+          <h2 class="text-[11px] font-bold uppercase tracking-wide text-primary">Datos del comprobante</h2>
+
+          <dl class="grid gap-x-3 gap-y-1 rounded-lg bg-muted/40 px-2.5 py-2 text-xs text-foreground/80 sm:grid-cols-2">
+            <div *ngIf="invoice?.sri?.access_key" class="sm:col-span-2">
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Clave de acceso</dt>
+              <dd class="flex items-center gap-2">
+                <span class="min-w-0 truncate font-mono text-[11px] font-semibold text-primary" [title]="invoice?.sri?.access_key">
+                  {{ invoice?.sri?.access_key }}
+                </span>
+                <button type="button" class="shrink-0 text-[10px] font-semibold text-muted-foreground hover:text-primary hover:underline"
+                  (click)="copyAccessKey()" aria-label="Copiar clave de acceso">Copiar</button>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Número SRI</dt>
+              <dd class="font-bold text-foreground">{{ invoice?.sri?.number || '—' }}</dd>
+            </div>
+            <div>
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Documento</dt>
+              <dd class="font-semibold">{{ invoice?.sri?.invoice || '—' }}</dd>
+            </div>
+            <div>
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Establecimiento</dt>
+              <dd class="font-semibold">{{ invoice?.electronic?.establishment_code || invoice?.sri?.establishment_code || invoice?.establishment_code || '—' }}</dd>
+            </div>
+            <div>
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Punto de emisión</dt>
+              <dd class="font-semibold">{{ invoice?.electronic?.emission_point_code || invoice?.sri?.emission_point_code || invoice?.emission_point_code || '—' }}</dd>
+            </div>
+            <div *ngIf="invoice?.sri?.authorization_datetime" class="sm:col-span-2">
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Autorización</dt>
+              <dd class="truncate font-semibold">{{ invoice?.sri?.authorization_datetime }}</dd>
+            </div>
+            <div *ngIf="invoice?.sri?.authorization_number" class="sm:col-span-2">
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Número de autorización</dt>
+              <dd class="truncate font-mono text-[11px] font-semibold" [title]="invoice?.sri?.authorization_number">{{ invoice?.sri?.authorization_number }}</dd>
+            </div>
+          </dl>
+
+          <div class="grid gap-1.5 text-[11px] text-foreground/80 sm:grid-cols-3">
+            <div class="rounded-lg bg-muted/40 px-2.5 py-1.5">
+              <span class="font-bold uppercase text-muted-foreground">Estado FacturADA</span>
+              <p class="font-semibold">{{ facturaStatusLabel }}</p>
+            </div>
+            <div class="rounded-lg bg-muted/40 px-2.5 py-1.5">
+              <span class="font-bold uppercase text-muted-foreground">Estado proveedor</span>
+              <p class="font-semibold">{{ providerStatusLabel }}</p>
+            </div>
+            <div class="rounded-lg bg-muted/40 px-2.5 py-1.5">
+              <span class="font-bold uppercase text-muted-foreground">Correo</span>
+              <p class="font-semibold">{{ emailStatusLabel }}</p>
+              <p *ngIf="emailInfo.sent_at" class="text-[10px] text-muted-foreground">{{ emailInfo.sent_at }}</p>
+              <p *ngIf="emailInfo.error" class="truncate text-red-600" [title]="emailInfo.error">{{ emailInfo.error }}</p>
+            </div>
+          </div>
+
+          <div *ngIf="sriMessages.length === 1" class="rounded-lg bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
+            <span class="font-bold uppercase">Mensaje SRI:</span>
+            <span class="ml-1">{{ sriMessages[0] }}</span>
+          </div>
+          <details *ngIf="sriMessages.length > 1" class="rounded-lg border border-border bg-muted/40 px-2.5 py-2 text-[11px]">
+            <summary class="cursor-pointer font-bold text-foreground/80">Ver mensajes tributarios ({{ sriMessages.length }})</summary>
+            <ul class="mt-1 list-disc space-y-0.5 pl-4 text-muted-foreground">
+              <li *ngFor="let message of sriMessages">{{ message }}</li>
+            </ul>
+          </details>
+        </div>
+
+        <app-electronic-status-panel *ngIf="capabilities.isLiteMode && invoice" [document]="invoice"
+          (updated)="electronicDocumentUpdated($event)" />
+      </section>
+
+      <!-- Cartera y abonos -->
       <section *ngIf="activeDetailTab === 'collections'" class="rounded-xl border border-border bg-card p-3 shadow-sm">
         <div class="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h2 class="text-sm font-bold text-foreground">Cartera de la factura</h2>
             <p class="mt-0.5 text-[11px] text-muted-foreground">El saldo no depende del estado SRI.</p>
-            <p *ngIf="lastCollectionAt" class="mt-1 text-[10px] text-muted-foreground">Último abono: {{ lastCollectionAt
-              }}</p>
+            <p *ngIf="lastCollectionAt" class="mt-1 text-[10px] text-muted-foreground">Último abono: {{ lastCollectionAt }}</p>
           </div>
-          <span class="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800">{{ collectionStatus
-            }}</span>
+          <span class="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800">{{ collectionStatus }}</span>
         </div>
         <div class="mt-3 grid gap-2 sm:grid-cols-3">
           <div class="rounded-lg bg-muted/50 p-2.5">
             <p class="text-[10px] uppercase text-muted-foreground">Total factura</p>
-            <p class="mt-1 text-base font-bold">{{ (invoice?.totals?.grand_total ?? invoice?.total ?? 0) |
-              currency:'USD':'symbol':'1.2-2' }}</p>
+            <p class="mt-1 text-base font-bold">{{ (invoice?.totals?.grand_total ?? invoice?.total ?? 0) | currency:'USD':'symbol':'1.2-2' }}</p>
           </div>
           <div class="rounded-lg bg-emerald-50 p-2.5">
             <p class="text-[10px] uppercase text-emerald-700">Total cobrado</p>
-            <p class="mt-1 text-base font-bold text-emerald-700">{{ totalCollected | currency:'USD':'symbol':'1.2-2' }}
-            </p>
+            <p class="mt-1 text-base font-bold text-emerald-700">{{ totalCollected | currency:'USD':'symbol':'1.2-2' }}</p>
           </div>
           <div class="rounded-lg bg-amber-50 p-2.5">
             <p class="text-[10px] uppercase text-amber-700">Saldo pendiente</p>
-            <p class="mt-1 text-base font-bold text-amber-800">{{ outstandingAmount | currency:'USD':'symbol':'1.2-2' }}
-            </p>
+            <p class="mt-1 text-base font-bold text-amber-800">{{ outstandingAmount | currency:'USD':'symbol':'1.2-2' }}</p>
           </div>
         </div>
 
@@ -259,18 +214,18 @@
             <p class="text-[11px] text-muted-foreground">No se permite superar el saldo actual.</p>
           </div>
           <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <select class="input !h-9 text-xs" formControlName="payment_method">
+            <select class="input !h-9 text-xs" formControlName="payment_method" aria-label="Método de pago">
               <option value="">Método de pago</option>
-              <option *ngFor="let method of paymentMethods" [value]="method.name">{{ method.description || method.nombre
-                || method.name }}</option>
+              <option *ngFor="let method of paymentMethods" [value]="method.name">{{ method.description || method.nombre || method.name }}</option>
             </select>
             <input type="text" inputmode="decimal" appDecimalInput min="0.01" [max]="outstandingAmount" step="0.01"
-              class="input !h-9 text-xs" formControlName="amount" placeholder="Monto" />
-            <input class="input !h-9 text-xs" formControlName="reference" placeholder="Referencia" />
-            <button type="submit" class="btn btn-primary !h-9 !text-xs" [disabled]="savingCollection">{{
-              savingCollection ? 'Registrando…' : 'Registrar abono' }}</button>
+              class="input !h-9 text-xs" formControlName="amount" placeholder="Monto" aria-label="Monto del abono" />
+            <input class="input !h-9 text-xs" formControlName="reference" placeholder="Referencia" aria-label="Referencia" />
+            <button type="submit" class="btn btn-primary !h-9 !text-xs" [disabled]="savingCollection">
+              {{ savingCollection ? 'Registrando…' : 'Registrar abono' }}
+            </button>
           </div>
-          <input class="input mt-2 !h-9 text-xs" formControlName="notes" placeholder="Notas del abono (opcional)" />
+          <input class="input mt-2 !h-9 text-xs" formControlName="notes" placeholder="Notas del abono (opcional)" aria-label="Notas del abono" />
           <p class="mt-2 text-[10px] text-muted-foreground">Los abonos en efectivo requieren una caja abierta; el
             backend valida la apertura y el saldo final.</p>
         </form>
@@ -284,22 +239,23 @@
                 <th class="p-2 text-right">Monto</th>
                 <th class="p-2">Referencia</th>
                 <th class="p-2">Estado</th>
-                <th class="p-2"></th>
+                <th class="p-2"><span class="sr-only">Acciones</span></th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let collection of collections" class="border-t border-border">
-                <td class="p-2">{{ collection.posting_date || collection.created_at || collection.creation || '—' }}
-                </td>
-                <td class="p-2">{{ collection.payment_method || '—' }} <span class="text-muted-foreground">{{
-                    collection.payment_code ? '(' + collection.payment_code + ')' : '' }}</span></td>
-                <td class="p-2 text-right font-semibold">{{ (collection.amount ?? collection.monto ?? 0) |
-                  currency:'USD':'symbol':'1.2-2' }}</td>
+                <td class="p-2">{{ collection.posting_date || collection.created_at || collection.creation || '—' }}</td>
+                <td class="p-2">{{ collection.payment_method || '—' }} <span class="text-muted-foreground">{{ collection.payment_code ? '(' + collection.payment_code + ')' : '' }}</span></td>
+                <td class="p-2 text-right font-semibold">{{ (collection.amount ?? collection.monto ?? 0) | currency:'USD':'symbol':'1.2-2' }}</td>
                 <td class="p-2">{{ collection.reference || '—' }}</td>
                 <td class="p-2">{{ collection.status || collection.estado || 'Confirmado' }}</td>
-                <td class="p-2 text-right"><button *ngIf="canCancelCollection(collection)" type="button"
-                    class="text-[11px] font-semibold text-red-600 hover:underline"
-                    (click)="cancelCollection(collection)">Anular</button></td>
+                <td class="p-2 text-right">
+                  <button *ngIf="canCancelCollection(collection)" type="button"
+                    class="text-[11px] font-semibold text-red-600 hover:underline" (click)="cancelCollection(collection)">Anular</button>
+                </td>
+              </tr>
+              <tr *ngIf="loadingCollections && !collections.length">
+                <td colspan="6" class="p-5 text-center text-muted-foreground">Cargando abonos…</td>
               </tr>
               <tr *ngIf="!collections.length && !loadingCollections">
                 <td colspan="6" class="p-5 text-center text-muted-foreground">No hay abonos registrados.</td>
@@ -309,12 +265,11 @@
         </div>
       </section>
 
+      <!-- Productos -->
       <section class="rounded-xl border border-border bg-card shadow-sm">
-        <div class="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
-          <div>
-            <h2 class="text-sm font-bold text-foreground">Productos</h2>
-            <p class="text-[11px] text-muted-foreground">{{ invoiceItems.length }} ítem(s) en la factura</p>
-          </div>
+        <div class="border-b border-border px-3 py-2">
+          <h2 class="text-sm font-bold text-foreground">Productos</h2>
+          <p class="text-[11px] text-muted-foreground">{{ invoiceItems.length }} ítem(s) en la factura</p>
         </div>
 
         <div class="app-table-wrap hidden max-h-[58vh] lg:block">
@@ -326,37 +281,24 @@
                 <th class="px-3 py-2 text-right">P. Unit.</th>
                 <th class="px-3 py-2 text-right">Descuento</th>
                 <th class="px-3 py-2 text-center">IVA</th>
-
                 <th class="px-3 py-2 text-right">Subtotal</th>
                 <th class="px-3 py-2 text-right">Total</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let item of invoiceItems" class="app-tr">
-                <td class="px-3 py-2">
-                  <p class="font-semibold text-foreground">{{ item.productName || item.item_name || item.nombre ||
-                    item.name || item.item || item.product || 'Producto' }}</p>
-                </td>
+                <td class="px-3 py-2 font-semibold text-foreground">{{ itemName(item) }}</td>
                 <td class="px-3 py-2 text-center font-semibold">{{ item.quantity ?? item.qty ?? 0 }}</td>
-                <td class="px-3 py-2 text-right">{{ (item.price ?? item.rate ?? 0) | currency:'USD':'symbol':'1.2-2' }}
-                </td>
-                <td class="px-3 py-2 text-right">{{ (item.discount_amount ?? item.total_discount ?? 0) |
-                  currency:'USD':'symbol':'1.2-2' }}</td>
+                <td class="px-3 py-2 text-right">{{ (item.price ?? item.rate ?? 0) | currency:'USD':'symbol':'1.2-2' }}</td>
+                <td class="px-3 py-2 text-right">{{ itemDiscount(item) | currency:'USD':'symbol':'1.2-2' }}</td>
                 <td class="px-3 py-2 text-center">
-                  <span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                    {{ item.tax_rate ?? 0 }}%
-                  </span>
+                  <span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{{ item.tax_rate ?? 0 }}%</span>
                 </td>
-
                 <td class="px-3 py-2 text-right">{{ itemSubtotal(item) | currency:'USD':'symbol':'1.2-2' }}</td>
-
-                <td class="px-3 py-2 text-right font-bold text-foreground">{{ itemTotal(item) |
-                  currency:'USD':'symbol':'1.2-2' }}</td>
+                <td class="px-3 py-2 text-right font-bold text-foreground">{{ itemTotal(item) | currency:'USD':'symbol':'1.2-2' }}</td>
               </tr>
               <tr *ngIf="!invoiceItems.length">
-                <td colspan="6" class="px-3 py-8 text-center text-xs text-muted-foreground">
-                  No hay productos en esta factura.
-                </td>
+                <td colspan="7" class="px-3 py-8 text-center text-xs text-muted-foreground">No hay productos en esta factura.</td>
               </tr>
             </tbody>
           </table>
@@ -366,24 +308,20 @@
           <article *ngFor="let item of invoiceItems" class="rounded-lg border border-border bg-muted/40 p-2">
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0">
-                <p class="line-clamp-2 text-xs font-bold text-foreground">{{ item.productName || item.item_name ||
-                  item.nombre || item.name || item.item || item.product || 'Producto' }}</p>
+                <p class="line-clamp-2 text-xs font-bold text-foreground">{{ itemName(item) }}</p>
                 <p class="text-[10px] text-muted-foreground">
-                  {{ item.quantity ?? item.qty ?? 0 }} x {{ (item.price ?? item.rate ?? 0) |
-                  currency:'USD':'symbol':'1.2-2' }}
+                  {{ item.quantity ?? item.qty ?? 0 }} x {{ (item.price ?? item.rate ?? 0) | currency:'USD':'symbol':'1.2-2' }}
                 </p>
               </div>
-              <p class="shrink-0 text-sm font-bold text-foreground">{{ itemTotal(item) | currency:'USD':'symbol':'1.2-2'
-                }}</p>
+              <p class="shrink-0 text-sm font-bold text-foreground">{{ itemTotal(item) | currency:'USD':'symbol':'1.2-2' }}</p>
             </div>
             <div class="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
               <span>Subtotal {{ itemSubtotal(item) | currency:'USD':'symbol':'1.2-2' }}</span>
               <span>IVA {{ item.tax_rate ?? 0 }}%</span>
             </div>
-            <div *ngIf="(item.discount_amount ?? item.total_discount ?? 0) > 0"
-              class="mt-1 flex items-center justify-between text-[11px] text-amber-600">
+            <div *ngIf="itemDiscount(item) > 0" class="mt-1 flex items-center justify-between text-[11px] text-amber-600">
               <span>Descuento</span>
-              <span>{{ (item.discount_amount ?? item.total_discount ?? 0) | currency:'USD':'symbol':'1.2-2' }}</span>
+              <span>{{ itemDiscount(item) | currency:'USD':'symbol':'1.2-2' }}</span>
             </div>
           </article>
 
@@ -398,162 +336,90 @@
     <aside class="space-y-3 xl:sticky xl:top-3 xl:self-start">
       <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
         <h2 class="mb-2 text-[11px] font-bold uppercase tracking-wide text-primary">Resumen</h2>
-
-        <div class="space-y-1.5 text-xs text-foreground/80">
+        <dl class="space-y-1.5 text-xs text-foreground/80">
           <div class="flex justify-between gap-3">
-            <span>Descuento</span>
-            <span class="font-semibold">{{ (invoice?.totals?.total_discount ?? invoice?.total_discount ?? 0) |
-              currency:'USD':'symbol':'1.2-2' }}</span>
-          </div>
-
-          <div class="flex justify-between gap-3">
-            <span>Subtotal</span>
-            <span class="font-semibold">{{ invoice?.subtotal | currency:'USD':'symbol':'1.2-2' }}</span>
+            <dt>Descuento</dt>
+            <dd class="font-semibold">{{ (invoice?.totals?.total_discount ?? invoice?.total_discount ?? 0) | currency:'USD':'symbol':'1.2-2' }}</dd>
           </div>
           <div class="flex justify-between gap-3">
-            <span>IVA</span>
-            <span class="font-semibold">{{ invoice?.iva | currency:'USD':'symbol':'1.2-2' }}</span>
+            <dt>Subtotal</dt>
+            <dd class="font-semibold">{{ invoice?.subtotal | currency:'USD':'symbol':'1.2-2' }}</dd>
+          </div>
+          <div class="flex justify-between gap-3">
+            <dt>IVA</dt>
+            <dd class="font-semibold">{{ invoice?.iva | currency:'USD':'symbol':'1.2-2' }}</dd>
           </div>
           <div class="mt-2 flex items-end justify-between gap-3 border-t border-border pt-2">
-            <span class="text-[11px] font-bold uppercase text-muted-foreground">Total</span>
-            <span class="text-2xl font-black text-primary">{{ invoice?.total | currency:'USD':'symbol':'1.2-2' }}</span>
+            <dt class="text-[11px] font-bold uppercase text-muted-foreground">Total</dt>
+            <dd class="text-2xl font-black text-primary">{{ invoice?.total | currency:'USD':'symbol':'1.2-2' }}</dd>
           </div>
-        </div>
+        </dl>
       </section>
 
       <section *ngIf="invoicePayments.length" class="rounded-xl border border-border bg-card p-3 shadow-sm">
         <h2 class="mb-2 text-[11px] font-bold uppercase tracking-wide text-primary">Formas de pago</h2>
-
-        <div class="space-y-1.5 text-xs text-foreground/80">
-          <div *ngFor="let payment of invoicePayments" class="rounded-lg bg-muted/40 px-2.5 py-2">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <p class="truncate font-bold text-foreground">{{ payment.payment_method || 'Método interno' }}</p>
-                <p *ngIf="payment.forma_pago" class="text-[10px] font-semibold uppercase text-muted-foreground">
-                  Código SRI: {{ payment.forma_pago }}
-                </p>
-              </div>
-              <p class="shrink-0 font-black text-foreground">{{ payment.monto | currency:'USD':'symbol':'1.2-2' }}</p>
+        <ul class="space-y-1.5 text-xs text-foreground/80">
+          <li *ngFor="let payment of invoicePayments" class="flex items-start justify-between gap-3 rounded-lg bg-muted/40 px-2.5 py-2">
+            <div class="min-w-0">
+              <p class="truncate font-bold text-foreground">{{ payment.payment_method || 'Método interno' }}</p>
+              <p *ngIf="payment.forma_pago" class="text-[10px] font-semibold uppercase text-muted-foreground">Código SRI: {{ payment.forma_pago }}</p>
             </div>
-          </div>
-        </div>
+            <p class="shrink-0 font-black text-foreground">{{ payment.monto | currency:'USD':'symbol':'1.2-2' }}</p>
+          </li>
+        </ul>
       </section>
 
-      <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
-        <h2 class="mb-2 text-[11px] font-bold uppercase tracking-wide text-primary">Acciones</h2>
-
-        <div class="grid gap-2">
-          <button *ngIf="canAnnul" class="btn btn-warn w-full !py-1.5 !text-[11px]" (click)="openMotivo()"
-            [title]="'Crear nota de crédito'">
-            Anular factura
-          </button>
-          <p *ngIf="!canAnnul && annulBlockReason"
-            class="rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800">
-            {{ annulBlockReason }}
-          </p>
-
-          <button *ngIf="canResend" class="btn btn-warn w-full !py-1.5 !text-[11px]" (click)="reenviarFactura()">
-            {{ sriActionLabel }}
-          </button>
-          <button *ngIf="canConsultAuthorization" class="btn btn-warn w-full !py-1.5 !text-[11px]"
-            (click)="consultarEstadoSri()" [disabled]="liteActionRunning">
-            Consultar autorización
-          </button>
-          <button *ngIf="canRetryLite" class="btn btn-warn w-full !py-1.5 !text-[11px]" (click)="retryLiteInvoice()"
-            [disabled]="liteActionRunning">
-            Reintentar emisión
-          </button>
-
-          <button
-            *ngIf="capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta' && (!capabilities.isLiteMode || isLiteAuthorized)"
-            class="btn btn-primary w-full !py-1.5 !text-[11px]" (click)="getFacturaPdf()"
-            [disabled]="documentActionRunning">
-            <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>
-            Descargar RIDE
-          </button>
-          <button
-            *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta'"
-            class="btn btn-outline w-full !py-1.5 !text-[11px]" (click)="getTicketPdf()"
-            [disabled]="documentActionRunning">
-            Descargar ticket
-          </button>
-          <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && isLiteAuthorized"
-            class="btn btn-outline w-full !py-1.5 !text-[11px]" (click)="downloadLiteXml()"
-            [disabled]="documentActionRunning">
-            Descargar XML
-          </button>
-          <button *ngIf="canSendEmail" class="btn btn-outline w-full !py-1.5 !text-[11px]"
-            (click)="sendLiteInvoiceEmail()" [disabled]="emailActionRunning">
-            {{ emailActionRunning ? 'Enviando…' : 'Enviar por correo' }}
-          </button>
-        </div>
+      <section *ngIf="invoice" class="rounded-xl border border-border bg-card p-3 shadow-sm">
+        <h2 class="mb-2 text-[11px] font-bold uppercase tracking-wide text-primary">Nota de crédito</h2>
+        <button *ngIf="canAnnul" type="button" class="btn btn-outline w-full !border-red-300 !py-1.5 !text-[11px] !text-red-700"
+          (click)="openMotivo()">Anular factura con nota de crédito</button>
+        <p *ngIf="!canAnnul && annulBlockReason" class="rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800">
+          {{ annulBlockReason }}
+        </p>
       </section>
     </aside>
   </div>
+  </ng-container>
 </div>
 
-<div
-  class="fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t bg-card px-3 py-2 shadow-[0_-8px_24px_rgba(15,23,42,0.12)] md:hidden">
-  <button *ngIf="canResend" class="btn btn-warn flex-1 !py-1.5 !text-[11px]" (click)="reenviarFactura()">
-    {{ sriActionLabel }}
-  </button>
-  <button *ngIf="canConsultAuthorization" class="btn btn-warn flex-1 !py-1.5 !text-[11px]"
-    (click)="consultarEstadoSri()" [disabled]="liteActionRunning">Consultar autorización</button>
-  <button *ngIf="canRetryLite" class="btn btn-warn flex-1 !py-1.5 !text-[11px]" (click)="retryLiteInvoice()"
-    [disabled]="liteActionRunning">Reintentar emisión</button>
-  <button
-    *ngIf="capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta' && (!capabilities.isLiteMode || isLiteAuthorized)"
-    class="btn btn-primary flex-1 !py-1.5 !text-[11px]" (click)="getFacturaPdf()" [disabled]="documentActionRunning">
-    <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>
-    RIDE
-  </button>
-  <button
-    *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && invoice?.type !== 'Nota Venta'"
-    class="btn btn-outline flex-1 !py-1.5 !text-[11px]" (click)="getTicketPdf()"
-    [disabled]="documentActionRunning">Ticket</button>
-  <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read') && isLiteAuthorized"
-    class="btn btn-outline flex-1 !py-1.5 !text-[11px]" (click)="downloadLiteXml()"
-    [disabled]="documentActionRunning">XML</button>
-  <button *ngIf="canSendEmail" class="btn btn-outline flex-1 !py-1.5 !text-[11px]" (click)="sendLiteInvoiceEmail()"
-    [disabled]="emailActionRunning">Correo</button>
-  <button class="btn btn-outline flex-1 !py-1.5 !text-[11px]" (click)="goBack()">
-    Volver
-  </button>
-</div>
+<app-document-actions *ngIf="!loadFailed" [actions]="documentActions" layout="mobile" />
 
-<div *ngIf="showMotivoModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-3">
-  <div class="relative w-full max-w-md rounded-xl bg-card p-4 text-xs shadow-xl">
-    <button class="absolute right-3 top-2 text-lg text-muted-foreground hover:text-foreground"
-      (click)="closeMotivo()">×</button>
+<div *ngIf="showMotivoModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-3"
+  (click)="closeMotivo()">
+  <div class="relative w-full max-w-md rounded-xl bg-card p-4 text-xs shadow-xl" role="dialog" aria-modal="true"
+    aria-labelledby="annul-title" (click)="$event.stopPropagation()">
+    <button type="button" class="absolute right-3 top-2 text-lg text-muted-foreground hover:text-foreground"
+      (click)="closeMotivo()" aria-label="Cerrar">×</button>
 
-    <h3 class="text-center text-base font-bold text-foreground">Anular factura</h3>
-    <p class="mb-3 text-center text-xs text-muted-foreground">Elige un motivo o especifica uno nuevo.</p>
+    <h3 id="annul-title" class="text-center text-base font-bold text-foreground">Anular factura</h3>
+    <p class="mb-3 text-center text-xs text-muted-foreground">
+      Se emitirá una nota de crédito por la factura {{ invoiceNumber }}. Elige un motivo o especifica uno nuevo.
+    </p>
 
     <form [formGroup]="motivoForm" (ngSubmit)="onConfirmMotivo()" class="space-y-3">
       <div>
-        <label class="mb-1 block text-[11px] font-semibold uppercase text-muted-foreground">Motivo</label>
-        <select formControlName="motivo" (change)="onMotivoChange()"
-          class="w-full rounded-lg border px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-card text-foreground">
+        <label for="annul-reason" class="mb-1 block text-[11px] font-semibold uppercase text-muted-foreground">Motivo</label>
+        <select id="annul-reason" formControlName="motivo" (change)="onMotivoChange()"
+          class="w-full rounded-lg border bg-card px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
           <option value="">Elige una opción (opcional)</option>
           <option *ngFor="let m of motivosAnulacion" [value]="m">{{ m }}</option>
         </select>
       </div>
 
       <div *ngIf="motivoForm.value.motivo === 'Otro'">
-        <label class="mb-1 block text-[11px] font-semibold uppercase text-muted-foreground">Especifica el motivo</label>
-        <input type="text" formControlName="otroTexto"
-          class="w-full rounded-lg border px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-card text-foreground"
+        <label for="annul-other" class="mb-1 block text-[11px] font-semibold uppercase text-muted-foreground">Especifica el motivo</label>
+        <input id="annul-other" type="text" formControlName="otroTexto"
+          class="w-full rounded-lg border bg-card px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           placeholder="Escribe aquí..." />
         <div *ngIf="motivoForm.get('otroTexto')?.invalid && motivoForm.get('otroTexto')?.touched"
-          class="mt-1 text-[11px] text-red-500">
+          class="mt-1 text-[11px] text-red-500" role="alert">
           Escribe al menos 2 caracteres.
         </div>
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-1">
-        <button type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]"
-          (click)="closeMotivo()">Cancelar</button>
-        <button type="submit" class="btn btn-primary !px-3 !py-1.5 !text-[11px]">Aceptar</button>
+        <button type="button" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="closeMotivo()">Cancelar</button>
+        <button type="submit" class="btn btn-primary !px-3 !py-1.5 !text-[11px]">Emitir nota de crédito</button>
       </div>
     </form>
   </div>

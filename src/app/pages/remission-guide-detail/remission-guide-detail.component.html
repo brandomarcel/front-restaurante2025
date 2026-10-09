@@ -1,153 +1,188 @@
 <ngx-spinner></ngx-spinner>
 
-<header class="mb-3 rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
-  <div class="app-container flex items-center justify-between gap-3">
-    <div class="flex items-center gap-3">
-      <button class="btn btn-ghost px-2 py-1" (click)="goBack()" aria-label="Volver a Guías de Remisión">
-        <fa-icon icon="arrow-left"></fa-icon>
-        <span class="ml-2 hidden sm:inline">Atrás</span>
-      </button>
-
-      <div>
-        <div class="flex items-center gap-3">
-          <h1 class="text-base font-bold leading-tight text-foreground sm:text-lg">
-            Guía de Remisión <span class="text-muted-foreground">#{{ documentNumber }}</span>
-          </h1>
-          <span class="badge" [ngClass]="statusBadge">{{ statusLabel }}</span>
+<div class="app-container" [ngClass]="{ 'pb-20 md:pb-0': documentActions.length }">
+  <header class="mb-3 rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
+    <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+      <div class="flex min-w-0 items-center gap-2">
+        <button type="button" class="btn btn-ghost !px-2 !py-1 !text-[11px]" (click)="goBack()" aria-label="Volver a guías de remisión">
+          <fa-icon icon="arrow-left"></fa-icon>
+          <span class="hidden sm:inline">Atrás</span>
+        </button>
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <h1 class="truncate text-base font-bold leading-tight text-foreground">Guía de remisión {{ documentNumber }}</h1>
+            <app-electronic-status-badge *ngIf="guide" [document]="guide" [liteMode]="true" />
+          </div>
+          <div *ngIf="guide" class="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+            <span>ID: <b class="font-semibold text-foreground/80">{{ guide?.name }}</b></span>
+            <span *ngIf="guide?.posting_date">Emisión: <b class="font-semibold text-foreground/80">{{ guide?.posting_date }}</b></span>
+            <span *ngIf="guide?.environment">Ambiente: <b class="font-semibold text-foreground/80">{{ guide?.environment }}</b></span>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Acciones rápidas (solo desktop) -->
-    <div class="hidden items-center gap-1.5 md:flex">
-      <button *ngIf="canEmitDraft" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" [disabled]="actionRunning" (click)="emitirBorrador()">Emitir</button>
-      <button *ngIf="canEdit" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" [routerLink]="['/dashboard/remission-guides', guide?.name, 'edit']">Editar</button>
-      <button *ngIf="isAuthorized" class="btn btn-primary !px-3 !py-1.5 !text-[11px]" (click)="downloadPdf()">
-        <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>Descargar PDF
-      </button>
-      <button *ngIf="isAuthorized" class="btn btn-outline !px-3 !py-1.5 !text-[11px]" (click)="downloadXml()">XML</button>
-      <button *ngIf="canConsult" class="btn btn-warn !px-3 !py-1.5 !text-[11px]" [disabled]="actionRunning" (click)="consultarAutorizacion()">Consultar autorización</button>
-      <button *ngIf="canRetry" class="btn btn-warn !px-3 !py-1.5 !text-[11px]" [disabled]="actionRunning" (click)="reintentar()">Reintentar</button>
+      <app-document-actions class="hidden md:block" [actions]="documentActions" />
     </div>
-  </div>
-</header>
+  </header>
 
-<main *ngIf="guide" class="app-container space-y-3 pb-20 md:pb-0">
-  <app-electronic-status-panel [document]="guide" kind="guide" (updated)="fetch($event.name)" />
-  <!-- FILA 1: Información general + Transporte + SRI -->
-  <section class="grid grid-cols-1 gap-3 md:grid-cols-3">
-    <div class="app-card p-3">
-      <div class="mb-4 flex items-center justify-between">
-        <h3 class="text-sm font-bold text-foreground">🧾 Información general</h3>
-        <span class="badge" [ngClass]="statusBadge">{{ statusLabel }}</span>
-      </div>
-      <ul class="grid gap-y-2 text-sm text-foreground/80">
-        <li><strong>ID:</strong> {{ guide?.name || '—' }}</li>
-        <li><strong>N° documento:</strong> {{ documentNumber }}</li>
-        <li><strong>Fecha emisión:</strong> {{ guide?.posting_date || '—' }}</li>
-        <li><strong>Ambiente:</strong> {{ guide?.environment || '—' }}</li>
-        <li><strong>Estado:</strong> {{ statusLabel }}</li>
-      </ul>
-    </div>
-
-    <div class="app-card p-3">
-      <div class="mb-4 flex items-center justify-between">
-        <h3 class="text-sm font-bold text-foreground">🚚 Transporte</h3>
-      </div>
-      <ul class="grid gap-y-2 text-sm text-foreground/80">
-        <li><strong>Transportista:</strong> {{ guide?.transport?.razon_social_transportista || '—' }}</li>
-        <li><strong>Identificación:</strong> {{ identificationLabel(guide?.transport?.tipo_identificacion_transportista) }} {{ guide?.transport?.ruc_transportista || '' }}</li>
-        <li><strong>Placa:</strong> {{ guide?.transport?.placa || '—' }}</li>
-        <li><strong>Dirección establecimiento:</strong> {{ guide?.transport?.dir_establecimiento || '—' }}</li>
-        <li><strong>Dirección partida:</strong> {{ guide?.transport?.dir_partida || '—' }}</li>
-        <li><strong>Fecha inicio:</strong> {{ guide?.transport?.fecha_ini_transporte || '—' }}</li>
-        <li><strong>Fecha fin:</strong> {{ guide?.transport?.fecha_fin_transporte || '—' }}</li>
-      </ul>
-    </div>
-
-    <div class="app-card p-3">
-      <div class="mb-4 flex items-center justify-between">
-        <h3 class="text-sm font-bold text-foreground">📤 Información del SRI</h3>
-        <span class="badge" [ngClass]="statusBadge">{{ statusLabel }}</span>
-      </div>
-      <ul class="grid gap-y-2 text-sm text-foreground/80">
-        <li><strong>Estado FacturADA:</strong> {{ statusLabel }}</li>
-        <li *ngIf="providerStatus !== '—'"><strong>Estado proveedor:</strong> {{ providerStatus }}</li>
-        <li *ngIf="accessKey">
-          <strong>Clave de acceso:</strong>
-          <span class="break-all">{{ accessKey }}</span>
-          <button type="button" class="ml-2 text-primary underline" (click)="copyAccessKey()">Copiar</button>
-        </li>
-        <li *ngIf="authorizationNumber"><strong>Autorización:</strong> {{ authorizationNumber }}</li>
-        <li *ngIf="authorizationDatetime"><strong>Fecha autorización:</strong> {{ authorizationDatetime }}</li>
-        <li *ngIf="emissionError" class="text-red-700"><strong>Error de envío:</strong> {{ emissionError }}</li>
-        <li *ngIf="!emissionError && sriMessage"><strong>Mensaje SRI:</strong> {{ sriMessage }}</li>
-        <li *ngIf="!accessKey && !sriMessage && !emissionError" class="text-muted-foreground">Sin información adicional del SRI todavía.</li>
-      </ul>
+  <section *ngIf="loadFailed" class="rounded-xl border border-border bg-card px-4 py-10 text-center shadow-sm" role="alert">
+    <p class="text-sm font-semibold text-foreground">No se pudo cargar la guía de remisión.</p>
+    <p class="mt-1 text-xs text-muted-foreground">Revisa tu conexión e inténtalo de nuevo.</p>
+    <div class="mt-3 flex justify-center gap-2">
+      <button type="button" class="btn btn-outline !text-xs" (click)="goBack()">Volver</button>
+      <button type="button" class="btn btn-primary !text-xs" (click)="retryLoad()">Reintentar</button>
     </div>
   </section>
 
-  <!-- FILA 2: Destinatarios y detalles (ancho completo) -->
-  <section>
-    <div class="app-card p-3">
-      <div class="mb-2 flex items-center justify-between">
-        <h3 class="text-sm font-bold text-foreground">📦 Destinatarios</h3>
-      </div>
+  <ng-container *ngIf="guide">
+    <nav class="mb-3 flex w-full gap-1 overflow-x-auto rounded-xl border border-border bg-card p-1.5 shadow-sm"
+      role="tablist" aria-label="Secciones de la guía de remisión">
+      <button *ngFor="let tab of detailTabs" type="button" role="tab" [id]="'guide-tab-' + tab.id"
+        [attr.aria-selected]="activeDetailTab === tab.id" aria-controls="guide-tab-panel"
+        class="inline-flex min-h-[30px] items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[11px] font-bold text-muted-foreground transition hover:bg-muted hover:text-primary"
+        [ngClass]="{ '!bg-primary/10 !text-primary shadow-sm': activeDetailTab === tab.id }"
+        (click)="selectDetailTab(tab.id)">
+        {{ tab.label }}
+        <app-electronic-status-badge *ngIf="tab.id === 'electronic'" [document]="guide" [liteMode]="true" />
+      </button>
+    </nav>
 
-      <div class="space-y-3">
-        <article *ngFor="let destinatario of destinatarios" class="rounded-lg border border-border bg-muted/40 p-2.5">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <p class="font-semibold text-foreground">{{ destinatario.razon_social_destinatario || '—' }}</p>
-            <span class="text-[11px] text-muted-foreground">{{ destinatario.identificacion_destinatario || '—' }}</span>
+    <div id="guide-tab-panel" role="tabpanel" [attr.aria-labelledby]="'guide-tab-' + activeDetailTab" class="space-y-3">
+
+      <!-- Información general -->
+      <ng-container *ngIf="activeDetailTab === 'general'">
+        <section class="rounded-xl border border-border bg-card p-2.5 shadow-sm">
+          <h2 class="mb-2 text-[11px] font-bold uppercase tracking-wide text-primary">Transporte</h2>
+          <dl class="grid gap-x-3 gap-y-1 rounded-lg bg-muted/40 px-2.5 py-2 text-xs text-foreground/80 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="sm:col-span-2">
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Transportista</dt>
+              <dd class="truncate font-bold text-foreground">{{ guide?.transport?.razon_social_transportista || '—' }}</dd>
+            </div>
+            <div>
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Identificación</dt>
+              <dd class="font-semibold">{{ identificationLabel(guide?.transport?.tipo_identificacion_transportista) }} {{ guide?.transport?.ruc_transportista || '' }}</dd>
+            </div>
+            <div>
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Placa</dt>
+              <dd class="font-semibold">{{ guide?.transport?.placa || '—' }}</dd>
+            </div>
+            <div class="sm:col-span-2">
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Dirección establecimiento</dt>
+              <dd class="truncate font-semibold" [title]="guide?.transport?.dir_establecimiento || ''">{{ guide?.transport?.dir_establecimiento || '—' }}</dd>
+            </div>
+            <div class="sm:col-span-2">
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Dirección partida</dt>
+              <dd class="truncate font-semibold" [title]="guide?.transport?.dir_partida || ''">{{ guide?.transport?.dir_partida || '—' }}</dd>
+            </div>
+            <div>
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Inicio de traslado</dt>
+              <dd class="font-semibold">{{ guide?.transport?.fecha_ini_transporte || '—' }}</dd>
+            </div>
+            <div>
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Fin de traslado</dt>
+              <dd class="font-semibold">{{ guide?.transport?.fecha_fin_transporte || '—' }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="rounded-xl border border-border bg-card shadow-sm">
+          <div class="border-b border-border px-3 py-2">
+            <h2 class="text-sm font-bold text-foreground">Destinatarios</h2>
+            <p class="text-[11px] text-muted-foreground">{{ destinatarios.length }} destinatario(s) en la guía</p>
           </div>
-          <p class="mt-0.5 text-[11px] text-muted-foreground">{{ destinatario.dir_destinatario || '—' }}</p>
-          <p class="mt-0.5 text-[11px] text-muted-foreground">
-            Motivo: {{ destinatario.motivo_traslado || '—' }}
-            <span *ngIf="destinatario.num_doc_sustento"> · Doc. sustento: {{ destinatario.num_doc_sustento }}</span>
+
+          <div class="space-y-3 p-2.5">
+            <article *ngFor="let destinatario of destinatarios" class="rounded-lg border border-border bg-muted/40 p-2.5">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <p class="font-semibold text-foreground">{{ destinatario.razon_social_destinatario || '—' }}</p>
+                <span class="text-[11px] text-muted-foreground">{{ destinatario.identificacion_destinatario || '—' }}</span>
+              </div>
+              <p class="mt-0.5 text-[11px] text-muted-foreground">{{ destinatario.dir_destinatario || '—' }}</p>
+              <p class="mt-0.5 text-[11px] text-muted-foreground">
+                Motivo: {{ destinatario.motivo_traslado || '—' }}
+                <span *ngIf="destinatario.num_doc_sustento"> · Doc. sustento: {{ destinatario.num_doc_sustento }}</span>
+              </p>
+
+              <div class="mt-2 overflow-x-auto rounded-lg border border-border bg-card">
+                <table class="w-full text-xs">
+                  <thead class="bg-muted/50 text-left text-[10px] uppercase text-muted-foreground">
+                    <tr>
+                      <th class="p-2">Código</th>
+                      <th class="p-2">Descripción</th>
+                      <th class="p-2 text-right">Cantidad</th>
+                      <th class="p-2">Unidad</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let detalle of destinatario.detalles" class="border-t border-border">
+                      <td class="p-2 font-mono text-[11px]">{{ detalle.codigo_interno || detalle.codigoInterno || '—' }}</td>
+                      <td class="p-2">{{ detalle.descripcion || '—' }}</td>
+                      <td class="p-2 text-right font-semibold">{{ detalle.cantidad ?? 0 }}</td>
+                      <td class="p-2">{{ detalle.unidad_medida || detalle.unidadMedida || '—' }}</td>
+                    </tr>
+                    <tr *ngIf="!destinatario.detalles?.length">
+                      <td colspan="4" class="p-4 text-center text-muted-foreground">Sin detalles.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+
+            <div *ngIf="!destinatarios.length" class="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+              No hay destinatarios registrados.
+            </div>
+          </div>
+        </section>
+      </ng-container>
+
+      <!-- Estado SRI: se oculta sin desmontar para que el panel siga escuchando actualizaciones en tiempo real -->
+      <div [ngClass]="activeDetailTab === 'electronic' ? 'grid' : 'hidden'" class="gap-3 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+        <section class="space-y-2 rounded-xl border border-border bg-card p-2.5 shadow-sm">
+          <h2 class="text-[11px] font-bold uppercase tracking-wide text-primary">Datos del comprobante</h2>
+          <dl class="grid gap-x-3 gap-y-1 rounded-lg bg-muted/40 px-2.5 py-2 text-xs text-foreground/80 sm:grid-cols-2">
+            <div *ngIf="accessKey" class="sm:col-span-2">
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Clave de acceso</dt>
+              <dd class="flex items-center gap-2">
+                <span class="min-w-0 truncate font-mono text-[11px] font-semibold text-primary" [title]="accessKey">{{ accessKey }}</span>
+                <button type="button" class="shrink-0 text-[10px] font-semibold text-muted-foreground hover:text-primary hover:underline"
+                  (click)="copyAccessKey()" aria-label="Copiar clave de acceso">Copiar</button>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Estado FacturADA</dt>
+              <dd class="font-semibold">{{ statusLabel }}</dd>
+            </div>
+            <div>
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Estado proveedor</dt>
+              <dd class="font-semibold">{{ providerStatus }}</dd>
+            </div>
+            <div *ngIf="authorizationNumber" class="sm:col-span-2">
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Número de autorización</dt>
+              <dd class="truncate font-mono text-[11px] font-semibold" [title]="authorizationNumber">{{ authorizationNumber }}</dd>
+            </div>
+            <div *ngIf="authorizationDatetime" class="sm:col-span-2">
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Fecha de autorización</dt>
+              <dd class="font-semibold">{{ authorizationDatetime }}</dd>
+            </div>
+          </dl>
+
+          <div *ngIf="emissionError" class="rounded-lg bg-red-50 px-2 py-1.5 text-[11px] text-red-700">
+            <span class="font-bold uppercase">Error de envío:</span>
+            <span class="ml-1">{{ emissionError }}</span>
+          </div>
+          <div *ngIf="!emissionError && sriMessage" class="rounded-lg bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
+            <span class="font-bold uppercase">Mensaje SRI:</span>
+            <span class="ml-1">{{ sriMessage }}</span>
+          </div>
+          <p *ngIf="!accessKey && !sriMessage && !emissionError" class="text-[11px] text-muted-foreground">
+            Sin información adicional del SRI todavía.
           </p>
+        </section>
 
-          <div class="app-table-wrap mt-2">
-            <table class="app-table">
-              <thead class="app-thead">
-                <tr>
-                  <th class="p-3 text-left">Código</th>
-                  <th class="p-3 text-left">Descripción</th>
-                  <th class="p-3 text-left">Cantidad</th>
-                  <th class="p-3 text-left">Unidad</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let detalle of destinatario.detalles" class="app-tr">
-                  <td class="p-3">{{ detalle.codigo_interno || detalle.codigoInterno || '—' }}</td>
-                  <td class="p-3">{{ detalle.descripcion || '—' }}</td>
-                  <td class="p-3">{{ detalle.cantidad ?? 0 }}</td>
-                  <td class="p-3">{{ detalle.unidad_medida || detalle.unidadMedida || '—' }}</td>
-                </tr>
-                <tr *ngIf="!destinatario.detalles?.length">
-                  <td colspan="4" class="p-4 text-center text-muted-foreground">Sin detalles.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </article>
-
-        <div *ngIf="!destinatarios.length" class="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-          No hay destinatarios registrados.
-        </div>
+        <app-electronic-status-panel [document]="guide" kind="guide" (updated)="fetch($event.name)" />
       </div>
     </div>
-  </section>
-</main>
-
-<!-- Barra de acciones móvil (fija en el pie de la página) -->
-<div *ngIf="guide"
-  class="fixed inset-x-0 bottom-0 z-40 flex justify-center gap-2 border-t bg-card px-4 py-2 text-center md:hidden">
-  <button *ngIf="canEmitDraft" class="btn btn-primary" [disabled]="actionRunning" (click)="emitirBorrador()">Emitir</button>
-  <button *ngIf="canEdit" class="btn btn-outline" [routerLink]="['/dashboard/remission-guides', guide?.name, 'edit']">Editar</button>
-  <button *ngIf="isAuthorized" class="btn btn-primary" (click)="downloadPdf()">
-    <fa-icon [icon]="['fas','download']" class="mr-1"></fa-icon>PDF
-  </button>
-  <button *ngIf="isAuthorized" class="btn btn-outline" (click)="downloadXml()">XML</button>
-  <button *ngIf="canConsult" class="btn btn-warn" [disabled]="actionRunning" (click)="consultarAutorizacion()">Consultar</button>
-  <button *ngIf="canRetry" class="btn btn-warn" [disabled]="actionRunning" (click)="reintentar()">Reintentar</button>
+  </ng-container>
 </div>
+
+<app-document-actions [actions]="documentActions" layout="mobile" />

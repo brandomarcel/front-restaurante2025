@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { finalize } from 'rxjs';
+import { finalize, Subscription } from 'rxjs';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { CajasService } from 'src/app/services/cajas.service';
@@ -29,6 +29,9 @@ export class ReportCierreCajaComponent implements OnInit, OnDestroy {
   exporting = false;
   errorMessage = '';
   businessId = '';
+  private querySub?: Subscription;
+  private exportSub?: Subscription;
+  private resultFilters?: string;
   private readonly onDataChanged = () => this.buscar();
 
   constructor(
@@ -38,14 +41,18 @@ export class ReportCierreCajaComponent implements OnInit, OnDestroy {
   ) {}
 
   get canView(): boolean {
-    return this.capabilities.isEnabled('cash_register')
+    return !['none', 'billing'].includes(this.capabilities.reportScope || '')
+      && (this.capabilities.hasPermission('*') || this.capabilities.hasPermission('reports.view'))
+      && this.capabilities.isEnabled('cash_register')
       && (this.capabilities.hasPermission('*')
         || this.capabilities.hasPermission('restaurant.manage')
         || this.capabilities.hasPermission('billing.manage'));
   }
 
   get canExport(): boolean {
-    return this.canView && !this.loading && !this.exporting;
+    return this.canView && !this.loading && !this.exporting
+      && this.businessId === this.capabilities.activeBusinessId
+      && this.resultFilters === JSON.stringify(this.filters);
   }
 
   ngOnInit(): void {
@@ -59,10 +66,14 @@ export class ReportCierreCajaComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.querySub?.unsubscribe();
+    this.exportSub?.unsubscribe();
     window.removeEventListener('facturada:restaurant-data-changed', this.onDataChanged);
   }
 
   buscar(): void {
+    this.querySub?.unsubscribe();
+    this.resultFilters = undefined;
     const currentBusiness = this.capabilities.activeBusinessId || '';
     if (!currentBusiness || !this.canView) {
       this.businessId = currentBusiness;
@@ -71,21 +82,31 @@ export class ReportCierreCajaComponent implements OnInit, OnDestroy {
       this.errorMessage = 'No tienes permiso para consultar este reporte.';
       return;
     }
+    if (this.filters.from_date && this.filters.to_date && this.filters.from_date > this.filters.to_date) {
+      this.errorMessage = 'La fecha desde no puede ser mayor a la fecha hasta.';
+      return;
+    }
     this.businessId = currentBusiness;
+    const filtersSnapshot = JSON.stringify(this.filters);
     this.errorMessage = '';
     this.rows = [];
     this.columns = [];
     this.loading = true;
-    this.cajasService.getCashClosingsReport({ ...this.filters, limit: 100 })
+    this.querySub = this.cajasService.getCashClosingsReport({ ...this.filters, limit: 100 })
       .pipe(finalize(() => this.loading = false))
       .subscribe({
         next: (response: any) => {
+          if (currentBusiness !== this.capabilities.activeBusinessId) return;
+          this.resultFilters = filtersSnapshot;
           const message = response?.message ?? response ?? {};
           this.columns = Array.isArray(message.columns) ? message.columns : [];
           const result = Array.isArray(message.result) ? message.result : [];
-          this.rows = result.map((row: any) => this.normalizeRow(row));
+          // Desk appends a summary row; cards must sum actual closings once.
+          const closings = Number(message.add_total_row) === 1 ? result.slice(0, -1) : result;
+          this.rows = closings.map((row: any) => this.normalizeRow(row));
         },
         error: (error: any) => {
+          if (currentBusiness !== this.capabilities.activeBusinessId) return;
           this.rows = [];
           this.columns = [];
           this.errorMessage = this.readError(error);
@@ -97,20 +118,23 @@ export class ReportCierreCajaComponent implements OnInit, OnDestroy {
     if (!this.canExport) return;
     this.exporting = true;
     this.errorMessage = '';
-    this.cajasService.exportCashClosingsReport(this.filters)
+    const business = this.businessId;
+    this.exportSub = this.cajasService.exportCashClosingsReport(this.filters)
       .pipe(finalize(() => this.exporting = false))
       .subscribe({
         next: (blob: Blob) => {
+          if (business !== this.capabilities.activeBusinessId) return;
           const url = URL.createObjectURL(blob);
           const anchor = document.createElement('a');
           anchor.href = url;
-          anchor.download = `cierre-caja-${this.businessId}.xlsx`;
+          anchor.download = `cierre-caja-${business}.xlsx`;
           document.body.appendChild(anchor);
           anchor.click();
           anchor.remove();
           URL.revokeObjectURL(url);
         },
         error: (error: any) => {
+          if (business !== this.capabilities.activeBusinessId) return;
           this.errorMessage = this.readError(error);
           this.alertService.error(this.errorMessage);
         }
@@ -151,7 +175,7 @@ export class ReportCierreCajaComponent implements OnInit, OnDestroy {
   }
 
   get totalRetiradoSum(): number {
-    return this.rows.reduce((acc, row) => acc + (this.money(row, 'total_retiros', 'withdrawals', 'retiros') || 0), 0);
+    return this.rows.reduce((acc, row) => acc + (this.money(row, 'withdrawals_total', 'total_retiros', 'withdrawals', 'retiros') || 0), 0);
   }
 
   get cierresConDiferencia(): number {

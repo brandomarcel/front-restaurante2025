@@ -2,24 +2,59 @@
   <form [formGroup]="invoiceForm" (ngSubmit)="finalizeInvoice()" class="min-h-full">
     <div class="space-y-3 pb-24 sm:pb-6">
 
-      <!-- <section class="flex items-center justify-between gap-3 rounded-xl border border-primary/15 bg-gradient-to-r from-primary/10 via-white to-white px-3 py-2.5 shadow-sm">
+      <!-- <header class="invoice-header">
         <div>
-          <p class="text-[10px] font-bold uppercase tracking-wide text-primary">{{ isGenericPos ? 'POS genérico' : 'Facturación directa' }}</p>
-          <h1 class="text-base font-black text-foreground">{{ isGenericPos ? 'Punto de venta' : 'Nueva factura' }}</h1>
-          <p class="text-[10px] text-muted-foreground">{{ isGenericPos ? 'Selecciona cliente, productos, pagos y cobra desde tu terminal.' : 'Emite una factura electrónica con los datos actuales.' }}</p>
+          <p class="invoice-eyebrow text-primary">Facturación directa</p>
+          <h1 class="text-2xl font-bold tracking-tight text-foreground">Nueva factura</h1>
         </div>
-        <span *ngIf="isGenericPos" class="hidden rounded-full bg-slate-900 px-2.5 py-1 text-[10px] font-bold text-white sm:inline-flex">Venta rápida</span>
-      </section> -->
+        <span class="invoice-environment" [ngClass]="invoiceEnvironment === 'Produccion' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'">
+          <span class="h-2 w-2 rounded-full bg-current" aria-hidden="true"></span>
+          {{ invoiceEnvironment === 'Produccion' ? 'Producción' : (invoiceEnvironment || 'Ambiente sin configurar') }}
+        </span>
+      </header> -->
 
-      <section *ngIf="currentFiscalLocation || posTerminalBlockMessage" class="rounded-xl border px-3 py-2.5 text-[11px]" [ngClass]="posTerminalBlockMessage ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-border bg-card text-muted-foreground'">
+      <section *ngIf="!canSelectFiscalLocation && (currentFiscalLocation || posTerminalBlockMessage)" class="rounded-xl border px-3 py-2.5 text-[13px]" [ngClass]="posTerminalBlockMessage ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-border bg-card text-muted-foreground'">
         <div class="grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
           <span *ngIf="selectedPosTerminal" class="min-w-0 truncate"><b>Terminal:</b> {{ posTerminalLabel(selectedPosTerminal) }} <em *ngIf="terminalAssignmentLabel" class="not-italic text-primary">({{ terminalAssignmentLabel }})</em></span>
           <span *ngIf="currentFiscalLocation?.establishment" class="min-w-0 truncate"><b>Establecimiento:</b> {{ fiscalEstablishmentLabel(currentFiscalLocation) }}</span>
           <span *ngIf="currentFiscalLocation?.emissionPoint" class="min-w-0 truncate"><b>Punto de emisión:</b> {{ fiscalEmissionPointLabel(currentFiscalLocation) }}</span>
           <span *ngIf="currentFiscalLocation?.environment" class="min-w-0 truncate"><b>Ambiente:</b> {{ currentFiscalLocation.environment }}</span>
         </div>
-        <p *ngIf="!selectedPosTerminal && !posTerminalBlockMessage" class="mt-1 text-[10px] text-muted-foreground">Se usará la configuración general del establecimiento y punto de emisión.</p>
+        <p *ngIf="!selectedPosTerminal && !posTerminalBlockMessage" class="mt-1 text-[12px] text-muted-foreground">Se usará el establecimiento y punto seleccionados para esta factura.</p>
         <p *ngIf="posTerminalBlockMessage" class="mt-1 font-semibold">{{ posTerminalBlockMessage }}</p>
+      </section>
+
+      <section *ngIf="canSelectFiscalLocation" class="invoice-location rounded-xl border border-border bg-card">
+        <div class="invoice-fiscal-fields">
+          <label class="block">
+            <span class="mb-1 block text-[13px] font-semibold">Establecimiento</span>
+            <select *ngIf="fiscalEstablishments.length > 1; else singleEstablishment" class="input w-full"
+              [ngModel]="selectedEstablishmentId" (ngModelChange)="selectFiscalEstablishment($event)"
+              [ngModelOptions]="{standalone: true}" [disabled]="fiscalSelectionLocked" aria-label="Establecimiento de facturación">
+              <option value="">Selecciona un establecimiento</option>
+              <option *ngFor="let establishment of fiscalEstablishments" [ngValue]="establishment.name">{{ fiscalOptionLabel(establishment, 'establishment') }}</option>
+            </select>
+            <ng-template #singleEstablishment>
+              <p class="invoice-location-value bg-muted/40 text-foreground">{{ fiscalEstablishments.length ? fiscalOptionLabel(fiscalEstablishments[0], 'establishment') : 'Sin establecimientos con secuencia de factura para este ambiente' }}</p>
+            </ng-template>
+          </label>
+          <label class="block">
+            <span class="mb-1 block text-[13px] font-semibold">Punto de emisión</span>
+            <select *ngIf="fiscalEmissionPoints.length > 1; else singleEmissionPoint" class="input w-full"
+              [ngModel]="selectedEmissionPointId" (ngModelChange)="selectFiscalEmissionPoint($event)"
+              [ngModelOptions]="{standalone: true}" [disabled]="fiscalSelectionLocked" aria-label="Punto de emisión de facturación">
+              <option value="">Selecciona un punto de emisión</option>
+              <option *ngFor="let point of fiscalEmissionPoints" [ngValue]="point.name">{{ fiscalOptionLabel(point, 'emission_point') }}</option>
+            </select>
+            <ng-template #singleEmissionPoint>
+              <p class="invoice-location-value bg-muted/40 text-foreground">{{ fiscalEmissionPoints.length ? fiscalOptionLabel(fiscalEmissionPoints[0], 'emission_point') : (selectedEstablishmentId ? 'Sin puntos con secuencia de factura para este ambiente' : 'Selecciona primero el establecimiento') }}</p>
+            </ng-template>
+          </label>
+          <div class="invoice-fiscal-environment">
+            <span class="mb-1 block text-xs text-muted-foreground">Ambiente</span>
+            <p class="invoice-location-value" [ngClass]="invoiceEnvironment === 'Produccion' ? 'text-emerald-700' : 'text-amber-700'">{{ invoiceEnvironment === 'Produccion' ? 'Producción' : (invoiceEnvironment || 'Sin configurar') }}</p>
+          </div>
+        </div>
       </section>
 
       <section *ngIf="emissionState" class="rounded-xl border px-3 py-2 text-xs"
@@ -37,31 +72,38 @@
                  emissionState === 'REJECTED' ? 'Comprobante rechazado por el SRI' :
                  emissionState === 'PROVIDER_ERROR' ? 'No se pudo completar el envío' : 'Error al emitir la factura' }}
             </p>
-            <p *ngIf="emissionInvoiceName" class="mt-0.5 text-[10px] opacity-80">Factura: {{ emissionInvoiceName }}</p>
-            <p *ngIf="emissionAccessKey" class="mt-0.5 break-all font-mono text-[10px] opacity-80">Clave: {{ emissionAccessKey }}</p>
-            <p *ngIf="emissionPostingDate" class="mt-0.5 text-[10px] opacity-80">Fecha de emisión: {{ emissionPostingDate }}</p>
-            <p *ngIf="emissionAuthorizationNumber" class="mt-0.5 text-[10px] opacity-80">Autorización: {{ emissionAuthorizationNumber }}</p>
-            <p *ngIf="emissionAuthorizationDatetime" class="mt-0.5 text-[10px] opacity-80">Fecha autorización: {{ emissionAuthorizationDatetime }}</p>
+            <p *ngIf="emissionInvoiceName" class="mt-0.5 text-[12px] opacity-80">Factura: {{ emissionInvoiceName }}</p>
+            <p *ngIf="emissionAccessKey" class="mt-0.5 break-all font-mono text-[12px] opacity-80">Clave: {{ emissionAccessKey }}</p>
+            <p *ngIf="emissionPostingDate" class="mt-0.5 text-[12px] opacity-80">Fecha de emisión: {{ emissionPostingDate }}</p>
+            <p *ngIf="emissionAuthorizationNumber" class="mt-0.5 text-[12px] opacity-80">Autorización: {{ emissionAuthorizationNumber }}</p>
+            <p *ngIf="emissionAuthorizationDatetime" class="mt-0.5 text-[12px] opacity-80">Fecha autorización: {{ emissionAuthorizationDatetime }}</p>
           </div>
           <div class="grid grid-cols-1 gap-1.5 sm:flex sm:flex-wrap">
-            <button *ngIf="emissionInvoiceName" type="button" class="min-h-[34px] rounded-md border border-current px-2.5 py-1.5 text-[10px] font-bold" [routerLink]="['/dashboard/invoices', emissionInvoiceName]">Ver detalle</button>
-            <button *ngIf="emissionState === 'AUTHORIZED'" type="button" class="min-h-[34px] rounded-md bg-emerald-600 px-2.5 py-1.5 text-[10px] font-bold text-white" (click)="printRide()">Imprimir RIDE</button>
-            <button *ngIf="emissionState === 'AUTHORIZED' || emissionState === 'PROCESSING'" type="button" class="min-h-[34px] rounded-md border border-current px-2.5 py-1.5 text-[10px] font-bold" (click)="printTicket()">Ticket</button>
+            <button *ngIf="emissionInvoiceName" type="button" class="min-h-[40px] rounded-md border border-current px-2.5 py-1.5 text-[12px] font-bold"
+              [disabled]="isEmitting || isConfirmingEmission" (click)="startNewInvoice()">Nueva factura</button>
+            <button *ngIf="emissionInvoiceName" type="button" class="min-h-[40px] rounded-md border border-current px-2.5 py-1.5 text-[12px] font-bold" [routerLink]="['/dashboard/invoices', emissionInvoiceName]">Ver detalle</button>
+            <button *ngIf="emissionState === 'AUTHORIZED'" type="button" class="min-h-[40px] rounded-md bg-emerald-600 px-2.5 py-1.5 text-[12px] font-bold text-white" (click)="printRide()">Imprimir RIDE</button>
+            <button *ngIf="emissionState === 'AUTHORIZED' || emissionState === 'PROCESSING'" type="button" class="min-h-[40px] rounded-md border border-current px-2.5 py-1.5 text-[12px] font-bold" (click)="printTicket()">Ticket</button>
           </div>
         </div>
         <details *ngIf="emissionMessages.length" class="mt-2">
-          <summary class="cursor-pointer text-[10px] font-bold">Ver mensajes tributarios</summary>
-          <ul class="mt-1 list-disc space-y-0.5 pl-4 text-[11px]"><li *ngFor="let message of emissionMessages">{{ message }}</li></ul>
+          <summary class="cursor-pointer text-[12px] font-bold">Ver mensajes tributarios</summary>
+          <ul class="mt-1 list-disc space-y-0.5 pl-4 text-[13px]"><li *ngFor="let message of emissionMessages">{{ message }}</li></ul>
         </details>
       </section>
 
-      <div class="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
-        <main class="min-w-0 space-y-3">
-          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
+      <section *ngIf="previousInvoice && !emissionInvoiceName" class="rounded-xl border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+        <span>Comprobante anterior: </span>
+        <a [routerLink]="['/dashboard/invoices', previousInvoice.name]" class="font-semibold text-primary hover:underline">{{ previousInvoice.name }} · Ver estado</a>
+        <p class="mt-1">Puedes continuar facturando y consultar este comprobante desde su detalle.</p>
+      </section>
+
+      <div class="invoice-workspace">
+        <main class="invoice-editor min-w-0 rounded-xl border border-border bg-card">
+          <section class="invoice-editor-section">
             <div class="mb-2 flex items-center justify-between gap-2">
               <div>
-                <h3 class="text-xs font-semibold text-primary">Cliente</h3>
-                <p class="text-[10px] text-muted-foreground">Busca por nombre, cédula, RUC, teléfono o correo.</p>
+                <h2 class="invoice-panel-title text-foreground">Cliente</h2>
               </div>
               <app-button type="button" tone="info" impact="bold" size="small" shape="rounded" (buttonClick)="openCustomerModalFromSearch()">
                 <fa-icon [icon]="['fas','user-plus']" class="mr-1"></fa-icon>
@@ -81,14 +123,14 @@
                   (blur)="closeCustomerSearchSoon()"
                   (keyup.enter)="selectFirstCustomerSuggestion()"
                   placeholder="Nombre, cédula, RUC, teléfono o correo"
-                  class="min-h-[32px] w-full rounded-md border border-border bg-card px-2.5 text-[11px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  class="min-h-[40px] w-full rounded-md border border-border bg-card px-2.5 text-[13px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                   [ngClass]="{
                     'border-red-400': invoiceForm.get('selectedCustomer')?.invalid && invoiceForm.get('selectedCustomer')?.touched
                   }" />
 
                 <div *ngIf="isCustomerSearchOpen"
                   class="absolute left-0 right-0 top-full z-30 mt-1 max-h-56 overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
-                  <div *ngIf="customerSearchLoading" class="px-2.5 py-1.5 text-[11px] text-muted-foreground">
+                  <div *ngIf="customerSearchLoading" class="px-2.5 py-1.5 text-[13px] text-muted-foreground">
                     Buscando clientes...
                   </div>
 
@@ -96,20 +138,20 @@
                     *ngFor="let c of customers; trackBy: trackByCustomerId"
                     type="button"
                     (mousedown)="selectCustomer(c)"
-                    class="flex w-full items-start gap-2 border-b border-border px-2.5 py-1.5 text-left text-[11px] hover:bg-primary/5">
-                    <span class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-primary/10 text-[10px] font-bold text-primary">
+                    class="flex w-full items-start gap-2 border-b border-border px-2.5 py-1.5 text-left text-[13px] hover:bg-primary/5">
+                    <span class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-primary/10 text-[12px] font-bold text-primary">
                       {{ c?.nombre?.charAt(0) || 'C' }}
                     </span>
                     <span class="min-w-0">
                       <span class="block truncate font-semibold text-foreground">{{ c?.nombre }}</span>
-                      <span class="block truncate text-[10px] text-muted-foreground">
+                      <span class="block truncate text-[12px] text-muted-foreground">
                         {{ c?.num_identificacion }} · {{ c?.telefono || c?.correo || 'Sin contacto' }}
                       </span>
                     </span>
                   </button>
 
                   <div *ngIf="!customerSearchLoading && customers.length === 0"
-                    class="px-2.5 py-1.5 text-[11px] text-muted-foreground">
+                    class="px-2.5 py-1.5 text-[13px] text-muted-foreground">
                     Sin coincidencias.
                     <button type="button" (mousedown)="openCustomerModalFromSearch()" class="ml-1 font-semibold text-primary">
                       Crear cliente
@@ -123,14 +165,14 @@
                   *ngIf="!selectedCustomer"
                   type="button"
                   (click)="selectFinalConsumer()"
-                  class="min-h-[36px] whitespace-nowrap rounded-md border border-primary/20 bg-primary/5 px-2.5 text-[11px] font-semibold text-primary sm:min-h-[32px] sm:px-3">
+                  class="min-h-[40px] whitespace-nowrap rounded-md border border-primary/20 bg-primary/5 px-2.5 text-[13px] font-semibold text-primary sm:min-h-[40px] sm:px-3">
                   Consumidor final
                 </button>
 
                 <button
                   type="button"
                   (click)="searchCustomerFromInput()"
-                  class="min-h-[36px] rounded-md bg-primary px-2.5 text-[11px] font-semibold text-white sm:min-h-[32px] sm:px-3">
+                  class="min-h-[40px] rounded-md bg-primary px-2.5 text-[13px] font-semibold text-white sm:min-h-[40px] sm:px-3">
                   Buscar
                 </button>
 
@@ -138,35 +180,32 @@
                   *ngIf="selectedCustomer"
                   type="button"
                   (click)="clearSelectedCustomer()"
-                  class="min-h-[36px] rounded-md border border-border bg-card px-2.5 text-[11px] font-semibold text-muted-foreground sm:min-h-[32px] sm:px-3">
+                  class="min-h-[40px] rounded-md border border-border bg-card px-2.5 text-[13px] font-semibold text-muted-foreground sm:min-h-[40px] sm:px-3">
                   Cambiar
                 </button>
               </div>
             </div>
 
             <div *ngIf="invoiceForm.get('selectedCustomer')?.invalid && invoiceForm.get('selectedCustomer')?.touched"
-              class="mt-1 text-[11px] text-red-500">
+              class="mt-1 text-[13px] text-red-500">
               Debes seleccionar un cliente.
             </div>
 
             <div *ngIf="selectedCustomer"
-              class="mt-2 grid grid-cols-1 gap-1.5 rounded-lg border border-border bg-muted/40 p-2.5 text-[11px] text-foreground/80 sm:grid-cols-3">
+              class="invoice-customer-contact mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground/80">
               <p class="truncate"><span class="text-muted-foreground">ID:</span> {{ selectedCustomer.num_identificacion || '—' }}</p>
               <p class="truncate"><span class="text-muted-foreground">Email:</span> {{ selectedCustomer.correo || '—' }}</p>
               <p class="truncate"><span class="text-muted-foreground">Tel:</span> {{ selectedCustomer.telefono || '—' }}</p>
             </div>
           </section>
 
-          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <div class="mb-2 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <section class="invoice-editor-section">
+            <div class="mb-3 flex flex-col gap-2">
               <div>
-                <h3 class="text-xs font-semibold text-primary">{{ isGenericPos ? 'Venta actual' : 'Detalle de factura' }}</h3>
-                <p class="text-[10px] text-muted-foreground">
-                  Agrega productos desde el catálogo.
-                </p>
+                <h2 class="invoice-panel-title text-foreground">Productos de la factura</h2>
               </div>
 
-              <div class="w-full min-w-0 lg:w-[560px]">
+              <div class="w-full min-w-0">
                 <div class="grid gap-1.5">
                   <div class="grid min-w-0 gap-1.5 md:grid-cols-[minmax(0,1fr)_auto_auto]">
                     <div class="relative">
@@ -180,20 +219,20 @@
                         (blur)="closeProductSearchSoon()"
                         (keyup.enter)="selectFirstProductSuggestion()"
                         placeholder="Buscar producto por nombre o código"
-                        class="min-h-[34px] w-full rounded-lg border border-border bg-card px-3 pr-9 text-[11px] outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                        class="min-h-[40px] w-full rounded-lg border border-border bg-card px-3 pr-9 text-[13px] outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" />
 
                       <button
                         *ngIf="productSearchTerm"
                         type="button"
                         (mousedown)="clearProductSearch()"
-                        class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground/70 hover:bg-muted hover:text-foreground/80">
+                        class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-[12px] font-semibold text-muted-foreground/70 hover:bg-muted hover:text-foreground/80">
                         ✕
                       </button>
 
                       <div
                         *ngIf="isProductSearchOpen"
                         class="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-xl border border-border bg-card p-1.5 shadow-xl">
-                        <p class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+                        <p class="px-2 py-1 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground/70">
                           {{ productSearchHelpText }}
                         </p>
 
@@ -207,18 +246,18 @@
                               <img *ngIf="product.image_url" [src]="product.image_url" [alt]="product.nombre" class="h-full w-full object-cover" />
                               <span *ngIf="!product.image_url" class="m-auto text-[8px] text-muted-foreground/70">—</span>
                             </span>
-                            <span class="block truncate text-[11px] font-bold text-foreground">{{ product.nombre }}</span>
-                            <span class="block truncate text-[10px] text-muted-foreground">
+                            <span class="block truncate text-[13px] font-bold text-foreground">{{ product.nombre }}</span>
+                            <span class="block truncate text-[12px] text-muted-foreground">
                               {{ product.codigo || 'Sin código' }}
                               <ng-container *ngIf="hasInventory(product)"> · Stock {{ getInventoryLabel(product) }}</ng-container>
                             </span>
                           </span>
 
                           <span class="flex flex-wrap items-center justify-end gap-1">
-                            <span class="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold text-foreground/80">
+                            <span class="rounded-md bg-muted px-1.5 py-0.5 text-[12px] font-bold text-foreground/80">
                               {{ getProductPriceLabel(product) }}
                             </span>
-                            <span class="rounded-md bg-muted/40 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                            <span class="rounded-md bg-muted/40 px-1.5 py-0.5 text-[12px] font-semibold text-muted-foreground">
                               {{ getProductTaxLabel(product) }}
                             </span>
                             <span *ngIf="isOutOfStock(product)" class="badge badge-red">Agotado</span>
@@ -228,7 +267,7 @@
 
                         <div
                           *ngIf="productSearchTerm.trim() && filteredProductSuggestions.length === 0"
-                          class="rounded-lg border border-dashed border-border bg-muted/40 px-2 py-3 text-center text-[11px] text-muted-foreground">
+                          class="rounded-lg border border-dashed border-border bg-muted/40 px-2 py-3 text-center text-[13px] text-muted-foreground">
                           No encontré productos con ese texto.
                         </div>
                       </div>
@@ -237,7 +276,7 @@
                     <button
                       type="button"
                       (click)="selectFirstProductSuggestion()"
-                      class="min-h-[38px] rounded-lg bg-primary px-3 text-[11px] font-bold text-white transition hover:bg-primary/90 md:min-h-[34px]">
+                      class="min-h-[38px] rounded-lg bg-primary px-3 text-[13px] font-bold text-white transition hover:bg-primary/90 md:min-h-[40px]">
                       Agregar
                     </button>
 
@@ -246,131 +285,91 @@
               </div>
             </div>
 
-            <div *ngIf="cartItems.length > 0; else emptyCart" class="space-y-1.5">
-              <div
-                *ngFor="let item of cartItems; let i = index; trackBy: trackByIndex"
-                class="rounded-lg border border-border bg-muted/40 px-2.5 py-2 transition">
-                <div class="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+            <div *ngIf="cartItems.length > 0; else emptyCart" class="invoice-product-list border border-border rounded-lg">
+              <div class="invoice-product-columns bg-muted/40 text-muted-foreground" aria-hidden="true">
+                <span>Producto</span><span>Cantidad</span><span>Precio</span><span>Desc. %</span><span>Desc. $</span><span class="text-right">Total</span><span></span>
+              </div>
+              <article *ngFor="let item of cartItems; let i = index; trackBy: trackByIndex"
+                class="invoice-product border-border bg-card">
+                <div class="invoice-product-header">
                   <div class="min-w-0">
-                    <div class="flex flex-wrap items-center gap-1.5">
-                      <p class="truncate text-xs font-semibold leading-4 text-foreground">
-                        {{ item.nombre || item.description }}
-                      </p>
-                      <span class="rounded bg-card px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
-                        IVA {{ item.tax_value ?? (item.tax === 'IVA-15' ? 15 : 0) }}%
-                      </span>
-                    </div>
-                    <p class="truncate text-[10px] text-muted-foreground">
+                    <h3 class="break-words text-sm font-semibold text-foreground">{{ item.nombre || item.description }}</h3>
+                    <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       <span *ngIf="item.codigo">{{ item.codigo }}</span>
-                      <span *ngIf="hasCartInventory(item)">{{ item.codigo ? ' · ' : '' }}Stock {{ getCartStockLabel(item) }}</span>
-                    </p>
-                  </div>
-
-                  <div class="grid grid-cols-2 items-end gap-2 sm:grid-cols-[auto_auto_auto_auto]">
-                    <div>
-                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-muted-foreground/70">Cant</p>
-                      <div class="inline-flex overflow-hidden rounded-md border border-border bg-card">
-                        <button
-                          type="button"
-                          class="h-7 w-7 text-muted-foreground hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50"
-                          (click)="decrementQty(i)">
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          class="no-spinner h-7 w-12 border-x border-border text-center text-[11px] bg-card text-foreground"
-                          min="1"
-                          step="1"
-                          [ngModelOptions]="{standalone: true}"
-                          [(ngModel)]="item.quantity"
-                          (ngModelChange)="onCartQuantityChange(i)">
-                        <button
-                          type="button"
-                          class="h-7 w-7 text-muted-foreground hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50"
-                          [disabled]="!canIncreaseCartItem(i)"
-                          (click)="incrementQty(i)">
-                          +
-                        </button>
-                      </div>
+                      <span class="rounded bg-muted/50 px-2 py-0.5">IVA {{ item.tax_value ?? (item.tax === 'IVA-15' ? 15 : 0) }}%</span>
+                      <span *ngIf="hasCartInventory(item)">Stock {{ getCartStockLabel(item) }}</span>
                     </div>
 
-                    <div>
-                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-muted-foreground/70">Precio</p>
-                      <input
-                        type="text"
-                        inputmode="decimal"
-                        appDecimalInput
-                        class="no-spinner h-7 w-20 rounded-md border-border bg-card text-center text-[11px]"
-                        min="0"
-                        step="0.01"
-                        [ngModelOptions]="{standalone: true}"
-                        [(ngModel)]="item.price"
-                        (ngModelChange)="updateCartTotals()">
-                    </div>
-
-                    <div class="text-right">
-                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-muted-foreground/70">Total</p>
-                      <p class="h-7 rounded-md bg-card px-2 py-1 text-xs font-bold text-foreground">
-                        ${{ item.total | number:'1.2-2' }}
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      (click)="removeProductFromCart(i)"
-                      class="h-8 w-full self-end rounded-md border border-red-200 bg-card text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-7 sm:w-7"
-                      title="Eliminar"
-                      aria-label="Eliminar">
-                      <fa-icon [icon]="['fas', 'trash']" class="text-[10px]"></fa-icon>
-                    </button>
-                  </div>
-
-                  <!-- Descuento por línea: porcentaje y monto fijo -->
-                  <div class="mt-2 flex flex-wrap items-center gap-2 border-t border-border pt-2">
-                    <label class="flex items-center gap-1 text-[9px] font-semibold uppercase text-muted-foreground/70">
-                      Desc. %
-                      <input
-                        type="text"
-                        inputmode="decimal"
-                        appDecimalInput
-                        class="no-spinner h-6 w-14 rounded border border-border bg-card px-1 text-center text-[11px] font-normal normal-case text-foreground"
-                        min="0" max="100" step="1"
-                        [ngModelOptions]="{standalone: true}"
-                        [(ngModel)]="item.discount_percentage"
-                        (ngModelChange)="updateCartTotals()">
-                    </label>
-                    <label class="flex items-center gap-1 text-[9px] font-semibold uppercase text-muted-foreground/70">
-                      Desc. $
-                      <input
-                        type="text"
-                        inputmode="decimal"
-                        appDecimalInput
-                        class="no-spinner h-6 w-16 rounded border border-border bg-card px-1 text-center text-[11px] font-normal normal-case text-foreground"
-                        min="0" step="0.01"
-                        [ngModelOptions]="{standalone: true}"
-                        [(ngModel)]="item.discount_amount"
-                        (ngModelChange)="updateCartTotals()">
-                    </label>
-                    <span *ngIf="(item.discount_total ?? 0) > 0" class="ml-auto text-[10px] font-semibold text-emerald-600">
-                      -${{ item.discount_total | number:'1.2-2' }}
-                    </span>
                   </div>
                 </div>
-              </div>
+
+                <div class="invoice-line-controls">
+                  <label class="invoice-product-field">
+                    <span class="invoice-field-label text-muted-foreground">Cantidad</span>
+                    <span class="invoice-quantity border border-border bg-card">
+                      <button type="button" class="text-muted-foreground hover:bg-muted/50"
+                        [attr.aria-label]="'Reducir cantidad de ' + (item.nombre || item.description)" (click)="decrementQty(i)">−</button>
+                      <input type="number" class="no-spinner bg-card text-foreground" min="1" step="1"
+                        [attr.aria-label]="'Cantidad de ' + (item.nombre || item.description)"
+                        [ngModelOptions]="{standalone: true}" [(ngModel)]="item.quantity" (ngModelChange)="onCartQuantityChange(i)">
+                      <button type="button" class="text-muted-foreground hover:bg-muted/50 disabled:opacity-40"
+                        [disabled]="!canIncreaseCartItem(i)" [attr.aria-label]="'Aumentar cantidad de ' + (item.nombre || item.description)"
+                        (click)="incrementQty(i)">+</button>
+                    </span>
+                  </label>
+                  <label class="invoice-product-field">
+                    <span class="invoice-field-label text-muted-foreground">Precio unitario</span>
+                    <span class="invoice-money-input border border-border bg-card">
+                      <span class="text-muted-foreground" aria-hidden="true">$</span>
+                      <input type="text" inputmode="decimal" appDecimalInput class="no-spinner bg-card text-foreground"
+                        min="0" step="0.01" [ngModelOptions]="{standalone: true}" [(ngModel)]="item.price" (ngModelChange)="updateCartTotals()">
+                    </span>
+                  </label>
+                    <label class="invoice-product-field">
+                      <span class="invoice-field-label text-muted-foreground">Descuento porcentual</span>
+                      <span class="invoice-money-input border border-border bg-card">
+                        <input type="text" inputmode="decimal" appDecimalInput class="no-spinner bg-card text-foreground" min="0" max="100" step="1"
+                          [ngModelOptions]="{standalone: true}" [(ngModel)]="item.discount_percentage" (ngModelChange)="updateCartTotals()">
+                        <span class="text-muted-foreground" aria-hidden="true">%</span>
+                      </span>
+                    </label>
+                    <label class="invoice-product-field">
+                      <span class="invoice-field-label text-muted-foreground">Descuento fijo</span>
+                      <span class="invoice-money-input border border-border bg-card">
+                        <span class="text-muted-foreground" aria-hidden="true">$</span>
+                        <input type="text" inputmode="decimal" appDecimalInput class="no-spinner bg-card text-foreground" min="0" step="0.01"
+                          [ngModelOptions]="{standalone: true}" [(ngModel)]="item.discount_amount" (ngModelChange)="updateCartTotals()">
+                      </span>
+                    </label>
+                  <div class="invoice-line-total bg-primary/5">
+                    <span class="invoice-field-label text-muted-foreground">Total del producto</span>
+                    <strong class="text-primary">${{ item.total | number:'1.2-2' }}</strong>
+                  </div>
+                </div>
+
+
+                  <button type="button" (click)="removeProductFromCart(i)"
+                    class="invoice-remove text-muted-foreground hover:bg-red-50 hover:text-red-600"
+                    [attr.aria-label]="'Eliminar ' + (item.nombre || item.description)" title="Eliminar producto">
+                    <fa-icon [icon]="['fas', 'trash']"></fa-icon>
+                  </button>
+              </article>
             </div>
 
             <ng-template #emptyCart>
-              <div class="rounded-lg border border-dashed border-border bg-muted/40 p-6 text-center text-[11px] text-muted-foreground">
-                No hay ítems en la factura.
+              <div class="rounded-lg border border-dashed border-border bg-muted/40 p-6 text-center text-[13px] text-muted-foreground">
+                <p class="text-sm font-semibold text-foreground">Agrega tu primer producto</p><p class="mt-1">Busca por nombre o código en el catálogo.</p>
               </div>
             </ng-template>
           </section>
 
-          <section *ngIf="canUseAdditionalFields" class="rounded-xl border border-border bg-card p-3 shadow-sm">
+          <details *ngIf="canUseAdditionalFields" class="invoice-editor-section invoice-extra-fields" [open]="additionalFields.length > 0">
+            <summary class="cursor-pointer text-xs font-medium text-muted-foreground">Información adicional <span *ngIf="additionalFields.length">({{ additionalFields.length }})</span></summary>
+            <div class="mt-3">
             <div class="mb-2 flex items-center justify-between gap-3">
               <div>
-                <h3 class="text-xs font-semibold text-primary">Información adicional</h3>
-                <p class="text-[10px] text-muted-foreground">Datos que se incluirán en la factura electrónica.</p>
+                <h2 class="text-xs font-medium text-foreground">Campos de la factura</h2>
+
               </div>
               <app-button type="button" tone="info" impact="bold" size="small" shape="rounded" (buttonClick)="addAdditionalField()">
                 Agregar
@@ -383,16 +382,16 @@
                 [formGroupName]="i"
                 class="grid grid-cols-1 items-start gap-2 rounded-lg border border-border bg-muted/40 p-2 sm:grid-cols-[1fr_1fr_auto]">
                 <div>
-                  <label class="mb-0.5 block text-[10px] font-semibold text-muted-foreground">Nombre</label>
-                  <input type="text" class="input !h-8 !text-[11px]" formControlName="field_name" maxlength="300" placeholder="Ej. correo" />
-                  <small *ngIf="field.get('field_name')?.invalid && field.get('field_name')?.touched" class="text-[10px] text-red-500">
+                  <label class="mb-0.5 block text-[12px] font-semibold text-muted-foreground">Nombre</label>
+                  <input type="text" class="input !h-8 !text-[13px]" formControlName="field_name" maxlength="300" placeholder="Ej. correo" />
+                  <small *ngIf="field.get('field_name')?.invalid && field.get('field_name')?.touched" class="text-[12px] text-red-500">
                     Ingresa el nombre.
                   </small>
                 </div>
                 <div>
-                  <label class="mb-0.5 block text-[10px] font-semibold text-muted-foreground">Valor</label>
-                  <input type="text" class="input !h-8 !text-[11px]" formControlName="field_value" maxlength="300" placeholder="Valor del campo" />
-                  <small *ngIf="field.get('field_value')?.invalid && field.get('field_value')?.touched" class="text-[10px] text-red-500">
+                  <label class="mb-0.5 block text-[12px] font-semibold text-muted-foreground">Valor</label>
+                  <input type="text" class="input !h-8 !text-[13px]" formControlName="field_value" maxlength="300" placeholder="Valor del campo" />
+                  <small *ngIf="field.get('field_value')?.invalid && field.get('field_value')?.touched" class="text-[12px] text-red-500">
                     Ingresa el valor.
                   </small>
                 </div>
@@ -402,137 +401,157 @@
                   (click)="removeAdditionalField(i)"
                   [attr.aria-label]="'Eliminar campo adicional ' + (i + 1)"
                   title="Eliminar campo">
-                  <fa-icon [icon]="['fas', 'trash']" class="text-[10px]"></fa-icon>
+                  <fa-icon [icon]="['fas', 'trash']" class="text-[12px]"></fa-icon>
                 </button>
               </div>
             </div>
 
-            <p *ngIf="additionalFields.length === 0" class="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground">
+            <p *ngIf="additionalFields.length === 0" class="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-[13px] text-muted-foreground">
               No hay campos adicionales. El sistema puede agregar campos configurados por el administrador al emitir.
             </p>
-          </section>
+            </div>
+          </details>
         </main>
 
-        <aside class="space-y-3 xl:sticky xl:top-3 xl:self-start">
-          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <p class="text-[10px] font-semibold uppercase tracking-wide text-primary">Resumen</p>
-                <p class="mt-1 text-2xl font-bold leading-none text-foreground">${{ total | number:'1.2-2' }}</p>
-              </div>
-              <span class="rounded-md border border-border bg-muted/40 px-2 py-1 text-[10px] font-semibold text-muted-foreground">
-                {{ cartItems.length }} ítems
-              </span>
-            </div>
+        <aside class="invoice-sidebar rounded-xl border border-border bg-card" aria-label="Pago y resumen de la factura">
+          <section class="invoice-payment-terms invoice-checkout-section" aria-labelledby="payment-terms-heading">
+            <h2 id="payment-terms-heading" class="text-sm font-semibold text-foreground">Condición de pago</h2>
+            <fieldset class="invoice-payment-options mt-3" aria-label="Condición de pago">
+              <label class="invoice-payment-option border border-border" [ngClass]="!isCreditInvoice ? 'bg-primary/5 text-primary border-primary/40' : 'text-muted-foreground hover:bg-muted/40'">
+                <input type="radio" class="sr-only" formControlName="payment_condition" value="Contado" (change)="onPaymentConditionChange()" />
+                <span class="font-semibold">Contado</span>
+              </label>
+              <label class="invoice-payment-option border border-border" [ngClass]="isCreditInvoice ? 'bg-primary/5 text-primary border-primary/40' : 'text-muted-foreground hover:bg-muted/40'">
+                <input type="radio" class="sr-only" formControlName="payment_condition" value="Credito" (change)="onPaymentConditionChange()" />
+                <span class="font-semibold">Crédito</span>
+              </label>
+            </fieldset>
 
-            <div class="mt-3 space-y-1 rounded-lg border border-border bg-muted/40 p-2 text-[11px]">
-              <div class="flex items-center justify-between">
-                <span class="text-muted-foreground">Subtotal</span>
-                <span class="font-semibold text-foreground">${{ subtotal | number:'1.2-2' }}</span>
+            <div *ngIf="isCreditInvoice" class="mt-4 space-y-3 border-t border-border pt-3">
+              <label class="block">
+                <span class="mb-1 block text-xs text-muted-foreground">Fecha de vencimiento <span aria-hidden="true">*</span></span>
+                <input type="date" class="input w-full text-sm" formControlName="payment_due_date" aria-required="true" />
+              </label>
+              <p *ngIf="invoiceForm.get('payment_due_date')?.invalid && invoiceForm.get('payment_due_date')?.touched" class="text-xs text-red-600">Selecciona la fecha de vencimiento.</p>
+              <div class="flex items-center justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2.5 text-amber-800" aria-live="polite">
+                <span class="text-xs">Saldo por cobrar</span>
+                <strong class="text-sm">${{ estimatedOutstandingAmount | number:'1.2-2' }}</strong>
               </div>
-              <div *ngIf="totalDiscount > 0" class="flex items-center justify-between text-emerald-600">
-                <span>Descuento</span>
-                <span class="font-semibold">-${{ totalDiscount | number:'1.2-2' }}</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-muted-foreground">IVA</span>
-                <span class="font-semibold text-foreground">${{ iva | number:'1.2-2' }}</span>
-              </div>
-              <div class="flex items-center justify-between border-t border-border pt-1.5">
-                <span class="font-semibold text-muted-foreground">Total</span>
-                <span class="font-bold text-primary">${{ total | number:'1.2-2' }}</span>
-              </div>
-            </div>
-          </section>
-
-          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <div class="mb-2 flex items-start justify-between gap-2">
-              <div>
-                <label class="block text-[10px] font-semibold uppercase tracking-wide text-primary">Métodos de pago</label>
-                <p class="mt-0.5 text-[11px] text-muted-foreground">Puedes dividir el cobro; no se permite repetir un método.</p>
-              </div>
-              <button type="button" class="rounded-md border border-primary/20 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/5"
-                (click)="addPaymentRow()">+ Agregar</button>
-            </div>
-            <div class="space-y-2">
-              <div *ngFor="let payment of paymentRows; let index = index" class="grid grid-cols-[1fr_86px_30px] gap-1.5">
-                <ng-select class="ng-select-tailwind text-xs" [(ngModel)]="payment.method" [ngModelOptions]="{standalone: true}"
-                  (ngModelChange)="onPaymentRowMethodChange(index)" [items]="payments" bindLabel="description" bindValue="name"
-                  placeholder="Método"></ng-select>
-                <input type="text" inputmode="decimal" appDecimalInput min="0.01" step="0.01" class="input !h-9 !px-2 text-right text-xs"
-                  [(ngModel)]="payment.amount" [ngModelOptions]="{standalone: true}" aria-label="Monto del pago" />
-                <button type="button" class="rounded-md text-lg leading-none text-red-500 hover:bg-red-50 disabled:opacity-40"
-                  [disabled]="paymentRows.length === 1" (click)="removePaymentRow(index)" aria-label="Quitar método de pago">×</button>
-              </div>
-            </div>
-            <div class="mt-2 flex justify-between text-[11px]">
-              <span class="text-muted-foreground">Pagado: <b class="text-foreground">${{ paymentRowsTotal | number:'1.2-2' }}</b></span>
-              <span [class.text-emerald-700]="paymentRemaining === 0" [class.text-red-600]="paymentRemaining !== 0">Restante: <b>${{ paymentRemaining | number:'1.2-2' }}</b></span>
-            </div>
-            <div *ngIf="paymentRemaining !== 0" class="mt-2 rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-2 text-[11px] font-semibold text-red-600">
-              {{ paymentRemaining > 0
-                  ? ('Falta cobrar $' + (paymentRemaining | number:'1.2-2') + ' para completar el total.')
-                  : ('El pago excede el total por $' + (-paymentRemaining | number:'1.2-2') + '.') }}
-            </div>
-          </section>
-
-          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <label class="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-primary">Condición de pago</label>
-            <select class="input !h-9 text-xs" formControlName="payment_condition" (change)="onPaymentConditionChange()">
-              <option value="Contado">Contado</option>
-              <option value="Credito">Crédito</option>
-            </select>
-
-            <div *ngIf="isCreditInvoice" class="mt-3 space-y-2 border-t border-border pt-3">
-              <div class="grid gap-2 sm:grid-cols-2">
-                <label class="text-[11px] font-semibold text-muted-foreground">Vencimiento
-                  <input type="date" class="input mt-1 !h-9 text-xs" formControlName="payment_due_date" />
-                </label>
-                <div class="rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
-                  <p class="font-semibold">Saldo estimado</p>
-                  <p class="mt-0.5 text-base font-bold">${{ estimatedOutstandingAmount | number:'1.2-2' }}</p>
+              <details class="invoice-initial-payment border-t border-border pt-3">
+                <summary class="cursor-pointer text-xs font-medium text-foreground">
+                  Abono inicial <span class="font-normal text-muted-foreground">(opcional)</span>
+                  <span *ngIf="initialCollectionAmount > 0" class="ml-1 text-primary">${{ initialCollectionAmount | number:'1.2-2' }}</span>
+                </summary>
+                <div class="mt-3 space-y-3">
+                  <p class="text-xs text-muted-foreground">Registra aquí el dinero recibido ahora. Este abono reduce el saldo por cobrar.</p>
+                  <div class="invoice-initial-payment-fields">
+                    <div class="min-w-0">
+                      <label for="initial-payment-method" class="mb-1 block text-xs text-muted-foreground">Método del abono</label>
+                      <ng-select class="ng-select-tailwind text-sm" labelForId="initial-payment-method" formControlName="initial_collection_method" [items]="payments" bindLabel="description" bindValue="name" placeholder="Selecciona"></ng-select>
+                    </div>
+                    <label class="min-w-0">
+                      <span class="mb-1 block text-xs text-muted-foreground">Importe del abono</span>
+                      <span class="invoice-payment-amount">
+                        <span class="text-muted-foreground" aria-hidden="true">$</span>
+                        <input type="text" inputmode="decimal" appDecimalInput min="0" [max]="total" step="0.01" class="input bg-card text-foreground" formControlName="initial_collection_amount" />
+                      </span>
+                    </label>
+                  </div>
+                  <label class="block">
+                    <span class="mb-1 block text-xs text-muted-foreground">Referencia <span class="text-muted-foreground/70">(opcional)</span></span>
+                    <input class="input w-full text-sm" formControlName="initial_collection_reference" placeholder="Número de transferencia o comprobante" />
+                  </label>
+                  <label class="block">
+                    <span class="mb-1 block text-xs text-muted-foreground">Notas <span class="text-muted-foreground/70">(opcional)</span></span>
+                    <input class="input w-full text-sm" formControlName="initial_collection_notes" placeholder="Detalle del abono" />
+                  </label>
                 </div>
+              </details>
+            </div>
+          </section>
+
+          <section class="invoice-payment invoice-checkout-section border-t border-border" aria-labelledby="payment-heading">
+            <h2 id="payment-heading" class="text-sm font-semibold text-foreground">Distribución del pago</h2>
+            <div class="mt-4 space-y-3">
+              <div *ngFor="let payment of paymentRows; let index = index" class="invoice-payment-row">
+                <div class="min-w-0">
+                  <label class="mb-1 block text-xs text-muted-foreground" [attr.for]="'payment-method-' + index">Método {{ paymentRows.length > 1 ? index + 1 : '' }}</label>
+                  <ng-select class="ng-select-tailwind text-sm" [(ngModel)]="payment.method" [ngModelOptions]="{standalone: true}"
+                    [labelForId]="'payment-method-' + index" (ngModelChange)="onPaymentRowMethodChange(index)"
+                    [items]="payments" bindLabel="description" bindValue="name" placeholder="Selecciona" [clearable]="false"></ng-select>
+                </div>
+                <label class="min-w-0">
+                  <span class="mb-1 block text-xs text-muted-foreground">Importe</span>
+                  <span class="invoice-payment-amount">
+                    <span class="text-muted-foreground" aria-hidden="true">$</span>
+                    <input type="text" inputmode="decimal" appDecimalInput min="0.01" step="0.01" class="input bg-card text-foreground"
+                      [ngModel]="payment.amount || null" (ngModelChange)="payment.amount = $event" [ngModelOptions]="{standalone: true}"
+                      [readonly]="paymentRows.length === 1" placeholder="Importe" [attr.aria-label]="'Importe del pago ' + (index + 1)" />
+                  </span>
+
+                </label>
+                <button type="button" class="invoice-payment-remove text-muted-foreground hover:bg-red-50 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                  [disabled]="paymentRows.length === 1" (click)="removePaymentRow(index)" [attr.aria-label]="'Quitar método de pago ' + (index + 1)" title="Quitar método">
+                  <fa-icon [icon]="['fas', 'trash']"></fa-icon>
+                </button>
+                  <button *ngIf="paymentRows.length > 1 && paymentRemaining > 0 && payment.method" type="button"
+                    class="invoice-payment-remainder text-xs font-medium text-primary hover:underline" (click)="completePaymentAmount(index)">Usar restante</button>
               </div>
-              <p class="text-[11px] text-muted-foreground">Los métodos fiscales siguen cubriendo el total. El abono inicial es dinero cobrado y no se duplica en ellos.</p>
-              <div class="grid gap-2 sm:grid-cols-2">
-                <ng-select class="ng-select-tailwind text-xs" formControlName="initial_collection_method" [items]="payments" bindLabel="description" bindValue="name" placeholder="Método del abono inicial"></ng-select>
-                <input type="text" inputmode="decimal" appDecimalInput min="0" [max]="total" step="0.01" class="input !h-9 text-right text-xs" formControlName="initial_collection_amount" placeholder="Abono inicial (opcional)" />
+            </div>
+
+            <button type="button" class="invoice-payment-add mt-3 w-full rounded-lg border border-dashed border-primary/30 text-primary hover:bg-primary/5"
+              (click)="addPaymentRow()">+ Agregar otro método</button>
+
+            <div *ngIf="paymentRows.length > 1" class="invoice-payment-summary mt-3 border-t border-border pt-3" aria-live="polite">
+              <div class="flex items-center justify-between gap-2 text-xs">
+                <span class="text-muted-foreground">Total asignado</span>
+                <strong class="text-foreground">${{ paymentRowsTotal | number:'1.2-2' }}</strong>
               </div>
-              <div class="grid gap-2 sm:grid-cols-2">
-                <input class="input !h-9 text-xs" formControlName="initial_collection_reference" placeholder="Referencia (opcional)" />
-                <input class="input !h-9 text-xs" formControlName="initial_collection_notes" placeholder="Notas del abono (opcional)" />
+              <div *ngIf="total > 0" class="mt-2 flex items-center justify-between gap-2 rounded-md px-2.5 py-2 text-xs"
+                [ngClass]="paymentRemaining === 0 ? 'bg-emerald-50 text-emerald-800' : (paymentRemaining > 0 ? 'bg-amber-50 text-amber-800' : 'bg-red-50 text-red-700')">
+                <span>{{ paymentRemaining === 0 ? 'Total distribuido' : (paymentRemaining > 0 ? 'Falta asignar' : 'Importe excedido') }}</span>
+                <strong *ngIf="paymentRemaining !== 0">${{ (paymentRemaining > 0 ? paymentRemaining : -paymentRemaining) | number:'1.2-2' }}</strong>
+                <span *ngIf="paymentRemaining === 0" class="font-semibold">Completo</span>
               </div>
             </div>
           </section>
 
+
+          <section class="invoice-checkout-summary border-t border-border" aria-label="Resumen de factura">
+            <div class="flex items-center justify-between text-xs text-muted-foreground"><span>Subtotal</span><span>${{ subtotal | number:'1.2-2' }}</span></div>
+            <div *ngIf="totalDiscount > 0" class="flex items-center justify-between text-xs text-emerald-700"><span>Descuento</span><span>−${{ totalDiscount | number:'1.2-2' }}</span></div>
+            <div class="flex items-center justify-between text-xs text-muted-foreground"><span>IVA</span><span>${{ iva | number:'1.2-2' }}</span></div>
+            <div class="invoice-checkout-total flex items-center justify-between text-foreground"><span class="text-sm font-semibold">Total</span><strong class="text-xl text-primary">${{ total | number:'1.2-2' }}</strong></div>
+          </section>
+          <div class="invoice-checkout-action">
           <button
             type="submit"
-            class="hidden min-h-[42px] w-full items-center justify-between rounded-lg bg-primary px-3 text-xs font-bold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 md:flex"
+            class="invoice-submit hidden w-full bg-primary text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 md:flex"
             [disabled]="invoiceForm.invalid || cartItems.length === 0 || !canEmitInvoice || paymentRemaining !== 0">
-            <span>{{ isGenericPos ? 'Cobrar y emitir' : 'Generar factura' }}</span>
-            <span>${{ total | number:'1.2-2' }}</span>
+            <span>{{ isEmitting ? 'Emitiendo…' : (isConfirmingEmission ? 'Confirmando…' : 'Generar factura') }}</span>
           </button>
-          <p *ngIf="invoicePlanBlockMessage" class="mt-2 rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-2 text-[11px] font-semibold text-orange-700">
+          <p *ngIf="invoicePlanBlockMessage" class="mt-2 rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-2 text-[13px] font-semibold text-orange-700">
             {{ invoicePlanBlockMessage }}
           </p>
+          </div>
         </aside>
       </div>
     </div>
   </form>
 </div>
 
-<div class="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card p-2 shadow-sm md:hidden" *ngIf="cartItems.length > 0">
+<div class="invoice-mobile-action fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card p-2 shadow-sm md:hidden" *ngIf="cartItems.length > 0">
   <div class="flex items-center justify-between gap-2">
     <div>
-      <p class="text-[10px] text-muted-foreground">Total</p>
+      <p class="text-[12px] text-muted-foreground">Total</p>
       <p class="text-base font-bold text-foreground">${{ total | number:'1.2-2' }}</p>
     </div>
     <button
       type="button"
-      class="min-h-[36px] rounded-lg bg-primary px-3 text-xs font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+      class="invoice-submit inline-flex bg-primary text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
       [disabled]="invoiceForm.invalid || cartItems.length === 0 || !canEmitInvoice || paymentRemaining !== 0"
       (click)="finalizeInvoice()">
-      {{ isGenericPos ? 'Cobrar' : 'Generar' }}
+      {{ isEmitting ? 'Emitiendo…' : (isConfirmingEmission ? 'Confirmando…' : 'Generar factura') }}
     </button>
   </div>
 </div>
@@ -544,26 +563,26 @@
 
     <form [formGroup]="customerForm" (ngSubmit)="saveCustomer()" class="space-y-3">
       <div>
-        <label class="block text-[11px] font-semibold text-foreground/80">Tipo de identificación</label>
-        <select class="select !mt-1 !h-8 !text-[11px]" formControlName="tipo_identificacion">
+        <label class="block text-[13px] font-semibold text-foreground/80">Tipo de identificación</label>
+        <select class="select !mt-1 !h-8 !text-[13px]" formControlName="tipo_identificacion">
           <option *ngFor="let item of identificationTypes" [value]="item.value">{{ item.label }}</option>
         </select>
 
-        <div *ngIf="customerForm.get('tipo_identificacion')?.invalid && submittedCustomerForm" class="mt-1 text-[11px] text-red-500">
+        <div *ngIf="customerForm.get('tipo_identificacion')?.invalid && submittedCustomerForm" class="mt-1 text-[13px] text-red-500">
           Seleccione un tipo de identificación.
         </div>
       </div>
 
       <div>
-        <label class="block text-[11px] font-semibold text-foreground/80">Identificación</label>
+        <label class="block text-[13px] font-semibold text-foreground/80">Identificación</label>
         <input
           [attr.maxlength]="getMaxLength()"
           type="text"
           formControlName="num_identificacion"
-          class="mt-1 h-8 w-full rounded-md border border-border px-2.5 text-[11px] text-foreground bg-card text-foreground"
+          class="mt-1 h-8 w-full rounded-md border border-border px-2.5 text-[13px] text-foreground bg-card text-foreground"
           inputmode="numeric"
           autocomplete="off" />
-        <div *ngIf="customerForm.get('num_identificacion')?.invalid && submittedCustomerForm" class="mt-1 text-[11px] text-red-500">
+        <div *ngIf="customerForm.get('num_identificacion')?.invalid && submittedCustomerForm" class="mt-1 text-[13px] text-red-500">
           <ng-container *ngIf="customerForm.get('num_identificacion')?.errors?.['required']">Campo requerido.</ng-container>
           <ng-container *ngIf="customerForm.get('num_identificacion')?.errors?.['cedulaInvalida']">La cédula debe tener 10 dígitos.</ng-container>
           <ng-container *ngIf="customerForm.get('num_identificacion')?.errors?.['rucInvalido']">El RUC debe tener 13 dígitos.</ng-container>
@@ -571,37 +590,37 @@
       </div>
 
       <div>
-        <label class="block text-[11px] font-semibold text-foreground/80">Nombre / Razón social</label>
+        <label class="block text-[13px] font-semibold text-foreground/80">Nombre / Razón social</label>
         <input
           type="text"
           formControlName="nombre"
-          class="mt-1 h-8 w-full rounded-md border border-border px-2.5 text-[11px] text-foreground bg-card text-foreground"
+          class="mt-1 h-8 w-full rounded-md border border-border px-2.5 text-[13px] text-foreground bg-card text-foreground"
           oninput="this.value = this.value.toUpperCase()" />
-        <div *ngIf="customerForm.get('nombre')?.invalid && submittedCustomerForm" class="mt-1 text-[11px] text-red-500">
+        <div *ngIf="customerForm.get('nombre')?.invalid && submittedCustomerForm" class="mt-1 text-[13px] text-red-500">
           Campo requerido.
         </div>
       </div>
 
       <div>
-        <label class="block text-[11px] font-semibold text-foreground/80">Email</label>
-        <input type="email" formControlName="correo" class="mt-1 h-8 w-full rounded-md border border-border px-2.5 text-[11px] text-foreground bg-card text-foreground" />
-        <div *ngIf="customerForm.get('correo')?.invalid && submittedCustomerForm" class="mt-1 text-[11px] text-red-500">
+        <label class="block text-[13px] font-semibold text-foreground/80">Email</label>
+        <input type="email" formControlName="correo" class="mt-1 h-8 w-full rounded-md border border-border px-2.5 text-[13px] text-foreground bg-card text-foreground" />
+        <div *ngIf="customerForm.get('correo')?.invalid && submittedCustomerForm" class="mt-1 text-[13px] text-red-500">
           Email inválido.
         </div>
       </div>
 
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <label class="block text-[11px] font-semibold text-foreground/80">Teléfono</label>
-          <input maxlength="10" type="text" formControlName="telefono" class="mt-1 h-8 w-full rounded-md border border-border px-2.5 text-[11px] text-foreground bg-card text-foreground" />
-          <div *ngIf="customerForm.get('telefono')?.invalid && submittedCustomerForm" class="mt-1 text-[11px] text-red-500">
+          <label class="block text-[13px] font-semibold text-foreground/80">Teléfono</label>
+          <input maxlength="10" type="text" formControlName="telefono" class="mt-1 h-8 w-full rounded-md border border-border px-2.5 text-[13px] text-foreground bg-card text-foreground" />
+          <div *ngIf="customerForm.get('telefono')?.invalid && submittedCustomerForm" class="mt-1 text-[13px] text-red-500">
             Teléfono inválido.
           </div>
         </div>
         <div>
-          <label class="block text-[11px] font-semibold text-foreground/80">Dirección</label>
-          <input type="text" formControlName="direccion" class="mt-1 h-8 w-full rounded-md border border-border px-2.5 text-[11px] text-foreground bg-card text-foreground" />
-          <div *ngIf="customerForm.get('direccion')?.invalid && submittedCustomerForm" class="mt-1 text-[11px] text-red-500">
+          <label class="block text-[13px] font-semibold text-foreground/80">Dirección</label>
+          <input type="text" formControlName="direccion" class="mt-1 h-8 w-full rounded-md border border-border px-2.5 text-[13px] text-foreground bg-card text-foreground" />
+          <div *ngIf="customerForm.get('direccion')?.invalid && submittedCustomerForm" class="mt-1 text-[13px] text-red-500">
             Dirección inválida.
           </div>
         </div>

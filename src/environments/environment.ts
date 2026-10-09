@@ -2,10 +2,19 @@
 // `ng build` replaces `environment.ts` with `environment.prod.ts`.
 // The list of file replacements can be found in `angular.json`.
 
+
+//LOCAL
+// export const environment = {
+//   apiUrl: '/api', // con proxy
+//   URL: 'http://192.168.100.195:8002',
+//   // El proxy conserva la sesión y añade este sitio al tráfico Socket.IO.
+//   frappeSiteNamespace: 'facturada_core_simple_test',
+//   production: false,
+// };
+
 export const environment = {
-  apiUrl: '/api', // con proxy
-  URL: 'http://192.168.100.195:8002',
-  // El proxy conserva la sesión y añade este sitio al tráfico Socket.IO.
+  apiUrl: '/api',
+  URL: '', // Déjalo vacío
   frappeSiteNamespace: 'facturada_core_simple_test',
   production: false,
 };

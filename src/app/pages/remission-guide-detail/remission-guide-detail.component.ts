@@ -13,6 +13,10 @@ import { liteEmissionMessages } from 'src/app/core/utils/lite-invoice-emission';
 import { canConsultLiteInvoice, canRetryLiteInvoice } from 'src/app/core/utils/lite-invoice-actions';
 import { ElectronicStatusPanelComponent } from 'src/app/shared/components/electronic-status-panel/electronic-status-panel.component';
 import { electronicDocumentLabel } from 'src/app/core/utils/electronic-document';
+import { ElectronicStatusBadgeComponent } from 'src/app/shared/components/electronic-status-badge/electronic-status-badge.component';
+import { DocumentAction, DocumentActionsComponent } from 'src/app/shared/components/document-actions/document-actions.component';
+
+type DetailTab = 'general' | 'electronic';
 
 /**
  * Sigue el mismo formato de página que invoice-detail-page / credit-note-detail-page
@@ -22,12 +26,18 @@ import { electronicDocumentLabel } from 'src/app/core/utils/electronic-document'
 @Component({
   selector: 'app-remission-guide-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, FontAwesomeModule, NgxSpinnerComponent, ElectronicStatusPanelComponent],
+  imports: [CommonModule, RouterModule, FontAwesomeModule, NgxSpinnerComponent, ElectronicStatusPanelComponent, ElectronicStatusBadgeComponent, DocumentActionsComponent],
   templateUrl: './remission-guide-detail.component.html'
 })
 export class RemissionGuideDetailComponent implements OnInit {
   guide: any = null;
   actionRunning = false;
+  loadFailed = false;
+  activeDetailTab: DetailTab = 'general';
+  readonly detailTabs: { id: DetailTab; label: string }[] = [
+    { id: 'general', label: 'Información general' },
+    { id: 'electronic', label: 'Estado SRI' }
+  ];
   private baseUrl = environment.URL;
 
   constructor(
@@ -46,10 +56,22 @@ export class RemissionGuideDetailComponent implements OnInit {
 
   fetch(name: string): void {
     this.spinner.show();
+    this.loadFailed = false;
     this.svc.getDetail(name).pipe(finalize(() => this.spinner.hide())).subscribe({
       next: (res: any) => { this.guide = res; },
-      error: (err) => toast.error(this.readError(err))
+      error: (err) => {
+        this.loadFailed = !this.guide;
+        toast.error(this.readError(err));
+      }
     });
+  }
+
+  retryLoad(): void {
+    this.fetch(this.route.snapshot.paramMap.get('id')!);
+  }
+
+  selectDetailTab(tab: DetailTab): void {
+    this.activeDetailTab = tab;
   }
 
   goBack(): void {
@@ -107,13 +129,6 @@ export class RemissionGuideDetailComponent implements OnInit {
     return electronicDocumentLabel(this.guide);
   }
 
-  get statusBadge(): string {
-    if (['AUTORIZADA', 'AUTORIZADO'].includes(this.statusRaw)) return 'badge-green';
-    if (['RECHAZADA', 'RECHAZADO', 'ERROR DE ENVIO', 'ERROR DE ENVÍO'].includes(this.statusRaw)) return 'badge-red';
-    if (['BORRADOR', 'DRAFT'].includes(this.statusRaw)) return 'badge-gray';
-    return 'badge-yellow';
-  }
-
   get isDraft(): boolean {
     return ['BORRADOR', 'DRAFT'].includes(this.statusRaw);
   }
@@ -136,6 +151,33 @@ export class RemissionGuideDetailComponent implements OnInit {
 
   get canRetry(): boolean {
     return this.capabilities.hasPermission('billing.manage') && canRetryLiteInvoice(this.guide);
+  }
+
+  /** Las reglas de visibilidad siguen en los getters `can*`; aquí solo se ordenan para la UI. */
+  get documentActions(): DocumentAction[] {
+    if (!this.guide) return [];
+    const actions: DocumentAction[] = [];
+    if (this.canEmitDraft) {
+      actions.push({ id: 'emit', label: 'Emitir', variant: 'primary', disabled: this.actionRunning, run: () => this.emitirBorrador() });
+    }
+    if (this.canEdit) {
+      actions.push({ id: 'edit', label: 'Editar', variant: 'outline',
+        run: () => this.router.navigate(['/dashboard/remission-guides', this.guide?.name, 'edit']) });
+    }
+    if (this.canConsult) {
+      actions.push({ id: 'consult', label: 'Consultar autorización', shortLabel: 'Consultar SRI',
+        title: 'Consulta el resultado en el SRI sin volver a emitir', variant: 'warn',
+        disabled: this.actionRunning, run: () => this.consultarAutorizacion() });
+    }
+    if (this.canRetry) {
+      actions.push({ id: 'retry', label: 'Reintentar', variant: 'warn', disabled: this.actionRunning, run: () => this.reintentar() });
+    }
+    if (this.isAuthorized) {
+      actions.push({ id: 'pdf', label: 'Descargar PDF', shortLabel: 'PDF', variant: 'primary', icon: ['fas', 'download'],
+        run: () => this.downloadPdf() });
+      actions.push({ id: 'xml', label: 'XML', title: 'Descargar XML autorizado', variant: 'outline', run: () => this.downloadXml() });
+    }
+    return actions;
   }
 
   emitirBorrador(): void {

@@ -1,16 +1,18 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, OnChanges } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnChanges, OnDestroy } from '@angular/core';
+import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { finalize } from 'rxjs';
+import { Subscription, finalize } from 'rxjs';
 import { toast } from 'ngx-sonner';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { ElectronicReviewService } from 'src/app/services/electronic-review.service';
-import { backendFlag, canVerifyMissingSriDocument, canRegenerateElectronicDocument, electronicDocumentLabel } from 'src/app/core/utils/electronic-document';
+import { backendFlag, canVerifyMissingSriDocument, canRegenerateElectronicDocument, electronicDocumentLabel, electronicReplacement, isClosedElectronicDocument } from 'src/app/core/utils/electronic-document';
 import { liteEmissionMessages } from 'src/app/core/utils/lite-invoice-emission';
+import { ElectronicDocumentUpdatesService } from 'src/app/services/electronic-document-updates.service';
 
 @Component({
   selector: 'app-electronic-status-panel', standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   template: `
     <section class="rounded-xl border border-border bg-card p-4 space-y-3">
       <div class="flex flex-wrap items-center justify-between gap-2">
@@ -23,9 +25,15 @@ import { liteEmissionMessages } from 'src/app/core/utils/lite-invoice-emission';
         <div class="rounded-lg bg-muted/40 p-3"><p class="text-xs text-muted-foreground">Autorización SRI</p><strong>{{ authorization }}</strong></div>
       </div>
       <p *ngFor="let message of messages" class="text-sm break-words">{{ message }}</p>
-      <p *ngIf="reviewRequired" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Revisión manual requerida. No reintentar hasta revisar el resultado.</p>
-      <p *ngIf="electronic.manual_reviewed_at" class="text-xs text-muted-foreground">Revisado por {{ electronic.manual_reviewed_by }} · {{ electronic.manual_reviewed_at }}</p>
-      <div *ngIf="canManage && (reviewRequired || canVerify)" class="space-y-2 border-t border-border pt-3">
+      <a *ngIf="replacement" [routerLink]="[kind === 'credit-note' ? '/dashboard/credit-note' : '/dashboard/invoices', replacement]"
+        class="inline-block rounded-lg border border-border px-3 py-2 text-sm font-semibold">Abrir factura reemplazante</a>
+      <p *ngIf="automaticQueryActive" class="rounded-lg bg-muted/40 p-3 text-sm">Consulta automática programada
+        <span *ngIf="electronic.next_status_check_at"> · Próxima consulta: {{ electronic.next_status_check_at }}</span></p>
+      <p *ngIf="electronic.fecha_ultima_consulta || electronic.last_status_check_at" class="text-xs text-muted-foreground">Última consulta: {{ electronic.fecha_ultima_consulta || electronic.last_status_check_at }}</p>
+      <p *ngIf="electronic.status_check_error" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{{ queryError }}</p>
+      <p *ngIf="manualReviewAvailable && reviewRequired" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Revisión manual requerida. No reintentar hasta revisar el resultado.</p>
+      <p *ngIf="manualReviewAvailable && electronic.manual_reviewed_at" class="text-xs text-muted-foreground">Revisado por {{ electronic.manual_reviewed_by }} · {{ electronic.manual_reviewed_at }}</p>
+      <div *ngIf="canManage && manualReviewAvailable && (reviewRequired || canVerify)" class="space-y-2 border-t border-border pt-3">
         <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold" (click)="reviewOpen = !reviewOpen" [disabled]="busy">Registrar revisión SRI</button>
         <div *ngIf="reviewOpen" class="space-y-3">
           <label class="block text-sm">Motivo de revisión (obligatorio)
@@ -41,7 +49,7 @@ import { liteEmissionMessages } from 'src/app/core/utils/lite-invoice-emission';
       </div>
     </section>`
 })
-export class ElectronicStatusPanelComponent implements OnChanges {
+export class ElectronicStatusPanelComponent implements OnChanges, OnDestroy {
   @Input() document: any;
   @Input() kind: 'invoice' | 'credit-note' | 'guide' = 'invoice';
   @Output() updated = new EventEmitter<any>();
@@ -49,12 +57,30 @@ export class ElectronicStatusPanelComponent implements OnChanges {
   reviewOpen = false;
   reason = '';
   verified = false;
-  constructor(public capabilities: CompanyCapabilitiesService, private service: ElectronicReviewService) {}
-  ngOnChanges(): void { this.reviewOpen = false; this.reason = ''; this.verified = false; }
+  private updates?: Subscription;
+  private watchedDocument = '';
+  constructor(public capabilities: CompanyCapabilitiesService, private service: ElectronicReviewService,
+    private documentUpdates: ElectronicDocumentUpdatesService) {}
+  ngOnChanges(): void {
+    this.reviewOpen = false; this.reason = ''; this.verified = false;
+    const business = typeof this.document?.business === 'object' ? this.document.business.name : this.document?.business;
+    const key = this.document?.name && business === this.capabilities.activeBusinessId && !this.closed
+      ? `${business}/${this.kind}/${this.document.name}` : '';
+    if (key === this.watchedDocument) return;
+    this.updates?.unsubscribe();
+    this.watchedDocument = key;
+    if (key) this.updates = this.documentUpdates.watch(this.document.name, business, this.kind === 'guide')
+      .subscribe(document => this.updated.emit(document));
+  }
+  ngOnDestroy(): void { this.updates?.unsubscribe(); }
   get electronic(): any { return this.document?.electronic ?? {}; }
+  get closed(): boolean { return isClosedElectronicDocument(this.document); }
+  get replacement(): string { return this.kind === 'guide' ? '' : electronicReplacement(this.document); }
+  get automaticQueryActive(): boolean { return !this.closed && !this.reviewRequired && backendFlag(this.electronic.automatic_query_active); }
+  get queryError(): string { return liteEmissionMessages({ message: this.electronic.status_check_error }).join(' · '); }
   get label(): string { return electronicDocumentLabel(this.document); }
   get confirmed(): boolean { return backendFlag(this.electronic.reception_confirmed); }
-  get reviewRequired(): boolean { return backendFlag(this.electronic.manual_review_required ?? this.document?.manual_review_required); }
+  get reviewRequired(): boolean { return !this.closed && backendFlag(this.electronic.manual_review_required ?? this.document?.manual_review_required); }
   get reception(): string {
     const labels: Record<string, string> = { NOT_SENT: 'Sin envío', RECIBIDA: 'Recibida', DEVUELTA: 'Devuelta', UNKNOWN: 'Recepción incierta' };
     return labels[this.electronic.reception_status] ?? 'No informado';
@@ -63,15 +89,33 @@ export class ElectronicStatusPanelComponent implements OnChanges {
     const labels: Record<string, string> = { NOT_REQUESTED: 'Sin consulta', PENDIENTE: 'Pendiente', AUTORIZADO: 'Autorizada', NO_AUTORIZADO: 'No autorizada', UNKNOWN: 'Autorización incierta' };
     return labels[this.electronic.authorization_status] ?? 'No informado';
   }
-  get messages(): string[] { return liteEmissionMessages(this.document); }
+  get messages(): string[] {
+    const messages = liteEmissionMessages(this.document);
+    return this.manualReviewAvailable ? messages : messages.filter(message =>
+      !/(revisi[oó]n manual|verificaci[oó]n manual|regeneraci[oó]n|regenerar)/i.test(message));
+  }
+  get manualReviewAvailable(): boolean {
+    if (this.kind === 'guide') return true;
+    if (this.electronic.manual_review_available !== undefined) {
+      return backendFlag(this.electronic.manual_review_available);
+    }
+    // Compatibility with older API responses. Compare calendar dates in Ecuador,
+    // never elapsed hours or the browser's local timezone.
+    const issued = String(this.document?.posting_date || this.document?.createdAt || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(issued)) return false;
+    const parts = new Intl.DateTimeFormat('en', { timeZone: 'America/Guayaquil',
+      year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+    const part = (type: string) => parts.find(item => item.type === type)?.value || '';
+    return issued < `${part('year')}-${part('month')}-${part('day')}`;
+  }
   get canManage(): boolean {
     const business = typeof this.document?.business === 'object' ? this.document.business.name : this.document?.business;
     return !!business && business === this.capabilities.activeBusinessId && this.capabilities.hasPermission('billing.manage');
   }
-  get canVerify(): boolean { return this.kind !== 'guide' && canVerifyMissingSriDocument(this.document); }
-  get canRegenerate(): boolean { return this.kind !== 'guide' && canRegenerateElectronicDocument(this.document); }
+  get canVerify(): boolean { return this.kind !== 'guide' && this.manualReviewAvailable && canVerifyMissingSriDocument(this.document); }
+  get canRegenerate(): boolean { return this.kind !== 'guide' && this.manualReviewAvailable && canRegenerateElectronicDocument(this.document); }
   confirmReview(): void {
-    if (this.busy || !this.canManage || !this.reason.trim() || (!this.reviewRequired && !this.canVerify)) return;
+    if (this.busy || !this.canManage || !this.manualReviewAvailable || !this.reason.trim() || (!this.reviewRequired && !this.canVerify)) return;
     if (!this.reviewRequired && !this.verified) { toast.error('Confirma la verificación manual de inexistencia en SRI.'); return; }
     this.run(false);
   }

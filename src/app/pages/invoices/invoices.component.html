@@ -2,250 +2,118 @@
   <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
     <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h2 class="text-xl font-bold">Facturas</h2>
+        <h1 class="text-xl font-bold">Facturas</h1>
+        <p class="text-xs opacity-80">Consulta el estado electrónico, el cliente y el envío de cada comprobante.</p>
       </div>
-      <div class="rounded-full bg-card/20 px-3 py-1 text-xs font-semibold">Registros: {{ total }}</div>
+      <div class="self-start rounded-full bg-card/20 px-3 py-1 text-xs font-semibold sm:self-auto" aria-live="polite">
+        {{ total }} {{ total === 1 ? 'registro' : 'registros' }}
+      </div>
     </div>
   </section>
 
-  <section class="rounded-xl border border-primary/15 bg-card p-4 shadow-sm">
-    <div class="toolbar !mb-0">
-      <div class="flex w-full flex-col gap-2 sm:flex-row">
-        <input class="input" type="search" [(ngModel)]="search" placeholder="Buscar documento, clave, cliente o identificación..." />
-        <select class="input sm:max-w-[190px]" [(ngModel)]="statusFiltro" (change)="page = 1; loadInvoices()">
-          <option value="">Todos los estados</option>
-          <option value="Borrador">Borrador</option>
-          <option value="Pendiente Emision">Pendiente emisión</option>
-          <option value="Emitida">Emitida</option>
-          <option value="Autorizada">Autorizada</option>
-          <option value="Rechazada">Rechazada</option>
-          <option value="Error de Envio">Error de envío</option>
-          <option value="Anulada">Anulada</option>
-        </select>
-      </div>
-      <app-button (click)="limpiarFiltros()" impact="bold" tone="light" shape="rounded" size="small">Limpiar</app-button>
+  <section class="rounded-xl border border-primary/15 bg-card p-3 shadow-sm" aria-label="Filtros de facturas">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <input class="input flex-1" type="search" [(ngModel)]="search" aria-label="Buscar facturas"
+        placeholder="Buscar documento, clave, cliente o identificación…" autocomplete="off" />
+      <select class="input sm:max-w-[220px]" [(ngModel)]="statusFiltro" (ngModelChange)="onStatusChange()"
+        aria-label="Filtrar por estado">
+        <option value="">Todos los estados</option>
+        <option *ngFor="let option of statusOptions" [value]="option.value">{{ option.label }}</option>
+      </select>
+      <app-button *ngIf="hasActiveFilters" (click)="limpiarFiltros()" impact="bold" tone="light" shape="rounded"
+        size="small">Limpiar filtros</app-button>
     </div>
   </section>
 
-  <ng-container *ngIf="invoicesFiltradas.length > 0; else empty">
-    <section class="app-table-wrap">
-      <table class="app-table text-xs">
-        <thead class="app-thead">
-          <tr>
-            <th class="app-th">Documento</th>
-            <th class="app-th">Clave Acceso</th>
-            <th class="app-th">Fecha emisión</th>
-            <th class="app-th">Cliente / identificación</th>
-            <th class="app-th text-right">Total</th>
-            <!-- <th class="app-th">Moneda</th> -->
-            <th class="app-th">Estado</th>
-            <th class="app-th">Proveedor / SRI</th>
-            <th class="app-th">Correo</th>
-            <th class="app-th text-center">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let inv of invoicesFiltradas" class="app-tr">
-            <td class="app-td">
-              <div class="flex flex-col">
-                <span class="font-semibold">{{ documentNumber(inv) }}</span>
-                <span class="text-[11px] text-muted-foreground">{{ inv.name || '—' }}</span>
+  <section class="rounded-xl border border-border bg-card shadow-sm" [attr.aria-busy]="loading">
+    <app-list-state [loading]="loading" [empty]="!invoicesFiltradas.length" [hasFilters]="hasActiveFilters"
+      emptyMessage="Todavía no hay facturas registradas." filteredMessage="Ninguna factura coincide con los filtros."
+      (clear)="limpiarFiltros()" />
+
+    <ng-container *ngIf="invoicesFiltradas.length">
+      <!-- Escritorio -->
+      <div class="app-table-wrap hidden !rounded-none !border-0 lg:block" [class.opacity-60]="loading">
+        <table class="app-table text-xs">
+          <thead class="app-thead">
+            <tr>
+              <th class="app-th">Documento</th>
+              <th class="app-th">Fecha emisión</th>
+              <th class="app-th">Cliente</th>
+              <th class="app-th text-right">Total</th>
+              <th class="app-th">Estado</th>
+              <th class="app-th">Correo</th>
+              <th class="app-th text-right"><span class="sr-only">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let inv of invoicesFiltradas; trackBy: trackByName" class="app-tr">
+              <td class="app-td">
+                <a class="font-semibold text-primary hover:underline" [routerLink]="['/dashboard/invoices', inv.name]">
+                  {{ documentNumber(inv) }}
+                </a>
+                <div class="text-[11px] text-muted-foreground">{{ inv.name || '—' }}</div>
+                <div *ngIf="accessKey(inv) as key" class="max-w-[200px] truncate font-mono text-[10px] text-muted-foreground"
+                  [title]="key">{{ key }}</div>
+              </td>
+              <td class="app-td whitespace-nowrap">{{ postingDate(inv) }}</td>
+              <td class="app-td">
+                <div class="max-w-[220px] truncate" [title]="customerName(inv)">{{ customerName(inv) }}</div>
+                <div class="text-[10px] text-muted-foreground">{{ customerIdentification(inv) }}</div>
+              </td>
+              <td class="app-td whitespace-nowrap text-right font-semibold">
+                {{ invoiceTotal(inv) | currency:(inv.currency || 'USD'):'symbol':'1.2-2' }}
+              </td>
+              <td class="app-td">
+                <app-electronic-status-badge [document]="inv" />
+                <div *ngIf="providerStatus(inv)" class="mt-0.5 text-[10px] text-muted-foreground">
+                  Proveedor: {{ providerStatus(inv) }}
+                </div>
+                <div *ngIf="sriMessage(inv) as message" class="max-w-[220px] truncate text-[10px] text-muted-foreground"
+                  [title]="message">{{ message }}</div>
+              </td>
+              <td class="app-td whitespace-nowrap">{{ emailStatus(inv) }}</td>
+              <td class="app-td text-right">
+                <a class="btn btn-outline !px-3 !py-1 !text-[11px]" [routerLink]="['/dashboard/invoices', inv.name]"
+                  [attr.aria-label]="'Ver detalle de la factura ' + documentNumber(inv)">Ver detalle</a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Móvil y tablet -->
+      <ul class="divide-y divide-border lg:hidden" [class.opacity-60]="loading">
+        <li *ngFor="let inv of invoicesFiltradas; trackBy: trackByName">
+          <a class="block px-3 py-3 transition hover:bg-muted/40 focus:bg-muted/40 focus:outline-none"
+            [routerLink]="['/dashboard/invoices', inv.name]">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="truncate text-sm font-bold text-foreground">{{ documentNumber(inv) }}</p>
+                <p class="truncate text-xs text-foreground/80">{{ customerName(inv) }}</p>
+                <p class="text-[11px] text-muted-foreground">{{ postingDate(inv) }} · {{ customerIdentification(inv) }}</p>
               </div>
-            </td>
-
-            <td class="app-td">
-              <div class="flex flex-col">
-                <span class="font-semibold">{{ inv.access_key || '—' }}</span>
-              </div>
-            </td>
-
-            <td class="app-td">{{ postingDate(inv) }}</td>
-            <td class="app-td">
-              <div>{{ customerName(inv) }}</div>
-              <div class="text-[10px] text-muted-foreground">{{ customerIdentification(inv) }}</div>
-            </td>
-            <td class="app-td text-right font-semibold">{{ (inv.total ?? inv.grand_total ?? 0) | currency:(inv.currency || 'USD'):'symbol':'1.2-2' }}</td>
-            <!-- <td class="app-td">{{ inv.currency || 'USD' }}</td> -->
-            <td class="app-td">
-              <span class="badge" [ngClass]="getInvoiceStatusBadge(inv)">{{ getInvoiceStatusLabel(inv) }}</span>
-            </td>
-            <td class="app-td">
-              <div>{{ providerStatus(inv) }}</div>
-              <div class="max-w-[220px] truncate text-[10px] text-muted-foreground" [title]="sriMessage(inv)">{{ sriMessage(inv) }}</div>
-            </td>
-            <td class="app-td">{{ emailStatus(inv) }}</td>
-            <td class="app-td text-center">
-              <button class="btn btn-outline" [routerLink]="['/dashboard/invoices', inv.name]">Abrir</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <app-pagination
-        [page]="page"
-        [totalPages]="totalPages"
-        [totalItems]="total"
-        [pageSize]="pageSize"
-        (pageChange)="onPaginationPage($event)"
-        (pageSizeChange)="onPaginationPageSize($event)">
-      </app-pagination>
-    </section>
-  </ng-container>
-
-  <ng-template #empty>
-    <div class="app-card"><div class="app-card-body text-center text-muted-foreground">No hay facturas para los filtros seleccionados.</div></div>
-  </ng-template>
-</div>
-
-
-<!-- Modal Detalle Factura -->
-<div *ngIf="mostrarModal" class="app-modal-backdrop">
-    <div class="app-modal">
-        <button class="app-modal-close" (click)="closeModal()">×</button>
-
-        <div class="app-card-body">
-            <h3 class="text-lg font-semibold mb-4">
-                Detalle de la Factura
-                <span class="text-muted-foreground font-normal">
-                    #{{ invoiceSelected?.sri?.number || invoiceSelected?.name }}
+              <div class="flex shrink-0 flex-col items-end gap-1">
+                <span class="text-sm font-black text-foreground">
+                  {{ invoiceTotal(inv) | currency:(inv.currency || 'USD'):'symbol':'1.2-2' }}
                 </span>
-            </h3>
-
-            <!-- Acciones -->
-            <div class="mb-4 flex flex-wrap gap-2">
-                <button *ngIf="capabilities.hasPermission('billing.read')" class="btn btn-warn" (click)="getFacturaPdf()" [disabled]="!invoiceSelected?.sri?.invoice && !invoiceSelected?.name">
-                    Descargar RIDE
-                </button>
-                <button *ngIf="capabilities.isLiteMode && capabilities.hasPermission('billing.read')" class="btn btn-outline" (click)="getTicketPdf()">
-                    Descargar ticket
-                </button>
-
-                <button *ngIf="invoiceSelected?.order" class="btn btn-outline"
-                    (click)="irAOrden(invoiceSelected?.order)">
-                    Ver Orden: {{ invoiceSelected?.order }}
-                </button>
-
-                <button *ngIf="canRunSriAction" class="btn btn-primary"
-                    (click)="reenviarFactura()" [disabled]="actionRunning">
-                    {{ sriActionLabel }}
-                </button>
+                <app-electronic-status-badge [document]="inv" />
+              </div>
             </div>
+            <p *ngIf="sriMessage(inv) as message" class="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{{ message }}</p>
+          </a>
+        </li>
+      </ul>
 
-            <!-- Tabs -->
-            <div class="tabs">
-                <button class="tab" [ngClass]="{ 'tab-active': activeTab === 'info' }" (click)="activeTab = 'info'">
-                    Información
-                </button>
-
-                <button class="tab" [ngClass]="{ 'tab-active': activeTab === 'sri' }" (click)="activeTab = 'sri'">
-                    SRI
-                </button>
-
-                <button class="tab" [ngClass]="{ 'tab-active': activeTab === 'items' }" (click)="activeTab = 'items'">
-                    Items
-                </button>
-            </div>
-
-            <!-- Tab: Información -->
-            <div *ngIf="activeTab === 'info'">
-                <div class="grid md:grid-cols-2 gap-6 mb-6">
-                    <!-- Info factura -->
-                    <div>
-                        <h4 class="text-base font-semibold text-foreground/80 mb-2">🧾 Información</h4>
-                        <ul class="text-sm text-foreground/80 space-y-1">
-                            <li><strong>ID:</strong> {{ invoiceSelected?.name }}</li>
-                            <li><strong>N° Factura:</strong> {{ invoiceSelected?.sri?.number || '—' }}</li>
-                            <li><strong>Fecha:</strong> {{ invoiceSelected?.createdAt | ecuadorTime }}</li>
-                            <li><strong>Total:</strong> <span class="text-green-700 font-semibold">
-                                    {{ invoiceSelected?.total | currency:'USD':'symbol':'1.2-2' }}
-                                </span></li>
-                        </ul>
-                    </div>
-
-                    <!-- Cliente -->
-                    <div>
-                        <h4 class="text-base font-semibold text-foreground/80 mb-2">👤 Cliente</h4>
-                        <ul class="text-sm text-foreground/80 space-y-1">
-                            <li><strong>Nombre:</strong> {{ invoiceSelected?.customer?.fullName || '—' }}</li>
-                            <li><strong>Cédula/RUC:</strong> {{ invoiceSelected?.customer?.num_identificacion || '—' }}
-                            </li>
-                            <li><strong>Email:</strong> {{ invoiceSelected?.customer?.correo || '—' }}</li>
-                            <li><strong>Teléfono:</strong> {{ invoiceSelected?.customer?.telefono || '—' }}</li>
-                            <li><strong>Dirección:</strong> {{ invoiceSelected?.customer?.direccion || '—' }}</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tab: SRI -->
-            <div *ngIf="activeTab === 'sri'" class="text-sm text-foreground/80">
-                <h4 class="text-base font-semibold text-foreground/80 mb-2">📤 Información del SRI</h4>
-                <ul class="space-y-1">
-                    <li>
-                        <strong>Estado SRI:</strong>
-                        <span class="badge" [ngClass]="getSriStatusBadge(invoiceSelected?.sri?.status)">
-                            {{ getSriStatusLabel(invoiceSelected?.sri?.status) }}
-                        </span>
-                    </li>
-
-                    <li *ngIf="invoiceSelected?.sri?.number"><strong>Número:</strong> {{ invoiceSelected?.sri?.number }}
-                    </li>
-                    <li *ngIf="invoiceSelected?.sri?.invoice"><strong>Factura:</strong> {{ invoiceSelected?.sri?.invoice
-                        }}</li>
-                    <li *ngIf="invoiceSelected?.total !== undefined">
-                        <strong>Total Factura:</strong> {{ invoiceSelected?.total | currency:'USD':'symbol':'1.2-2' }}
-                    </li>
-                    <li *ngIf="invoiceSelected?.sri?.access_key">
-                        <strong>Clave de Acceso:</strong>
-                        <span class="break-all font-mono text-sm text-blue-700">{{ invoiceSelected?.sri?.access_key
-                            }}</span>
-                    </li>
-                    <li *ngIf="invoiceSelected?.sri?.authorization_datetime">
-                        <strong>F. Autorización:</strong> {{ invoiceSelected?.sri?.authorization_datetime }}
-                    </li>
-                    <li *ngIf="invoiceSelected?.sri?.authorization_number">
-                        <strong>Número de autorización:</strong> {{ invoiceSelected?.sri?.authorization_number }}
-                    </li>
-                </ul>
-            </div>
-
-            <!-- Tab: Items -->
-            <div *ngIf="activeTab === 'items'">
-                <h4 class="text-base font-semibold text-foreground/80 mb-2">📦 Items</h4>
-                <div class="app-table-wrap max-h-[50vh]">
-                    <table class="app-table">
-                        <thead class="app-thead">
-                            <tr>
-                                <th class="p-2 text-left">Producto</th>
-                                <th class="p-2 text-left">Cantidad</th>
-                                <th class="p-2 text-left">Precio Unitario</th>
-                                <th class="p-2 text-left">IVA</th>
-                                <th class="p-2 text-left">Subtotal</th>
-                                <th class="p-2 text-left">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngFor="let it of invoiceSelected?.items" class="app-tr">
-                                <td class="p-2">{{ it.productName }}</td>
-                                <td class="p-2">{{ it.quantity }}</td>
-                                <td class="p-2">{{ it.price | currency:'USD':'symbol':'1.2-2' }}</td>
-                                <td class="p-2"><span class="badge badge-gray">{{ (it.tax_rate ?? 0) }}%</span></td>
-                                <td class="p-2">{{ (it.subtotal ?? (it.quantity * it.price)) |
-                                    currency:'USD':'symbol':'1.2-2' }}</td>
-                                <td class="p-2 font-medium">
-                                    {{
-                                    (it.total ??
-                                    ((it.subtotal ?? (it.quantity * it.price)) +
-                                    ((it.subtotal ?? (it.quantity * it.price)) * ((it.tax_rate ?? 0)/100)))
-                                    ) | currency:'USD':'symbol':'1.2-2'
-                                    }}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-        </div>
-    </div>
+      <div class="px-3 pb-3">
+        <app-pagination
+          [page]="page"
+          [totalPages]="totalPages"
+          [totalItems]="total"
+          [pageSize]="pageSize"
+          (pageChange)="onPaginationPage($event)"
+          (pageSizeChange)="onPaginationPageSize($event)">
+        </app-pagination>
+      </div>
+    </ng-container>
+  </section>
 </div>

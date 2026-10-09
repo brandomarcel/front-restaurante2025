@@ -8,6 +8,8 @@ import { environment } from 'src/environments/environment';
 export class FrappeSocketService {
   private socket?: Socket; // socket del namespace
   private rooms = new Set<string>();
+  private documents = new Map<string, { doctype: string; name: string; subscribers: number }>();
+  private listeners = new Map<string, Map<(...args: any[]) => void, (...args: any[]) => void>>();
 
   private connectedSubject = new BehaviorSubject<boolean>(false);
   private errorSubject = new BehaviorSubject<any>(null);
@@ -56,6 +58,9 @@ export class FrappeSocketService {
       this.zone.run(() => {
         this.connectedSubject.next(true);
         for (const r of this.rooms) this.socket!.emit('subscribe', r);
+        for (const document of this.documents.values()) {
+          this.socket!.emit('doc_subscribe', document.doctype, document.name);
+        }
       });
     });
 
@@ -94,12 +99,42 @@ export class FrappeSocketService {
     this.socket?.emit(event, payload);
   }
 
+  subscribeDocument(doctype: string, name: string): void {
+    const key = `${doctype}/${name}`;
+    const existing = this.documents.get(key);
+    if (existing) { existing.subscribers++; return; }
+    this.documents.set(key, { doctype, name, subscribers: 1 });
+    if (this.socket?.connected) this.socket.emit('doc_subscribe', doctype, name);
+  }
+
+  unsubscribeDocument(doctype: string, name: string): void {
+    const key = `${doctype}/${name}`;
+    const existing = this.documents.get(key);
+    if (!existing || --existing.subscribers > 0) return;
+    this.documents.delete(key);
+    this.socket?.emit('doc_unsubscribe', doctype, name);
+  }
+
   on<T = any>(event: string, handler: (data: T) => void): void {
-    this.socket?.on(event, (data: T) => this.zone.run(() => handler(data)));
+    if (!this.socket) return;
+    let handlers = this.listeners.get(event);
+    if (!handlers) { handlers = new Map(); this.listeners.set(event, handlers); }
+    if (handlers.has(handler)) return;
+    const wrapped = (data: T) => this.zone.run(() => handler(data));
+    handlers.set(handler, wrapped);
+    this.socket.on(event, wrapped);
   }
 
   off(event: string, handler?: (...args: any[]) => void): void {
-    if (handler) this.socket?.off(event, handler);
-    else this.socket?.off(event);
+    if (handler) {
+      const handlers = this.listeners.get(event);
+      const wrapped = handlers?.get(handler);
+      if (wrapped) this.socket?.off(event, wrapped);
+      handlers?.delete(handler);
+      if (!handlers?.size) this.listeners.delete(event);
+    } else {
+      this.socket?.off(event);
+      this.listeners.delete(event);
+    }
   }
 }

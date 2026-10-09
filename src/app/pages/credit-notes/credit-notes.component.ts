@@ -1,22 +1,21 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, DestroyRef, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NgxSpinnerService } from 'ngx-spinner';
-import { EcuadorTimePipe } from '../../core/pipes/ecuador-time-pipe.pipe';
-import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 import { RouterModule } from '@angular/router';
-import { PrintService } from 'src/app/services/print.service';
-import { environment } from 'src/environments/environment';
+import { Subscription } from 'rxjs';
 import { toast } from 'ngx-sonner';
+import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 import { CreditNoteService } from 'src/app/services/credit-note.service';
-import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
-import { finalize } from 'rxjs';
 import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
+import { ElectronicStatusBadgeComponent } from 'src/app/shared/components/electronic-status-badge/electronic-status-badge.component';
+import { ListStateComponent } from 'src/app/shared/components/list-state/list-state.component';
+import { ELECTRONIC_STATUS_FILTERS, electronicStatusFilterOptions } from 'src/app/core/utils/electronic-document';
+import { debouncedCallback } from 'src/app/shared/utils/debounced-callback';
 
 @Component({
   selector: 'app-credit-notes',
   standalone: true,
-  imports: [CommonModule, FormsModule, EcuadorTimePipe, ButtonComponent,RouterModule, AppPaginationComponent],
+  imports: [CommonModule, FormsModule, ButtonComponent, RouterModule, AppPaginationComponent, ElectronicStatusBadgeComponent, ListStateComponent],
   templateUrl: './credit-notes.component.html',
   styleUrl: './credit-notes.component.css'
 })
@@ -27,33 +26,36 @@ export class CreditNotesComponent implements OnInit {
   pageSize = 10;
   total = 0;
   totalPages = 1;
+  loading = false;
 
   _search = '';
   statusFilter = '';
 
-  mostrarModal = false;
-  invoiceSelected: any | null = null;
-  activeTab: 'info' | 'sri' | 'items' = 'info';
-  documentLoading = false;
+  /** Las notas de crédito siempre se leen con el contrato electrónico Lite. */
+  readonly statusOptions = electronicStatusFilterOptions(ELECTRONIC_STATUS_FILTERS, true);
+  private readonly searchBackend: () => void;
+  private request?: Subscription;
 
-  private url = environment.URL; // si usas URL (como en orders); si usas apiUrl para imprimir, ajusta
+  constructor(private svc: CreditNoteService, destroyRef: DestroyRef) {
+    this.searchBackend = debouncedCallback(destroyRef, () => {
+      this.page = 1;
+      this.loadInvoices();
+    });
+    destroyRef.onDestroy(() => this.request?.unsubscribe());
+  }
 
-  constructor(
-    private svc: CreditNoteService,           // o InvoicesService
-    private spinner: NgxSpinnerService,
-    private printService: PrintService,
-    public capabilities: CompanyCapabilitiesService
-  ) {}
   ngOnInit(): void {
     this.loadInvoices();
   }
 
   loadInvoices(): void {
-    this.spinner.show();
+    // Cancela la petición anterior para que una respuesta lenta no pise un filtro más reciente.
+    this.request?.unsubscribe();
+    this.loading = true;
     const offset = (this.page - 1) * this.pageSize;
-    this.svc.getAllCreditNotes(this.pageSize, offset, this.statusFilter || undefined, this._search).subscribe({
+    this.request = this.svc.getAllCreditNotes(this.pageSize, offset, this.statusFilter || undefined, this._search).subscribe({
       next: (res: any) => {
-        const msg = res.message || res; // depende de tu proxy
+        const msg = res.message || res;
         this.invoices = msg.data || [];
         this.pageSize = Number(msg?.limit ?? this.pageSize) || this.pageSize;
         const responseOffset = Number(msg?.offset);
@@ -64,10 +66,10 @@ export class CreditNotesComponent implements OnInit {
         const hasNext = Boolean(msg?.has_next ?? msg?.hasNext);
         this.totalPages = Math.max(1, Math.ceil(this.total / this.pageSize) || 1, hasNext ? this.page + 1 : 1);
         this.aplicarFiltros();
-        this.spinner.hide();
+        this.loading = false;
       },
       error: (err: any) => {
-        this.spinner.hide();
+        this.loading = false;
         toast.error(String(err?.error?.message || err?.message || 'No se pudieron cargar las notas de crédito.'));
       }
     });
@@ -76,8 +78,12 @@ export class CreditNotesComponent implements OnInit {
   get search(): string { return this._search; }
   set search(v: string) {
     this._search = v || '';
-    this.page = 1;
-    this.loadInvoices();
+    this.aplicarFiltros();
+    this.searchBackend();
+  }
+
+  get hasActiveFilters(): boolean {
+    return !!this._search.trim() || !!this.statusFilter;
   }
 
   customerName(invoice: any): string {
@@ -96,53 +102,49 @@ export class CreditNotesComponent implements OnInit {
     return String(invoice?.related_document_number ?? invoice?.invoice_modified?.invoice_reference ?? '—');
   }
 
+  noteTotal(invoice: any): number {
+    return Number(invoice?.grand_total ?? invoice?.total ?? 0) || 0;
+  }
+
   providerStatus(invoice: any): string {
-    return String(invoice?.electronic?.provider_status ?? invoice?.sri?.provider_status ?? '—');
+    return String(invoice?.electronic?.provider_status ?? invoice?.sri?.provider_status ?? '');
   }
 
   sriMessage(invoice: any): string {
-    return String(invoice?.electronic?.sri_message ?? invoice?.sri?.sri_message ?? '—');
+    return String(invoice?.electronic?.sri_message ?? invoice?.sri?.sri_message ?? '');
   }
 
   emailStatus(invoice: any): string {
     return String(invoice?.email?.status ?? invoice?.email_status ?? 'No enviado');
   }
 
-  invoiceStatus(invoice: any): string {
-    return String(invoice?.status ?? invoice?.sri?.status ?? '');
+  trackByName(_: number, invoice: any): string {
+    return String(invoice?.name ?? '');
   }
 
   aplicarFiltros(): void {
-    const term = (this._search || '').toLowerCase();
-    let lista = Array.isArray(this.invoices) ? [...this.invoices] : [];
-
-    lista = lista.filter(inv => {
-      const byText = [
-        inv?.name,
-        inv?.sri?.number,
-        inv?.sri?.access_key,
-        inv?.document_number,
-        inv?.related_document_number,
-        inv?.related_access_key,
-        inv?.customer?.fullName,
-        inv?.customer?.num_identificacion,
-        inv?.customer_name,
-        inv?.customer_identification_number,
-        inv?.status,
-        inv?.provider_status,
-        inv?.email_status
-      ].map(x => (x ?? '').toString().toLowerCase()).some(x => x.includes(term));
-
-      return byText;
-    });
-
-    this.invoicesFiltradas = lista;
+    const term = (this._search || '').trim().toLowerCase();
+    const lista = Array.isArray(this.invoices) ? this.invoices : [];
+    this.invoicesFiltradas = !term ? [...lista] : lista.filter(inv => [
+      inv?.name,
+      inv?.sri?.number,
+      inv?.sri?.access_key,
+      inv?.document_number,
+      inv?.related_document_number,
+      inv?.related_access_key,
+      inv?.customer?.fullName,
+      inv?.customer?.num_identificacion,
+      inv?.customer_name,
+      inv?.customer_identification_number,
+      inv?.status,
+      inv?.provider_status,
+      inv?.email_status
+    ].some(value => String(value ?? '').toLowerCase().includes(term)));
   }
 
   limpiarFiltros(): void {
     this._search = '';
     this.statusFilter = '';
-    this.aplicarFiltros();
     this.page = 1;
     this.loadInvoices();
   }
@@ -151,9 +153,6 @@ export class CreditNotesComponent implements OnInit {
     this.page = 1;
     this.loadInvoices();
   }
-
-  nextPage(): void { if (this.page < this.totalPages) { this.page++; this.loadInvoices(); } }
-  prevPage(): void { if (this.page > 1) { this.page--; this.loadInvoices(); } }
 
   onPaginationPage(page: number): void {
     if (page === this.page) return;
@@ -165,70 +164,5 @@ export class CreditNotesComponent implements OnInit {
     this.pageSize = size;
     this.page = 1;
     this.loadInvoices();
-  }
-
- // Abrir/Cerrar modal
-  openInvoiceDetail(inv: any) {
-    this.invoiceSelected = inv || null;
-    this.activeTab = 'info';
-    this.mostrarModal = true;
-  }
-  closeModal() { this.mostrarModal = false; }
-
-  // PDF de factura (usa tu PrintService)
-  getFacturaPdf() {
-    if (!this.capabilities.hasPermission('billing.read')) {
-      toast.error('No tienes permisos para descargar documentos.');
-      return;
-    }
-    const invoiceName = this.invoiceSelected?.name || this.invoiceSelected?.sri?.invoice;
-    if (!invoiceName) {
-      toast.error('Factura no disponible');
-      return;
-    }
-    if (this.capabilities.isLiteMode) {
-      if (this.documentLoading) return;
-      this.documentLoading = true;
-      this.printService.downloadLiteInvoicePdf(invoiceName, 'Credit Note').pipe(
-        finalize(() => { this.documentLoading = false; })
-      ).subscribe({
-        next: (blob) => {
-          const url = window.URL.createObjectURL(blob);
-          const w = window.open(url, '_blank');
-          if (!w) toast.error('No se pudo abrir la ventana de impresión');
-          window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
-        },
-        error: () => toast.error('No se pudo descargar la nota de crédito.')
-      });
-      return;
-    }
-    const url = this.url + this.printService.getCreditNotePdf(invoiceName);
-    const w = window.open(url, '_blank');
-    if (!w) toast.error('No se pudo abrir la ventana de impresión');
-  }
-
-  getSriStatusLabel(status: string | undefined | null): string {
-    const value = String(status || '').trim().toUpperCase();
-    if (value === 'AUTORIZADO' || value === 'AUTORIZADA' || value === 'AUTHORIZED') return 'Autorizada';
-    if (value === 'REJECTED' || value === 'RECHAZADO' || value === 'RECHAZADA' || value === 'NOT_AUTHORIZED') return 'Rechazada';
-    if (value === 'ERROR') return 'Error';
-    if (value === 'QUEUED' || value === 'EN COLA') return 'En cola';
-    if (value === 'PROCESSING') return 'Procesando';
-    if (value === 'EMITIDA') return 'Autorización pendiente';
-    if (value === 'EN REVISION') return 'En revisión';
-    if (value === 'ANULADA') return 'Anulada';
-    if (value === 'DRAFT' || value === 'BORRADOR') return 'Borrador';
-    if (value === 'PENDIENTE EMISION' || value === 'PENDIENTE EMISIÓN') return 'Pendiente emisión';
-    if (value === 'ERROR DE ENVIO' || value === 'ERROR DE ENVÍO') return 'Error de envío';
-    if (value === 'REEMPLAZADA' || value === 'REPLACED') return 'Reemplazada';
-    return value || '—';
-  }
-
-  getSriStatusBadge(status: string | undefined | null): string {
-    const value = String(status || '').trim().toUpperCase();
-    if (value === 'AUTORIZADO' || value === 'AUTORIZADA' || value === 'AUTHORIZED') return 'badge-green';
-    if (value === 'REJECTED' || value === 'RECHAZADO' || value === 'RECHAZADA' || value === 'ERROR' || value === 'ERROR DE ENVIO' || value === 'ERROR DE ENVÍO' || value === 'ANULADA') return 'badge-red';
-    if (value === 'REEMPLAZADA' || value === 'REPLACED') return 'badge-gray';
-    return 'badge-yellow';
   }
 }

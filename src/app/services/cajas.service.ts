@@ -159,6 +159,7 @@ export class CajasService {
       .set('ignore_prepared_report', '1');
     return this.http.get<any>(`${this.apiUrl}/method/frappe.desk.query_report.run`, {
       params,
+      withCredentials: true,
       context: new HttpContext().set(REQUIRE_AUTH, true)
     });
   }
@@ -184,10 +185,14 @@ export class CajasService {
     return this.http.post(`${this.apiUrl}/method/frappe.desk.query_report.export_query`, {
       report_name: 'FacturADA Restaurant Cash Closings',
       filters: JSON.stringify(reportFilters),
+      applied_filters: JSON.stringify(reportFilters),
+      visible_idx: '[]',
+      custom_columns: '[]',
       file_format_type: 'Excel',
       include_filters: 1
     }, {
       responseType: 'blob',
+      withCredentials: true,
       context: new HttpContext().set(REQUIRE_AUTH, true)
     });
   }
@@ -259,6 +264,10 @@ export class CajasService {
   }
 
   private cashClosingsReportAccessError(): Error | null {
+    if (!(this.capabilities.hasPermission('*') || this.capabilities.hasPermission('reports.view'))
+      || ['none', 'billing'].includes(this.capabilities.reportScope || '')) {
+      return new Error('No tienes permiso para consultar este reporte.');
+    }
     if (!this.capabilities.isEnabled('cash_register')) {
       return new Error('Este reporte no está habilitado para este negocio.');
     }
