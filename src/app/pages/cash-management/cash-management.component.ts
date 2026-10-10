@@ -5,14 +5,15 @@ import { finalize } from 'rxjs';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { CajasService } from 'src/app/services/cajas.service';
+import { CajaNavComponent } from 'src/app/shared/components/caja-nav/caja-nav.component';
+import { cashDifferenceKind, cashNumber, isClosedCashStatus, isForbidden, normalizeCashStatus } from 'src/app/core/utils/cash-register';
 
-type CashTab = 'openings' | 'withdrawals' | 'closings' | 'summary';
+type CashTab = 'openings' | 'withdrawals' | 'closings';
 
 @Component({
   selector: 'app-cash-management',
-  imports: [CommonModule, FormsModule],
-  templateUrl: './cash-management.component.html',
-  styleUrls: ['./cash-management.component.css']
+  imports: [CommonModule, FormsModule, CajaNavComponent],
+  templateUrl: './cash-management.component.html'
 })
 export class CashManagementComponent implements OnInit, OnDestroy {
   activeTab: CashTab = 'openings';
@@ -86,6 +87,53 @@ export class CashManagementComponent implements OnInit, OnDestroy {
     this.filters = { user: '', status: '', fromDate: '', toDate: '' };
   }
 
+  readonly tabs: ReadonlyArray<{ id: CashTab; label: string }> = [
+    { id: 'openings', label: 'Aperturas' },
+    { id: 'withdrawals', label: 'Retiros' },
+    { id: 'closings', label: 'Cierres' }
+  ];
+
+  get hasActiveFilters(): boolean {
+    return !!(this.filters.user || this.filters.status || this.filters.fromDate || this.filters.toDate);
+  }
+
+  /** Usuarios que aparecen en el historial, para elegirlos en vez de escribirlos. */
+  get userOptions(): string[] {
+    return this.distinct([...this.openings, ...this.withdrawals, ...this.closings].map((row) => this.rowUser(row)));
+  }
+
+  /** Estados que existen en la pestaña actual (los retiros y las aperturas usan estados distintos). */
+  get statusOptions(): string[] {
+    return this.distinct(this.rowsFor(this.activeTab).map((row) => this.rowStatus(row)));
+  }
+
+  setTab(tab: CashTab): void {
+    this.activeTab = tab;
+    // Un estado de otra pestaña dejaría la lista vacía sin motivo aparente.
+    if (this.filters.status && !this.statusOptions.includes(this.filters.status)) this.filters.status = '';
+  }
+
+  countFor(tab: CashTab): number {
+    return this.applyFilters(this.rowsFor(tab)).length;
+  }
+
+  statusClass(row: any): string {
+    const status = normalizeCashStatus(this.rowStatus(row));
+    if (status === 'ABIERTA' || status === 'OPEN') return 'bg-emerald-100 text-emerald-800';
+    if (isClosedCashStatus(status)) return 'bg-muted text-muted-foreground';
+    if (status === 'BORRADOR' || status === 'DRAFT') return 'bg-amber-100 text-amber-900';
+    return 'bg-sky-100 text-sky-800';
+  }
+
+  rowDifference(row: any): number {
+    return cashNumber(row?.diferencia ?? row?.difference ?? 0);
+  }
+
+  differenceClass(value: number): string {
+    const kind = cashDifferenceKind(value);
+    return kind === 'even' ? 'text-muted-foreground' : (kind === 'short' ? 'text-red-700' : 'text-amber-700');
+  }
+
   get visibleOpenings(): any[] {
     return this.applyFilters(this.openings);
   }
@@ -131,6 +179,14 @@ export class CashManagementComponent implements OnInit, OnDestroy {
     return this.toNumber(row?.amount ?? row?.monto ?? row?.total ?? 0);
   }
 
+  private rowsFor(tab: CashTab): any[] {
+    return tab === 'openings' ? this.openings : (tab === 'withdrawals' ? this.withdrawals : this.closings);
+  }
+
+  private distinct(values: string[]): string[] {
+    return Array.from(new Set(values.filter((value) => value && value !== '—'))).sort((a, b) => a.localeCompare(b));
+  }
+
   private applyFilters(rows: any[]): any[] {
     const user = this.normalize(this.filters.user);
     const status = this.normalize(this.filters.status);
@@ -166,13 +222,11 @@ export class CashManagementComponent implements OnInit, OnDestroy {
   }
 
   private toNumber(value: unknown): number {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
+    return cashNumber(value);
   }
 
   private errorMessage(error: any): string {
-    const status = Number(error?.status ?? error?.error?.status ?? 0);
-    if (status === 403) return 'Solo un gerente o administrador puede consultar toda la gestión de caja';
+    if (isForbidden(error)) return 'Solo un gerente o administrador puede consultar toda la gestión de caja';
     const payload = error?.error ?? error;
     const message = payload?.message ?? payload?.msg ?? payload?._server_messages;
     if (typeof message === 'string') return message;

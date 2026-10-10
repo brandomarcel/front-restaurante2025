@@ -1,106 +1,136 @@
 <div class="app-container space-y-4">
-  <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
-    <h2 class="text-xl font-bold">Cierre de Caja</h2>
-    <p class="text-xs text-primary-foreground/80">Registra el efectivo contado y cierra el turno de forma segura.</p>
-  </section>
+  <app-caja-nav active="cierre" [state]="navState" [opening]="cierre.apertura" />
 
-  <div *ngIf="!canOperateCash" class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-800">
+  <div *ngIf="!canOperateCash" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800" role="alert">
     No tienes permiso para administrar la caja en este negocio.
   </div>
 
-  <div *ngIf="canOperateCash && sinApertura" class="rounded-lg border border-red-300 bg-red-50 p-3 text-sm font-medium text-red-700">
-    No hay apertura activa para este usuario. Debes abrir caja antes de registrar un cierre.
+  <!-- Cierre recién registrado -->
+  <section *ngIf="lastClose" class="mx-auto max-w-2xl rounded-2xl border border-emerald-200 bg-emerald-50 p-5" role="status">
+    <div class="flex items-start gap-3">
+      <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-lg text-white" aria-hidden="true">✓</span>
+      <div class="min-w-0 flex-1">
+        <h1 class="text-base font-bold text-emerald-900">Caja cerrada</h1>
+        <dl class="mt-2 grid grid-cols-2 gap-2 text-xs text-emerald-900 sm:grid-cols-4">
+          <div><dt class="text-emerald-800/70">Estado</dt><dd class="font-bold">{{ lastClose.status || lastClose.estado || 'Cerrada' }}</dd></div>
+          <div><dt class="text-emerald-800/70">Efectivo contado</dt><dd class="font-bold">{{ (lastClose.efectivo_real ?? lastClose.cash_counted ?? 0) | currency }}</dd></div>
+          <div><dt class="text-emerald-800/70">Diferencia</dt><dd class="font-bold">{{ (lastClose.diferencia ?? lastClose.difference ?? 0) | currency }}</dd></div>
+          <div><dt class="text-emerald-800/70">Fecha</dt><dd class="font-bold">{{ lastClose.closed_at || lastClose.fecha_cierre || '—' }}</dd></div>
+        </dl>
+        <a routerLink="/caja/apertura" class="btn btn-outline mt-3 !bg-card !text-xs">Abrir un nuevo turno</a>
+      </div>
+    </div>
+  </section>
+
+  <div *ngIf="canOperateCash && loadingData" class="grid animate-pulse grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]" aria-busy="true">
+    <div class="h-80 rounded-2xl bg-muted"></div>
+    <div class="h-80 rounded-2xl bg-muted"></div>
   </div>
 
-  <ng-container *ngIf="canOperateCash && !sinApertura">
-    <section class="grid grid-cols-1 gap-3 md:grid-cols-4">
-      <article class="rounded-lg border border-primary/15 bg-card p-3 shadow-sm">
-        <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">Apertura</p>
-        <p class="mt-1 text-sm font-semibold text-foreground/80">{{ cierre.apertura }}</p>
-        <p class="text-xs text-muted-foreground">{{ cierre.monto_apertura | currency }}</p>
-      </article>
-      <article class="rounded-lg border border-primary/15 bg-card p-3 shadow-sm">
-        <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">Ventas en efectivo</p>
-        <p class="mt-1 text-lg font-bold text-primary">{{ paymentAmount('01') | currency }}</p>
-      </article>
-      <article class="rounded-lg border border-primary/15 bg-card p-3 shadow-sm">
-        <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">Retiros</p>
-        <p class="mt-1 text-lg font-bold text-primary">{{ cierre.total_retiros | currency }}</p>
-      </article>
-      <article class="rounded-lg border border-amber-200 bg-amber-50 p-3 shadow-sm">
-        <p class="text-[11px] font-semibold uppercase tracking-wide text-amber-700">Efectivo esperado</p>
-        <p class="mt-1 text-lg font-bold text-amber-800">{{ totalEsperado | currency }}</p>
-      </article>
-    </section>
+  <!-- Sin turno abierto -->
+  <section *ngIf="canOperateCash && !loadingData && sinApertura && !lastClose" class="mx-auto max-w-xl rounded-2xl border border-amber-200 bg-amber-50 p-5 text-center">
+    <p class="text-sm font-bold text-amber-900">No tienes una caja abierta</p>
+    <p class="mt-1 text-xs text-amber-800">Solo se puede cerrar el turno que abriste.</p>
+    <a routerLink="/caja/apertura" class="btn btn-primary mt-3 !text-xs">Ir a abrir caja</a>
+  </section>
 
-    <section class="rounded-xl border border-primary/15 bg-card p-4 shadow-sm space-y-4">
-      <div class="rounded-lg border border-border bg-muted/40 p-3">
-        <p class="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Conteo por forma de pago</p>
-        <p class="mb-3 text-[11px] text-muted-foreground">
-          <b class="text-foreground/80">Sistema</b> es lo que el negocio registró como vendido con ese método durante el turno.
-          Escribe en <b class="text-foreground/80">Contado</b> lo que realmente reuniste o verificaste para cada uno; la <b class="text-foreground/80">diferencia</b> se calcula sola.
-        </p>
+  <div *ngIf="canOperateCash && !loadingData && !sinApertura" class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div class="space-y-4">
+      <!-- 1. Efectivo -->
+      <section class="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <h2 class="flex items-center gap-2 text-sm font-bold text-foreground">
+          <span class="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">1</span>Cuenta el efectivo de la caja
+        </h2>
+        <p class="mt-0.5 text-xs text-muted-foreground">Todo el dinero físico, incluido el fondo inicial.</p>
 
-        <div class="hidden grid-cols-[minmax(0,1fr)_110px_130px_100px] items-center gap-2 border-b border-border pb-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground sm:grid">
-          <span>Forma de pago</span>
-          <span class="text-right">Sistema</span>
-          <span class="text-right">Contado</span>
-          <span class="text-right">Diferencia</span>
+        <div class="mt-3 flex flex-wrap items-end gap-3">
+          <div class="w-full max-w-[240px]">
+            <label for="cash-counted" class="mb-1 block text-xs font-semibold text-foreground/80">Efectivo contado</label>
+            <div class="relative">
+              <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-xl font-bold text-muted-foreground">$</span>
+              <input id="cash-counted" type="text" inputmode="decimal" appDecimalInput min="0" step="0.01" autocomplete="off"
+                class="input !h-14 !pl-9 text-2xl font-black" [ngModel]="paymentCount('01')" (ngModelChange)="onPaymentCountChange('01', $event)"
+                [disabled]="saving || showDenominations" placeholder="0.00" />
+            </div>
+          </div>
+          <button type="button" class="btn btn-outline !text-xs" (click)="showDenominations = !showDenominations" [attr.aria-expanded]="showDenominations" [disabled]="saving">
+            {{ showDenominations ? 'Escribir el total' : 'Contar por billetes y monedas' }}
+          </button>
         </div>
 
-        <div *ngFor="let payment of paymentMethodsForCount; trackBy: trackPayment"
-          class="grid grid-cols-2 items-center gap-2 border-b border-border/60 py-2.5 last:border-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_110px_130px_100px]">
-          <p class="col-span-2 text-xs font-semibold text-foreground/80 sm:col-span-1">{{ payment.payment_method }}</p>
+        <div *ngIf="showDenominations" class="mt-4 rounded-xl border border-border bg-muted/30 p-3">
+          <div class="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
+            <div *ngFor="let d of denominations; let i = index; trackBy: denominationTrack" class="flex items-center gap-2">
+              <span class="w-16 shrink-0 text-xs font-bold" [ngClass]="d.kind === 'bill' ? 'text-emerald-800' : 'text-amber-800'">
+                {{ d.label }} <span class="text-[9px] font-normal text-muted-foreground">{{ d.kind === 'bill' ? 'billete' : 'moneda' }}</span>
+              </span>
+              <div class="inline-flex items-center overflow-hidden rounded-md border border-border bg-card" role="group" [attr.aria-label]="'Cantidad de ' + d.label + ' ' + (d.kind === 'bill' ? 'billete' : 'moneda')">
+                <button type="button" class="h-7 w-7 text-muted-foreground hover:bg-muted" (click)="stepDenomination(i, -1)" aria-label="Uno menos">−</button>
+                <input type="text" inputmode="numeric" class="h-7 w-12 border-x border-border bg-card text-center text-xs font-bold text-foreground focus:outline-none"
+                  [ngModel]="denominationCounts[i] || null" (ngModelChange)="onDenominationChange(i, $event)" placeholder="0" [attr.aria-label]="'Cantidad de ' + d.label" />
+                <button type="button" class="h-7 w-7 text-muted-foreground hover:bg-muted" (click)="stepDenomination(i, 1)" aria-label="Uno más">+</button>
+              </div>
+              <span class="ml-auto text-xs text-muted-foreground">{{ (denominationCounts[i] || 0) * d.value | currency }}</span>
+            </div>
+          </div>
+          <div class="mt-3 flex items-center justify-between border-t border-border pt-2 text-xs">
+            <button type="button" class="font-semibold text-muted-foreground hover:text-foreground" (click)="clearDenominations()">Poner en cero</button>
+            <span>Total contado: <b class="text-sm text-foreground">{{ denominationsTotal | currency }}</b></span>
+          </div>
+        </div>
+      </section>
 
-          <span class="text-left text-xs text-muted-foreground sm:text-right">{{ payment.amount | currency }}</span>
+      <!-- 2. Otras formas de pago -->
+      <section *ngIf="otherPaymentMethods.length" class="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <h2 class="flex items-center gap-2 text-sm font-bold text-foreground">
+          <span class="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">2</span>Verifica los otros cobros
+        </h2>
+        <p class="mt-0.5 text-xs text-muted-foreground">Ya vienen con lo que registró el sistema. Corrige solo si tu voucher o banco dice otra cosa.</p>
 
-          <input type="text" inputmode="decimal" appDecimalInput min="0" step="0.01"
-            class="input h-8 w-full text-right text-xs" [ngModel]="paymentCount(payment.payment_code)"
-            (ngModelChange)="onPaymentCountChange(payment.payment_code, $event)"
-            [disabled]="loadingData || saving" [attr.aria-label]="'Valor contado de ' + payment.payment_method" />
-
-          <span class="text-right text-xs font-bold" [ngClass]="paymentDifferenceClass(payment.payment_code)">
+        <div class="mt-3 hidden grid-cols-[minmax(0,1fr)_100px_130px_90px] gap-2 border-b border-border pb-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground sm:grid">
+          <span>Forma de pago</span><span class="text-right">Sistema</span><span class="text-right">Verificado</span><span class="text-right">Diferencia</span>
+        </div>
+        <div *ngFor="let payment of otherPaymentMethods; trackBy: trackPayment"
+          class="grid grid-cols-2 items-center gap-2 border-b border-border/60 py-2.5 last:border-0 sm:grid-cols-[minmax(0,1fr)_100px_130px_90px]">
+          <p class="col-span-2 text-xs font-semibold text-foreground sm:col-span-1">{{ payment.payment_method }}</p>
+          <span class="text-xs text-muted-foreground sm:text-right"><span class="sm:hidden">Sistema: </span>{{ payment.amount | currency }}</span>
+          <input type="text" inputmode="decimal" appDecimalInput min="0" step="0.01" class="input h-8 w-full text-right text-xs"
+            [ngModel]="paymentCount(payment.payment_code)" (ngModelChange)="onPaymentCountChange(payment.payment_code, $event)"
+            [disabled]="saving" [attr.aria-label]="'Valor verificado de ' + payment.payment_method" />
+          <span class="col-span-2 text-right text-xs font-bold sm:col-span-1" [ngClass]="paymentDifferenceClass(payment.payment_code)">
             {{ paymentDifference(payment.payment_code) > 0 ? '+' : '' }}{{ paymentDifference(payment.payment_code) | currency }}
           </span>
         </div>
-      </div>
+      </section>
+    </div>
 
-      <div class="rounded-lg p-3"
-        [ngClass]="cierre.diferencia >= 0 ? 'bg-emerald-50 ring-1 ring-emerald-200' : 'bg-red-50 ring-1 ring-red-200'">
-        <p class="text-[11px] font-semibold uppercase tracking-wide"
-          [ngClass]="cierre.diferencia >= 0 ? 'text-emerald-700' : 'text-red-700'">
-          Diferencia de efectivo (caja física)
-        </p>
-        <p class="mt-1 text-xl font-bold" [ngClass]="cierre.diferencia >= 0 ? 'text-emerald-700' : 'text-red-700'">
-          {{ cierre.diferencia | currency }}
-        </p>
-        <p class="mt-1 text-[11px]" [ngClass]="cierre.diferencia >= 0 ? 'text-emerald-700/80' : 'text-red-700/80'">
-          Solo compara el efectivo contado arriba contra lo esperado (apertura + ventas en efectivo − retiros). Las demás formas de pago muestran su propia diferencia en la fila correspondiente.
-        </p>
+    <!-- Resumen y cierre -->
+    <aside class="space-y-3 rounded-2xl border border-border bg-card p-5 shadow-sm lg:sticky lg:top-4">
+      <h2 class="text-sm font-bold text-foreground">Resumen del efectivo</h2>
+      <dl class="space-y-1.5 text-xs">
+        <div class="flex justify-between"><dt class="text-muted-foreground">Fondo inicial</dt><dd class="font-semibold text-foreground">{{ cierre.monto_apertura | currency }}</dd></div>
+        <div class="flex justify-between"><dt class="text-muted-foreground">+ Ventas en efectivo</dt><dd class="font-semibold text-foreground">{{ paymentAmount('01') | currency }}</dd></div>
+        <div class="flex justify-between"><dt class="text-muted-foreground">− Retiros</dt><dd class="font-semibold text-rose-700">{{ cierre.total_retiros | currency }}</dd></div>
+        <div class="flex justify-between border-t border-border pt-1.5"><dt class="font-semibold text-foreground">Debería haber</dt><dd class="font-bold text-foreground">{{ totalEsperado | currency }}</dd></div>
+        <div class="flex justify-between"><dt class="font-semibold text-foreground">Contaste</dt><dd class="font-bold text-foreground">{{ cierre.efectivo_real | currency }}</dd></div>
+      </dl>
+
+      <div class="rounded-xl p-3 text-center"
+        [ngClass]="differenceKind === 'even' ? 'bg-emerald-50 text-emerald-800' : (differenceKind === 'short' ? 'bg-red-50 text-red-800' : 'bg-amber-50 text-amber-900')" aria-live="polite">
+        <p class="text-[10px] font-bold uppercase tracking-wide">{{ differenceKind === 'even' ? 'La caja cuadra' : (differenceKind === 'short' ? 'Faltante' : 'Sobrante') }}</p>
+        <p class="text-2xl font-black">{{ differenceKind === 'even' ? '✓' : (cierre.diferencia | currency) }}</p>
+        <p *ngIf="differenceKind !== 'even'" class="text-[10px] opacity-80">Revisa el conteo o explica la diferencia en la nota.</p>
       </div>
 
       <div>
-        <label class="mb-1 block text-xs font-semibold text-muted-foreground" for="observaciones">Observaciones</label>
-        <textarea id="observaciones" name="observaciones" [(ngModel)]="cierre.observaciones" rows="3" class="input"
-          placeholder="Notas adicionales del cierre" [disabled]="loadingData || saving"></textarea>
+        <label class="mb-1 block text-xs font-semibold text-foreground/80" for="observaciones">Nota del cierre <span class="font-normal text-muted-foreground">(opcional)</span></label>
+        <textarea id="observaciones" name="observaciones" [(ngModel)]="cierre.observaciones" rows="2" class="input"
+          placeholder="Ej.: faltan $2 por vuelto mal dado" [disabled]="saving"></textarea>
       </div>
 
-      <div class="pt-2">
-        <app-button impact="bold" tone="primary" shape="rounded" size="medium" [disabled]="!canSave || loadingData || saving"
-          (click)="guardarCierre()">
-          {{ saving ? 'Cerrando...' : 'Cerrar caja' }}
-        </app-button>
-      </div>
-    </section>
-  </ng-container>
-
-  <section *ngIf="lastClose" class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
-    <p class="text-sm font-bold text-emerald-800">Cierre registrado correctamente</p>
-    <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-emerald-900 sm:grid-cols-4">
-      <span>Estado: <b>{{ lastClose.status || lastClose.estado || 'Cerrada' }}</b></span>
-      <span>Efectivo contado: <b>{{ (lastClose.efectivo_real ?? lastClose.cash_counted ?? 0) | currency }}</b></span>
-      <span>Diferencia: <b>{{ (lastClose.diferencia ?? lastClose.difference ?? 0) | currency }}</b></span>
-      <span>Fecha: <b>{{ lastClose.closed_at || lastClose.fecha_cierre || '—' }}</b></span>
-    </div>
-  </section>
+      <button type="button" class="btn btn-primary w-full !py-3 !text-sm" [disabled]="!canSave" (click)="guardarCierre()">
+        {{ saving ? 'Cerrando…' : 'Cerrar caja' }}
+      </button>
+    </aside>
+  </div>
 </div>

@@ -1,83 +1,111 @@
 <div class="app-container space-y-4">
-  <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
-    <h2 class="text-xl font-bold">Apertura de Caja</h2>
-    <p class="text-xs text-primary-foreground/80">Registra el inicio del turno con el monto base de operación.</p>
+  <app-caja-nav active="apertura" [state]="navState" [opening]="openingId" />
+
+  <!-- Consultando -->
+  <section *ngIf="loadingStatus" class="mx-auto max-w-xl animate-pulse space-y-3 rounded-2xl border border-border bg-card p-6" aria-busy="true">
+    <div class="h-4 w-40 rounded bg-muted"></div>
+    <div class="h-12 rounded-lg bg-muted"></div>
+    <div class="h-10 rounded-lg bg-muted"></div>
   </section>
 
-  <section class="rounded-xl border border-primary/15 bg-card p-4 shadow-sm">
-    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-      <div class="rounded-lg bg-primary/5 p-3">
-        <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">Usuario</p>
-        <p class="mt-1 text-sm font-medium text-foreground/80">{{ apertura.usuario || 'No identificado' }}</p>
+  <!-- Ya hay un turno abierto -->
+  <section *ngIf="!loadingStatus && cajaActiva" class="mx-auto max-w-3xl space-y-4">
+    <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+      <div class="flex flex-wrap items-start gap-3">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-lg text-white" aria-hidden="true">✓</span>
+        <div class="min-w-0 flex-1">
+          <h1 class="text-base font-bold text-emerald-900">Tu caja está abierta</h1>
+          <p class="text-xs text-emerald-800">
+            Turno <span class="font-mono">{{ openingId || '—' }}</span>
+            <ng-container *ngIf="openedAt"> · desde {{ openedAt | date:'short' }}</ng-container>
+            <ng-container *ngIf="activeTerminalLabel"> · {{ activeTerminalLabel }}</ng-container>
+          </p>
+          <p class="mt-1 text-[11px] text-emerald-800/80">Para abrir una nueva primero debes cerrar este turno.</p>
+        </div>
       </div>
-      <div class="rounded-lg p-3"
-        [ngClass]="cajaActiva ? 'bg-red-50 ring-1 ring-red-200' : 'bg-emerald-50 ring-1 ring-emerald-200'">
-        <p class="text-[11px] font-semibold uppercase tracking-wide"
-          [ngClass]="cajaActiva ? 'text-red-700' : 'text-emerald-700'">
-          Estado de caja
-        </p>
-        <p class="mt-1 text-sm font-semibold" [ngClass]="cajaActiva ? 'text-red-700' : 'text-emerald-700'">
-          {{ cajaActiva ? ('Abierta · ' + (aperturaActual?.status || aperturaActual?.estado || 'Abierta')) : 'Lista para apertura' }}
-        </p>
-      </div>
+    </div>
+
+    <div *ngIf="cashMetrics" class="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
+        <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Fondo inicial</p>
+        <p class="mt-1 text-lg font-black text-foreground">{{ metric('monto_apertura', 'opening_amount') | currency }}</p>
+      </article>
+      <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
+        <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Retiros</p>
+        <p class="mt-1 text-lg font-black text-rose-700">−{{ metric('total_retiros', 'total_withdrawals') | currency }}</p>
+      </article>
+      <article class="rounded-xl border border-primary/20 bg-primary/5 p-3 shadow-sm md:col-span-2">
+        <p class="text-[10px] font-bold uppercase tracking-wide text-primary">Efectivo que debería haber en caja</p>
+        <p class="mt-1 text-lg font-black text-foreground">{{ metric('efectivo_sistema', 'expected_cash') | currency }}</p>
+      </article>
+    </div>
+    <div *ngIf="loadingMetrics && !cashMetrics" class="h-20 animate-pulse rounded-xl bg-muted"></div>
+
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <a routerLink="/caja/retiro" class="flex items-center justify-between rounded-xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/40 hover:bg-primary/5">
+        <span><b class="block text-sm text-foreground">Registrar un retiro</b><span class="text-[11px] text-muted-foreground">Sacar efectivo para compras o pagos.</span></span>
+        <span class="text-primary" aria-hidden="true">→</span>
+      </a>
+      <a routerLink="/caja/cierre" class="flex items-center justify-between rounded-xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/40 hover:bg-primary/5">
+        <span><b class="block text-sm text-foreground">Cerrar caja</b><span class="text-[11px] text-muted-foreground">Contar el dinero y terminar el turno.</span></span>
+        <span class="text-primary" aria-hidden="true">→</span>
+      </a>
     </div>
   </section>
 
-  <div *ngIf="cajaActiva" class="rounded-lg border border-red-300 bg-red-50 p-3 text-sm font-medium text-red-700">
-    Ya tienes una caja abierta. Debes cerrar el turno actual para poder abrir una nueva caja.
-    <span *ngIf="aperturaActual" class="mt-1 block text-xs font-normal">
-      Apertura: {{ aperturaActual.name || aperturaActual.cash_opening || '—' }}
-      <span *ngIf="aperturaActual.opened_at"> · {{ aperturaActual.opened_at | date:'short' }}</span>
-    </span>
-  </div>
-
-  <section *ngIf="cajaActiva && cashMetrics" class="grid grid-cols-2 gap-2 md:grid-cols-4">
-    <article class="rounded-xl border border-border bg-card p-3 shadow-sm"><p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Monto de apertura</p><strong class="mt-1 block text-lg text-foreground">{{ (cashMetrics.monto_apertura ?? cashMetrics.opening_amount ?? 0) | currency }}</strong></article>
-    <article class="rounded-xl border border-border bg-card p-3 shadow-sm"><p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Retiros</p><strong class="mt-1 block text-lg text-foreground">{{ (cashMetrics.total_retiros ?? cashMetrics.total_withdrawals ?? 0) | currency }}</strong></article>
-    <article class="rounded-xl border border-border bg-card p-3 shadow-sm"><p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Efectivo del sistema</p><strong class="mt-1 block text-lg text-foreground">{{ (cashMetrics.efectivo_sistema ?? cashMetrics.expected_cash ?? 0) | currency }}</strong></article>
-    <article class="rounded-xl border border-border bg-card p-3 shadow-sm"><p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Diferencia</p><strong class="mt-1 block text-lg text-foreground">{{ cashMetrics.difference ?? cashMetrics.diferencia ?? '—' }}</strong></article>
+  <!-- Sin terminales configuradas -->
+  <section *ngIf="!loadingStatus && !cajaActiva && needsTerminalConfiguration" class="mx-auto max-w-xl rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-800" role="alert">
+    <p class="font-bold">Primero configura una terminal POS</p>
+    <p class="mt-1 text-xs">La caja se abre siempre sobre una terminal (serie de facturación y bodega). Pide a un administrador que la cree en Configuración → Terminales POS.</p>
   </section>
 
-  <div *ngIf="loadingStatus" class="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm font-medium text-primary">
-    Verificando estado de caja...
-  </div>
+  <!-- Abrir turno -->
+  <form *ngIf="!loadingStatus && !cajaActiva && !needsTerminalConfiguration" (ngSubmit)="abrirCaja()"
+    class="mx-auto max-w-xl space-y-5 rounded-2xl border border-border bg-card p-5 shadow-sm md:p-6">
+    <header>
+      <h1 class="text-lg font-bold text-foreground">Abrir caja</h1>
+      <p class="text-xs text-muted-foreground">Cuenta el efectivo con el que empiezas el turno (fondo para dar vuelto).</p>
+      <p class="mt-1 text-[11px] text-muted-foreground">Cajero: <b class="text-foreground/80">{{ apertura.usuario || 'No identificado' }}</b></p>
+    </header>
 
-  <div *ngIf="!cajaActiva && !loadingStatus && needsTerminalConfiguration"
-    class="rounded-lg border border-red-300 bg-red-50 p-3 text-sm font-medium text-red-700">
-    Debe configurar al menos un terminal POS antes de utilizar Caja.
-  </div>
-
-  <form *ngIf="!cajaActiva && !loadingStatus && !needsTerminalConfiguration" class="rounded-xl border border-primary/15 bg-card p-4 shadow-sm space-y-4">
     <div *ngIf="usesPosTerminalModel && availableTerminals.length > 1">
-      <label class="mb-1 block text-xs font-semibold text-muted-foreground" for="pos_terminal">Terminal POS</label>
-      <select id="pos_terminal" name="pos_terminal" class="input" [ngModel]="selectedTerminalId"
-        (ngModelChange)="onTerminalChange($event)" [disabled]="saving || loadingStatus">
-        <option value="">Selecciona un terminal</option>
-        <option *ngFor="let terminal of availableTerminals" [value]="terminal.name">
-          {{ terminal.terminal_name || terminal.name }}
-        </option>
-      </select>
-      <p *ngIf="needsTerminalSelection" class="mt-1 text-[11px] text-red-600">Selecciona un terminal para continuar.</p>
+      <p class="mb-1.5 text-xs font-semibold text-foreground/80">¿En qué caja vas a trabajar?</p>
+      <div class="grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Terminal POS">
+        <label *ngFor="let terminal of availableTerminals" class="flex cursor-pointer items-center gap-2 rounded-lg border border-border p-3 text-xs transition hover:border-primary/40 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+          <input type="radio" name="pos_terminal" [value]="terminal.name" [ngModel]="selectedTerminalId" (ngModelChange)="onTerminalChange($event)" [disabled]="saving" />
+          <span class="min-w-0"><b class="block truncate text-foreground">{{ terminal.terminal_name || terminal.name }}</b>
+            <span *ngIf="terminal.establishment_code" class="font-mono text-[10px] text-muted-foreground">{{ terminal.establishment_code }}-{{ terminal.emission_point_code }}</span></span>
+        </label>
+      </div>
+      <p *ngIf="needsTerminalSelection" class="mt-1 text-[11px] font-semibold text-amber-700">Elige una terminal para continuar.</p>
+    </div>
+    <p *ngIf="usesPosTerminalModel && availableTerminals.length === 1" class="rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+      Terminal: <b class="text-foreground">{{ availableTerminals[0].terminal_name || availableTerminals[0].name }}</b>
+    </p>
+
+    <div>
+      <label class="mb-1 block text-xs font-semibold text-foreground/80" for="monto_apertura">Fondo inicial</label>
+      <div class="relative">
+        <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-xl font-bold text-muted-foreground">$</span>
+        <input type="text" inputmode="decimal" appDecimalInput id="monto_apertura" name="monto_apertura" [(ngModel)]="apertura.monto_apertura"
+          class="input !h-14 !pl-9 text-2xl font-black" placeholder="0.00" [disabled]="saving" autocomplete="off" />
+      </div>
+      <div class="mt-2 flex flex-wrap gap-1.5" aria-label="Montos rápidos">
+        <button *ngFor="let amount of quickAmounts" type="button" class="rounded-full border px-3 py-1 text-xs font-semibold transition"
+          [ngClass]="amountValue === amount ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:bg-muted'"
+          (click)="setAmount(amount)">{{ amount | currency:'USD':'symbol':'1.0-0' }}</button>
+      </div>
+      <p *ngIf="!(amountValue > 0)" class="mt-1 text-[11px] text-muted-foreground">Debe ser mayor a $0.</p>
     </div>
 
     <div>
-      <label class="mb-1 block text-xs font-semibold text-muted-foreground" for="monto_apertura">Monto de apertura</label>
-      <input type="text" inputmode="decimal" appDecimalInput id="monto_apertura" name="monto_apertura" [(ngModel)]="apertura.monto_apertura"
-        class="input" placeholder="Ej: 100.00" [disabled]="saving || loadingStatus" />
-      <p class="mt-1 text-[11px] text-muted-foreground">Ingresa el efectivo inicial entregado para operar.</p>
+      <label class="mb-1 block text-xs font-semibold text-foreground/80" for="observacion">Nota <span class="font-normal text-muted-foreground">(opcional)</span></label>
+      <input id="observacion" name="observacion" [(ngModel)]="apertura.observacion" class="input" autocomplete="off"
+        placeholder="Ej.: turno de la mañana" [disabled]="saving" />
     </div>
 
-    <div>
-      <label class="mb-1 block text-xs font-semibold text-muted-foreground" for="observacion">Observaciones</label>
-      <textarea id="observacion" name="observacion" [(ngModel)]="apertura.observacion" rows="3" class="input"
-        placeholder="Comentarios opcionales sobre la apertura" [disabled]="saving || loadingStatus"></textarea>
-    </div>
-
-    <div class="pt-2">
-      <app-button impact="bold" tone="primary" shape="rounded" size="medium" [disabled]="!canSubmit || saving || loadingStatus"
-        (click)="abrirCaja()">
-        {{ saving ? 'Abriendo...' : 'Abrir Caja' }}
-      </app-button>
-    </div>
+    <button type="submit" class="btn btn-primary w-full !py-3 !text-sm" [disabled]="!canSubmit">
+      {{ saving ? 'Abriendo…' : (amountValue > 0 ? 'Abrir caja con ' + (amountValue | currency) : 'Abrir caja') }}
+    </button>
   </form>
 </div>

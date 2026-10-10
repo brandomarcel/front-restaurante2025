@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, HostListener, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AbstractControl, FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -7,7 +7,6 @@ import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { catchError, debounceTime, distinctUntilChanged, finalize, of, Subject, Subscription, switchMap, takeUntil } from 'rxjs';
 
-import { ButtonComponent } from "src/app/shared/components/button/button.component";
 import { AlertService } from '../../core/services/alert.service';
 import { CustomersService } from 'src/app/services/customers.service';
 import { PaymentsService } from 'src/app/services/payments.service';
@@ -28,9 +27,14 @@ import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabi
 import { buildMultiplePaymentPayload, findPaymentMethod, getDefaultPaymentValue, isPaymentMethodAlreadySelected, PaymentRow, roundMoney } from 'src/app/shared/utils/payment.utils';
 import { LiteEmissionState } from 'src/app/core/utils/lite-invoice-emission';
 import { ProductVariantPickerComponent } from 'src/app/shared/components/product-variant-picker/product-variant-picker.component';
+import { fiscalSeries } from 'src/app/core/utils/fiscal-setup';
 import { clampDiscountAmount, clampDiscountPercentage, computeLineTotals } from 'src/app/shared/utils/line-discount.utils';
 
 type Payment = { name: string; codigo: string; nombre: string; description?: string; };
+
+/** Mismo límite que valida `finalizeInvoice` (USD, IVA incluido). */
+const FINAL_CONSUMER_LIMIT = 50;
+const FINAL_CONSUMER_IDENTIFICATION = '9999999999999';
 type CartItem = {
   name?: string; nombre?: string; description?: string; codigo?: string;
   quantity: number; price: number; discount_percentage: number; discount_amount: number;
@@ -42,9 +46,8 @@ type CartItem = {
 @Component({
   selector: 'app-invoicing',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, RouterModule, ButtonComponent, ProductVariantPickerComponent, DecimalInputDirective],
-  templateUrl: './invoicing.component.html',
-  styleUrls: ['./invoicing.component.css']
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, RouterModule, ProductVariantPickerComponent, DecimalInputDirective],
+  templateUrl: './invoicing.component.html'
 })
 export class InvoicingComponent implements OnInit, OnDestroy {
   @ViewChild('productVariantPicker') productVariantPicker!: ProductVariantPickerComponent;
@@ -377,7 +380,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   }
 
   selectFinalConsumer(): void {
-    const finalConsumerIdentification = '9999999999999';
+    const finalConsumerIdentification = FINAL_CONSUMER_IDENTIFICATION;
     this.customerSearchTerm = finalConsumerIdentification;
     this.findCustomerByIdentification(finalConsumerIdentification);
   }
@@ -412,7 +415,8 @@ export class InvoicingComponent implements OnInit, OnDestroy {
           toast.success('Cliente creado exitosamente.');
           this.selectCustomer(created);
           this.closeCustomerModal();
-        }
+        },
+        error: (err) => toast.error(this.getErrorMessage(err) || 'No se pudo crear el cliente.')
       });
 
 
@@ -761,6 +765,36 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     return name ? `${code} · ${name}` : String(code);
   }
 
+  get selectedFiscalEstablishment(): any | null {
+    return this.fiscalEstablishments.find(item => item.name === this.selectedEstablishmentId) || null;
+  }
+
+  get selectedFiscalEmissionPoint(): any | null {
+    return this.fiscalEmissionPoints.find(item => item.name === this.selectedEmissionPointId) || null;
+  }
+
+  /** "001-002" cuando la ubicación está completa; vacío mientras falte elegir. */
+  get selectedFiscalSeries(): string {
+    const establishment = this.selectedFiscalEstablishment;
+    const point = this.selectedFiscalEmissionPoint;
+    if (!establishment || !point) return '';
+    return fiscalSeries(establishment.establishment_code, point.emission_point_code);
+  }
+
+  /** Hay más de una opción en algún nivel: el usuario tiene algo que decidir. */
+  get fiscalChoiceAvailable(): boolean {
+    return this.fiscalEstablishments.length > 1 || this.fiscalEmissionPoints.length > 1;
+  }
+
+  /** Ningún establecimiento tiene secuencia de factura para el ambiente actual. */
+  get noFiscalOptions(): boolean {
+    return this.canSelectFiscalLocation && this.fiscalEstablishments.length === 0;
+  }
+
+  get canConfigureFiscal(): boolean {
+    return this.capabilities.hasPermission('*') || this.capabilities.hasPermission('business.settings.manage');
+  }
+
   get terminalAssignmentLabel(): string {
     return this.selectedPosTerminal && this.capabilities.terminalAccessRequired ? 'Asignado a tu usuario' : '';
   }
@@ -853,7 +887,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const UMBRAL_CONSUMIDOR_FINAL = 50;
+    const UMBRAL_CONSUMIDOR_FINAL = FINAL_CONSUMER_LIMIT;
     const selectedCustomer = this.selectedCustomer as any;
     const identificationType = String(
       selectedCustomer?.tipo_identificacion ??
@@ -1150,6 +1184,78 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       },
       error: () => { }
     });
+  }
+
+  // ------------------ Ayudas de la vista ------------------
+
+  /** Esc cierra el alta de cliente sin perder la factura en curso. */
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.showCustomerModal) this.closeCustomerModal();
+  }
+
+  get isFinalConsumerSelected(): boolean {
+    const customer = this.selectedCustomer as any;
+    if (!customer) return false;
+    const type = String(customer?.tipo_identificacion ?? customer?.identification_type ?? '').toLocaleLowerCase();
+    const id = String(customer?.num_identificacion ?? customer?.identification_number ?? '').trim();
+    return type.includes('consumidor final') || id === FINAL_CONSUMER_IDENTIFICATION;
+  }
+
+  /** Aviso anticipado de la regla que `finalizeInvoice` hace cumplir. */
+  get finalConsumerOverLimit(): boolean {
+    return this.isFinalConsumerSelected && this.total > FINAL_CONSUMER_LIMIT;
+  }
+
+  get finalConsumerLimit(): number {
+    return FINAL_CONSUMER_LIMIT;
+  }
+
+  get cartUnits(): number {
+    return this.cartItems.reduce((total, item) => total + this.safeNumber(item.quantity, 0), 0);
+  }
+
+  get needsFiscalLocation(): boolean {
+    return this.canSelectFiscalLocation && !this.selectedEmissionPointId;
+  }
+
+  /**
+   * Por qué todavía no se puede emitir, en lenguaje del usuario. Refleja las
+   * mismas condiciones que deshabilitan el botón y las que `finalizeInvoice`
+   * valida al enviar; no agrega reglas nuevas.
+   */
+  get blockingReasons(): string[] {
+    if (this.emissionInvoiceName || this.isEmitting || this.isConfirmingEmission) return [];
+    const reasons: string[] = [];
+    if (this.invoicePlanBlockMessage) reasons.push(this.invoicePlanBlockMessage);
+    if (!this.capabilities.hasPermission('billing.create')) reasons.push('Tu usuario no tiene permiso para emitir facturas.');
+    if (this.posTerminalBlockMessage) reasons.push(this.posTerminalBlockMessage);
+    if (this.needsFiscalLocation) reasons.push('Elige el establecimiento y el punto de emisión.');
+    if (!this.invoiceForm?.get('selectedCustomer')?.value) reasons.push('Elige el cliente.');
+    if (!this.cartItems.length) reasons.push('Agrega al menos un producto.');
+    if (this.finalConsumerOverLimit) reasons.push(`Consumidor Final solo hasta $${FINAL_CONSUMER_LIMIT}: identifica al cliente.`);
+    if (this.isCreditInvoice && !this.invoiceForm.get('payment_due_date')?.value) reasons.push('Indica la fecha de vencimiento del crédito.');
+    if (!this.invoiceForm?.get('paymentMethod')?.value) reasons.push('No hay formas de pago disponibles.');
+    if (this.cartItems.length && this.paymentRemaining !== 0) {
+      reasons.push(this.paymentRemaining > 0
+        ? `Falta asignar $${this.paymentRemaining.toFixed(2)} en las formas de pago.`
+        : `Las formas de pago superan el total por $${(-this.paymentRemaining).toFixed(2)}.`);
+    }
+    return reasons;
+  }
+
+  get emissionStateTitle(): string {
+    switch (this.emissionState) {
+      case 'AUTHORIZED': return 'Factura autorizada por el SRI';
+      case 'PROCESSING': return 'Factura enviada. Autorización pendiente';
+      case 'REJECTED': return 'El SRI rechazó el comprobante';
+      case 'PROVIDER_ERROR': return 'No se pudo completar el envío';
+      default: return 'Error al emitir la factura';
+    }
+  }
+
+  lineTaxLabel(item: CartItem): string {
+    return `IVA ${item.tax_value ?? (item.tax === 'IVA-15' ? 15 : 0)}%`;
   }
 
   // ------------------ Utilidades ------------------

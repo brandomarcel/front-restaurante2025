@@ -2,17 +2,22 @@ import { Component, OnInit } from '@angular/core';
 import { CajasService } from 'src/app/services/cajas.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonComponent } from 'src/app/shared/components/button/button.component';
+import { RouterModule } from '@angular/router';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { finalize } from 'rxjs';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { CajaAbiertaGuard } from 'src/app/core/guards/caja-abierta.guard';
 import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
+import { CajaNavComponent, CajaTurnState } from 'src/app/shared/components/caja-nav/caja-nav.component';
+import {
+  CASH_DENOMINATIONS, cashDifferenceKind, cashNumber, currentSessionEmail, isClosedCashStatus, isForbidden,
+  readCashBackendMessage, sumDenominations
+} from 'src/app/core/utils/cash-register';
 
 @Component({
   selector: 'app-close-caja',
-  imports: [CommonModule, FormsModule, ButtonComponent, DecimalInputDirective],
+  imports: [CommonModule, FormsModule, RouterModule, DecimalInputDirective, CajaNavComponent],
   templateUrl: './close-caja.component.html',
   styleUrls: ['./close-caja.component.css']
 })
@@ -37,6 +42,10 @@ export class CloseCajaComponent implements OnInit {
   sinApertura = true;
   loadingData = false;
   saving = false;
+  /** Conteo guiado por billetes y monedas: solo ayuda a llenar el efectivo contado. */
+  readonly denominations = CASH_DENOMINATIONS;
+  denominationCounts: number[] = CASH_DENOMINATIONS.map(() => 0);
+  showDenominations = false;
   private loadingCounter = 0;
 
   constructor(
@@ -48,20 +57,50 @@ export class CloseCajaComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    const user = this.getCurrentUser();
-    this.cierre.usuario = user?.email || '';
+    this.cierre.usuario = currentSessionEmail();
     // Evita consultas y spinners para Mesero u otros perfiles sin caja.
     if (!this.canOperateCash) return;
     this.getDatosCierre();
   }
 
-  private getCurrentUser(): { email?: string } | null {
-    try {
-      return JSON.parse(localStorage.getItem('user') || '{}');
-    } catch {
-      return null;
-    }
+  get navState(): CajaTurnState {
+    if (this.loadingData) return 'loading';
+    return this.sinApertura ? 'closed' : 'open';
   }
+
+  get differenceKind(): 'short' | 'over' | 'even' {
+    return cashDifferenceKind(Number(this.cierre.diferencia) || 0);
+  }
+
+  get denominationsTotal(): number {
+    return sumDenominations(this.denominationCounts);
+  }
+
+  /** Formas de pago distintas al efectivo: se verifican, no se cuentan billetes. */
+  get otherPaymentMethods() {
+    return this.paymentMethodsForCount.filter((payment) => payment.payment_code !== '01');
+  }
+
+  get cashPaymentMethod() {
+    return this.paymentMethodsForCount.find((payment) => payment.payment_code === '01') || null;
+  }
+
+  onDenominationChange(index: number, value: unknown): void {
+    const quantity = Math.max(0, Math.floor(cashNumber(value)));
+    this.denominationCounts = this.denominationCounts.map((current, i) => i === index ? quantity : current);
+    this.onPaymentCountChange('01', this.denominationsTotal);
+  }
+
+  stepDenomination(index: number, delta: number): void {
+    this.onDenominationChange(index, (this.denominationCounts[index] || 0) + delta);
+  }
+
+  clearDenominations(): void {
+    this.denominationCounts = CASH_DENOMINATIONS.map(() => 0);
+    this.onPaymentCountChange('01', 0);
+  }
+
+  denominationTrack = (index: number) => index;
 
   private beginLoading(): void {
     this.loadingCounter += 1;
@@ -91,6 +130,8 @@ export class CloseCajaComponent implements OnInit {
     this.paymentCounts = {};
     this.ventasEfectivo = 0;
     this.backendExpectedCash = null;
+    this.denominationCounts = CASH_DENOMINATIONS.map(() => 0);
+    this.showDenominations = false;
   }
 
   getDatosCierre(): void {
@@ -116,10 +157,8 @@ export class CloseCajaComponent implements OnInit {
           ?? datos?.opening
           ?? datos?.last_cash_opening
           ?? null;
-        const aperturaStatus = this.normalizeStatus(apertura?.status ?? apertura?.estado ?? datos?.opening_status ?? datos?.status);
-
         this.sinApertura = !this.hasOpening(apertura)
-          || ['CERRADA', 'CLOSED', 'CANCELADA', 'CANCELLED'].includes(aperturaStatus);
+          || isClosedCashStatus(apertura?.status ?? apertura?.estado ?? datos?.opening_status ?? datos?.status);
         if (this.sinApertura) {
           this.resetCajaValores();
           return;
@@ -151,7 +190,6 @@ export class CloseCajaComponent implements OnInit {
         this.loadDashboardMetrics();
       },
       error: (error) => {
-        console.warn('No hay apertura activa o no se pudo cargar datos de cierre:', error);
         this.resetCajaValores();
         this.alertService.error(this.errorMessage(error) || 'No se pudo consultar la apertura de caja.');
       }
@@ -178,9 +216,15 @@ export class CloseCajaComponent implements OnInit {
       return;
     }
 
+    const counted = Number(this.cierre.efectivo_real || 0);
+    const difference = Number(this.cierre.diferencia || 0);
+    const kind = this.differenceKind;
+    const differenceText = kind === 'even'
+      ? 'La caja cuadra.'
+      : `${kind === 'short' ? 'Faltan' : 'Sobran'} ${Math.abs(difference).toFixed(2)}.`;
     void this.alertService.confirm(
-      `Se cerrará la apertura ${this.cierre.apertura} con ${Number(this.cierre.efectivo_real || 0).toFixed(2)} de efectivo contado.`,
-      '¿Cerrar caja?'
+      `Contado ${counted.toFixed(2)} · Esperado ${this.totalEsperado.toFixed(2)}. ${differenceText}`,
+      `¿Cerrar la caja ${this.cierre.apertura}?`
     ).then((result) => {
       if (result.isConfirmed) this.ejecutarCierre();
     });
@@ -250,7 +294,6 @@ export class CloseCajaComponent implements OnInit {
         this.cleanCaja();
       },
       error: (error) => {
-        console.error('Error al guardar cierre:', error);
         this.alertService.error(this.errorMessage(error) || 'No se pudo guardar el cierre de caja.');
       }
     });
@@ -327,13 +370,8 @@ export class CloseCajaComponent implements OnInit {
     return Boolean(String(value?.name || value?.cash_opening || value?.apertura || '').trim());
   }
 
-  private normalizeStatus(value: unknown): string {
-    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
-  }
-
   private toNumber(value: unknown): number {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
+    return cashNumber(value);
   }
 
   private normalizePaymentTotals(response: any): Array<{ payment_method: string; payment_code: string; amount: number }> {
@@ -365,24 +403,8 @@ export class CloseCajaComponent implements OnInit {
     return ({ '01': 'Efectivo', '19': 'Tarjeta de credito/debito', '20': 'Transferencia' } as Record<string, string>)[code] || 'Otros';
   }
 
-  private readBackendMessage(error: any): string {
-    const payload = error?.error ?? error;
-    const direct = payload?.message ?? payload?.msg ?? payload?._server_messages;
-    if (Array.isArray(direct)) return direct.map((item: any) => String(item?.message || item)).join(' ');
-    if (direct && typeof direct === 'object') return String(direct.message || direct.error || direct.msg || '');
-    if (typeof direct === 'string') {
-      try {
-        const parsed = JSON.parse(direct);
-        if (Array.isArray(parsed)) return parsed.map((item: any) => String(item?.message || item)).join(' ');
-      } catch { /* mensaje plano */ }
-      return direct;
-    }
-    return error?.message || '';
-  }
-
   private errorMessage(error: any): string {
-    const status = Number(error?.status ?? error?.error?.status ?? 0);
-    if (status === 403) return 'No tienes permiso para administrar la caja';
-    return this.readBackendMessage(error);
+    if (isForbidden(error)) return 'No tienes permiso para administrar la caja';
+    return readCashBackendMessage(error);
   }
 }

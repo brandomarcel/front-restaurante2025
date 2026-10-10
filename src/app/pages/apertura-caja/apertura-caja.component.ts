@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonComponent } from 'src/app/shared/components/button/button.component';
+import { RouterModule } from '@angular/router';
 import { CajasService } from 'src/app/services/cajas.service';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { NgxSpinnerService } from 'ngx-spinner';
@@ -9,10 +9,12 @@ import { finalize } from 'rxjs';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { CajaAbiertaGuard } from 'src/app/core/guards/caja-abierta.guard';
 import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
+import { CajaNavComponent, CajaTurnState } from 'src/app/shared/components/caja-nav/caja-nav.component';
+import { cashNumber, cashOpeningName, currentSessionEmail, readCashBackendMessage } from 'src/app/core/utils/cash-register';
 
 @Component({
   selector: 'app-apertura-caja',
-  imports: [CommonModule, FormsModule, ButtonComponent, DecimalInputDirective],
+  imports: [CommonModule, FormsModule, RouterModule, DecimalInputDirective, CajaNavComponent],
   templateUrl: './apertura-caja.component.html',
   styleUrls: ['./apertura-caja.component.css']
 })
@@ -31,6 +33,8 @@ export class AperturaCajaComponent implements OnInit {
   cashMetrics: any | null = null;
   loadingMetrics = false;
   selectedTerminalId = '';
+  /** Montos habituales de fondo de caja, para no tener que escribirlos. */
+  readonly quickAmounts = [20, 50, 100, 200];
   private loadingCounter = 0;
 
   constructor(private cajasService: CajasService,
@@ -41,8 +45,7 @@ export class AperturaCajaComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    const user = this.getCurrentUser();
-    this.apertura.usuario = user?.email || '';
+    this.apertura.usuario = currentSessionEmail();
     this.selectedTerminalId = this.capabilities.activePosTerminal?.name || '';
 
     this.verificarCajaAbierta();
@@ -75,12 +78,41 @@ export class AperturaCajaComponent implements OnInit {
     if (terminal) this.capabilities.setActivePosTerminal(terminal);
   }
 
-  private getCurrentUser(): { email?: string } | null {
-    try {
-      return JSON.parse(localStorage.getItem('user') || '{}');
-    } catch {
-      return null;
+  get navState(): CajaTurnState {
+    if (this.loadingStatus) return 'loading';
+    return this.cajaActiva ? 'open' : 'closed';
+  }
+
+  get openingId(): string {
+    return cashOpeningName(this.aperturaActual);
+  }
+
+  get openedAt(): string | null {
+    return this.aperturaActual?.opened_at || this.aperturaActual?.posting_date || this.aperturaActual?.creation || null;
+  }
+
+  get activeTerminalLabel(): string {
+    const terminal = this.availableTerminals.find((item) => String(item?.name || '') === this.selectedTerminalId)
+      || this.capabilities.activePosTerminal;
+    return terminal ? String(terminal.terminal_name || terminal.name) : '';
+  }
+
+  get amountValue(): number {
+    return cashNumber(this.apertura.monto_apertura);
+  }
+
+  setAmount(amount: number): void {
+    if (this.saving) return;
+    this.apertura.monto_apertura = amount;
+  }
+
+  /** Primer valor numérico disponible en las métricas del turno. */
+  metric(...keys: string[]): number {
+    for (const key of keys) {
+      const value = this.cashMetrics?.[key];
+      if (value !== undefined && value !== null && value !== '') return cashNumber(value);
     }
+    return 0;
   }
 
   private beginLoading(): void {
@@ -114,12 +146,12 @@ export class AperturaCajaComponent implements OnInit {
     ).subscribe({
       next: (res: any) => {
         this.aperturaActual = res?.message?.apertura || (Array.isArray(res?.data) ? res.data[0] : null);
+        // Igual que antes: sin estado se asume abierta; solo cerrada/closed la descarta.
         const status = String(this.aperturaActual?.status || this.aperturaActual?.estado || 'Abierta').toLowerCase();
         this.cajaActiva = !!this.aperturaActual && status !== 'cerrada' && status !== 'closed';
         this.loadMetrics();
       },
       error: (error) => {
-        console.error('Error al verificar apertura activa:', error);
         this.cajaActiva = false;
         this.aperturaActual = null;
         this.alertService.error(this.readBackendMessage(error) || 'No se pudo consultar la apertura de caja.');
@@ -174,7 +206,6 @@ export class AperturaCajaComponent implements OnInit {
         this.verificarCajaAbierta();
       },
       error: (error) => {
-        console.error('Error al abrir caja:', error);
         this.alertService.error(this.readBackendMessage(error) || 'No se pudo abrir la caja.');
       }
     });
@@ -201,17 +232,6 @@ export class AperturaCajaComponent implements OnInit {
   }
 
   private readBackendMessage(error: any): string {
-    const payload = error?.error ?? error;
-    const direct = payload?.message ?? payload?.msg ?? payload?._server_messages;
-    if (Array.isArray(direct)) return direct.map((item: any) => String(item?.message || item)).join(' ');
-    if (direct && typeof direct === 'object') return String(direct.message || direct.error || direct.msg || '');
-    if (typeof direct === 'string') {
-      try {
-        const parsed = JSON.parse(direct);
-        if (Array.isArray(parsed)) return parsed.map((item: any) => String(item?.message || item)).join(' ');
-      } catch { /* mensaje plano */ }
-      return direct;
-    }
-    return error?.message || '';
+    return readCashBackendMessage(error);
   }
 }

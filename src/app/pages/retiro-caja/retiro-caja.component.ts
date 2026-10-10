@@ -3,13 +3,18 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { CajasService } from 'src/app/services/cajas.service';
-import { ButtonComponent } from 'src/app/shared/components/button/button.component';
+import { RouterModule } from '@angular/router';
+import { finalize } from 'rxjs';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
+import { CajaNavComponent, CajaTurnState } from 'src/app/shared/components/caja-nav/caja-nav.component';
+import {
+  cashNullableNumber, cashNumber, cashOpeningName, currentSessionEmail, isClosedCashStatus, isForbidden, readCashBackendMessage
+} from 'src/app/core/utils/cash-register';
 
 @Component({
   selector: 'app-retiro-caja',
-  imports: [CommonModule, FormsModule, ButtonComponent, DecimalInputDirective],
+  imports: [CommonModule, FormsModule, RouterModule, DecimalInputDirective, CajaNavComponent],
   templateUrl: './retiro-caja.component.html',
   styleUrls: ['./retiro-caja.component.css']
 })
@@ -30,7 +35,10 @@ export class RetiroCajaComponent implements OnInit {
   diferencia: number | null = null;
   loading = false;
   loadingWithdrawals = false;
+  saving = false;
   error = '';
+  /** Motivos frecuentes: un toque llena el campo, que sigue siendo editable. */
+  readonly quickReasons = ['Compra de insumos', 'Pago a proveedor', 'Depósito al banco', 'Gastos varios'];
 
   retiros: any[] = [];
   totalRetiros = 0;
@@ -40,8 +48,7 @@ export class RetiroCajaComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    const user = this.getCurrentUser();
-    this.retiro.usuario = user.email;
+    this.retiro.usuario = currentSessionEmail();
 
     this.verificarCajaAbierta();
   }
@@ -69,13 +76,12 @@ export class RetiroCajaComponent implements OnInit {
           ?? normalized?.last_cash_opening
           ?? (Array.isArray(res?.data) ? res.data[0] : null);
         const opening = this.hasOpeningRecord(candidateOpening) ? candidateOpening : null;
-        const status = this.normalizeStatus(
+        const isClosed = isClosedCashStatus(
           opening?.status
           ?? opening?.estado
           ?? normalized?.opening_status
           ?? normalized?.status
         );
-        const isClosed = ['CERRADA', 'CLOSED', 'CANCELADA', 'CANCELLED'].includes(status);
         this.cashOpening = opening || null;
         this.cajaActiva = !!opening && !isClosed;
         this.cashStatus = this.cajaActiva
@@ -110,6 +116,28 @@ export class RetiroCajaComponent implements OnInit {
     });
   }
 
+  get navState(): CajaTurnState {
+    if (this.loading) return 'loading';
+    return this.cajaActiva ? 'open' : 'closed';
+  }
+
+  get amountValue(): number {
+    return cashNumber(this.retiro.monto);
+  }
+
+  /** Aviso (no bloquea): se retira más de lo que el sistema espera en caja. */
+  get exceedsExpectedCash(): boolean {
+    return this.efectivoSistema > 0 && this.amountValue > this.efectivoSistema;
+  }
+
+  setReason(reason: string): void {
+    this.retiro.motivo = reason;
+  }
+
+  /**
+   * Los retiros no se pueden eliminar (el contrato del backend no lo permite),
+   * así que se confirma el monto antes de registrarlo.
+   */
   registrarRetiro() {
     if (!this.canSubmit) {
       return;
@@ -121,14 +149,26 @@ export class RetiroCajaComponent implements OnInit {
       reason: String(this.retiro.motivo || '').trim()
     };
 
-    this.cajasService.create_retiro_de_caja(data).subscribe({
-      next: () => {
-        this.alertService.success('Retiro registrado correctamente');
-        this.retiro.motivo = '';
-        this.retiro.monto = 0;
-        this.verificarCajaAbierta();
-      },
-      error: (error) => this.alertService.error(this.errorMessage(error) || 'No se pudo registrar el retiro.')
+    this.saving = true;
+    this.alertService.confirm(
+      `Retirar ${data.amount.toFixed(2)} por "${data.reason}". Un retiro registrado no se puede eliminar.`,
+      'Confirmar retiro'
+    ).then((result) => {
+      if (!result.isConfirmed) {
+        this.saving = false;
+        return;
+      }
+      this.cajasService.create_retiro_de_caja(data).pipe(
+        finalize(() => this.saving = false)
+      ).subscribe({
+        next: () => {
+          this.alertService.success('Retiro registrado correctamente');
+          this.retiro.motivo = '';
+          this.retiro.monto = 0;
+          this.verificarCajaAbierta();
+        },
+        error: (error) => this.alertService.error(this.errorMessage(error) || 'No se pudo registrar el retiro.')
+      });
     });
   }
 
@@ -169,77 +209,33 @@ export class RetiroCajaComponent implements OnInit {
     });
   }
 
-eliminarRetiro(name: string) {
-  const confirmacion = confirm('¿Estás seguro de eliminar este retiro?');
-
-  if (confirmacion) {
-    this.cajasService.eliminarRetiro(name).subscribe(() => {
-      this.alertService.success('Retiro eliminado correctamente');
-      this.obtenerRetiros(); 
-    });
-  }
-}
-
   get canSubmit(): boolean {
     return this.cajaActiva
       && !this.loading
       && !this.loadingWithdrawals
+      && !this.saving
       && Number(this.retiro.monto) > 0
       && String(this.retiro.motivo || '').trim().length > 0;
   }
 
-  private getCurrentUser(): { email: string } {
-    try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      return { email: String(user?.email || '').trim() };
-    } catch {
-      return { email: '' };
-    }
-  }
-
   private openingName(opening: any): string {
-    if (typeof opening === 'string') return opening.trim();
-    return String(opening?.name || opening?.cash_opening || opening?.apertura || '').trim();
+    return cashOpeningName(opening);
   }
 
   private hasOpeningRecord(opening: any): boolean {
     return this.openingName(opening).length > 0;
   }
 
-  private normalizeStatus(value: unknown): string {
-    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
-  }
-
   private toNumber(value: unknown): number {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
+    return cashNumber(value);
   }
 
   private readNullableNumber(value: unknown): number | null {
-    if (value === null || value === undefined || value === '') return null;
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
+    return cashNullableNumber(value);
   }
 
   private errorMessage(error: any): string {
-    const status = Number(error?.status ?? error?.error?.status ?? 0);
-    if (status === 403) return 'No tienes permiso para administrar la caja.';
-    return this.readBackendMessage(error) || 'No se pudo consultar la información de caja.';
+    if (isForbidden(error)) return 'No tienes permiso para administrar la caja.';
+    return readCashBackendMessage(error) || 'No se pudo consultar la información de caja.';
   }
-
-  private readBackendMessage(error: any): string {
-    const payload = error?.error ?? error;
-    const direct = payload?.message ?? payload?.msg ?? payload?._server_messages;
-    if (Array.isArray(direct)) return direct.map((item: any) => String(item?.message || item)).join(' ');
-    if (direct && typeof direct === 'object') return String(direct.message || direct.error || direct.msg || '');
-    if (typeof direct === 'string') {
-      try {
-        const parsed = JSON.parse(direct);
-        if (Array.isArray(parsed)) return parsed.map((item: any) => String(item?.message || item)).join(' ');
-      } catch { /* mensaje plano */ }
-      return direct;
-    }
-    return error?.message || '';
-  }
-
 }
