@@ -131,4 +131,16 @@ describe('InvoicesService (FacturADA Lite)', () => {
       }
     });
   });
+
+  it('never presents a credit note returned by an older backend as an invoice', () => {
+    service.getAllInvoices(10, 0).subscribe((result: any) => {
+      expect(result.data.map((row: any) => row.name)).toEqual(['INV-ORIGINAL']);
+      expect(result.data[0].credit_note_summary.state).toBe('FULL');
+    });
+    http.expectOne(request => request.url.includes('get_all_invoices')).flush({ message: { data: [
+      { name: 'INV-NC', document_type: 'Nota de Credito', status: 'Autorizada', grand_total: 30 },
+      { name: 'INV-ORIGINAL', document_type: 'Factura', status: 'Autorizada', grand_total: 30,
+        credit_note_summary: { state: 'FULL', documents: [{ name: 'INV-NC' }] } }
+    ], total: 2 } });
+  });
 });

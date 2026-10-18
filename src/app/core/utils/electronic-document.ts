@@ -3,6 +3,12 @@ export function backendFlag(value: unknown): boolean {
   return value === true || value === 1 || value === '1';
 }
 
+export function isCreditNoteDocument(document: any): boolean {
+  const type = String(document?.document_type ?? document?.type ?? document?.tipo ?? '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+  return ['NOTA DE CREDITO', 'NOTA CREDITO', 'CREDIT NOTE', 'CREDIT_NOTE'].includes(type);
+}
+
 export function electronicReplacement(document: any): string {
   return String(document?.regenerated_invoice || document?.electronic?.regenerated_invoice
     || document?.replacement_invoice || document?.replaced_by || '').trim();

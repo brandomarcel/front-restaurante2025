@@ -9,6 +9,12 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- Corregida mezcla de NC en la lista Facturas: Lite filtra por Factura antes de
+  contar/paginar; Angular descarta NC conocidas de respuestas antiguas. Enlaces
+  antiguos de factura que apuntan a NC redirigen a su detalle correcto, con enlace
+  visible a la factura original. La NC conserva Autorizada; la compensación se
+  muestra en la factura. Build y 28 pruebas Angular/6 backend aprobados.
+
 - 2026-10-18: lista y detalle distinguen anulación documental y compensación total
   mediante NC autorizadas. Indicador rojo, filas diferenciadas en móvil/escritorio,
   aviso en detalle y enlaces a las NC; se conservan consultas/descargas históricas.

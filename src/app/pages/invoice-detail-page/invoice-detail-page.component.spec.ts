@@ -12,6 +12,7 @@ import { FaIconLibrary } from '@fortawesome/angular-fontawesome';
 import { fas } from '@fortawesome/free-solid-svg-icons';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { of } from 'rxjs';
 
 describe('Invoice detail cancellation', () => {
   function detail(invoice: any): InvoiceDetailPageComponent {
@@ -38,6 +39,16 @@ describe('Invoice detail cancellation', () => {
     expect(component.isCancelled).toBeFalse();
     expect(component.canAnnul).toBeFalse();
     expect(component.annulBlockReason).toContain('notas de crédito relacionadas');
+  });
+
+  it('opens a credit note from an old invoice URL in its own detail page', () => {
+    const component: any = detail({});
+    component.invoicesSvc = { getInvoiceDetail: () => of({ name: 'INV-NC', document_type: 'Nota de Credito' }) };
+    component.spinner = { show: jasmine.createSpy(), hide: jasmine.createSpy() };
+    component.router = { navigate: jasmine.createSpy() };
+    component.fetch('INV-NC');
+    expect(component.router.navigate).toHaveBeenCalledOnceWith(['/dashboard/credit-note', 'INV-NC'], { replaceUrl: true });
+    expect(component.spinner.hide).toHaveBeenCalled();
   });
 
   it('renders the cancellation notice and a link to the related credit note in the real template', () => {

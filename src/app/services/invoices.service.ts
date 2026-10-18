@@ -9,6 +9,7 @@ import { CompanyCapabilitiesService } from '../core/services/company-capabilitie
 import { frappeData, frappeList } from '../core/utils/frappe-response';
 import { normalizeLiteEmissionResponse } from '../core/utils/lite-invoice-emission';
 import { parseLocalizedDecimal } from '../shared/utils/decimal.utils';
+import { isCreditNoteDocument } from '../core/utils/electronic-document';
 
 @Injectable({ providedIn: 'root' })
 export class InvoicesService {
@@ -111,7 +112,10 @@ export class InvoicesService {
         const sourceRows = Array.isArray(rawData)
           ? rawData
           : (Array.isArray(rawData?.data) ? rawData.data : frappeList<any>(res));
-        const rows = sourceRows.map((item:any) => this.fromLiteInvoice(item));
+        // Older servers returned NC in this endpoint. Do not present them as
+        // invoices; the updated backend also filters before counting/paging.
+        const rows = sourceRows.filter((item: any) => !isCreditNoteDocument(item))
+          .map((item:any) => this.fromLiteInvoice(item));
         const totalCandidate = body?.total
           ?? body?.total_count
           ?? body?.count

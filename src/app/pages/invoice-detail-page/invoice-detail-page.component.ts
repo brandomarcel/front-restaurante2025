@@ -19,7 +19,7 @@ import { PaymentsService } from 'src/app/services/payments.service';
 import { InvoiceCollectionsService } from 'src/app/services/invoice-collections.service';
 import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 import { ElectronicStatusPanelComponent } from 'src/app/shared/components/electronic-status-panel/electronic-status-panel.component';
-import { electronicDocumentLabel, isCancelledInvoice } from 'src/app/core/utils/electronic-document';
+import { electronicDocumentLabel, isCancelledInvoice, isCreditNoteDocument } from 'src/app/core/utils/electronic-document';
 import { ElectronicStatusBadgeComponent } from 'src/app/shared/components/electronic-status-badge/electronic-status-badge.component';
 import { DocumentAction, DocumentActionsComponent } from 'src/app/shared/components/document-actions/document-actions.component';
 
@@ -102,6 +102,11 @@ export class InvoiceDetailPageComponent implements OnInit {
         this.invoice = res?.data && typeof res.data === 'object' && !Array.isArray(res.data)
           ? res.data
           : (res?.message?.data || (res?.message && typeof res.message === 'object' && !Array.isArray(res.message) && (res.message.name || res.message.invoice_name) ? res.message : res));
+        if (isCreditNoteDocument(this.invoice)) {
+          this.spinner.hide();
+          this.router.navigate(['/dashboard/credit-note', this.invoice.name || id], { replaceUrl: true });
+          return;
+        }
         if (this.invoice && !Array.isArray(this.invoice.payments)) {
           this.invoice.payments = res?.message?.payments || res?.message?.doc?.payments || res?.payments || [];
         }

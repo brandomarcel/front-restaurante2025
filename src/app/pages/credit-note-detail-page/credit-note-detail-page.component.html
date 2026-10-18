@@ -38,6 +38,12 @@
   </section>
 
   <ng-container *ngIf="invoice && !loading">
+    <section *ngIf="relatedInvoice" class="mb-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm">
+      <p>Este documento es una nota de crédito. Consulta la factura original para ver si quedó compensada total o parcialmente.</p>
+      <a class="mt-1 inline-block font-semibold text-primary underline" [routerLink]="['/dashboard/invoices', relatedInvoice]">
+        Ver factura {{ relatedDocumentNumber || relatedInvoice }}
+      </a>
+    </section>
     <nav class="mb-3 flex w-full gap-1 overflow-x-auto rounded-xl border border-border bg-card p-1.5 shadow-sm"
       role="tablist" aria-label="Secciones de la nota de crédito">
       <button *ngFor="let tab of detailTabs" type="button" role="tab" [id]="'credit-note-tab-' + tab.id"
