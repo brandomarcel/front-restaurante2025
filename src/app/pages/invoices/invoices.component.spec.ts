@@ -45,6 +45,16 @@ describe('InvoicesComponent', () => {
     expect(values).toContain('Reemplazada');
     expect(component.statusOptions.find(option => option.value === 'Emitida')?.label).toBe('Autorización pendiente');
   });
+  it('renders cancellation in both table and mobile rows even when SRI remains authorized', () => {
+    setup();
+    component.invoices = [{ name: 'VOID-1', status: 'Autorizada',
+      sri: { provider_status: 'AUTHORIZED' }, credit_note_summary: { state: 'FULL' } }];
+    component.aplicarFiltros();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Anulada con nota de crédito');
+    expect(fixture.nativeElement.querySelector('tbody tr').className).toContain('bg-muted/40');
+    expect(fixture.nativeElement.querySelector('ul li').className).toContain('bg-muted/40');
+  });
 
   it('debounces the backend search but filters the visible page immediately', () => {
     setup();

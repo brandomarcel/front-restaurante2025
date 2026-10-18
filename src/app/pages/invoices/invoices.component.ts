@@ -10,7 +10,7 @@ import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabi
 import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
 import { ElectronicStatusBadgeComponent } from 'src/app/shared/components/electronic-status-badge/electronic-status-badge.component';
 import { ListStateComponent } from 'src/app/shared/components/list-state/list-state.component';
-import { ELECTRONIC_STATUS_FILTERS, electronicStatusFilterOptions } from 'src/app/core/utils/electronic-document';
+import { ELECTRONIC_STATUS_FILTERS, electronicStatusFilterOptions, isCancelledInvoice } from 'src/app/core/utils/electronic-document';
 import { debouncedCallback } from 'src/app/shared/utils/debounced-callback';
 
 @Component({
@@ -21,6 +21,7 @@ import { debouncedCallback } from 'src/app/shared/utils/debounced-callback';
   styleUrls: ['./invoices.component.css']
 })
 export class InvoicesComponent implements OnInit {
+  readonly isCancelled = isCancelledInvoice;
   invoices: any[] = [];
   invoicesFiltradas: any[] = [];
   page = 1;

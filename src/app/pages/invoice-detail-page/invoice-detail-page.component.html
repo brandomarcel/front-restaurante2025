@@ -48,6 +48,26 @@
     </div>
   </header>
 
+  <section *ngIf="isCancelled" role="status" class="mb-3 rounded-xl border border-red-300 bg-red-50 p-4 text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100">
+    <h2 class="text-base font-bold">Factura anulada</h2>
+    <p class="mt-1 text-sm" *ngIf="invoice?.credit_note_summary?.state === 'FULL'; else cancelledDocument">
+      El importe está compensado con notas de crédito autorizadas. La autorización original se conserva en el historial.
+    </p>
+    <ng-template #cancelledDocument><p class="mt-1 text-sm">Este documento está marcado como anulado. Sus datos se conservan para consulta e historial.</p></ng-template>
+  </section>
+
+  <section *ngIf="relatedCreditNotes.length" class="mb-3 rounded-xl border border-border bg-card p-3">
+    <h2 class="text-sm font-bold">{{ invoice?.credit_note_summary?.state === 'PARTIAL' ? 'Nota de crédito parcial' : 'Notas de crédito relacionadas' }}</h2>
+    <p *ngIf="!isCancelled" class="mt-1 text-xs text-muted-foreground">La factura se compensa por completo cuando las notas de crédito autorizadas cubren su importe total.</p>
+    <ul class="mt-2 max-h-44 space-y-2 overflow-y-auto">
+      <li *ngFor="let note of relatedCreditNotes" class="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <a class="font-semibold text-primary underline" [routerLink]="['/dashboard/credit-note', note.name]">{{ note.document_number || note.name }}</a>
+        <span>{{ note.grand_total | currency:(note.currency || 'USD'):'symbol':'1.2-2' }}</span>
+        <app-electronic-status-badge [document]="note" />
+      </li>
+    </ul>
+  </section>
+
   <nav class="mb-3 flex w-full gap-1 overflow-x-auto rounded-xl border border-border bg-card p-1.5 shadow-sm"
     role="tablist" aria-label="Secciones del detalle de factura">
     <button *ngFor="let tab of detailTabs" type="button" role="tab" [id]="'invoice-tab-' + tab.id"

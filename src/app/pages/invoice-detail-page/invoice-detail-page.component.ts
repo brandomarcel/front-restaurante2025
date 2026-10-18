@@ -19,7 +19,7 @@ import { PaymentsService } from 'src/app/services/payments.service';
 import { InvoiceCollectionsService } from 'src/app/services/invoice-collections.service';
 import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 import { ElectronicStatusPanelComponent } from 'src/app/shared/components/electronic-status-panel/electronic-status-panel.component';
-import { electronicDocumentLabel } from 'src/app/core/utils/electronic-document';
+import { electronicDocumentLabel, isCancelledInvoice } from 'src/app/core/utils/electronic-document';
 import { ElectronicStatusBadgeComponent } from 'src/app/shared/components/electronic-status-badge/electronic-status-badge.component';
 import { DocumentAction, DocumentActionsComponent } from 'src/app/shared/components/document-actions/document-actions.component';
 
@@ -147,9 +147,9 @@ export class InvoiceDetailPageComponent implements OnInit {
   }
 
   get canManageCollections(): boolean {
-    return this.capabilities.hasPermission('*')
+    return !this.isCancelled && (this.capabilities.hasPermission('*')
       || this.capabilities.hasPermission('billing.manage')
-      || this.capabilities.hasPermission('billing.create');
+      || this.capabilities.hasPermission('billing.create'));
   }
 
   retryLoad(): void {
@@ -599,6 +599,9 @@ export class InvoiceDetailPageComponent implements OnInit {
     return String(value || '').trim().toUpperCase();
   }
 
+  get isCancelled(): boolean { return isCancelledInvoice(this.invoice); }
+  get relatedCreditNotes(): any[] { return this.invoice?.credit_note_summary?.documents || []; }
+
   get liteState(): LiteEmissionState {
     return liteEmissionState({
       ...(this.invoice?.electronic ?? {}),
@@ -652,6 +655,8 @@ export class InvoiceDetailPageComponent implements OnInit {
 
   get annulBlockReason(): string {
     if (!this.invoice) return 'Factura no disponible.';
+    if (this.isCancelled) return 'La factura ya está anulada. Consulta su historial y las notas de crédito relacionadas.';
+    if (['PARTIAL', 'PENDING'].includes(this.invoice?.credit_note_summary?.state)) return 'La factura ya tiene notas de crédito relacionadas. Revisa su importe y estado antes de crear otra.';
 
     const authorized = ['AUTORIZADO', 'AUTORIZADA', 'AUTHORIZED', 'SRI_AUTHORIZED'].includes(this.invoiceStatusRaw) ||
       this.liteProviderStatus === 'AUTHORIZED';
@@ -766,6 +771,7 @@ export class InvoiceDetailPageComponent implements OnInit {
   }
 
   get canSendEmail(): boolean {
+    if (this.isCancelled) return false;
     return this.capabilities.isLiteMode && this.isLiteAuthorized && this.capabilities.hasPermission('billing.manage');
   }
 

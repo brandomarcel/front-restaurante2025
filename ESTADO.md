@@ -9,6 +9,15 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-10-18: lista y detalle distinguen anulación documental y compensación total
+  mediante NC autorizadas. Indicador rojo, filas diferenciadas en móvil/escritorio,
+  aviso en detalle y enlaces a las NC; se conservan consultas/descargas históricas.
+  Una NC pendiente o parcial no se presenta como anulación completa. Lite expone
+  el resumen de NC y amplía el filtro Anulada sin cambiar el estado fiscal original.
+  Publicar Angular y Lite juntos para obtener el resumen y sus enlaces.
+  Validado: build de producción, 19 pruebas Angular en Chromium y cinco pruebas
+  backend; filtro y detalle comprobados con MariaDB y transacción revertida.
+
 - Creado `ESTADO.md` con el formato acordado; se actualizará al cierre de cada sesión cuando se solicite.
 - Revisadas las instrucciones de `AGENTS.md` y `CLAUDE.md`, el estado de Git y las diferencias locales.
 - Cambios existentes observados, todavía sin commit y sin validación funcional registrada en esta conversación:

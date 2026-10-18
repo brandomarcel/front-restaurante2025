@@ -62,4 +62,22 @@ describe('Electronic document contract', () => {
     expect(electronicStatusView({ status: 'Emitida', sri: { provider_status: 'PROCESSING' } }, false).label).toBe('Procesando');
     expect(electronicStatusView({}, false)).toEqual({ label: 'No informado', tone: 'neutral' });
   });
+  it('prioritizes cancelled documents over a retained authorized provider state', () => {
+    for (const document of [
+      { status: 'Anulada', sri: { provider_status: 'AUTHORIZED' } },
+      { status: 'Autorizada', docstatus: 2 },
+      { status: 'Autorizada', credit_note_summary: { state: 'FULL' } }
+    ]) {
+      for (const lite of [true, false]) {
+        expect(electronicStatusView(document, lite).label).toContain('Anulada');
+        expect(electronicStatusView(document, lite).tone).toBe('danger');
+      }
+      expect(getLiteInvoiceAction(document)).toBe('none');
+    }
+  });
+  it('does not label partial or pending credit notes as cancelled', () => {
+    for (const state of ['PARTIAL', 'PENDING', 'NONE']) {
+      expect(electronicStatusView({ status: 'Autorizada', credit_note_summary: { state } }, true).label).toBe('Autorizada');
+    }
+  });
 });

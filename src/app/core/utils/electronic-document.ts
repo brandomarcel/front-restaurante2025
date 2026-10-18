@@ -8,13 +8,26 @@ export function electronicReplacement(document: any): string {
     || document?.replacement_invoice || document?.replaced_by || '').trim();
 }
 
+export function isCancelledInvoice(document: any): boolean {
+  const states = [document?.status, document?.einvoice_status, document?.sri?.status]
+    .map(value => String(value ?? '').trim().toUpperCase());
+  return ['ANULADA', 'ANULADO', 'CANCELLED', 'CANCELED'].some(state => states.includes(state))
+    || Number(document?.docstatus) === 2 || document?.credit_note_summary?.state === 'FULL';
+}
+
+export function invoiceCancellationLabel(document: any): string {
+  return document?.credit_note_summary?.state === 'FULL' ? 'Anulada con nota de crédito' : 'Anulada';
+}
+
 export function isClosedElectronicDocument(document: any): boolean {
+  if (isCancelledInvoice(document)) return true;
   const status = String(document?.status ?? document?.einvoice_status ?? document?.sri?.status ?? '')
     .trim().toUpperCase();
   return !!electronicReplacement(document) || ['REEMPLAZADA', 'REPLACED', 'ANULADA', 'CANCELLED'].includes(status);
 }
 
 export function electronicDocumentLabel(document: any): string {
+  if (isCancelledInvoice(document)) return invoiceCancellationLabel(document);
   const status = String(document?.status ?? '').trim();
   const phase = document?.electronic ?? {};
   if (status === 'Rechazada') {
@@ -45,6 +58,7 @@ const STATUS_TONES: Record<string, ElectronicStatusTone> = {
 
 /** Estados del flujo Restaurante, que no expone las fases SRI del contrato Lite. */
 export function legacyInvoiceStatusLabel(document: any): string {
+  if (isCancelledInvoice(document)) return invoiceCancellationLabel(document);
   const status = String(document?.status || document?.sri?.status || '').trim().toUpperCase();
   const provider = String(document?.sri?.provider_status || document?.provider_status || '').trim().toUpperCase();
   const code = String(document?.sri?.sri_code || document?.sri?.status_code || document?.sri?.code
@@ -67,7 +81,7 @@ export function legacyInvoiceStatusLabel(document: any): string {
 /** Etiqueta y tono visual de un comprobante; nunca modifica su estado fiscal. */
 export function electronicStatusView(document: any, liteMode: boolean): ElectronicStatusView {
   const label = liteMode ? electronicDocumentLabel(document) : legacyInvoiceStatusLabel(document);
-  return { label, tone: STATUS_TONES[label] ?? 'warning' };
+  return { label, tone: isCancelledInvoice(document) ? 'danger' : STATUS_TONES[label] ?? 'warning' };
 }
 
 /** Valores exactos de `status` que acepta el backend (frontend_electronic_states.md). */
