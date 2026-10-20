@@ -237,6 +237,24 @@ export class CompanyComponent implements OnInit, DoCheck {
     return ['NO CONFIGURADO', 'VENCIDO', 'NO VIGENTE', 'ERROR DE LECTURA'].includes(status) || !!this.certInfo?.lastError;
   }
 
+  get certificateBlockingMessage(): string {
+    if (this.certInfo?.lastError) return this.certInfo.lastError;
+    if (this.normalizeStatus(this.certificateStatusLabel) === 'NO VIGENTE' && this.certInfo?.validFrom) {
+      return `La firma estará vigente desde el ${this.formatCertificateDateTime(this.certInfo.validFrom)}. Si esa hora ya pasó, actualiza la página para consultar su estado.`;
+    }
+    return 'Revisa el estado del certificado y carga uno vigente.';
+  }
+
+  formatCertificateDateTime(value?: string): string {
+    if (!value) return '—';
+    const date = new Date(/[zZ]$|[+-]\d{2}:?\d{2}$/.test(value) ? value : `${value.replace(' ', 'T')}Z`);
+    if (Number.isNaN(date.getTime())) return this.formatCertificateDate(value);
+    return new Intl.DateTimeFormat('es-EC', {
+      timeZone: 'America/Guayaquil', day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+    }).format(date) + ' (hora de Ecuador continental)';
+  }
+
   formatCertificateDate(value?: string): string {
     const raw = `${value || ''}`.trim();
     if (!raw) return '—';

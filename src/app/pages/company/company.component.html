@@ -307,7 +307,7 @@
           </div>
           <div *ngIf="certificateConfigured && certificateIsBlocking" class="rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-red-800" role="alert">
             <p class="font-bold">No se puede facturar con esta firma</p>
-            <p class="mt-1 text-[11px]">{{ certInfo?.lastError || 'Revisa el estado del certificado y carga uno vigente.' }}</p>
+            <p class="mt-1 text-[11px]">{{ certificateBlockingMessage }}</p>
           </div>
 
           <!-- Carga -->
@@ -339,15 +339,15 @@
                 </button>
               </div>
               <small *ngIf="f['clave'].invalid && submitted" class="text-red-600">Necesaria al cargar un archivo nuevo.</small>
-              <p class="mt-1 text-[11px] text-muted-foreground">Solo se usa para validar la firma; nunca se guarda en este navegador.</p>
+              <p class="mt-1 text-[11px] text-muted-foreground">La contraseña se guarda cifrada en el servidor para validar la firma y firmar tus comprobantes.</p>
             </div>
           </div>
 
           <details *ngIf="certificateConfigured" class="rounded-lg border border-border px-3 py-2">
             <summary class="cursor-pointer font-semibold text-muted-foreground">Detalles del certificado</summary>
             <dl class="mt-2 grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
-              <div class="flex gap-2"><dt class="w-24 shrink-0 text-muted-foreground">Válida desde</dt><dd class="text-foreground">{{ formatCertificateDate(certInfo?.validFrom) }}</dd></div>
-              <div class="flex gap-2"><dt class="w-24 shrink-0 text-muted-foreground">Válida hasta</dt><dd class="text-foreground">{{ formatCertificateDate(certInfo?.validTo) }}</dd></div>
+              <div class="flex gap-2"><dt class="w-24 shrink-0 text-muted-foreground">Válida desde</dt><dd class="text-foreground">{{ formatCertificateDateTime(certInfo?.validFrom) }}</dd></div>
+              <div class="flex gap-2"><dt class="w-24 shrink-0 text-muted-foreground">Válida hasta</dt><dd class="text-foreground">{{ formatCertificateDateTime(certInfo?.validTo) }}</dd></div>
               <div class="flex gap-2"><dt class="w-24 shrink-0 text-muted-foreground">Emisor</dt><dd class="min-w-0 truncate text-foreground" [title]="certInfo?.issuer || ''">{{ certInfo?.issuer || '—' }}</dd></div>
               <div class="flex gap-2"><dt class="w-24 shrink-0 text-muted-foreground">N.º de serie</dt><dd class="min-w-0 truncate font-mono text-foreground">{{ certInfo?.serialNumber || '—' }}</dd></div>
             </dl>

@@ -9,6 +9,7 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-10-20: configuración de firma muestra fecha y hora de vigencia en Ecuador continental. El aviso de firma aún no vigente indica cuándo empieza, y el texto de contraseña aclara su almacenamiento cifrado en el servidor. Core unifica la validación de estas fechas en UTC.
 - Corregida mezcla de NC en la lista Facturas: Lite filtra por Factura antes de
   contar/paginar; Angular descarta NC conocidas de respuestas antiguas. Enlaces
   antiguos de factura que apuntan a NC redirigen a su detalle correcto, con enlace
