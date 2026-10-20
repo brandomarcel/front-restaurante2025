@@ -115,10 +115,15 @@
             </div>
 
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div class="sm:col-span-2">
+              <div>
                 <label for="company-name" class="mb-1 block font-semibold text-foreground/80">Razón social</label>
                 <input id="company-name" type="text" class="input" formControlName="businessname" [class.border-red-500]="f['businessname'].invalid && submitted" />
                 <small *ngIf="f['businessname'].invalid && submitted" class="text-red-600">Campo requerido</small>
+              </div>
+              <div>
+                <label for="company-trade-name" class="mb-1 block font-semibold text-foreground/80">Nombre comercial</label>
+                <input id="company-trade-name" type="text" class="input" formControlName="trade_name" maxlength="140" placeholder="Ej.: MARY STORE V" />
+                <p class="mt-1 text-[11px] text-muted-foreground">Nombre con el que se identifica tu negocio. Si lo dejas vacío, se usará el nombre del negocio.</p>
               </div>
               <div>
                 <label for="company-ruc" class="mb-1 block font-semibold text-foreground/80">RUC</label>
