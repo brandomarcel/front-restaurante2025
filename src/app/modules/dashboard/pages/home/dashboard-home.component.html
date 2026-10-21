@@ -23,25 +23,39 @@
 
   <app-plan-usage-card *ngIf="showPlanCard" [plan]="plan"></app-plan-usage-card>
 
-  <section *ngIf="showBillingPeriod" class="mb-3 rounded-xl border border-border bg-card p-3 shadow-sm" aria-label="Período de comprobantes">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Período de comprobantes</p>
-        <h2 class="text-base font-bold capitalize text-foreground">{{ billingPeriodLabel }}</h2>
-        <p class="text-[11px] text-muted-foreground">{{ billingDateRangeLabel }} · Según fecha de emisión</p>
-      </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted" aria-label="Mes anterior" (click)="shiftBillingMonth(-1)">‹</button>
-        <label for="billing-month" class="sr-only">Mes de los comprobantes</label>
-        <input id="billing-month" type="month" class="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
-          [ngModel]="billingMonth" (ngModelChange)="selectBillingMonth($event)" [max]="currentMonth" />
-        <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-          aria-label="Mes siguiente" [disabled]="billingMonth >= currentMonth" (click)="shiftBillingMonth(1)">›</button>
-        <button *ngIf="billingMonth !== currentMonth" type="button" class="rounded-lg px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" (click)="selectBillingMonth(currentMonth)">Mes actual</button>
+  <section *ngIf="showBillingPeriod" class="billing-period" aria-label="Período de comprobantes">
+    <div class="billing-period__summary">
+      <span class="billing-period__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+      </span>
+      <div class="billing-period__copy">
+        <div class="billing-period__heading">
+          <h2>{{ billingPeriodLabel }}</h2>
+          <span *ngIf="billingMonth === currentMonth" class="billing-period__badge">Mes actual</span>
+        </div>
+        <p>{{ billingDateRangeLabel }} <span>· Fecha de emisión</span></p>
       </div>
     </div>
-    <p class="mt-2 text-[11px] text-muted-foreground">Este mes aplica a ventas y estados de comprobantes. El consumo del plan y la actividad reciente se muestran por separado.</p>
-    <p *ngIf="layout.view === 'operations'" class="mt-1 text-[11px] text-muted-foreground">Los indicadores de caja y operación conservan su período propio.</p>
+    <div class="billing-period__actions">
+      <button *ngIf="billingMonth !== currentMonth" type="button" class="billing-period__reset" (click)="selectBillingMonth(currentMonth)">Volver al mes actual</button>
+      <div class="billing-period__picker" role="group" aria-label="Seleccionar período">
+        <button type="button" class="billing-period__arrow" aria-label="Mes anterior" (click)="shiftBillingMonth(-1)">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 5-5 5 5 5"/></svg>
+        </button>
+        <label for="billing-month" class="sr-only">Mes de los comprobantes</label>
+        <select id="billing-month" class="billing-period__month" [ngModel]="billingMonth.slice(5, 7)"
+          (ngModelChange)="selectBillingMonth(billingMonth.slice(0, 4) + '-' + $event)">
+          <option *ngFor="let month of billingMonths" [value]="month.value" [disabled]="billingMonth.slice(0, 4) === currentMonth.slice(0, 4) && month.value > currentMonth.slice(5, 7)">{{ month.label }}</option>
+        </select>
+        <label for="billing-year" class="sr-only">Año de los comprobantes</label>
+        <select id="billing-year" class="billing-period__year" [ngModel]="billingMonth.slice(0, 4)" (ngModelChange)="selectBillingYear($event)">
+          <option *ngFor="let year of billingYears" [value]="year">{{ year }}</option>
+        </select>
+        <button type="button" class="billing-period__arrow" aria-label="Mes siguiente" [disabled]="billingMonth >= currentMonth" (click)="shiftBillingMonth(1)">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m8 5 5 5-5 5"/></svg>
+        </button>
+      </div>
+    </div>
   </section>
 
   <div *ngIf="showBillingPeriod && liteLoading" class="mb-3 rounded-xl border border-border bg-card p-4 text-center text-xs text-muted-foreground" role="status" aria-live="polite">

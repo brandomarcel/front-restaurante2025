@@ -105,8 +105,9 @@ describe('DashboardHomeComponent', () => {
     expect(orders.get_dashboard_metrics).not.toHaveBeenCalled();
     expect(company.get_empresa).not.toHaveBeenCalled();
     expect(element.querySelector('app-billing-panel')).not.toBeNull();
-    expect(element.querySelector('input[type="month"]')).not.toBeNull();
-    expect(element.textContent).toContain('Período de comprobantes');
+    expect(element.querySelector('select#billing-month')).not.toBeNull();
+    expect(element.querySelector('select#billing-year')).not.toBeNull();
+    expect(element.querySelector('[aria-label="Período de comprobantes"]')).not.toBeNull();
   });
 
   it('permite consultar otro mes con su rango completo, incluidos años bisiestos', async () => {
@@ -147,6 +148,29 @@ describe('DashboardHomeComponent', () => {
     expect(component.billingMonth).toBe(component.currentMonth);
   });
 
+  it('selecciona mes y año desde los controles y limita los meses futuros', async () => {
+    const element = await render({ screen: 'billing_overview', features: { billing: true, direct_invoice: true }, permissions: ['billing.read', 'reports.view'] });
+    fixture.componentInstance.selectBillingMonth('2024-02');
+    fixture.detectChanges();
+    const month = element.querySelector<HTMLSelectElement>('#billing-month')!;
+    month.value = '03';
+    month.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(lite.getDashboard).toHaveBeenCalledWith('2024-03-01', '2024-03-31', 'BUS-1');
+    const year = element.querySelector<HTMLSelectElement>('#billing-year')!;
+    year.value = '2023';
+    year.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(lite.getDashboard).toHaveBeenCalledWith('2023-03-01', '2023-03-31', 'BUS-1');
+    const component = fixture.componentInstance;
+    component.selectBillingMonth('2024-12');
+    component.selectBillingYear(component.currentMonth.slice(0, 4));
+    fixture.detectChanges();
+    expect(component.billingMonth <= component.currentMonth).toBeTrue();
+    const options = Array.from(month.options);
+    expect(options.filter(option => option.value > component.currentMonth.slice(5, 7)).every(option => option.disabled)).toBeTrue();
+  });
+
   it('conserva solo la respuesta del último mes seleccionado', async () => {
     const element = await render({ screen: 'billing_overview', features: { billing: true, direct_invoice: true }, permissions: ['billing.read', 'reports.view'] });
     const previous = new Subject<LiteDashboard>();
@@ -183,7 +207,7 @@ describe('DashboardHomeComponent', () => {
     expect(orders.get_dashboard_metrics).not.toHaveBeenCalled();
     expect(lite.getDashboard).not.toHaveBeenCalled();
     expect(element.querySelector('app-service-panel')).not.toBeNull();
-    expect(element.querySelector('input[type="month"]')).toBeNull();
+    expect(element.querySelector('#billing-month')).toBeNull();
     expect(element.textContent).toContain('Tomar pedido');
     expect(element.textContent).not.toContain('Firma:');
   });

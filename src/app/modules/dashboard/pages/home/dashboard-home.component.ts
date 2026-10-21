@@ -61,7 +61,8 @@ type OperationsResult = { metrics: OperationsMetrics } | { error: unknown };
     ApiPanelComponent,
     ServicePanelComponent
   ],
-  templateUrl: './dashboard-home.component.html'
+  templateUrl: './dashboard-home.component.html',
+  styleUrls: ['./dashboard-home.component.scss']
 })
 export class DashboardHomeComponent implements OnInit, OnDestroy {
   layout: DashboardLayout = { view: 'none', billingSummary: false };
@@ -84,6 +85,22 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
   liteError = '';
   fromDate = '';
   toDate = '';
+  readonly billingMonths = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+    .map((label, index) => ({ label, value: String(index + 1).padStart(2, '0') }));
+
+  get billingYears(): string[] {
+    const currentYear = Number(this.currentMonth.slice(0, 4));
+    const selectedYear = Number(this.billingMonth.slice(0, 4));
+    const oldestYear = Math.min(2000, selectedYear || currentYear);
+    return Array.from({ length: currentYear - oldestYear + 1 }, (_, index) => String(currentYear - index));
+  }
+
+  selectBillingYear(value: string): void {
+    if (!/^\d{4}$/.test(value) || Number(value) < 100 || value > this.currentMonth.slice(0, 4)) return;
+    const month = `${value}-${this.billingMonth.slice(5, 7)}`;
+    this.selectBillingMonth(month > this.currentMonth ? this.currentMonth : month);
+  }
 
   get showBillingPeriod(): boolean {
     return this.layout.view === 'billing' || this.layout.view === 'api'

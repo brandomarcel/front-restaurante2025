@@ -1,0 +1,102 @@
+:host { display: block; }
+
+.billing-period {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin-bottom: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--foreground);
+}
+
+.billing-period__summary { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.billing-period__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--muted);
+  color: var(--primary);
+}
+.billing-period__icon svg { width: 19px; height: 19px; }
+.billing-period__copy { min-width: 0; }
+.billing-period__heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.billing-period__heading h2 { margin: 0; font-size: 14px; line-height: 1.4; font-weight: 700; }
+.billing-period__heading h2::first-letter { text-transform: uppercase; }
+.billing-period__badge {
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.billing-period__copy p { margin: 3px 0 0; font-size: 11px; line-height: 1.5; color: var(--muted-foreground); }
+.billing-period__copy p span { white-space: nowrap; }
+.billing-period__actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.billing-period__reset { padding: 6px 0; font-size: 11px; font-weight: 600; color: var(--primary); }
+.billing-period__reset:hover { text-decoration: underline; }
+.billing-period__picker {
+  display: grid;
+  grid-template-columns: 32px minmax(106px, 1fr) 76px 32px;
+  align-items: center;
+  width: 260px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+}
+.billing-period__arrow {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: var(--foreground);
+  background: transparent;
+}
+.billing-period__arrow svg { width: 16px; height: 16px; }
+.billing-period__arrow:hover:not(:disabled) { background: var(--muted); }
+.billing-period__arrow:disabled { opacity: .3; cursor: not-allowed; }
+.billing-period__picker select {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  margin: 0;
+  padding: 0 22px 0 8px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background-color: transparent;
+  background-position: right 3px center;
+  background-size: 13px;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.billing-period__picker option { background: var(--card); color: var(--foreground); }
+.billing-period__picker .billing-period__year { border-left: 1px solid var(--border); font-weight: 400; }
+.billing-period button:focus-visible, .billing-period select:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .billing-period { padding: 12px; gap: 12px; }
+  .billing-period__icon { display: none; }
+  .billing-period__actions { width: 100%; flex-direction: row-reverse; justify-content: space-between; }
+  .billing-period__picker { width: 100%; }
+  .billing-period__reset { order: 1; }
+}
