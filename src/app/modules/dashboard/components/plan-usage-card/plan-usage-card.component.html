@@ -5,6 +5,7 @@
         <div class="flex items-end justify-between gap-3">
           <div>
             <p class="text-[10px] font-bold uppercase tracking-[.12em] text-violet-600">Consumo de comprobantes</p>
+            <p class="mt-1 text-[11px] text-muted-foreground">Según el período de consumo del plan; no cambia al seleccionar otro mes.</p>
             <p class="mt-1 text-2xl font-black leading-none text-foreground">
               {{ plan.unlimited ? 'Ilimitado' : plan.used }}
               <span *ngIf="!plan.unlimited" class="text-xs font-semibold text-muted-foreground"> usados</span>

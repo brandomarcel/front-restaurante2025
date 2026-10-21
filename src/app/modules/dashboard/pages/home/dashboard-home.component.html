@@ -23,11 +23,36 @@
 
   <app-plan-usage-card *ngIf="showPlanCard" [plan]="plan"></app-plan-usage-card>
 
+  <section *ngIf="showBillingPeriod" class="mb-3 rounded-xl border border-border bg-card p-3 shadow-sm" aria-label="Período de comprobantes">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Período de comprobantes</p>
+        <h2 class="text-base font-bold capitalize text-foreground">{{ billingPeriodLabel }}</h2>
+        <p class="text-[11px] text-muted-foreground">{{ billingDateRangeLabel }} · Según fecha de emisión</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted" aria-label="Mes anterior" (click)="shiftBillingMonth(-1)">‹</button>
+        <label for="billing-month" class="sr-only">Mes de los comprobantes</label>
+        <input id="billing-month" type="month" class="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+          [ngModel]="billingMonth" (ngModelChange)="selectBillingMonth($event)" [max]="currentMonth" />
+        <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="Mes siguiente" [disabled]="billingMonth >= currentMonth" (click)="shiftBillingMonth(1)">›</button>
+        <button *ngIf="billingMonth !== currentMonth" type="button" class="rounded-lg px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" (click)="selectBillingMonth(currentMonth)">Mes actual</button>
+      </div>
+    </div>
+    <p class="mt-2 text-[11px] text-muted-foreground">Este mes aplica a ventas y estados de comprobantes. El consumo del plan y la actividad reciente se muestran por separado.</p>
+    <p *ngIf="layout.view === 'operations'" class="mt-1 text-[11px] text-muted-foreground">Los indicadores de caja y operación conservan su período propio.</p>
+  </section>
+
+  <div *ngIf="showBillingPeriod && liteLoading" class="mb-3 rounded-xl border border-border bg-card p-4 text-center text-xs text-muted-foreground" role="status" aria-live="polite">
+    Cargando comprobantes de {{ billingPeriodLabel }}…
+  </div>
+
   <ng-container [ngSwitch]="layout.view">
     <ng-container *ngSwitchCase="'operations'">
-      <section *ngIf="layout.billingSummary && liteDashboard" class="mb-1">
+      <section *ngIf="layout.billingSummary && liteDashboard && !liteLoading" class="mb-1">
         <div class="mb-2 flex items-center justify-between gap-2 px-1">
-          <h2 class="text-sm font-bold text-foreground">Comprobantes electrónicos del mes</h2>
+          <h2 class="text-sm font-bold text-foreground">Comprobantes electrónicos del mes · {{ billingPeriodLabel }}</h2>
           <a routerLink="/dashboard/invoices" class="text-[11px] font-semibold text-primary">Ver facturas</a>
         </div>
         <app-billing-kpis [sales]="liteDashboard.sales"></app-billing-kpis>
@@ -49,11 +74,7 @@
 
     <ng-container *ngSwitchDefault>
 
-      <div *ngIf="liteLoading && !liteDashboard" class="mb-3 rounded-xl border border-border bg-card p-6 text-center text-xs font-semibold text-muted-foreground shadow-sm">
-        Cargando información…
-      </div>
-
-      <ng-container *ngIf="liteDashboard">
+      <ng-container *ngIf="liteDashboard && !liteLoading">
         <app-billing-panel *ngIf="layout.view === 'billing'"
           [dashboard]="liteDashboard"
           [plan]="plan"

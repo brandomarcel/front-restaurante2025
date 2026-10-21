@@ -85,6 +85,47 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
   fromDate = '';
   toDate = '';
 
+  get showBillingPeriod(): boolean {
+    return this.layout.view === 'billing' || this.layout.view === 'api'
+      || (this.layout.view === 'operations' && this.layout.billingSummary);
+  }
+
+  get billingMonth(): string {
+    return this.fromDate.slice(0, 7);
+  }
+
+  get currentMonth(): string {
+    return toIsoDate(new Date()).slice(0, 7);
+  }
+
+  get billingPeriodLabel(): string {
+    if (!this.billingMonth) return '';
+    const [year, month] = this.billingMonth.split('-').map(Number);
+    return new Intl.DateTimeFormat('es-EC', { month: 'long', year: 'numeric' })
+      .format(new Date(year, month - 1, 1));
+  }
+
+  get billingDateRangeLabel(): string {
+    const format = (date: string) => date.split('-').reverse().join('/');
+    return `${format(this.fromDate)} al ${format(this.toDate)}`;
+  }
+
+  selectBillingMonth(value: string): void {
+    if (!this.showBillingPeriod || !/^\d{4}-(0[1-9]|1[0-2])$/.test(value)
+      || value > this.currentMonth || value === this.billingMonth) return;
+    const [year, month] = value.split('-').map(Number);
+    if (year < 100) return;
+    this.fromDate = toIsoDate(new Date(year, month - 1, 1));
+    this.toDate = toIsoDate(new Date(year, month, 0));
+    this.liteLoad$.next();
+  }
+
+  shiftBillingMonth(offset: number): void {
+    const [year, month] = this.billingMonth.split('-').map(Number);
+    if (!year || !month) return;
+    this.selectBillingMonth(toIsoDate(new Date(year, month - 1 + offset, 1)).slice(0, 7));
+  }
+
   private alertCounter = 0;
   private readonly destroy$ = new Subject<void>();
   private readonly operationsLoad$ = new Subject<void>();

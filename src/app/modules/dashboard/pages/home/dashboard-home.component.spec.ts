@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { CompanyCapabilitiesService, CompanyFeatureKey } from 'src/app/core/services/company-capabilities.service';
 import { CompanyService } from 'src/app/services/company.service';
 import { FacturadaLiteDashboardService, LiteDashboard } from 'src/app/services/facturada-lite-dashboard.service';
@@ -105,6 +105,65 @@ describe('DashboardHomeComponent', () => {
     expect(orders.get_dashboard_metrics).not.toHaveBeenCalled();
     expect(company.get_empresa).not.toHaveBeenCalled();
     expect(element.querySelector('app-billing-panel')).not.toBeNull();
+    expect(element.querySelector('input[type="month"]')).not.toBeNull();
+    expect(element.textContent).toContain('Período de comprobantes');
+  });
+
+  it('permite consultar otro mes con su rango completo, incluidos años bisiestos', async () => {
+    await render({ screen: 'billing_overview', features: { billing: true, direct_invoice: true }, permissions: ['billing.read', 'reports.view'] });
+    fixture.componentInstance.selectBillingMonth('2024-02');
+    fixture.detectChanges();
+    expect(lite.getDashboard).toHaveBeenCalledWith('2024-02-01', '2024-02-29', 'BUS-1');
+    expect(fixture.componentInstance.billingPeriodLabel).toBe('febrero de 2024');
+    expect(fixture.nativeElement.textContent).toContain('01/02/2024 al 29/02/2024');
+    fixture.componentInstance.shiftBillingMonth(-1);
+    expect(lite.getDashboard).toHaveBeenCalledWith('2024-01-01', '2024-01-31', 'BUS-1');
+    fixture.componentInstance.shiftBillingMonth(-1);
+    expect(lite.getDashboard).toHaveBeenCalledWith('2023-12-01', '2023-12-31', 'BUS-1');
+  });
+
+  it('oculta las cifras anteriores mientras carga el mes seleccionado', async () => {
+    const element = await render({ screen: 'billing_overview', features: { billing: true, direct_invoice: true }, permissions: ['billing.read', 'reports.view'] });
+    const response = new Subject<LiteDashboard>();
+    lite.getDashboard.and.returnValue(response);
+    fixture.componentInstance.selectBillingMonth('2024-02');
+    fixture.detectChanges();
+    expect(element.querySelector('app-billing-panel')).toBeNull();
+    expect(element.querySelector('[role="status"]')?.textContent).toContain('febrero de 2024');
+    response.next(LITE_DASHBOARD);
+    fixture.detectChanges();
+    expect(element.querySelector('app-billing-panel')).not.toBeNull();
+    response.complete();
+  });
+
+  it('rechaza meses inválidos, futuros y selecciones repetidas', async () => {
+    await render({ screen: 'billing_overview', features: { billing: true, direct_invoice: true }, permissions: ['billing.read', 'reports.view'] });
+    const component = fixture.componentInstance;
+    const calls = lite.getDashboard.calls.count();
+    for (const value of ['', '2024-13', '2999-01', component.billingMonth]) component.selectBillingMonth(value);
+    expect(lite.getDashboard.calls.count()).toBe(calls);
+    component.selectBillingMonth('2024-02');
+    component.selectBillingMonth(component.currentMonth);
+    expect(component.billingMonth).toBe(component.currentMonth);
+  });
+
+  it('conserva solo la respuesta del último mes seleccionado', async () => {
+    const element = await render({ screen: 'billing_overview', features: { billing: true, direct_invoice: true }, permissions: ['billing.read', 'reports.view'] });
+    const previous = new Subject<LiteDashboard>();
+    const latest = new Subject<LiteDashboard>();
+    lite.getDashboard.and.returnValues(previous, latest);
+    fixture.componentInstance.selectBillingMonth('2024-02');
+    fixture.componentInstance.selectBillingMonth('2024-03');
+    previous.next(LITE_DASHBOARD);
+    fixture.detectChanges();
+    expect(element.querySelector('app-billing-panel')).toBeNull();
+    latest.next({ ...LITE_DASHBOARD, sales: { ...LITE_DASHBOARD.sales, authorized_count: 7 } });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.liteDashboard?.sales.authorized_count).toBe(7);
+    expect(fixture.componentInstance.billingMonth).toBe('2024-03');
+    expect(element.querySelector('app-billing-panel')).not.toBeNull();
+    previous.complete();
+    latest.complete();
   });
 
   it('Administrador con POS y facturación: turno más comprobantes del mes', async () => {
@@ -124,6 +183,7 @@ describe('DashboardHomeComponent', () => {
     expect(orders.get_dashboard_metrics).not.toHaveBeenCalled();
     expect(lite.getDashboard).not.toHaveBeenCalled();
     expect(element.querySelector('app-service-panel')).not.toBeNull();
+    expect(element.querySelector('input[type="month"]')).toBeNull();
     expect(element.textContent).toContain('Tomar pedido');
     expect(element.textContent).not.toContain('Firma:');
   });

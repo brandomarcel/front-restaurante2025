@@ -9,6 +9,7 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- Dashboard: período mensual visible con nombre y fechas, selector de mes, navegación anterior/siguiente y vuelta al mes actual. Al cargar otro mes oculta las cifras anteriores; la selección solo afecta comprobantes, no caja, actividad reciente ni consumo del plan, cuya tarjeta lo aclara. Diez pruebas Chromium aprobadas (bisiesto, límites y respuestas atrasadas); compilación sin optimización aprobada. No cambia los filtros de estado/tipo/ambiente del endpoint de métricas; esa revisión sigue pendiente.
 - 2026-10-20: configuración de firma muestra fecha y hora de vigencia en Ecuador continental. El aviso de firma aún no vigente indica cuándo empieza, y el texto de contraseña aclara su almacenamiento cifrado en el servidor. Core unifica la validación de estas fechas en UTC.
 - Corregida mezcla de NC en la lista Facturas: Lite filtra por Factura antes de
   contar/paginar; Angular descarta NC conocidas de respuestas antiguas. Enlaces
