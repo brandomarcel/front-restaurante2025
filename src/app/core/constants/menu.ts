@@ -1,5 +1,6 @@
 // core/constants/menu.ts
 import { MenuItem, Role } from '../models/menu.model';
+import { CASH_OPERATOR_PERMISSIONS } from '../utils/cash-register';
 
 export class Menu {
   public static pages: MenuItem[] = [
@@ -23,15 +24,6 @@ export class Menu {
           requiredFeatures: ['restaurant_pos', 'pos'],
           allowedRoles: ['ADMINISTRADOR', 'GERENTE', 'CAJERO'],
           permissionKey: 'billing.create',
-          hideInLite: true,
-        },
-        {
-          icon: 'assets/icons/tablericons/chart-donut-3.svg',
-          label: 'Ordenes en vivo',
-          route: '/dashboard/orders-realtime',
-          featureKey: 'kitchen',
-          uiVisibilityKey: 'restaurantKitchen',
-          permissionKeys: ['restaurant.orders.read', 'restaurant.orders.update'],
           hideInLite: true,
         },
       ],
@@ -115,11 +107,11 @@ export class Menu {
           label: 'Mi Caja',
           route: '/caja',
           featureKey: 'cash_register',
-          anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage', 'billing.manage', 'billing.create'],
+          anyPermissionKeys: [...CASH_OPERATOR_PERMISSIONS],
           children: [
-            { label: 'Apertura', route: '/caja/apertura', anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage', 'billing.manage', 'billing.create'] },
-            { label: 'Retiros', route: '/caja/retiro', anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage', 'billing.manage', 'billing.create'] },
-            { label: 'Cierre', route: '/caja/cierre', anyPermissionKeys: ['restaurant.cash.manage', 'restaurant.manage', 'billing.manage', 'billing.create'] },
+            { label: 'Apertura', route: '/caja/apertura', anyPermissionKeys: [...CASH_OPERATOR_PERMISSIONS] },
+            { label: 'Retiros', route: '/caja/retiro', anyPermissionKeys: [...CASH_OPERATOR_PERMISSIONS] },
+            { label: 'Cierre', route: '/caja/cierre', anyPermissionKeys: [...CASH_OPERATOR_PERMISSIONS] },
             { label: 'Gestión de Cajas', route: '/caja/gestion', anyPermissionKeys: ['restaurant.manage', 'billing.manage'] },
           ],
         },
@@ -156,6 +148,8 @@ export class Menu {
           uiVisibilityKey: 'pos',
           requiredFeatures: ['restaurant', 'orders', 'pos'],
           permissionKey: 'restaurant.orders.create',
+          // Quien cobra ya ve «POS» en Principal; aquí queda solo para el mesero.
+          hideWhenPermission: 'billing.create',
         },
       ],
     },

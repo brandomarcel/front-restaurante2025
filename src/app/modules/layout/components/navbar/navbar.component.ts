@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { MenuService } from '../../services/menu.service';
 import { ProfileMenuComponent } from './profile-menu/profile-menu.component';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { CASH_OPERATOR_PERMISSIONS } from 'src/app/core/utils/cash-register';
 
 import { PosTerminalSwitcherComponent } from 'src/app/shared/components/pos-terminal-switcher/pos-terminal-switcher.component';
 
@@ -66,10 +67,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   get canOpenCaja(): boolean {
     return this.capabilities.isEnabled('cash_register')
-      && (this.capabilities.hasPermission('restaurant.cash.manage')
-        || this.capabilities.hasPermission('restaurant.manage')
-        || this.capabilities.hasPermission('billing.manage')
-        || this.capabilities.hasPermission('billing.create'));
+      && CASH_OPERATOR_PERMISSIONS.some((permission) => this.capabilities.hasPermission(permission));
   }
 
   get canOpenOrders(): boolean {

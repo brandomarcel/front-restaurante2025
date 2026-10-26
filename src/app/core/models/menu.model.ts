@@ -42,6 +42,8 @@ export interface SubMenuItem {
   anyPermissionKeys?: string[];
   hideInLite?: boolean;
   hideInApiOnly?: boolean;
+  /** Oculta la opción si el usuario tiene este permiso (evita duplicar un acceso ya mostrado en otro grupo). */
+  hideWhenPermission?: string;
   /** Requiere que el contexto exponga api_configuration.enabled. */
   requiresApiConfiguration?: boolean;
   hideWhenFeature?: import('../services/company-capabilities.service').CompanyFeatureKey;

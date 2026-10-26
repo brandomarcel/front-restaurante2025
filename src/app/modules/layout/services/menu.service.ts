@@ -82,21 +82,6 @@ export class MenuService implements OnDestroy {
     this._currentRole.set(appRole || normalizedRoles[0] || '');
     const filtered = this.filterMenuByAccess(Menu.pages, effectiveRoles);
     this._pagesMenu.set(filtered);
-    console.groupCollapsed('[FacturADA][Menú filtrado]');
-    console.log({
-      contextRole,
-      receivedRoles: roles,
-      effectiveRoles,
-      currentRole: this._currentRole(),
-      business: this.capabilities.activeBusinessId,
-      permissions: this.capabilities.permissions,
-      features: this.capabilities.features,
-      visibleGroups: filtered.map(group => ({
-        group: group.group,
-        items: group.items.map(item => item.label)
-      }))
-    });
-    console.groupEnd();
     this.applyActiveState();
     this.rebuildQuickActions();
   }
@@ -129,6 +114,7 @@ export class MenuService implements OnDestroy {
       if (this.capabilities.isLiteMode && !this.capabilities.isEnabled('restaurant') && item.hideInLite) return null;
       if (this.capabilities.isApiOnlyMode && item.hideInApiOnly) return null;
       if (item.hideWhenFeature && this.capabilities.isEnabled(item.hideWhenFeature)) return null;
+      if (item.hideWhenPermission && this.capabilities.hasPermission(item.hideWhenPermission)) return null;
       if (item.requiresApiConfiguration && this.capabilities.apiConfiguration?.enabled !== true) return null;
 
       const rolesForThisItem = normRoles(item.allowedRoles) ?? normRoles(inheritedRoles);
@@ -258,6 +244,7 @@ export class MenuService implements OnDestroy {
         '/caja/apertura',
       ],
       MESERO: [
+        '/dashboard/tables',
         '/dashboard/pos',
         '/dashboard/orders',
       ],

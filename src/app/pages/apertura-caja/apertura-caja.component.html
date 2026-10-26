@@ -68,6 +68,10 @@
       <p class="mt-1 text-[11px] text-muted-foreground">Cajero: <b class="text-foreground/80">{{ apertura.usuario || 'No identificado' }}</b></p>
     </header>
 
+    <p *ngIf="terminalHolder" class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900" role="alert">
+      Esta terminal ya tiene la caja abierta por {{ terminalHolder.user }}. Esa persona debe cerrar su turno antes de que puedas abrir la tuya.
+    </p>
+
     <div *ngIf="usesPosTerminalModel && availableTerminals.length > 1">
       <p class="mb-1.5 text-xs font-semibold text-foreground/80">¿En qué caja vas a trabajar?</p>
       <div class="grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Terminal POS">

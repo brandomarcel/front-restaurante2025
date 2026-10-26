@@ -3,6 +3,14 @@
  * Antes estaban copiadas en cada pantalla; el comportamiento es el mismo.
  */
 
+/**
+ * Permisos que habilitan las operaciones de caja en menú, rutas, navbar y
+ * guard. Coincide con lo que exige el backend (`restaurant.cash.manage`, o
+ * `restaurant.manage` para Gerente); `billing.*` no da acceso a caja. Es solo
+ * visibilidad: el backend autoriza cada llamada.
+ */
+export const CASH_OPERATOR_PERMISSIONS: readonly string[] = ['restaurant.cash.manage', 'restaurant.manage'];
+
 export const CLOSED_CASH_STATUSES = ['CERRADA', 'CLOSED', 'CANCELADA', 'CANCELLED'];
 
 /** Mayúsculas y sin tildes, para comparar estados que llegan en español o inglés. */

@@ -5,14 +5,14 @@ import { CloseCajaComponent } from 'src/app/pages/close-caja/close-caja.componen
 import { RetiroCajaComponent } from 'src/app/pages/retiro-caja/retiro-caja.component';
 import { CashManagementComponent } from 'src/app/pages/cash-management/cash-management.component';
 import { RoleAccessGuard } from 'src/app/core/guards/role-access.guard';
+import { CASH_OPERATOR_PERMISSIONS } from 'src/app/core/utils/cash-register';
 
 
-const CASH_OPERATOR_PERMISSIONS = ['restaurant.cash.manage', 'restaurant.manage', 'billing.manage', 'billing.create'];
 
 const routes: Routes = [
-  { path: 'apertura', component: AperturaCajaComponent, canActivate: [RoleAccessGuard], data: { anyPermissionKeys: CASH_OPERATOR_PERMISSIONS } },
-  { path: 'cierre', component: CloseCajaComponent, canActivate: [RoleAccessGuard], data: { anyPermissionKeys: CASH_OPERATOR_PERMISSIONS } },
-  { path: 'retiro', component: RetiroCajaComponent, canActivate: [RoleAccessGuard], data: { anyPermissionKeys: CASH_OPERATOR_PERMISSIONS } },
+  { path: 'apertura', component: AperturaCajaComponent, canActivate: [RoleAccessGuard], data: { anyPermissionKeys: [...CASH_OPERATOR_PERMISSIONS] } },
+  { path: 'cierre', component: CloseCajaComponent, canActivate: [RoleAccessGuard], data: { anyPermissionKeys: [...CASH_OPERATOR_PERMISSIONS] } },
+  { path: 'retiro', component: RetiroCajaComponent, canActivate: [RoleAccessGuard], data: { anyPermissionKeys: [...CASH_OPERATOR_PERMISSIONS] } },
   {
     path: 'gestion',
     component: CashManagementComponent,

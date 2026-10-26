@@ -33,6 +33,8 @@ export class AperturaCajaComponent implements OnInit {
   cashMetrics: any | null = null;
   loadingMetrics = false;
   selectedTerminalId = '';
+  /** Otro usuario con la caja abierta en la terminal elegida; bloquea abrir una segunda. */
+  terminalHolder: { user: string; opened_at?: string } | null = null;
   /** Montos habituales de fondo de caja, para no tener que escribirlos. */
   readonly quickAmounts = [20, 50, 100, 200];
   private loadingCounter = 0;
@@ -76,6 +78,27 @@ export class AperturaCajaComponent implements OnInit {
     this.selectedTerminalId = terminalId;
     const terminal = this.availableTerminals.find((item) => String(item?.name || '') === terminalId);
     if (terminal) this.capabilities.setActivePosTerminal(terminal);
+    this.checkTerminalHolder();
+  }
+
+  /**
+   * Una terminal admite un solo turno abierto a la vez (el cierre suma por
+   * terminal, no por usuario). Se avisa antes de intentar abrir.
+   */
+  private checkTerminalHolder(): void {
+    this.terminalHolder = null;
+    if (!this.usesPosTerminalModel || !this.selectedTerminalId || this.cajaActiva) return;
+    const terminal = this.selectedTerminalId;
+    this.cajasService.getTerminalCashHolder(terminal).subscribe({
+      next: (res: any) => {
+        if (terminal !== this.selectedTerminalId) return;
+        const holder = (res?.message ?? res)?.data;
+        const sameUser = String(holder?.user || '').toLowerCase() === this.apertura.usuario.toLowerCase();
+        this.terminalHolder = holder?.user && !sameUser ? holder : null;
+      },
+      // Solo es un aviso previo: el backend vuelve a validar al abrir.
+      error: () => { this.terminalHolder = null; }
+    });
   }
 
   get navState(): CajaTurnState {
@@ -150,6 +173,7 @@ export class AperturaCajaComponent implements OnInit {
         const status = String(this.aperturaActual?.status || this.aperturaActual?.estado || 'Abierta').toLowerCase();
         this.cajaActiva = !!this.aperturaActual && status !== 'cerrada' && status !== 'closed';
         this.loadMetrics();
+        this.checkTerminalHolder();
       },
       error: (error) => {
         this.cajaActiva = false;
@@ -226,6 +250,7 @@ export class AperturaCajaComponent implements OnInit {
     return !this.cajaActiva
       && !this.needsTerminalConfiguration
       && !this.needsTerminalSelection
+      && !this.terminalHolder
       && Number(this.apertura.monto_apertura) > 0
       && !this.loadingStatus
       && !this.saving;

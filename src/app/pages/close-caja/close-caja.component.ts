@@ -8,6 +8,7 @@ import { finalize } from 'rxjs';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { CajaAbiertaGuard } from 'src/app/core/guards/caja-abierta.guard';
+import { CASH_OPERATOR_PERMISSIONS } from 'src/app/core/utils/cash-register';
 import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 import { CajaNavComponent, CajaTurnState } from 'src/app/shared/components/caja-nav/caja-nav.component';
 import {
@@ -350,11 +351,7 @@ export class CloseCajaComponent implements OnInit {
 
   get canOperateCash(): boolean {
     return this.capabilities.isEnabled('cash_register')
-      && (this.capabilities.hasPermission('*')
-        || this.capabilities.hasPermission('restaurant.cash.manage')
-        || this.capabilities.hasPermission('restaurant.manage')
-        || this.capabilities.hasPermission('billing.manage')
-        || this.capabilities.hasPermission('billing.create'));
+      && CASH_OPERATOR_PERMISSIONS.some((permission) => this.capabilities.hasPermission(permission));
   }
 
   get canSave(): boolean {

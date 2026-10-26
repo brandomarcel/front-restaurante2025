@@ -5,6 +5,7 @@ import { environment } from 'src/environments/environment';
 import { FrappeErrorService } from '../core/services/frappe-error.service';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 import { CompanyCapabilitiesService } from '../core/services/company-capabilities.service';
+import { CASH_OPERATOR_PERMISSIONS } from '../core/utils/cash-register';
 
 @Injectable({ providedIn: 'root' })
 export class CajasService {
@@ -43,6 +44,19 @@ export class CajasService {
     }).pipe(map((response: any) => this.normalizeCurrentOpening(response)));
   }
 
+
+  /** Quién tiene abierta la caja de una terminal (puede ser otro usuario), o `data: null`. */
+  getTerminalCashHolder(posTerminal: string) {
+    const accessError = this.cashAccessError();
+    if (accessError) return throwError(() => accessError);
+    const business = this.activeBusinessOrError();
+    if (business instanceof Error) return throwError(() => business);
+    const params = new HttpParams().set('business', business).set('pos_terminal', posTerminal);
+    return this.http.get<any>(`${this.restaurantApi}.get_terminal_cash_holder`, {
+      context: new HttpContext().set(REQUIRE_AUTH, true),
+      params
+    });
+  }
 
   // crearAperturaCaja(data: any) {
   //   const url = `${this.apiUrl}/resource/Apertura de Caja`;
@@ -253,11 +267,7 @@ export class CajasService {
     if (!this.capabilities.isEnabled('cash_register')) {
       return new Error('La caja no está habilitada para este negocio.');
     }
-    if (!this.capabilities.hasPermission('*')
-      && !this.capabilities.hasPermission('restaurant.cash.manage')
-      && !this.capabilities.hasPermission('restaurant.manage')
-      && !this.capabilities.hasPermission('billing.manage')
-      && !this.capabilities.hasPermission('billing.create')) {
+    if (!CASH_OPERATOR_PERMISSIONS.some((permission) => this.capabilities.hasPermission(permission))) {
       return new Error('El rol del usuario no permite realizar esta operación.');
     }
     return null;
