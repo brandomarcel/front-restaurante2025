@@ -1,76 +1,65 @@
-<section class="app-table-wrap">
-  <table class="app-table text-xs">
-    <thead class="app-thead">
+<section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+  <table class="w-full text-sm">
+    <thead class="border-b border-border bg-muted/50 text-left text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
       <tr>
-        <th class="app-th py-2">Orden</th>
-        <th class="app-th py-2">Fecha</th>
-        <th class="app-th py-2">Cliente</th>
-        <th class="app-th py-2">Tipo</th>
-        <th class="app-th py-2">Estado</th>
-        <th class="app-th py-2">SRI</th>
-        <th class="app-th py-2 text-right">Total</th>
-        <th class="app-th py-2 text-center">Acciones</th>
+        <th class="px-3 py-2.5">Orden</th>
+        <th class="px-3 py-2.5">Mesa</th>
+        <th class="px-3 py-2.5">Estado</th>
+        <th class="px-3 py-2.5">Espera / hora</th>
+        <th class="px-3 py-2.5">Factura</th>
+        <th class="px-3 py-2.5 text-right">Total</th>
+        <th class="px-3 py-2.5 text-right">Acción</th>
       </tr>
     </thead>
 
-    <tbody>
-      <tr *ngFor="let o of orders; trackBy: trackByName" class="app-tr" [ngClass]="getRowClass(o.status)">
-        <td class="app-td py-2">
-          <div class="flex flex-col">
-            <span class="font-semibold text-foreground">{{ o.name }}</span>
-            <span class="text-[11px] text-muted-foreground">{{ o.alias || o.usuario || '—' }}</span>
-          </div>
+    <tbody class="divide-y divide-border">
+      <tr *ngFor="let o of orders; trackBy: trackByName"
+        class="cursor-pointer transition hover:bg-muted/40"
+        [ngClass]="{ 'bg-sky-500/5': o._flashType === 'insert' }"
+        (click)="open.emit(o)">
+        <td class="px-3 py-2.5">
+          <p class="font-bold text-foreground">{{ o.alias || o.customer.nombre || 'Consumidor final' }}</p>
+          <p class="text-[11px] text-muted-foreground">#{{ o.name }} · {{ o.type || 'Servirse' }}</p>
         </td>
 
-        <td class="app-td py-2 text-muted-foreground whitespace-nowrap">{{ (o.createdAtISO || o.createdAt) | date:'dd/MM HH:mm' }}</td>
-        <td class="app-td py-2">{{ o.customer.nombre || 'Consumidor final' }}</td>
-        <td class="app-td py-2">{{ o.type || 'Nota Venta' }}</td>
+        <td class="px-3 py-2.5 font-semibold text-foreground/80">{{ table(o) || '—' }}</td>
 
-        <td class="app-td py-2">
-          <span class="badge" [ngClass]="{
-            'badge-red': o.status === 'Ingresada',
-            'badge-yellow': o.status === 'Preparación',
-            'badge-green': o.status === 'Cerrada',
-            'badge-gray': o.status !== 'Ingresada' && o.status !== 'Preparación' && o.status !== 'Cerrada'
-          }">
-            {{ o.status }}
+        <td class="px-3 py-2.5">
+          <span class="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold" [ngClass]="stageBadge[stage(o)]">
+            {{ stageLabel[stage(o)] }}
           </span>
         </td>
 
-        <td class="app-td py-2">
-          <span class="badge" [ngClass]="getSriBadge(o.sri.status)">
+        <td class="px-3 py-2.5 whitespace-nowrap">
+          <span *ngIf="isActive(o); else hour" class="font-bold" [ngClass]="waitClass(o)">{{ wait(o) }}</span>
+          <ng-template #hour><span class="text-muted-foreground">{{ (o.createdAtISO || o.createdAt) | date:'HH:mm' }}</span></ng-template>
+        </td>
+
+        <td class="px-3 py-2.5">
+          <span class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold" [ngClass]="getSriBadge(o.sri.status)">
             {{ o.sri.status || 'Sin factura' }}
           </span>
         </td>
 
-        <td class="app-td py-2 text-right font-semibold">{{ o.total | currency:'USD':'symbol':'1.2-2' }}</td>
+        <td class="px-3 py-2.5 text-right font-black tabular-nums text-foreground">{{ o.total | currency:'USD':'symbol':'1.2-2' }}</td>
 
-        <td class="app-td py-2 text-center">
-          <div class="flex items-center justify-center gap-1.5">
-            <button type="button" (click)="open.emit(o)" class="btn btn-outline !px-3 !py-1 !text-[11px]">Detalle</button>
-
-            <button
-              *ngIf="allowActions && o.status === 'Ingresada'"
-              type="button"
-              (click)="toPreparacion.emit(o)"
-              class="btn bg-amber-500 text-white hover:bg-amber-600 !px-3 !py-1 !text-[11px]">
-              Preparación
+        <td class="px-3 py-2.5 text-right" (click)="$event.stopPropagation()">
+          <ng-container *ngIf="allowActions; else detailOnly">
+            <button *ngIf="stage(o) === 'new'" type="button" class="action-btn bg-amber-500 text-white hover:bg-amber-600" (click)="toPreparacion.emit(o)">
+              Enviar a cocina
             </button>
-
-            <button
-              *ngIf="allowActions && o.status === 'Preparación'"
-              type="button"
-              (click)="toCerrada.emit(o)"
-              class="btn bg-emerald-600 text-white hover:bg-emerald-700 !px-3 !py-1 !text-[11px]">
-              Lista
+            <button *ngIf="stage(o) === 'prep'" type="button" class="action-btn bg-emerald-600 text-white hover:bg-emerald-700" (click)="toCerrada.emit(o)">
+              Cerrar orden
             </button>
-          </div>
-        </td>
-      </tr>
-
-      <tr *ngIf="orders.length === 0">
-        <td colspan="8" class="app-td py-8 text-center text-muted-foreground">
-          No hay ordenes disponibles.
+            <button *ngIf="stage(o) === 'ready' || stage(o) === 'closed'" type="button"
+              class="action-btn" [ngClass]="invoiced(o) ? 'border border-border bg-card text-foreground hover:bg-muted' : 'bg-primary text-primary-foreground hover:bg-primary/90'"
+              (click)="goOrder.emit(o)">
+              {{ invoiced(o) ? 'Ver orden' : 'Cobrar' }}
+            </button>
+          </ng-container>
+          <ng-template #detailOnly>
+            <button type="button" class="action-btn border border-border bg-card text-foreground hover:bg-muted" (click)="open.emit(o)">Detalle</button>
+          </ng-template>
         </td>
       </tr>
     </tbody>

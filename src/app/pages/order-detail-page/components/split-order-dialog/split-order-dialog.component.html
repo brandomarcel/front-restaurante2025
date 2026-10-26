@@ -1,11 +1,11 @@
-<div *ngIf="open" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[1px] p-2 sm:p-6" (click)="handleClose()">
+<div *ngIf="open" class="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[1px] p-2 sm:p-6" (click)="handleClose()">
   <div class="mx-auto flex h-full w-full max-w-5xl items-end sm:items-center" (click)="$event.stopPropagation()">
     <section class="w-full max-h-[95vh] overflow-y-auto rounded-2xl border border-border bg-card shadow-2xl">
       <header class="sticky top-0 z-20 border-b border-border bg-card px-4 py-3 sm:px-5">
         <div class="flex items-start justify-between gap-3">
           <div class="space-y-1">
-            <h3 class="text-base font-semibold text-foreground">Dividir cuenta</h3>
-            <p class="text-xs text-muted-foreground">Orden: {{ orderName }}</p>
+            <h3 class="text-lg font-bold text-foreground">Nueva subcuenta</h3>
+            <p class="text-xs text-muted-foreground">Orden #{{ orderName }} · pendiente por dividir <b class="text-foreground">${{ remainingOrderToSplit | number:'1.2-2' }}</b></p>
             <div class="flex flex-wrap items-center gap-2 pt-1">
               <span class="rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-foreground/80">
                 {{ availableItemsCount }} de {{ totalOrderItemsCount }} items disponibles
@@ -23,78 +23,59 @@
             type="button"
             class="h-8 w-8 rounded-md border border-border text-muted-foreground hover:bg-muted"
             (click)="handleClose()"
-            [disabled]="submitting">
-            x
+            [disabled]="submitting"
+            aria-label="Cerrar">
+            ✕
           </button>
         </div>
       </header>
 
       <div class="space-y-4 px-4 py-4 sm:px-5">
-        <section *ngIf="!isAutoItemMode" class="rounded-xl border border-border bg-muted/40 p-3">
-          <div class="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-2">
-            <span class="text-[11px] font-semibold text-muted-foreground">Accion rápida:</span>
-            <button
-              type="button"
-              class="rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary"
-              (click)="applyPayAllRemaining()"
-              [disabled]="submitting || remainingOrderToSplit <= 0">
-              Pagar todo pendiente (${{ remainingOrderToSplit | number:'1.2-2' }})
-            </button>
+        <!-- Nombre y atajos: siempre visibles, también después de usar un atajo -->
+        <section class="space-y-3 rounded-xl border border-border bg-muted/40 p-3">
+          <div>
+            <label for="split-label" class="mb-1 block text-xs font-semibold text-foreground/80">Nombre de la subcuenta *</label>
+            <input
+              id="split-label"
+              type="text"
+              [ngModel]="splitLabel"
+              (ngModelChange)="onSplitLabelChange($event)"
+              class="h-10 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground focus:border-primary focus:outline-none md:max-w-sm"
+              placeholder="Ej. Juan, Persona 1"
+              [disabled]="submitting" />
           </div>
 
-          <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div>
-              <label class="mb-1 block text-xs font-semibold text-foreground/80">Alias subcuenta *</label>
-              <input
-                type="text"
-                [ngModel]="splitLabel"
-                (ngModelChange)="onSplitLabelChange($event)"
-                class="h-10 w-full rounded-lg border border-border px-3 text-sm focus:border-primary focus:outline-none bg-card text-foreground"
-                placeholder="Mesa 4 - Persona 1"
-                [disabled]="submitting" />
-            </div>
-
-            <!-- <div>
-              <label class="mb-1 block text-xs font-semibold text-foreground/80">Cliente (opcional)</label>
-              <input
-                type="text"
-                [(ngModel)]="customer"
-                class="h-10 w-full rounded-lg border border-border px-3 text-sm focus:border-primary focus:outline-none bg-card text-foreground"
-                placeholder="CLI-0001"
-                [disabled]="submitting" />
-            </div> -->
+          <div>
+            <p class="mb-1 block text-xs font-semibold text-foreground/80">Cliente de la factura</p>
+            <p *ngIf="!selectedCustomer" class="mb-1.5 text-[11px] text-muted-foreground">
+              Si no eliges otro, se factura a <b class="text-foreground">{{ customerDefaultName || 'el cliente de la orden' }}</b>.
+            </p>
+            <app-pos-customer-picker class="block md:max-w-md" [customer]="selectedCustomer" (customerChange)="onCustomerChange($event)" />
+            <p *ngIf="finalConsumerOverLimit" class="mt-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+              Consumidor Final no puede facturar más de $50: elige un cliente con identificación.
+            </p>
           </div>
-        </section>
 
-        <section *ngIf="isAutoItemMode" class="rounded-xl border border-primary/20 bg-primary/5 p-3">
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <h4 class="text-sm font-semibold text-primary">Items asignados automaticamente</h4>
-              <p class="text-[11px] text-primary/80">
-                Se distribuyeron los productos restantes para aproximar el monto del {{ currentPaymentLabel }}.
-              </p>
-            </div>
+          <button
+            type="button"
+            class="h-9 rounded-lg border border-primary/30 bg-primary/10 px-3 text-xs font-bold text-primary transition hover:bg-primary/15 disabled:opacity-50"
+            (click)="applyPayAllRemaining()"
+            [disabled]="submitting || remainingOrderToSplit <= 0">
+            Usar todo lo pendiente · ${{ remainingOrderToSplit | number:'1.2-2' }}
+          </button>
+
+          <div *ngIf="isAutoItemMode" class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+            <p class="text-xs text-foreground/80">
+              <b class="text-primary">Se agregó todo lo pendiente</b>
+              · {{ selectedItemsCount }} producto(s) · {{ selectedUnitsCount | number:'1.0-2' }} unidades
+            </p>
             <button
               type="button"
               class="rounded-md border border-primary/30 bg-card px-2.5 py-1 text-xs font-semibold text-primary"
               (click)="enableManualItems()"
               [disabled]="submitting">
-              Editar items manual
+              Ajustar productos
             </button>
-          </div>
-          <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <div class="rounded-md border border-primary/20 bg-card px-2.5 py-2">
-              <p class="text-[11px] text-muted-foreground">Items incluidos</p>
-              <p class="text-sm font-semibold text-foreground">{{ selectedItemsCount }}</p>
-            </div>
-            <div class="rounded-md border border-primary/20 bg-card px-2.5 py-2">
-              <p class="text-[11px] text-muted-foreground">Unidades</p>
-              <p class="text-sm font-semibold text-foreground">{{ selectedUnitsCount }}</p>
-            </div>
-            <div class="rounded-md border border-primary/20 bg-card px-2.5 py-2">
-              <p class="text-[11px] text-muted-foreground">Total actual</p>
-              <p class="text-sm font-semibold text-foreground">${{ splitTotal | number:'1.2-2' }}</p>
-            </div>
           </div>
         </section>
 
@@ -142,17 +123,17 @@
               </div>
 
               <ng-template #noAvailableItems>
-                <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-5 text-center">
-                  <p class="text-sm font-semibold text-emerald-800">Todos los items ya fueron movidos</p>
+                <div class="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-5 text-center">
+                  <p class="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Todos los items ya fueron movidos</p>
                   <p class="mt-1 text-[11px] text-emerald-700">Si necesitas corregir algo, quita un item de la subcuenta y volvera a aparecer aqui.</p>
                 </div>
               </ng-template>
             </section>
 
-            <section class="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3">
+            <section class="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-3">
               <div class="mb-3 flex items-center justify-between gap-2">
                 <div>
-                  <h5 class="text-sm font-semibold text-emerald-900">Subcuenta actual</h5>
+                  <h5 class="text-sm font-semibold text-foreground">Subcuenta actual</h5>
                   <p class="text-[11px] text-emerald-700">Aqui ajustas cantidades y revisas el total antes de cobrar.</p>
                 </div>
                 <span class="rounded-full bg-card px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
@@ -163,7 +144,7 @@
               <div *ngIf="items.length; else emptySelectedItems" class="space-y-2.5">
             <article
               *ngFor="let row of items; let i = index"
-              class="rounded-2xl border border-emerald-200 bg-card p-3 shadow-sm">
+              class="rounded-2xl border border-emerald-500/30 bg-card p-3 shadow-sm">
               <div class="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <p class="text-sm font-semibold text-foreground">{{ getSelectedItemName(row) || ('Item ' + (i + 1)) }}</p>
@@ -222,7 +203,7 @@
               </div>
 
               <ng-template #emptySelectedItems>
-                <div class="rounded-2xl border border-dashed border-emerald-300 bg-card px-4 py-8 text-center">
+                <div class="rounded-2xl border border-dashed border-emerald-500/40 bg-card px-4 py-8 text-center">
                   <p class="text-sm font-semibold text-foreground">Aun no agregas productos a la subcuenta</p>
                   <p class="mt-1 text-[11px] text-muted-foreground">Selecciona uno o varios items del panel izquierdo para empezar.</p>
                 </div>
@@ -287,6 +268,11 @@
                     Quitar
                   </button>
                 </div>
+                <div *ngIf="isTransferRow(pay)" class="col-span-12">
+                  <input type="text" [(ngModel)]="pay.reference" [maxlength]="paymentReferenceMaxLength" [disabled]="submitting"
+                    placeholder="N.º de transferencia (opcional)" aria-label="Número de transferencia" autocomplete="off"
+                    class="h-10 w-full rounded-md border border-border bg-card px-2 text-sm text-foreground" />
+                </div>
               </div>
             </article>
           </div>
@@ -307,13 +293,13 @@
           <p
             *ngIf="payments.length"
             class="mt-2 rounded-md px-3 py-2 text-sm"
-            [ngClass]="hasPaymentMismatch ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'">
+            [ngClass]="hasPaymentMismatch ? 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/30' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'">
             <span *ngIf="hasPaymentMismatch">Falta ajustar pagos: ${{ paymentDifference | number:'1.2-2' }}</span>
             <span *ngIf="!hasPaymentMismatch">Pagos cuadrados correctamente.</span>
           </p>
         </section>
 
-        <p *ngIf="formError" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p *ngIf="formError" class="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {{ formError }}
         </p>
       </div>
@@ -329,7 +315,7 @@
           </button>
           <button
             type="button"
-            class="h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            class="h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
             (click)="submit()"
             [disabled]="submitting">
             {{ submitting ? 'Creando subcuenta...' : 'Crear subcuenta' }}

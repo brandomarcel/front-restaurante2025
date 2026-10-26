@@ -1,20 +1,55 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { finalize, Subscription } from 'rxjs';
 import { toast } from 'ngx-sonner';
+import { AngularSvgIconModule } from 'angular-svg-icon';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { OrdersService } from 'src/app/services/orders.service';
 import { RestaurantRealtimeEvent, RestaurantRealtimeService } from 'src/app/services/restaurant-realtime.service';
 
 type TableStatus = 'Libre' | 'Ocupada' | 'Reservada' | 'Inactiva';
 
+/** Resumen de las órdenes activas de una mesa, recalculado al cambiar las órdenes */
+interface TableOrderSummary {
+  count: number;
+  total: number;
+  since: number | null;
+  ready: boolean;
+  waiter: string;
+}
+
+const EMPTY_SUMMARY: TableOrderSummary = { count: 0, total: 0, since: null, ready: false, waiter: '' };
+
+/** Sillas dibujadas alrededor de la mesa según su capacidad */
+interface ChairLayout {
+  top: number[];
+  bottom: number[];
+  sides: boolean;
+}
+
+/** Capacidad máxima representada con sillas; mesas más grandes se dibujan igual que esta */
+const MAX_DRAWN_CHAIRS = 10;
+const chairLayouts = new Map<number, ChairLayout>();
+
+/** 1–3: arriba/abajo · 4+: una a cada lado y el resto repartido arriba/abajo */
+function buildChairLayout(capacity: number): ChairLayout {
+  const seats = Math.min(Math.max(Math.floor(capacity) || 1, 1), MAX_DRAWN_CHAIRS);
+  const sides = seats >= 4;
+  const rest = seats - (sides ? 2 : 0);
+  const range = (n: number) => Array.from({ length: n }, (_, i) => i);
+  return { top: range(Math.ceil(rest / 2)), bottom: range(Math.floor(rest / 2)), sides };
+}
+/** A partir de este tiempo una mesa ocupada se resalta como demorada */
+const LONG_STAY_MINUTES = 60;
+const CLOCK_TICK_MS = 30_000;
+
 @Component({
   selector: 'app-tables',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, AngularSvgIconModule],
   templateUrl: './tables.component.html',
   styleUrl: './tables.component.css'
 })
@@ -35,7 +70,17 @@ export class TablesComponent implements OnInit, OnDestroy {
   error = '';
   readonly statuses: TableStatus[] = ['Libre', 'Ocupada', 'Reservada', 'Inactiva'];
   readonly activeOrderStatuses = new Set(['INGRESADA', 'PREPARACION', 'LISTA']);
+  readonly statusFilters: { value: 'Todas' | TableStatus; label: string }[] = [
+    { value: 'Todas', label: 'Todas' },
+    { value: 'Libre', label: 'Libres' },
+    { value: 'Ocupada', label: 'Ocupadas' },
+    { value: 'Reservada', label: 'Reservadas' },
+  ];
   tableForm: FormGroup;
+  /** Reloj compartido para los tiempos de ocupación; avanza cada 30 s */
+  now = Date.now();
+  private orderSummaries = new Map<string, TableOrderSummary>();
+  private clockTimer: ReturnType<typeof setInterval> | null = null;
   private readonly realtimeSub = new Subscription();
 
   constructor(
@@ -57,15 +102,6 @@ export class TablesComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    console.log('[FacturADA][Mesas][acceso]', {
-      business: this.capabilities.activeBusinessId,
-      businessRole: this.capabilities.businessRole,
-      features: this.capabilities.features,
-      permissions: this.capabilities.permissions,
-      hasTablesModule: this.hasTablesModule,
-      canCreateOrders: this.canCreateOrders,
-      canManageTables: this.canManageTables
-    });
     if (!this.hasTablesModule) {
       this.error = 'El módulo de mesas no está habilitado para este negocio.';
       return;
@@ -73,11 +109,19 @@ export class TablesComponent implements OnInit, OnDestroy {
     this.restaurantRealtime.activate();
     this.realtimeSub.add(this.restaurantRealtime.events$.subscribe((event) => this.applyRealtimeEvent(event)));
     this.realtimeSub.add(this.restaurantRealtime.reconnected$.subscribe(() => this.refresh()));
+    this.clockTimer = setInterval(() => this.now = Date.now(), CLOCK_TICK_MS);
     this.refresh();
   }
 
   ngOnDestroy(): void {
     this.realtimeSub.unsubscribe();
+    if (this.clockTimer) clearInterval(this.clockTimer);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.showForm) this.closeForm();
+    else if (this.showTablePopup) this.closeTablePopup();
   }
 
   private applyRealtimeEvent(event: RestaurantRealtimeEvent): void {
@@ -106,11 +150,11 @@ export class TablesComponent implements OnInit, OnDestroy {
     const active = this.isActiveOrder(incoming);
     if (active) {
       const row = index >= 0 ? { ...this.activeOrders[index], ...incoming } : { ...incoming };
-      this.activeOrders = index >= 0
+      this.setActiveOrders(index >= 0
         ? this.activeOrders.map((order, i) => i === index ? { ...order, ...row } : order)
-        : [...this.activeOrders, row];
+        : [...this.activeOrders, row]);
     } else if (index >= 0) {
-      this.activeOrders = this.activeOrders.filter((_, i) => i !== index);
+      this.setActiveOrders(this.activeOrders.filter((_, i) => i !== index));
     }
     // El backend normalmente publica también table.updated. Este ajuste
     // inmediato evita que la tarjeta quede atrasada mientras llega ese evento.
@@ -171,11 +215,110 @@ export class TablesComponent implements OnInit, OnDestroy {
     return this.visibleTables.filter((table) => this.isInactive(table)).length;
   }
 
+  get statusCounts(): Record<'Todas' | TableStatus, number> {
+    return {
+      Todas: this.visibleTables.length,
+      Libre: this.freeTablesCount,
+      Ocupada: this.occupiedTablesCount,
+      Reservada: this.reservedTablesCount,
+      Inactiva: this.inactiveTablesCount,
+    };
+  }
+
+  /** Ingreso abierto en el salón: suma de las cuentas activas */
+  get openTotal(): number {
+    let total = 0;
+    this.orderSummaries.forEach((summary) => total += summary.total);
+    return total;
+  }
+
+  summary(table: any): TableOrderSummary {
+    return this.orderSummaries.get(String(table?.name || '').trim()) || EMPTY_SUMMARY;
+  }
+
   tableOrderCount(table: any): number {
-    const name = String(table?.name || '').trim();
-    return name
-      ? this.activeOrders.filter((order) => String(order?.table ?? order?.mesa ?? '').trim() === name).length
-      : 0;
+    return this.summary(table).count;
+  }
+
+  chairLayout(table: any): ChairLayout {
+    const capacity = Math.min(Number(table?.capacity) || 1, MAX_DRAWN_CHAIRS);
+    let layout = chairLayouts.get(capacity);
+    if (!layout) {
+      layout = buildChairLayout(capacity);
+      chairLayouts.set(capacity, layout);
+    }
+    return layout;
+  }
+
+  statusKey(table: any): 'free' | 'busy' | 'reserved' | 'inactive' {
+    switch (this.tableStatus(table)) {
+      case 'Ocupada': return 'busy';
+      case 'Reservada': return 'reserved';
+      case 'Inactiva': return 'inactive';
+      default: return 'free';
+    }
+  }
+
+  elapsedMinutes(since: number | null): number {
+    return since ? Math.max(0, Math.floor((this.now - since) / 60_000)) : 0;
+  }
+
+  elapsedLabel(since: number | null): string {
+    if (!since) return '';
+    const minutes = this.elapsedMinutes(since);
+    if (minutes < 1) return 'Recién';
+    if (minutes < 60) return `${minutes} min`;
+    const rest = minutes % 60;
+    return `${Math.floor(minutes / 60)} h${rest ? ` ${rest} min` : ''}`;
+  }
+
+  isLongStay(table: any): boolean {
+    return this.isOccupied(table) && this.elapsedMinutes(this.summary(table).since) >= LONG_STAY_MINUTES;
+  }
+
+  orderSince(order: any): number | null {
+    return this.parseDate(order?.creation);
+  }
+
+  orderStatusLabel(order: any): string {
+    switch (this.normalized(order?.status)) {
+      case 'INGRESADA': return 'Ingresada';
+      case 'PREPARACION': return 'En cocina';
+      case 'LISTA': return 'Lista para servir';
+      default: return String(order?.status || '');
+    }
+  }
+
+  isReadyOrder(order: any): boolean {
+    return this.normalized(order?.status) === 'LISTA';
+  }
+
+  orderItemsCount(order: any): number {
+    return Array.isArray(order?.items) ? order.items.reduce((sum: number, item: any) => sum + (Number(item?.qty) || 0), 0) : 0;
+  }
+
+  trackByName(_: number, row: any): string {
+    return String(row?.name || '');
+  }
+
+  /**
+   * Acción principal de un toque, como en los POS de salón: mesa libre abre una
+   * orden, mesa ocupada con una sola orden la abre; el resto muestra el detalle.
+   */
+  onTableTap(table: any): void {
+    if (this.isFree(table) && this.canCreateOrders) {
+      this.selectedTable = table;
+      this.openNewOrder();
+      return;
+    }
+    if (this.isOccupied(table)) {
+      const orders = this.ordersForTable(table);
+      if (orders.length === 1) {
+        this.openOrder(orders[0]);
+        return;
+      }
+    }
+    this.selectTable(table);
   }
 
   refresh(): void {
@@ -185,11 +328,6 @@ export class TablesComponent implements OnInit, OnDestroy {
     this.orders.getTables(this.showInactive ? null : true).pipe(finalize(() => this.loading = false)).subscribe({
       next: (response: any) => {
         this.tables = this.readRows(response).map((table) => this.normalizeTable(table));
-        console.log('[FacturADA][Mesas][cargadas]', {
-          business: this.capabilities.activeBusinessId,
-          total: this.tables.length,
-          tables: this.tables.map((table) => ({ name: table.name, status: table.status, business: table.business }))
-        });
         if (this.selectedTable) {
           this.selectedTable = this.tables.find((table) => table.name === this.selectedTable.name) || null;
         }
@@ -203,8 +341,7 @@ export class TablesComponent implements OnInit, OnDestroy {
     this.loadingOrders = true;
     this.orders.getAll(100, 0).pipe(finalize(() => this.loadingOrders = false)).subscribe({
       next: (response: any) => {
-        this.activeOrders = this.readRows(response).filter((order) => this.isActiveOrder(order));
-        this.updateSelectedOrders();
+        this.setActiveOrders(this.readRows(response).filter((order) => this.isActiveOrder(order)));
       },
       error: (error) => this.showRequestError(error, false)
     });
@@ -316,15 +453,6 @@ export class TablesComponent implements OnInit, OnDestroy {
     return 'Libre';
   }
 
-  statusClass(table: any): string {
-    switch (this.tableStatus(table)) {
-      case 'Ocupada': return 'border-orange-200 bg-orange-50 text-orange-800';
-      case 'Reservada': return 'border-violet-200 bg-violet-50 text-violet-800';
-      case 'Inactiva': return 'border-slate-200 bg-slate-100 text-slate-500';
-      default: return 'border-emerald-200 bg-emerald-50 text-emerald-800';
-    }
-  }
-
   isFree(table: any): boolean { return this.tableStatus(table) === 'Libre'; }
   isOccupied(table: any): boolean { return this.tableStatus(table) === 'Ocupada'; }
   isReserved(table: any): boolean { return this.tableStatus(table) === 'Reservada'; }
@@ -350,11 +478,45 @@ export class TablesComponent implements OnInit, OnDestroy {
     });
   }
 
+  private setActiveOrders(orders: any[]): void {
+    this.activeOrders = orders;
+    const summaries = new Map<string, TableOrderSummary>();
+    for (const order of orders) {
+      const tableName = this.orderTableName(order);
+      if (!tableName) continue;
+      const current = summaries.get(tableName) || { ...EMPTY_SUMMARY };
+      const since = this.orderSince(order);
+      summaries.set(tableName, {
+        count: current.count + 1,
+        total: current.total + (Number(order?.total) || 0),
+        since: since && (!current.since || since < current.since) ? since : current.since,
+        ready: current.ready || this.isReadyOrder(order),
+        waiter: current.waiter || String(order?.waiter || '').trim(),
+      });
+    }
+    this.orderSummaries = summaries;
+    this.updateSelectedOrders();
+  }
+
+  private ordersForTable(table: any): any[] {
+    const tableName = String(table?.name || '').trim();
+    return tableName ? this.activeOrders.filter((order) => this.orderTableName(order) === tableName) : [];
+  }
+
+  private orderTableName(order: any): string {
+    const raw = order?.table ?? order?.mesa;
+    return String(typeof raw === 'object' ? raw?.name : raw || '').trim();
+  }
+
+  /** Frappe entrega fechas "YYYY-MM-DD HH:mm:ss[.ffffff]" en hora del servidor */
+  private parseDate(value: any): number | null {
+    if (!value) return null;
+    const time = new Date(String(value).replace(' ', 'T').slice(0, 23)).getTime();
+    return Number.isFinite(time) ? time : null;
+  }
+
   private updateSelectedOrders(): void {
-    const tableName = String(this.selectedTable?.name || '').trim();
-    this.selectedOrders = tableName
-      ? this.activeOrders.filter((order) => String(order?.table ?? order?.mesa ?? '').trim() === tableName)
-      : [];
+    this.selectedOrders = this.ordersForTable(this.selectedTable);
   }
 
   private isActiveOrder(order: any): boolean {

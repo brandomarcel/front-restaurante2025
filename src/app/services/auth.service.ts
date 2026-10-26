@@ -314,16 +314,9 @@ login(username: string, password: string) {
     return this.http.get(`${this.apiUrl}/method/logout`, {
       context: new HttpContext().set(REQUIRE_AUTH, true)
     }).pipe(
-      tap(() => {
-        console.log('logout');
-      this.userService.clearUser();
-        this.capabilities.clear();
-        localStorage.removeItem('user');
-        localStorage.removeItem('businessId');
-        localStorage.removeItem('active_business');
-        localStorage.removeItem('access_token'); // si lo estás usando
-        this.router.navigate(['/auth/sign-in']);
-      })
+      // Aunque Frappe falle (sesión ya expirada, red), la sesión local se cierra igual
+      catchError(() => of(null)),
+      tap(() => this.goLogin())
     );
   }
 

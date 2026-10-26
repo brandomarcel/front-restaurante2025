@@ -402,6 +402,12 @@ export class RemissionGuideFormComponent implements OnInit {
       toast.error('No existe una secuencia activa de Guía de Remisión para este establecimiento, punto de emisión y ambiente. Configúrala en Secuencias de documentos.');
       return;
     }
+    // Mismo control de emisión que el POS (permiso, plan, firma, configuración y cupo).
+    const blockMessage = this.capabilities.getEmissionBlockMessage({ feature: 'billing' });
+    if (blockMessage) {
+      toast.error(blockMessage);
+      return;
+    }
     this.submitting = true;
     this.spinner.show();
     const payload = this.buildPayload();

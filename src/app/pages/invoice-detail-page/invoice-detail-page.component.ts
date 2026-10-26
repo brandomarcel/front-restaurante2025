@@ -394,7 +394,8 @@ export class InvoiceDetailPageComponent implements OnInit {
       toast.info('Este documento no permite reenviar al SRI. Consulta su autorización o revisa el estado electrónico.');
       return;
     }
-    const planBlockMessage = this.capabilities.getPlanBlockMessage('direct_invoice');
+    // Mismo control de emisión que el POS; `billing` cubre facturas de cualquier origen.
+    const planBlockMessage = this.capabilities.getEmissionBlockMessage({ feature: 'billing', permission: 'billing.manage' });
     if (planBlockMessage) {
       toast.error(planBlockMessage);
       return;
@@ -439,12 +440,8 @@ export class InvoiceDetailPageComponent implements OnInit {
         : 'La consulta solo está disponible para facturas Emitidas en proceso.');
       return;
     }
-
-    const planBlockMessage = this.capabilities.getPlanBlockMessage('direct_invoice');
-    if (planBlockMessage) {
-      toast.error(planBlockMessage);
-      return;
-    }
+    // Consultar no emite ni consume cupo: nunca se bloquea por plan, firma o cupo
+    // (ante SRI 43/70 consultar es la única acción válida).
 
     this.liteActionRunning = true;
     this.spinner.show();
@@ -469,6 +466,11 @@ export class InvoiceDetailPageComponent implements OnInit {
       toast.info(this.isLiteAuthorized
         ? 'La factura ya fue enviada o autorizada. Usa Consultar autorización para obtener su resultado.'
         : 'Esta factura no permite un reintento en su estado actual.');
+      return;
+    }
+    const blockMessage = this.capabilities.getEmissionBlockMessage({ feature: 'billing', permission: 'billing.manage' });
+    if (blockMessage) {
+      toast.error(blockMessage);
       return;
     }
     this.liteActionRunning = true;
@@ -534,7 +536,7 @@ export class InvoiceDetailPageComponent implements OnInit {
       return;
     }
 
-    const planBlockMessage = this.capabilities.getPlanBlockMessage('credit_note');
+    const planBlockMessage = this.capabilities.getEmissionBlockMessage({ feature: 'credit_note', permission: 'billing.manage' });
     if (planBlockMessage) {
       toast.error(planBlockMessage);
       return;
@@ -707,7 +709,7 @@ export class InvoiceDetailPageComponent implements OnInit {
     return !!this.invoice
       && this.capabilities.hasPermission('billing.manage')
       && canRetryLiteInvoice(this.invoice)
-      && this.capabilities.validateFeatureUse('direct_invoice').allowed;
+      && !this.capabilities.getEmissionBlockMessage({ feature: 'billing', permission: 'billing.manage' });
   }
 
   get sriActionLabel(): string {

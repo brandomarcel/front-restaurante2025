@@ -61,7 +61,7 @@
           <td class="app-td text-center"><div class="flex flex-wrap justify-center gap-1">
             <button type="button" class="btn btn-outline" (click)="open(note)">Abrir</button>
             <button *ngIf="note.status === 'Borrador'" type="button" class="btn btn-success" (click)="collect(note)" [disabled]="!!actionName">Cobrar</button>
-            <button *ngIf="note.status === 'Cobrada' && !note.lite_invoice" type="button" class="btn btn-primary" (click)="invoice(note)" [disabled]="!!actionName">Facturar</button>
+            <button *ngIf="note.status === 'Cobrada' && !note.lite_invoice" type="button" class="btn btn-primary" (click)="invoice(note)" [disabled]="!!actionName || !!invoiceBlockMessage" [title]="invoiceBlockMessage || ''">Facturar</button>
             <button *ngIf="note.status === 'Cobrada' || note.status === 'Facturada'" type="button" class="btn btn-outline" (click)="print(note)" [disabled]="!!actionName">Imprimir</button>
             <button *ngIf="(note.status === 'Borrador' || note.status === 'Cobrada') && !note.lite_invoice" type="button" class="btn btn-danger" (click)="cancel(note)" [disabled]="!!actionName">Anular</button>
           </div></td>

@@ -46,9 +46,15 @@ export interface OrderSplitItem {
   rate?: number;
   price?: number;
   tax_rate?: number;
+  /** Parte proporcional del descuento de la línea de la orden. */
+  discount_amount?: number;
   subtotal?: number;
   iva?: number;
   total?: number;
+  /** Campos que envía el backend: base, IVA y total de la línea. */
+  amount?: number;
+  tax_amount?: number;
+  total_amount?: number;
 }
 
 export interface OrderSplitPayment {
@@ -56,6 +62,8 @@ export interface OrderSplitPayment {
   method?: string;
   monto?: number;
   amount?: number;
+  /** Número de transferencia/comprobante registrado al crear la subcuenta. */
+  reference?: string;
 }
 
 export interface OrderSplitRow {

@@ -46,6 +46,8 @@ describe('POS caja — reglas de venta', () => {
       canEmit: () => true,
       getPosTerminalBlockMessage: () => terminalBlock,
       getPlanBlockMessage: () => planBlock,
+      getEmissionBlockMessage: (options: { requireTerminal?: boolean }) =>
+        planBlock || (options.requireTerminal ? terminalBlock : null),
       activePosTerminal: { name: 'TERM-1' },
       activeBusinessId: 'BIZ-1',
       business: { tax_profile: { environment: 'Producción' } },

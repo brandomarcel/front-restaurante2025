@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { OrderSplitRow } from 'src/app/services/order-split.types';
+import { PosCustomerPickerComponent } from 'src/app/pages/pos/pos-caja/ui/pos-customer-picker.component';
 
 @Component({
   selector: 'app-order-splits-table',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, PosCustomerPickerComponent],
   templateUrl: './order-splits-table.component.html'
 })
 export class OrderSplitsTableComponent {
@@ -19,9 +20,12 @@ export class OrderSplitsTableComponent {
   @Output() invoiceSplit = new EventEmitter<OrderSplitRow>();
   @Output() deleteSplit = new EventEmitter<OrderSplitRow>();
   @Output() viewInvoice = new EventEmitter<string>();
+  @Input() canChangeCustomer = false;
+  @Input() customerChangingSplitName = '';
+  @Output() changeCustomer = new EventEmitter<{ row: OrderSplitRow; customer: any }>();
+  /** Subcuenta cuyo cliente se está eligiendo. */
+  editingCustomerSplit = '';
   expandedSplitName = '';
-  showDetailModal = false;
-  detailRow: OrderSplitRow | null = null;
 
   onInvoice(row: OrderSplitRow | null | undefined): void {
     if (!row?.name) return;
@@ -58,6 +62,18 @@ export class OrderSplitsTableComponent {
     if (invoice) this.viewInvoice.emit(invoice);
   }
 
+  toggleCustomerEditor(row: OrderSplitRow): void {
+    this.editingCustomerSplit = this.editingCustomerSplit === row?.name ? '' : (row?.name || '');
+  }
+
+  onCustomerPicked(row: OrderSplitRow, customer: any): void {
+    if (!customer?.name) return;
+    this.editingCustomerSplit = '';
+    this.changeCustomer.emit({ row, customer });
+  }
+
+  trackBySplit = (_: number, row: OrderSplitRow) => row?.name;
+
   getCustomerName(row: OrderSplitRow | null | undefined): string {
     const customer = row?.customer as any;
     return String(row?.customer_name || customer?.customer_name || customer?.nombre || customer?.fullName || customer || 'Consumidor final');
@@ -65,11 +81,11 @@ export class OrderSplitsTableComponent {
 
   getStatusClass(row: OrderSplitRow): string {
     const status = String(row?.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
-    if (status.includes('PAGADA') || status.includes('FACTURADA') || status.includes('AUTORIZ')) return 'bg-emerald-100 text-emerald-700';
-    if (status.includes('PENDIENTE')) return 'bg-amber-100 text-amber-700';
-    if (status.includes('RECHAZ') || status.includes('ERROR')) return 'bg-red-100 text-red-700';
-    if (status.includes('CANCEL')) return 'bg-slate-200 text-slate-600';
-    return 'bg-sky-100 text-sky-700';
+    if (status.includes('PAGADA') || status.includes('FACTURADA') || status.includes('AUTORIZ')) return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
+    if (status.includes('PENDIENTE')) return 'bg-amber-500/15 text-amber-700 dark:text-amber-300';
+    if (status.includes('RECHAZ') || status.includes('ERROR')) return 'bg-destructive/10 text-destructive';
+    if (status.includes('CANCEL')) return 'bg-muted text-muted-foreground';
+    return 'bg-sky-500/15 text-sky-700 dark:text-sky-300';
   }
 
   toggleExpanded(row: OrderSplitRow | null | undefined): void {
@@ -81,24 +97,11 @@ export class OrderSplitsTableComponent {
     return !!row?.name && this.expandedSplitName === row.name;
   }
 
-  onDetail(row: OrderSplitRow | null | undefined): void {
-    if (!row?.name) return;
-    if (this.isMobileViewport()) {
-      this.detailRow = row;
-      this.showDetailModal = true;
-      return;
-    }
-    this.toggleExpanded(row);
-  }
-
-  closeDetailModal(): void {
-    this.showDetailModal = false;
-    this.detailRow = null;
-  }
-
-  getDetailButtonLabel(row: OrderSplitRow | null | undefined): string {
-    if (this.isMobileViewport()) return 'Detalle';
-    return this.isExpanded(row) ? 'Ocultar' : 'Detalle';
+  /** Etiqueta de cobro: lo que el cajero necesita saber de la subcuenta. */
+  getChargeLabel(row: OrderSplitRow | null | undefined): string {
+    if (!this.hasInvoice(row)) return 'Por facturar';
+    const sri = this.getSriStatus(row);
+    return sri === 'Sin factura' ? 'Facturada' : sri;
   }
 
   get splitTotalSum(): number {
@@ -200,8 +203,4 @@ export class OrderSplitsTableComponent {
     return Math.round((value + Number.EPSILON) * 100) / 100;
   }
 
-  private isMobileViewport(): boolean {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(max-width: 767px)').matches;
-  }
 }

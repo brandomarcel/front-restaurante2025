@@ -62,7 +62,9 @@ export function orderItemsFromCart(cart: any[]): any[] {
     rate: item.price,
     discount_percentage: Number(item.discount_percentage || 0),
     discount_amount: Number(item.discount_amount || 0),
-    tax_rate: item.tax_value
+    tax_rate: item.tax_value,
+    // Nota de cocina de la línea ("sin azúcar"); el backend la muestra en cocina y comanda.
+    ...(item.notes ? { notes: item.notes } : {})
   }));
 }
 

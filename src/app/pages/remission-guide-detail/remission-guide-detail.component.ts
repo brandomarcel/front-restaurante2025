@@ -184,6 +184,12 @@ export class RemissionGuideDetailComponent implements OnInit {
   emitirBorrador(): void {
     const name = this.guide?.name;
     if (!name || this.actionRunning) return;
+    // Mismo control de emisión que el POS: la guía exige firma, configuración y cupo.
+    const blockMessage = this.capabilities.getEmissionBlockMessage({ feature: 'billing' });
+    if (blockMessage) {
+      toast.error(blockMessage);
+      return;
+    }
     this.actionRunning = true;
     this.spinner.show();
     this.svc.emitDraft(name).pipe(finalize(() => { this.spinner.hide(); this.actionRunning = false; })).subscribe({
@@ -206,6 +212,11 @@ export class RemissionGuideDetailComponent implements OnInit {
   reintentar(): void {
     const name = this.guide?.name;
     if (!name || this.actionRunning || !this.canRetry) return;
+    const blockMessage = this.capabilities.getEmissionBlockMessage({ feature: 'billing', permission: 'billing.manage' });
+    if (blockMessage) {
+      toast.error(blockMessage);
+      return;
+    }
     if (!confirm('¿Reintentar el envío de esta guía de remisión al SRI?')) return;
     this.actionRunning = true;
     this.spinner.show();

@@ -33,6 +33,8 @@ describe('Invoice fiscal location selection', () => {
     localStorage.setItem('active_business', 'BIZ-1');
     localStorage.setItem('company_capabilities', JSON.stringify({
       features: { billing: true, direct_invoice: true, pos_terminal: false },
+      liteSetupReady: true, certificateStatus: 'VIGENTE',
+      plan: { status: 'ACTIVO', unlimited_documents: true },
       business: { name: 'BIZ-1', environment: 'Pruebas' }, businesses: [{ name: 'BIZ-1' }],
       establishments, emissionPoints: points, posTerminals: [terminal],
       sequences: points.map(point => ({ name: `SEQ-${point.name}`, business: 'BIZ-1',
@@ -293,7 +295,7 @@ describe('Invoice fiscal location selection', () => {
       discount_percentage: 0, discount_amount: 0, base_imponible: 10, iva: 0, total: 10 }];
     component.paymentRows = [{ method: 'CASH', amount: 10 }];
     component.selectFiscalEstablishment('EST-2');
-    spyOn(capabilities, 'getPlanBlockMessage').and.returnValue(null);
+    spyOn(capabilities, 'getEmissionBlockMessage').and.callThrough();
     (component as any).productsService = { getAll: () => of([]) };
     (component as any).spinner = { show: () => {}, hide: () => {} };
   }
@@ -352,7 +354,7 @@ describe('Invoice fiscal location selection', () => {
     setup({ features: { billing: true, direct_invoice: true, generic_pos: true }, permissions: { '*': true } });
     prepareInvoice();
     expect(component.canEmitInvoice).toBeTrue();
-    expect(capabilities.getPlanBlockMessage).toHaveBeenCalledWith('direct_invoice');
+    expect(capabilities.getEmissionBlockMessage).toHaveBeenCalledWith({ feature: 'direct_invoice' });
     (capabilities as any).state.set({ ...capabilities.config(), features: { ...capabilities.features, direct_invoice: false } });
     expect(component.canEmitInvoice).toBeFalse();
   });

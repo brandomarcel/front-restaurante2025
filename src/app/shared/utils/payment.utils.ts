@@ -13,6 +13,8 @@ export interface PaymentMethodLike {
 export interface InvoicePaymentPayload {
   formas_de_pago: string;
   monto: number;
+  /** Número de transferencia/comprobante del pago (opcional). */
+  reference?: string;
 }
 
 export interface PaymentBuildResult {
@@ -25,8 +27,12 @@ export interface PaymentBuildResult {
 export interface PaymentRow {
   method: string;
   amount: number;
+  /** Número de transferencia/comprobante; el backend lo guarda en `reference`. */
   reference?: string;
 }
+
+/** Largo del campo `reference` en los pagos del backend (Data). */
+export const PAYMENT_REFERENCE_MAX_LENGTH = 140;
 
 export function roundMoney(value: any): number {
   const numeric = parseLocalizedDecimal(value);
@@ -84,6 +90,20 @@ export function isCashPayment(
       || ''
   ).trim();
   return code === '01' || /^(cash|efectivo)$/i.test(label);
+}
+
+/**
+ * Transferencia o depósito: el negocio puede registrar su número. Se reconoce por
+ * el nombre o por el código SRI 20 (otros con utilización del sistema financiero).
+ */
+export function isTransferPayment(
+  paymentMethods: PaymentMethodLike[] | null | undefined,
+  selectedValue: string | null | undefined
+): boolean {
+  const payment = findPaymentMethod(paymentMethods, selectedValue);
+  const code = String(payment?.codigo || payment?.payment_code || payment?.forma_pago || '').trim();
+  const label = `${payment?.name || ''} ${payment?.description || ''} ${payment?.nombre || ''} ${selectedValue || ''}`;
+  return code === '20' || /transfer|dep[oó]sito/i.test(label);
 }
 
 export function buildSinglePaymentPayload(
@@ -160,7 +180,8 @@ export function buildMultiplePaymentPayload(
       return { payments: [], error: 'No puedes repetir el mismo método de pago.' };
     }
     seen.add(key);
-    normalized.push({ formas_de_pago: paymentId, monto: amount });
+    const reference = String(row?.reference || '').trim().slice(0, PAYMENT_REFERENCE_MAX_LENGTH);
+    normalized.push({ formas_de_pago: paymentId, monto: amount, ...(reference ? { reference } : {}) });
   }
 
   const error = validatePaymentsTotal(normalized, totalValue);

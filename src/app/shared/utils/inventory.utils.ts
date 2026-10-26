@@ -103,7 +103,9 @@ export function canSellProduct(product: Partial<Product> | null | undefined): bo
 }
 
 export function canUseInventoryQuantity(product: Partial<Product> | null | undefined, quantity: number): boolean {
-  if (!hasInventoryControl(product)) {
+  // Un agrupador no tiene stock propio (aunque arrastre track_stock): el
+  // selector de variantes valida la cantidad contra la variante elegida.
+  if (isVariantGrouper(product) || !hasInventoryControl(product)) {
     return true;
   }
 

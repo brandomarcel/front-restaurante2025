@@ -42,6 +42,8 @@ describe('Facturación — reglas de emisión', () => {
     localStorage.setItem('company_capabilities', JSON.stringify({
       features: { billing: true, direct_invoice: true, pos_terminal: false },
       permissions: { '*': true },
+      liteSetupReady: true, certificateStatus: 'VIGENTE',
+      plan: { status: 'ACTIVO', unlimited_documents: true },
       business: { name: 'BIZ-1', environment: 'Pruebas' }, businesses: [{ name: 'BIZ-1' }],
       establishments: [{ name: 'EST-1', business: 'BIZ-1', establishment_code: '001', status: 'Activo' }],
       emissionPoints: [{ name: 'PT-1', business: 'BIZ-1', establishment: 'EST-1', emission_point_code: '002', status: 'Activo' }],

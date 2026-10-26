@@ -96,7 +96,9 @@ export class CompanyComponent implements OnInit, DoCheck {
     const business = String(this.capabilities.activeBusinessId || localStorage.getItem('active_business') || '').trim();
     if (business !== this.loadedCompanyBusiness && !this.isLoadingCompany) {
       this.resetLiteEmissionView();
-      this.loadCompanyInfo();
+      // Empresa vacía en caliente = cierre de sesión en curso: limpiar sin alertar
+      if (business) this.loadCompanyInfo();
+      else this.loadedCompanyBusiness = '';
     }
     if (business !== this.apiConfigurationBusiness && !this.apiConfigurationLoading
       && !(this.apiConfigurationAccessDenied && !business)) {

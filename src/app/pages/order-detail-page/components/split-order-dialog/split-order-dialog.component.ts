@@ -6,8 +6,11 @@ import {
   SplitOrderPayload,
   SplitPaymentRequest
 } from 'src/app/services/order-split.types';
-import { findPaymentMethod, getPaymentDisplayLabel, getPaymentValue as getInternalPaymentValue, isPaymentMethodAlreadySelected } from 'src/app/shared/utils/payment.utils';
+import { findPaymentMethod, getPaymentDisplayLabel, getPaymentValue as getInternalPaymentValue, isPaymentMethodAlreadySelected, isTransferPayment, PAYMENT_REFERENCE_MAX_LENGTH } from 'src/app/shared/utils/payment.utils';
 import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
+import { PosCustomerPickerComponent } from 'src/app/pages/pos/pos-caja/ui/pos-customer-picker.component';
+import { FINAL_CONSUMER_IDENTIFICATION } from 'src/app/pages/pos/pos-caja/pos-sale.rules';
+import { fromCents, lineTotalsCents, roundQty, splitDiscountShareCents, toCents } from 'src/app/shared/utils/money-cents.utils';
 
 type SplitItemRowForm = {
   order_item: string;
@@ -19,6 +22,8 @@ type SplitItemRowForm = {
 type SplitPaymentRowForm = {
   formas_de_pago: string;
   monto: number;
+  /** Número de transferencia (opcional). */
+  reference?: string;
 };
 
 type OrderItemSource = {
@@ -33,18 +38,23 @@ type OrderItemSource = {
   unitPrice: number;
   taxRate: number;
   unitTotalExact: number;
+  /** Descuento de la línea aún no asignado a otras subcuentas, en centavos. */
+  remainingDiscountCents: number;
 };
 
 @Component({
   selector: 'app-split-order-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, DecimalInputDirective],
+  imports: [CommonModule, FormsModule, DecimalInputDirective, PosCustomerPickerComponent],
   templateUrl: './split-order-dialog.component.html'
 })
 export class SplitOrderDialogComponent implements OnChanges {
   @Input() open = false;
   @Input() orderName = '';
   @Input() customerDefault = '';
+  /** Datos visibles del cliente de la orden (el que se usa si no se elige otro). */
+  @Input() customerDefaultName = '';
+  @Input() customerDefaultIdentification = '';
   @Input() orderItemsSource: any[] = [];
   @Input() remainingOrderTotal = 0;
   @Input() nextPaymentIndex = 1;
@@ -56,14 +66,14 @@ export class SplitOrderDialogComponent implements OnChanges {
 
   splitLabel = '';
   customer = '';
+  /** Cliente elegido para esta subcuenta; null = el mismo de la orden. */
+  selectedCustomer: any = null;
   items: SplitItemRowForm[] = [];
   payments: SplitPaymentRowForm[] = [];
   formError = '';
   orderItemOptions: OrderItemSource[] = [];
   private lastAutoPaymentAmount = 0;
   splitLabelTouched = false;
-  quickSplitParts = 0;
-  quickSplitPlan: number[] = [];
   itemSelectionMode: 'manual' | 'auto' = 'manual';
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -79,22 +89,21 @@ export class SplitOrderDialogComponent implements OnChanges {
     }
   }
 
+  /** Total de la subcuenta, sumado en centavos con la misma regla que el backend y Lite. */
   get splitTotal(): number {
-    const sourceByRow = new Map(this.orderItemOptions.map((it) => [it.rowId, it]));
-    const total = this.items.reduce((acc, row) => {
-      const selected = sourceByRow.get(row.order_item);
-      if (selected) {
-        const qty = this.toPositive(row.qty, 0);
-        // Alineado al backend: subtotal línea + iva línea, con redondeo por línea.
-        const lineSubtotal = this.round2(qty * selected.unitPrice);
-        const lineIva = this.round2(lineSubtotal * (selected.taxRate / 100));
-        const lineTotal = this.round2(lineSubtotal + lineIva);
-        return acc + lineTotal;
-      }
-      return acc;
-    }, 0);
+    return fromCents(this.items.reduce((acc, row) => acc + this.lineTotalCents(row), 0));
+  }
 
-    return this.round2(total);
+  /**
+   * Total de una línea en centavos: base con la parte proporcional del descuento
+   * (la última parte se lleva el saldo) e IVA redondeado por línea.
+   */
+  private lineTotalCents(row: SplitItemRowForm): number {
+    const selected = this.getSelectedItemSource(row);
+    if (!selected) return 0;
+    const qty = roundQty(this.toPositive(row.qty, 0));
+    const discountCents = splitDiscountShareCents(selected.qty, selected.remainingDiscountCents, qty);
+    return lineTotalsCents(qty, selected.unitPrice, fromCents(discountCents), selected.taxRate).total;
   }
 
   get paymentsTotal(): number {
@@ -222,46 +231,27 @@ export class SplitOrderDialogComponent implements OnChanges {
     );
   }
 
+  onCustomerChange(customer: any): void {
+    this.selectedCustomer = customer || null;
+    this.customer = String(customer?.name || '').trim() || this.customerDefault || '';
+  }
+
+  /** El SRI no permite facturar a Consumidor Final por más de USD 50. */
+  get finalConsumerOverLimit(): boolean {
+    const identification = String(
+      this.selectedCustomer?.num_identificacion ?? this.selectedCustomer?.identification_number ?? this.customerDefaultIdentification ?? ''
+    ).trim();
+    return identification === FINAL_CONSUMER_IDENTIFICATION && this.splitTotal > 50;
+  }
+
   onSplitLabelChange(value: string): void {
     this.splitLabel = value;
     this.splitLabelTouched = true;
   }
 
-  configureQuickSplit(parts: number): void {
-    if (parts < 2) return;
-
-    const total = this.remainingOrderToSplit;
-    const totalCents = this.toCents(total);
-    const base = Math.floor(totalCents / parts);
-    const remainder = totalCents % parts;
-
-    this.quickSplitParts = parts;
-    this.quickSplitPlan = Array.from({ length: parts }, (_, i) => (base + (i < remainder ? 1 : 0)) / 100);
-
-    const currentPlanIndex = Math.min(parts, Math.max(1, this.currentPaymentIndex)) - 1;
-    const suggestedAmount = this.quickSplitPlan[currentPlanIndex] ?? 0;
-    const defaultMethod = this.getDefaultCashPaymentValue();
-    this.itemSelectionMode = 'auto';
-
-    this.applyItemsForTargetAmount(suggestedAmount);
-    const computedAmount = this.round2(this.splitTotal);
-    this.payments = [{
-      formas_de_pago: defaultMethod,
-      monto: computedAmount
-    }];
-    this.lastAutoPaymentAmount = computedAmount;
-
-    if (!this.splitLabelTouched || !String(this.splitLabel || '').trim()) {
-      this.splitLabel = this.currentPaymentLabel;
-      this.splitLabelTouched = false;
-    }
-  }
-
   applyPayAllRemaining(): void {
     // Toma todo lo pendiente en items y lo paga completo en una sola linea.
     this.itemSelectionMode = 'auto';
-    this.quickSplitParts = 0;
-    this.quickSplitPlan = [];
     this.selectAllRemainingItems();
     this.setSinglePaymentToCurrentSplit();
   }
@@ -291,13 +281,7 @@ export class SplitOrderDialogComponent implements OnChanges {
   }
 
   getItemLineTotal(row: SplitItemRowForm): number {
-    const selected = this.getSelectedItemSource(row);
-    if (!selected) return 0;
-
-    const qty = this.toPositive(row.qty, 0);
-    const lineSubtotal = this.round2(qty * selected.unitPrice);
-    const lineIva = this.round2(lineSubtotal * (selected.taxRate / 100));
-    return this.round2(lineSubtotal + lineIva);
+    return fromCents(this.lineTotalCents(row));
   }
 
   onWriteProduct(row: SplitItemRowForm): void {
@@ -339,6 +323,12 @@ export class SplitOrderDialogComponent implements OnChanges {
 
   canIncrementQty(row: SplitItemRowForm): boolean {
     return this.toPositive(row.qty, 1) < this.getItemMaxQty(row);
+  }
+
+  readonly paymentReferenceMaxLength = PAYMENT_REFERENCE_MAX_LENGTH;
+
+  isTransferRow(row: SplitPaymentRowForm): boolean {
+    return isTransferPayment(this.paymentOptions, row?.formas_de_pago);
   }
 
   getPaymentLabel(payment: any): string {
@@ -384,15 +374,13 @@ export class SplitOrderDialogComponent implements OnChanges {
       );
       const price = this.toPositive(it?.price ?? it?.rate, 0);
       const taxRate = Number(it?.tax_rate ?? it?.tax_value ?? 0) || 0;
-      const sourceTotal = Number(it?.total);
-      const sourceQtyForUnit =
-        this.toPositive(it?.quantity ?? it?.qty, 0) ||
-        this.toPositive(it?.original_qty, 0) ||
-        qty;
-      const unitTotalExact =
-        Number.isFinite(sourceTotal) && sourceQtyForUnit > 0
-          ? (sourceTotal / sourceQtyForUnit)
-          : (price * (1 + taxRate / 100));
+      // `remaining_discount` viene del backend (descuento aún sin asignar); antes de
+      // consultar subcuentas, la fila completa conserva todo su descuento.
+      const remainingDiscountCents = toCents(it?.remaining_discount ?? it?.discount_amount ?? 0);
+      // Valor unitario aproximado (con descuento e IVA): solo orienta el reparto automático.
+      const unitTotalExact = qty > 0
+        ? ((qty * price - fromCents(remainingDiscountCents)) / qty) * (1 + taxRate / 100)
+        : price * (1 + taxRate / 100);
 
       return {
         rowId,
@@ -405,21 +393,22 @@ export class SplitOrderDialogComponent implements OnChanges {
         remainingQty,
         unitPrice: price,
         taxRate,
-        unitTotalExact
+        unitTotalExact,
+        remainingDiscountCents
       };
     })
-    .filter((it) => it.qty > 0);
+    // Tras repartir en fracciones pueden quedar residuos mínimos: no son pendientes reales.
+    .filter((it) => roundQty(it.qty) > 0);
   }
 
   private resetForm(): void {
     this.splitLabel = this.currentPaymentLabel;
     this.customer = this.customerDefault || '';
+    this.selectedCustomer = null;
     this.items = [];
     this.payments = [this.buildDefaultPaymentRow()];
     this.formError = '';
     this.splitLabelTouched = false;
-    this.quickSplitParts = 0;
-    this.quickSplitPlan = [];
     this.itemSelectionMode = 'manual';
   }
 
@@ -440,48 +429,6 @@ export class SplitOrderDialogComponent implements OnChanges {
       monto: total
     }];
     this.lastAutoPaymentAmount = total;
-  }
-
-  private applyItemsForTargetAmount(targetAmount: number): void {
-    const source = this.orderItemOptions || [];
-    if (!source.length) return;
-
-    const positiveTarget = Math.max(0, this.round2(targetAmount));
-    if (positiveTarget <= 0) return;
-
-    const remainingTotal = this.round2(
-      source.reduce((acc, it) => acc + this.round2(this.toPositive(it.qty, 0) * this.toPositive(it.unitTotalExact, 0)), 0)
-    );
-    if (remainingTotal <= 0) return;
-
-    const ratio = Math.min(1, positiveTarget / remainingTotal);
-    const draftItems: SplitItemRowForm[] = source
-      .map((it) => ({
-        order_item: it.rowId,
-        order_item_label: it.productName,
-        product: '',
-        qty: this.round4(this.toPositive(it.qty, 0) * ratio)
-      }))
-      .filter((it) => it.qty > 0);
-
-    if (!draftItems.length) return;
-    this.items = draftItems;
-
-    const first = this.items[0];
-    const firstSrc = source.find((x) => x.rowId === first.order_item);
-    if (!firstSrc) return;
-
-    // Ajuste fino para acercar el total al objetivo.
-    const current = this.round2(this.splitTotal);
-    const diff = this.round2(positiveTarget - current);
-    if (diff === 0) return;
-
-    const unit = this.toPositive(firstSrc.unitTotalExact, 0);
-    if (unit <= 0) return;
-
-    const deltaQty = this.round4(diff / unit);
-    const maxQty = this.toPositive(firstSrc.qty, 0);
-    first.qty = this.clampNumber(this.round4(first.qty + deltaQty), 0.0001, maxQty);
   }
 
   private buildDefaultPaymentRow(): SplitPaymentRowForm {
@@ -601,7 +548,7 @@ export class SplitOrderDialogComponent implements OnChanges {
           || ''
         ).trim(),
         amount,
-        reference: '',
+        reference: String(p.reference || '').trim().slice(0, PAYMENT_REFERENCE_MAX_LENGTH),
         formas_de_pago: paymentMethod,
         monto: amount
       };
@@ -667,17 +614,4 @@ export class SplitOrderDialogComponent implements OnChanges {
     return Math.round((value + Number.EPSILON) * 100) / 100;
   }
 
-  private toCents(n: number): number {
-    return Math.round(this.round2(n) * 100);
-  }
-
-  private round4(n: number): number {
-    const value = Number(n);
-    if (!Number.isFinite(value)) return 0;
-    return Math.round(value * 10000) / 10000;
-  }
-
-  private clampNumber(value: number, min: number, max: number): number {
-    return Math.min(max, Math.max(min, value));
-  }
 }

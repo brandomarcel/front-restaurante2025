@@ -62,6 +62,16 @@ export class OrderSplitService {
     return this.emitInvoiceForSplit(splitName);
   }
 
+  /** Cambia el cliente de una subcuenta aún no facturada (cada persona puede facturar a su nombre). */
+  updateSplitCustomer(splitName: string, customer: string): Observable<any> {
+    const business = this.activeBusinessOrError();
+    if (business instanceof Error) return throwError(() => business);
+    return this.http.post<any>(`${this.baseUrl}.update_split_customer`, {
+      business, split_name: splitName, customer
+    }, { context: new HttpContext().set(REQUIRE_AUTH, true) })
+      .pipe(map((response: any) => ({ message: { ...(response?.message || {}), data: this.data(response) } })));
+  }
+
   deleteOrderSplit(splitName: string): Observable<any> {
     const business = this.activeBusinessOrError();
     if (business instanceof Error) return throwError(() => business);

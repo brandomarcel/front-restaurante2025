@@ -1,0 +1,143 @@
+@reference '../../../styles.css';
+
+.card {
+  @apply rounded-2xl border border-border bg-card shadow-sm;
+}
+
+.card-head {
+  @apply flex flex-col gap-2 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between;
+}
+
+.card-title {
+  @apply text-base font-bold text-foreground;
+}
+
+.icon-btn {
+  @apply grid h-10 w-10 place-items-center rounded-xl border border-border bg-card text-lg font-bold text-muted-foreground transition hover:bg-muted hover:text-foreground;
+}
+
+.btn-main {
+  @apply inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-bold text-white transition active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+.btn-outline {
+  @apply inline-flex h-10 items-center justify-center rounded-xl border border-border bg-card px-4 text-sm font-bold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+.link-btn {
+  @apply shrink-0 text-sm font-bold text-primary hover:underline;
+}
+
+.status-chip {
+  @apply rounded-full border px-2.5 py-0.5 text-xs font-bold;
+}
+
+/* Menú de acciones secundarias */
+.menu {
+  @apply absolute right-0 top-12 z-40 w-60 overflow-hidden rounded-xl border border-border bg-card py-1 shadow-xl;
+}
+
+.menu-item {
+  @apply block w-full px-4 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted;
+}
+
+/* Progreso de la orden */
+.progress {
+  @apply flex items-center;
+}
+
+.progress-step {
+  @apply flex flex-1 items-center gap-2 text-muted-foreground last:flex-none;
+}
+
+.progress-step:not(:last-child)::after {
+  content: '';
+  @apply mx-2 h-0.5 flex-1 rounded-full bg-border;
+}
+
+.progress-step.is-done:not(:last-child)::after {
+  @apply bg-emerald-500;
+}
+
+.progress-dot {
+  @apply grid h-7 w-7 shrink-0 place-items-center rounded-full border-2 border-border bg-card text-xs font-bold;
+}
+
+.progress-label {
+  @apply hidden text-xs font-bold sm:inline;
+}
+
+.progress-step.is-done .progress-dot {
+  @apply border-emerald-500 bg-emerald-500 text-white;
+}
+
+.progress-step.is-current {
+  @apply text-foreground;
+}
+
+.progress-step.is-current .progress-dot {
+  @apply border-primary bg-primary text-primary-foreground ring-4 ring-primary/15;
+}
+
+/* La etiqueta de la etapa actual se ve también en móvil */
+.progress-step.is-current .progress-label {
+  @apply inline;
+}
+
+/* Avisos */
+.notice {
+  @apply rounded-xl px-3 py-2 text-sm;
+}
+
+.notice-info { @apply bg-sky-500/10 text-sky-800 dark:text-sky-300; }
+.notice-ok { @apply bg-emerald-500/10 text-emerald-800 dark:text-emerald-300; }
+.notice-warn { @apply bg-amber-500/10 text-amber-800 dark:text-amber-300; }
+.notice-danger { @apply bg-destructive/10 text-destructive; }
+
+/* Cantidad */
+.stepper {
+  @apply inline-flex h-10 overflow-hidden rounded-xl border border-border bg-card;
+}
+
+.stepper button {
+  @apply w-10 text-lg font-bold text-foreground/80 transition hover:bg-muted disabled:opacity-40;
+}
+
+.stepper input {
+  @apply w-12 border-x border-border bg-card text-center text-sm font-bold text-foreground outline-none;
+}
+
+/* Totales */
+.totals {
+  @apply space-y-1 border-t border-border px-4 py-3 text-sm;
+}
+
+.totals > div {
+  @apply flex justify-between text-muted-foreground;
+}
+
+.totals dd {
+  @apply font-semibold tabular-nums text-foreground;
+}
+
+.totals .is-total {
+  @apply pt-1 text-base font-black text-foreground;
+}
+
+.totals .is-total dd {
+  @apply text-lg font-black;
+}
+
+/* Formularios */
+.field-label {
+  @apply mb-1 block text-[11px] font-bold uppercase text-muted-foreground;
+}
+
+.field {
+  @apply h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60;
+}
+
+/* Barra de cambios pendientes */
+.unsaved-bar {
+  @apply fixed inset-x-3 bottom-3 z-40 mx-auto flex max-w-2xl flex-col gap-2 rounded-2xl border border-amber-500/40 bg-card px-4 py-3 shadow-2xl sm:flex-row sm:items-center sm:justify-between;
+}

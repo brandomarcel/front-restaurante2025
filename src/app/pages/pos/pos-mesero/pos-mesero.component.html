@@ -139,7 +139,7 @@
           }">
           <div class="mb-1 flex cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-muted"
             [ngClass]="isRetailPos ? 'h-[108px] sm:h-[122px]' : 'h-[82px] sm:h-[92px]'"
-            (click)="addProduct(product)">
+            (click)="canAddProduct(product) && onProductCardClick(product)">
             <img *ngIf="product.image_url" [src]="product.image_url" [alt]="product.nombre || product.name" class="pointer-events-none h-full w-full object-cover" />
             <span *ngIf="!product.image_url" class="pointer-events-none text-[10px] text-muted-foreground/70">Sin imagen</span>
           </div>
@@ -284,6 +284,10 @@
                   ${{ item.price | number:'1.2-2' }} c/u
                   <span *ngIf="hasInventory(item)">· stock {{ getInventoryLabel(item) }}</span>
                 </p>
+                <p *ngIf="item.notes && editingNoteLine !== item.line_id"
+                  class="mt-1 inline-flex max-w-full items-start gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                  <span aria-hidden="true">📝</span><span class="break-words">{{ item.notes }}</span>
+                </p>
               </div>
               <p class="shrink-0 text-sm font-black text-primary">${{ item.total | number:'1.2-2' }}</p>
             </div>
@@ -308,13 +312,26 @@
                 </button>
               </div>
 
-              <button
-                type="button"
-                class="h-8 rounded-lg border border-red-200 bg-card px-2.5 text-[11px] font-bold text-red-600"
-                (click)="remove(item)">
-                Quitar
-              </button>
+              <div class="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  class="h-8 rounded-lg border px-2.5 text-[11px] font-bold transition"
+                  [ngClass]="item.notes ? 'border-amber-400 bg-amber-500/10 text-amber-700 dark:text-amber-300' : 'border-border bg-card text-foreground/80 hover:bg-muted'"
+                  (click)="editingNoteLine === item.line_id ? cancelNote() : openNote(item)"
+                  [attr.aria-expanded]="editingNoteLine === item.line_id">
+                  {{ item.notes ? 'Editar nota' : '+ Nota' }}
+                </button>
+                <button
+                  type="button"
+                  class="h-8 rounded-lg border border-red-200 bg-card px-2.5 text-[11px] font-bold text-red-600"
+                  (click)="remove(item)">
+                  Quitar
+                </button>
+              </div>
             </div>
+
+            <!-- Nota para cocina -->
+            <app-line-note-editor *ngIf="editingNoteLine === item.line_id" class="mt-2 block" [item]="item" (done)="cancelNote()"></app-line-note-editor>
 
             <!-- Descuento por línea -->
             <div class="mt-2 flex flex-wrap items-center gap-2">

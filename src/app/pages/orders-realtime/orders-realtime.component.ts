@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { concatMap, from, Subscription } from 'rxjs';
@@ -20,7 +20,11 @@ import { Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
 
 type ViewMode = 'normal' | 'cocina';
-type StatusFilter = 'ALL' | 'ACTIVAS' | 'Ingresada' | 'Preparación' | 'Cerrada';
+type StatusFilter = 'ALL' | 'ACTIVAS' | 'Ingresada' | 'Preparación' | 'Lista' | 'Cerrada';
+
+/** Preferencia por dispositivo: la tablet de cocina recuerda si el aviso sonoro está activo. */
+const KDS_SOUND_KEY = 'facturada.kds.sound';
+const CLOCK_TICK_MS = 30_000;
 type RoleName = 'Gerente' | 'Cajero' | 'Mesero' | 'Cocina' | 'Desconocido';
 
 @Component({
@@ -34,7 +38,8 @@ type RoleName = 'Gerente' | 'Cajero' | 'Mesero' | 'Cocina' | 'Desconocido';
     OrderModalComponent,
     OrderTableComponent
   ],
-  templateUrl: './orders-realtime.component.html'
+  templateUrl: './orders-realtime.component.html',
+  styleUrl: './orders-realtime.component.css'
 })
 export class OrdersRealtimeComponent implements OnInit, OnDestroy {
 
@@ -56,12 +61,18 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   kitchenAccessGranted = false;
   kitchenAccessError = '';
   realtimeConnected = false;
+  /** Reloj compartido para los tiempos de espera de Caja (un solo timer para toda la lista). */
+  now = Date.now();
+  soundEnabled = this.readSoundPreference();
+  isFullscreen = false;
 
   total$ = this.rt.streamTotal();
   private sub = new Subscription();
   private pendingActions = new Set<string>();
   private pendingItemActions = new Set<string>();
   private kitchenPollTimer: ReturnType<typeof setInterval> | null = null;
+  private clockTimer: ReturnType<typeof setInterval> | null = null;
+  private audioContext: AudioContext | null = null;
   private initialized = false;
   private currentBusinessId = '';
   private readonly baseUrl = environment.URL;
@@ -74,10 +85,12 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     private printService: PrintService,
     private restaurantRealtime: RestaurantRealtimeService,
     private capabilities: CompanyCapabilitiesService,
-    private companyService: CompanyService
+    private companyService: CompanyService,
+    private host: ElementRef<HTMLElement>
   ) {}
 
   ngOnInit(): void {
+    this.clockTimer = setInterval(() => this.now = Date.now(), CLOCK_TICK_MS);
     this.loadKitchenContext();
   }
 
@@ -164,7 +177,10 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     );
 
     this.sub.add(
-      this.rt.streamNewCount().subscribe(n => this.newCount = n)
+      this.rt.streamNewCount().subscribe(n => {
+        if (n > this.newCount && this.viewMode === 'cocina') this.playNewOrderSound();
+        this.newCount = n;
+      })
     );
 
     if (this.viewMode === 'cocina' && this.kitchenAccessGranted && !this.realtimeConnected) {
@@ -181,6 +197,63 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.sub.unsubscribe();
     this.stopKitchenFallbackPolling();
+    if (this.clockTimer) clearInterval(this.clockTimer);
+    void this.audioContext?.close().catch(() => undefined);
+  }
+
+  // ---- Aviso sonoro y pantalla completa (Cocina) ----
+
+  toggleSound(): void {
+    this.soundEnabled = !this.soundEnabled;
+    try { localStorage.setItem(KDS_SOUND_KEY, this.soundEnabled ? '1' : '0'); } catch { /* sin almacenamiento: solo esta sesión */ }
+    // El clic del usuario habilita el audio en el navegador; se confirma con un aviso de prueba.
+    if (this.soundEnabled) this.playNewOrderSound();
+  }
+
+  /** Dos tonos cortos generados con Web Audio (sin archivos). Si el navegador bloquea el audio, no hace nada. */
+  private playNewOrderSound(): void {
+    if (!this.soundEnabled || typeof window === 'undefined') return;
+    try {
+      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!Ctx) return;
+      this.audioContext ??= new Ctx();
+      const ctx = this.audioContext;
+      void ctx.resume();
+      [0, 0.18].forEach((offset, index) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = index ? 1175 : 880;
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime + offset);
+        gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + offset + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + offset + 0.16);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(ctx.currentTime + offset);
+        osc.stop(ctx.currentTime + offset + 0.17);
+      });
+    } catch { /* el aviso visual sigue funcionando */ }
+  }
+
+  private readSoundPreference(): boolean {
+    try { return localStorage.getItem(KDS_SOUND_KEY) !== '0'; } catch { return true; }
+  }
+
+  toggleFullscreen(): void {
+    if (document.fullscreenElement) void document.exitFullscreen?.();
+    // Solo esta pantalla (sin menú ni barra de la app), pensado para la tablet de cocina.
+    else void this.host.nativeElement.requestFullscreen?.().catch(() => toast.error('El navegador no permitió la pantalla completa.'));
+  }
+
+  @HostListener('document:fullscreenchange')
+  onFullscreenChange(): void {
+    this.isFullscreen = !!document.fullscreenElement;
+  }
+
+  clearFilters(): void {
+    this.search = '';
+    this.statusFilter = this.viewMode === 'cocina' ? 'ACTIVAS' : 'ALL';
+    this.kitchenFilter = 'ALL';
+    this.kitchenOnlyUrgent = false;
   }
 
   toggleModoCocina() {
@@ -240,7 +313,6 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     if (this.viewMode === 'cocina') this.loadKitchenOrders();
     else this.rt.loadInitial(80, 0, today, today, undefined, true);
     this.rt.markNewSeen();
-    toast.success('Ordenes actualizadas.');
   }
 
   handlePrintSelection(option: 'comanda' | 'recibo' | 'ambas') {
@@ -322,6 +394,16 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   }
 
   trackByName = (_: number, o: OrderVM) => o.name;
+  trackByColumn = (_: number, column: { key: string }) => column.key;
+
+  /** Columnas del KDS en orden de flujo: nuevos → preparando → listos. */
+  get kitchenColumns(): { key: 'NEW' | 'PREP' | 'READY'; title: string; hint: string; orders: OrderVM[]; empty: string }[] {
+    return [
+      { key: 'NEW', title: 'Nuevos', hint: 'Por empezar', orders: this.kitchenIngresadas, empty: 'No hay pedidos nuevos.' },
+      { key: 'PREP', title: 'Preparando', hint: 'En la cocina', orders: this.kitchenPreparacionSafe, empty: 'No hay pedidos en preparación.' },
+      { key: 'READY', title: 'Listos', hint: 'Para entregar', orders: this.kitchenCerradas, empty: 'No hay pedidos listos.' },
+    ];
+  }
 
   get allowStatusActions(): boolean {
     return this.roleName !== 'Mesero';
@@ -356,19 +438,15 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     return this.viewMode === 'cocina' ? 'Cocina' : 'Caja';
   }
 
-  get statusFilters(): { label: string; value: StatusFilter }[] {
-    const base = [
-      { label: 'Todas', value: 'ALL' as const },
-      { label: 'Ingresadas', value: 'Ingresada' as const },
-      { label: 'Preparación', value: 'Preparación' as const },
-      { label: 'Cerradas', value: 'Cerrada' as const }
+  /** Pestañas de Caja con su contador; los nombres describen la etapa, no el valor técnico. */
+  get statusTabs(): { label: string; value: StatusFilter; count: number }[] {
+    return [
+      { label: 'Todas', value: 'ALL', count: this.orders.length },
+      { label: 'Nuevas', value: 'Ingresada', count: this.countIngresadas },
+      { label: 'En cocina', value: 'Preparación', count: this.countPreparacion },
+      { label: 'Listas', value: 'Lista', count: this.countListas },
+      { label: 'Cerradas', value: 'Cerrada', count: this.countCerradas },
     ];
-
-    if (this.viewMode === 'cocina') {
-      return [{ label: 'Activas', value: 'ACTIVAS' as const }, ...base];
-    }
-
-    return base;
   }
 
   get filteredOrders(): OrderVM[] {
@@ -432,6 +510,10 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
 
   get countPreparacion(): number {
     return this.orders.filter(o => this.normalizeStatus(o.status) === 'Preparación').length;
+  }
+
+  get countListas(): number {
+    return this.orders.filter(o => this.normalizeStatus(o.status) === 'Lista').length;
   }
 
   get countCerradas(): number {
@@ -537,7 +619,6 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   private matchStatus(status: string, filter: StatusFilter): boolean {
     if (filter === 'ALL') return true;
     if (filter === 'ACTIVAS') return status === 'Ingresada' || status === 'Preparación';
-    if (filter === 'Cerrada') return status === 'Cerrada' || status === 'Lista';
     return status === filter;
   }
 

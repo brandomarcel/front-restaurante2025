@@ -368,9 +368,12 @@ updateOrderForInvoice(payload: any): Observable<any> {
     customer: payload?.customer,
     alias: payload?.alias ?? '',
     items: (payload?.items ?? []).map((item: any) => ({
+      // Identifica la fila existente: el backend conserva su precio, descuento y nota de cocina.
+      ...(item?.order_item ? { order_item: item.order_item } : {}),
       product: item?.product ?? item?.item,
       qty: parseLocalizedDecimal(item?.qty ?? item?.quantity ?? 0) ?? 0,
-      rate: parseLocalizedDecimal(item?.rate ?? item?.price ?? 0) ?? 0,
+      // Sin precio explícito no se envía: un 0 por defecto lo pisaría para Gerente/Administrador.
+      ...((item?.rate ?? item?.price) != null ? { rate: parseLocalizedDecimal(item?.rate ?? item?.price) ?? 0 } : {}),
       discount_percentage: parseLocalizedDecimal(item?.discount_percentage ?? 0) ?? 0,
       discount_amount: parseLocalizedDecimal(item?.discount_amount ?? 0) ?? 0,
       tax_rate: parseLocalizedDecimal(item?.tax_rate ?? item?.tax_value ?? 0) ?? 0,
@@ -411,7 +414,8 @@ updateOrderForInvoice(payload: any): Observable<any> {
       return {
         formas_de_pago: payment?.formas_de_pago ?? payment?.payment_method ?? payment?.name,
         ...(payment?.payment_code ?? payment?.forma_pago ? { payment_code: payment?.payment_code ?? payment?.forma_pago } : {}),
-        ...(amount !== undefined && amount !== null && amount !== '' ? { amount: parseLocalizedDecimal(amount) ?? 0 } : {})
+        ...(amount !== undefined && amount !== null && amount !== '' ? { amount: parseLocalizedDecimal(amount) ?? 0 } : {}),
+        ...(payment?.reference ? { reference: String(payment.reference).trim() } : {})
       };
     }) : [];
     const fiscalStatus = String(source.fiscal_status ?? source.estado ?? 'Nota Venta').trim();

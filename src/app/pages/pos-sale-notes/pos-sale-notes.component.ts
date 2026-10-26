@@ -75,8 +75,17 @@ export class PosSaleNotesComponent implements OnInit {
     this.runAction(note, 'cobrar', () => this.posSaleService.collect(note.name), 'Nota de venta cobrada.');
   }
 
+  /** Mismo control de emisión que el POS (permiso, plan, firma, configuración y cupo). */
+  get invoiceBlockMessage(): string | null {
+    return this.capabilities.getEmissionBlockMessage({ feature: 'billing' });
+  }
+
   invoice(note: any): void {
     if (String(note?.status || '') !== 'Cobrada' || note?.lite_invoice) return;
+    if (this.invoiceBlockMessage) {
+      toast.error(this.invoiceBlockMessage);
+      return;
+    }
     this.runAction(note, 'facturar', () => this.posSaleService.invoice(note.name), 'Nota de venta facturada.', true);
   }
 

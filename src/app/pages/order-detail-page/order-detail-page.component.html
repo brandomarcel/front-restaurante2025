@@ -1,304 +1,187 @@
 <ng-container *ngIf="loading; else loadedState">
-  <section class="rounded-xl border border-border bg-card p-4 shadow-sm">
-    <p class="text-xs font-semibold text-foreground/80">Cargando orden...</p>
-    <p class="mt-1 text-[11px] text-muted-foreground">Preparando información de la orden.</p>
-  </section>
+  <div class="space-y-3" aria-busy="true">
+    <div class="h-24 animate-pulse rounded-2xl bg-muted/60"></div>
+    <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div class="h-80 animate-pulse rounded-2xl bg-muted/60"></div>
+      <div class="h-80 animate-pulse rounded-2xl bg-muted/60"></div>
+    </div>
+  </div>
 </ng-container>
 
 <ng-template #loadedState>
   <ng-container *ngIf="!error; else errorState">
-    <div class="h-full min-h-0 space-y-3 pb-24 md:pb-3">
-      <section class="rounded-xl border border-primary/15 bg-card p-3 shadow-sm">
-        <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div class="min-w-0">
-            <div class="mb-1.5 flex flex-wrap items-center gap-1.5">
-              <button
-                type="button"
-                class="min-h-[30px] rounded-md border border-border bg-card px-2.5 text-[11px] font-semibold text-foreground/80 transition hover:bg-muted/40"
-                (click)="goBack()">
-                ← Volver
-              </button>
+    <div class="space-y-3 pb-28 md:pb-4">
 
-              <span class="rounded-md bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">
-                {{ order?.type || 'Sin tipo' }}
-              </span>
-
-              <span class="rounded-md border px-2 py-1 text-[10px] font-semibold" [ngClass]="orderStatusClass">
-                {{ orderStatusLabel }}
-              </span>
-
-              <span class="rounded-md border border-border bg-muted/40 px-2 py-1 text-[10px] font-semibold text-muted-foreground">
-                SRI: {{ sriStatus || 'Sin factura' }}
-              </span>
-            </div>
-
-            <div class="flex flex-wrap items-end gap-2">
-              <h2 class="truncate text-base font-bold leading-5 text-foreground">
-                Orden {{ order?.name || '-' }}
-              </h2>
-              <span class="rounded-md bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-                Alias: {{ order?.alias || 'Sin alias' }}
-              </span>
-            </div>
-
-            <p class="mt-1 text-[11px] text-muted-foreground">{{ order?.createdAt | ecuadorTime }}</p>
-          </div>
-
-          <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:min-w-[420px]">
-            <div class="rounded-lg border border-border bg-muted/40 px-2.5 py-2">
-              <p class="text-[10px] text-muted-foreground">Items</p>
-              <p class="text-sm font-bold text-foreground">{{ orderItems.length }}</p>
-            </div>
-            <div class="rounded-lg border border-border bg-muted/40 px-2.5 py-2">
-              <p class="text-[10px] text-muted-foreground">Subcuentas</p>
-              <p class="text-sm font-bold text-foreground">{{ orderSplits.length }}</p>
-            </div>
-            <div class="rounded-lg border border-border bg-muted/40 px-2.5 py-2">
-              <p class="text-[10px] text-muted-foreground">Pendiente</p>
-              <p class="text-sm font-bold" [ngClass]="pendingOrderToSplit > 0 ? 'text-amber-700' : 'text-emerald-700'">
-                ${{ pendingOrderToSplit | number:'1.2-2' }}
+      <!-- ============ 1. Encabezado: qué orden es y cuál es el siguiente paso ============ -->
+      <header class="card p-4">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div class="flex min-w-0 items-start gap-3">
+            <button type="button" class="icon-btn shrink-0" (click)="goBack()" aria-label="Volver" title="Volver">←</button>
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <h1 class="truncate text-2xl font-black tracking-tight text-foreground">{{ orderHeadline }}</h1>
+                <span class="status-chip" [ngClass]="orderStatusClass">{{ isLocked ? 'Facturada' : orderStatusLabel }}</span>
+              </div>
+              <p class="mt-0.5 text-sm text-muted-foreground">
+                #{{ order?.name }} · {{ order?.type || 'Servirse' }} · {{ order?.createdAt | ecuadorTime }}
               </p>
             </div>
-            <div class="col-span-3 rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-2 sm:col-span-1">
-              <p class="text-[10px] text-primary">Total</p>
-              <p class="text-lg font-bold leading-none text-primary">${{ orderTotal | number:'1.2-2' }}</p>
+          </div>
+
+          <div class="flex items-center gap-2 self-end lg:self-auto">
+            <div class="mr-1 text-right">
+              <p class="text-[11px] font-bold uppercase text-muted-foreground">Total</p>
+              <p class="text-2xl font-black tabular-nums text-foreground">${{ orderTotal | number:'1.2-2' }}</p>
+            </div>
+
+            <!-- Siguiente paso de la orden: un solo botón principal -->
+            <button *ngIf="canStartPreparation" type="button" class="btn-main bg-amber-500 hover:bg-amber-600" (click)="setOrderStatus('Preparacion')" [disabled]="closingOrder">
+              Iniciar preparación
+            </button>
+            <button *ngIf="!canStartPreparation && canMarkReady" type="button" class="btn-main bg-emerald-600 hover:bg-emerald-700" (click)="setOrderStatus('Lista')" [disabled]="closingOrder">
+              Marcar lista
+            </button>
+            <button *ngIf="!canStartPreparation && !canMarkReady && canCloseOrder" type="button" class="btn-main bg-primary hover:bg-primary/90" (click)="closeOrder()" [disabled]="closingOrder">
+              Cerrar orden
+            </button>
+
+            <!-- Acciones secundarias -->
+            <div *ngIf="showMoreActions" class="fixed inset-0 z-30" (click)="showMoreActions = false" aria-hidden="true"></div>
+            <div class="relative">
+              <button type="button" class="icon-btn" (click)="showMoreActions = !showMoreActions" [attr.aria-expanded]="showMoreActions" aria-label="Más acciones" title="Más acciones">⋯</button>
+              <div *ngIf="showMoreActions" class="menu" role="menu">
+                <button type="button" role="menuitem" class="menu-item" (click)="printAndClose('comanda')">🖨 Imprimir comanda</button>
+                <button type="button" role="menuitem" class="menu-item" (click)="printAndClose('recibo')">🧾 Imprimir recibo</button>
+                <button *ngIf="order?.sri?.invoice" type="button" role="menuitem" class="menu-item" (click)="printAndClose('factura')">📄 Factura PDF</button>
+                <button *ngIf="canMarkReady && canCloseOrder" type="button" role="menuitem" class="menu-item" (click)="showMoreActions = false; closeOrder()">Cerrar orden sin marcar lista</button>
+                <button *ngIf="canCancelOrder" type="button" role="menuitem" class="menu-item text-destructive" (click)="showMoreActions = false; setOrderStatus('Cancelada')">Cancelar orden</button>
+              </div>
             </div>
           </div>
         </div>
-      </section>
 
-      <section
-        *ngIf="order"
-        class="rounded-lg border px-3 py-2 text-[11px]"
-        [ngClass]="!canEditOrder ? 'border-border bg-muted/40 text-muted-foreground' : 'border-primary/25 bg-primary/5 text-primary'">
-        <ng-container *ngIf="canEditOrder; else blockedState">
-          Puedes editar cliente, productos, cantidades y precios antes de guardar los cambios.
-        </ng-container>
-        <ng-template #blockedState>
-          <ng-container *ngIf="isReadOnlyView; else invoiceLockState">
-            Orden cerrada: edición de ítems bloqueada. Puedes dividir cuenta para gestionar el pago.
-          </ng-container>
-          <ng-template #invoiceLockState>
-            Orden bloqueada por facturación.
-            <ng-container *ngIf="order?.sri?.invoice as inv">
-              Factura: <a [routerLink]="['/dashboard/invoices', inv]" class="font-semibold underline">{{ inv }}</a>
-            </ng-container>
-          </ng-template>
+        <!-- Progreso de la orden -->
+        <ol *ngIf="!isCancelled; else cancelledBanner" class="progress mt-4" aria-label="Progreso de la orden">
+          <li *ngFor="let step of progressSteps; let i = index" class="progress-step"
+            [class.is-done]="i < progressIndex" [class.is-current]="i === progressIndex"
+            [attr.aria-current]="i === progressIndex ? 'step' : null">
+            <span class="progress-dot">{{ i < progressIndex ? '✓' : i + 1 }}</span>
+            <span class="progress-label">{{ step }}</span>
+          </li>
+        </ol>
+        <ng-template #cancelledBanner>
+          <p class="notice notice-danger mt-3">Esta orden fue cancelada. Solo se puede consultar.</p>
         </ng-template>
-      </section>
 
-      <div class="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
+        <p *ngIf="isLocked" class="notice notice-info mt-3">
+          Orden facturada: ya no se puede modificar.
+          <a *ngIf="order?.sri?.invoice as inv" [routerLink]="['/dashboard/invoices', inv]" class="font-bold underline">Ver factura {{ inv }}</a>
+        </p>
+        <p *ngIf="isReadOnlyView" class="notice notice-info mt-3">Orden cerrada: solo puedes consultar o dividir la cuenta.</p>
+      </header>
+
+      <div class="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
+
+        <!-- ============ 2. Productos ============ -->
         <main class="min-w-0 space-y-3">
-          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <div class="mb-2 flex items-center justify-between gap-2">
-              <h3 class="text-xs font-semibold text-primary">Cliente</h3>
-              <span class="rounded-md bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                Información fiscal
-              </span>
-            </div>
-
-            <ng-select
-              *ngIf="canEditOrder"
-              class="ng-select-tailwind mb-2"
-              [items]="customers"
-              bindLabel="nombre"
-              bindValue="name"
-              placeholder="Cambiar cliente"
-              [searchable]="true"
-              [(ngModel)]="orderCustomerId"
-              [ngModelOptions]="{standalone: true}">
-              <ng-template ng-option-tmp let-item="item">
-                <div class="flex min-w-0 flex-col">
-                  <span class="truncate font-semibold text-foreground">{{ item.nombre }}</span>
-                  <span class="text-[10px] text-muted-foreground">{{ item.num_identificacion || item.identification_number || 'Sin identificación' }}</span>
-                </div>
-              </ng-template>
-            </ng-select>
-
-            <div class="grid grid-cols-1 gap-1.5 rounded-lg border border-border bg-muted/40 p-2.5 text-[11px] text-foreground/80 sm:grid-cols-2 lg:grid-cols-3">
-              <p class="truncate"><span class="text-muted-foreground">Nombre:</span> {{ order?.customer?.customer_name || order?.customer?.nombre || order?.nombre_cliente || '-' }}</p>
-              <p class="truncate"><span class="text-muted-foreground">Identificación:</span> {{ order?.customer?.identification_number || order?.customer?.num_identificacion || order?.identificacion_cliente || '-' }}</p>
-              <p class="truncate"><span class="text-muted-foreground">Tipo:</span> {{ order?.customer?.identification_type || order?.customer?.tipo_identificacion || order?.tipo_identificacion_cliente || '-' }}</p>
-              <p class="truncate"><span class="text-muted-foreground">Tel:</span> {{ order?.customer?.phone || order?.customer?.telefono || order?.telefono_cliente || '-' }}</p>
-              <p class="truncate sm:col-span-2"><span class="text-muted-foreground">Email:</span> {{ order?.customer?.email || order?.customer?.correo || order?.correo_cliente || '-' }}</p>
-              <p class="truncate sm:col-span-2 lg:col-span-3"><span class="text-muted-foreground">Dirección:</span> {{ order?.customer?.address || order?.customer?.direccion || order?.direccion_cliente || '-' }}</p>
-            </div>
-          </section>
-
-          <section *ngIf="canEditOrder" class="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <div class="mb-2 flex items-center justify-between gap-2">
+          <section class="card">
+            <div class="card-head">
               <div>
-                <h3 class="text-xs font-semibold text-primary">Formas de pago</h3>
-                <p class="text-[10px] text-muted-foreground">La suma debe coincidir con el total de la orden.</p>
+                <h2 class="card-title">Productos <span class="text-muted-foreground">({{ orderItems.length }})</span></h2>
+                <p *ngIf="canEditOrder && !canEditItems" class="text-xs text-muted-foreground">Para cambiar productos, elimina antes las subcuentas.</p>
               </div>
-              <button type="button" class="rounded-md border border-border bg-card px-2 py-1 text-[11px] font-semibold text-foreground/80" (click)="addOrderPayment()">
-                + Pago
-              </button>
-            </div>
-
-            <div class="space-y-1.5">
-              <div *ngFor="let payment of orderPayments; let i = index" class="grid grid-cols-[minmax(0,1fr)_92px_auto] items-end gap-2 rounded-lg border border-border bg-muted/40 p-2">
-                <label class="min-w-0">
-                  <span class="mb-1 block text-[9px] font-semibold uppercase text-muted-foreground/70">Método</span>
-                  <select class="h-8 w-full rounded-md border border-border bg-card px-2 text-[11px]" [(ngModel)]="payment.payment_method" [ngModelOptions]="{standalone: true}" (ngModelChange)="onOrderPaymentMethodChange(payment, i)">
-                    <option value="">Seleccionar</option>
-                    <option *ngFor="let method of paymentMethods" [value]="method.name" [disabled]="isOrderPaymentMethodUsed(method.name, i)">{{ method.description || method.nombre || method.name }}</option>
-                  </select>
-                </label>
-                <label>
-                  <span class="mb-1 block text-[9px] font-semibold uppercase text-muted-foreground/70">Monto</span>
-                  <input type="text" inputmode="decimal" appDecimalInput min="0" step="0.01" class="h-8 w-full rounded-md border border-border bg-card px-2 text-right text-[11px]" [(ngModel)]="payment.amount" [ngModelOptions]="{standalone: true}" />
-                </label>
-                <button type="button" class="h-8 rounded-md border border-red-200 bg-card px-2 text-[11px] font-semibold text-red-600" (click)="removeOrderPayment(i)">Quitar</button>
-              </div>
-              <p *ngIf="!orderPayments.length" class="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">Agrega al menos una forma de pago.</p>
-            </div>
-          </section>
-
-          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <div class="mb-2 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h3 class="text-xs font-semibold text-primary">Ítems de la orden</h3>
-                <p class="text-[10px] text-muted-foreground">Edita rápido cantidades y precios como en caja.</p>
-              </div>
-
-              <div *ngIf="canEditOrder" class="min-w-0 lg:w-[360px]">
+              <div *ngIf="canEditItems" class="w-full sm:w-80">
                 <ng-select
-                  id="order-product-select"
                   class="ng-select-tailwind"
                   [items]="products"
                   bindLabel="nombre"
                   bindValue="name"
-                  placeholder="Buscar y agregar producto"
+                  placeholder="+ Agregar producto"
                   [searchable]="true"
                   (change)="addProductToOrder($event)">
                   <ng-template ng-option-tmp let-item="item">
-                    <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
                       <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
                         <img *ngIf="item.image_url" [src]="item.image_url" [alt]="item.nombre" class="h-full w-full object-cover" />
-                        <span *ngIf="!item.image_url" class="text-[9px] text-muted-foreground/70">—</span>
                       </div>
-                      <div class="min-w-0">
+                      <div class="min-w-0 flex-1">
                         <div class="truncate font-semibold text-foreground">{{ item.nombre }}</div>
-                        <div class="text-[10px] text-muted-foreground">
-                          {{ item.codigo || 'Sin código' }}
-                          <span *ngIf="hasInventory(item)"> · Stock {{ getInventoryLabel(item) }}</span>
+                        <div class="text-[11px] text-muted-foreground">
+                          ${{ item.precio | number:'1.2-2' }}<span *ngIf="hasInventory(item)"> · Stock {{ getInventoryLabel(item) }}</span>
                         </div>
                       </div>
-                      <div class="flex gap-1">
-                        <span *ngIf="isOutOfStock(item)" class="badge badge-red">Agotado</span>
-                        <span *ngIf="!isOutOfStock(item) && isLowStock(item)" class="badge badge-yellow">Bajo stock</span>
-                      </div>
+                      <span *ngIf="isOutOfStock(item)" class="badge badge-red">Agotado</span>
                     </div>
                   </ng-template>
                 </ng-select>
               </div>
             </div>
 
-            <div *ngIf="orderItems.length > 0; else emptyItems" class="space-y-1.5">
-              <div
-                *ngFor="let item of orderItems; let i = index; trackBy: trackByIndex"
-                class="rounded-lg border border-border bg-muted/40 px-2.5 py-2 transition"
-                [ngClass]="{'opacity-70': !canEditOrder}">
-                <div class="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-                  <div class="min-w-0">
-                    <div class="flex flex-wrap items-center gap-1.5">
-                      <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-md bg-card">
-                        <img *ngIf="productImage(item.productId)" [src]="productImage(item.productId)" [alt]="item.productName || item.description" class="h-full w-full object-cover" />
-                        <span *ngIf="!productImage(item.productId)" class="text-[9px] text-muted-foreground/70">—</span>
-                      </div>
-                      <p class="truncate text-xs font-semibold leading-4 text-foreground">
-                        {{ item.productName || item.description }}
-                      </p>
-                      <span class="rounded bg-card px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
-                        IVA {{ item.tax_value ?? (item.tax === 'IVA-15' ? 15 : 0) }}%
-                      </span>
-                    </div>
-                    <p class="truncate text-[10px] text-muted-foreground" *ngIf="item.productId">{{ item.productId }}</p>
-                  </div>
-
-                  <div class="grid grid-cols-[auto_auto_auto] items-end gap-2 sm:grid-cols-[auto_auto_auto_auto]">
-                    <div>
-                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-muted-foreground/70">Cant</p>
-                      <div *ngIf="!isReadOnlyView; else readOnlyQty" class="inline-flex overflow-hidden rounded-md border border-border bg-card">
-                        <button type="button" class="h-7 w-7 text-muted-foreground hover:bg-muted/40" (click)="decrementOrderQty(i)" [disabled]="!canEditOrder">-</button>
-                        <input
-                          type="number"
-                          class="no-spinner h-7 w-12 border-x border-border text-center text-[11px] bg-card text-foreground"
-                          min="1"
-                          step="1"
-                          [ngModelOptions]="{standalone: true}"
-                          [(ngModel)]="item.quantity"
-                          (ngModelChange)="recalculateOrder()"
-                          [readOnly]="!canEditOrder"
-                          [attr.tabindex]="!canEditOrder ? -1 : 0">
-                        <button type="button" class="h-7 w-7 text-muted-foreground hover:bg-muted/40" (click)="incrementOrderQty(i)" [disabled]="!canEditOrder">+</button>
-                      </div>
-                      <ng-template #readOnlyQty>
-                        <span class="inline-flex h-7 min-w-12 items-center justify-center rounded-md border border-border bg-card px-2 text-[11px] font-semibold">{{ item.quantity }}</span>
-                      </ng-template>
-                    </div>
-
-                    <div>
-                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-muted-foreground/70">Precio</p>
-                      <input
-                        *ngIf="!isReadOnlyView; else readOnlyPrice"
-                        type="text"
-                        inputmode="decimal"
-                        appDecimalInput
-                        class="no-spinner h-7 w-20 rounded-md border-border bg-card text-center text-[11px]"
-                        min="0"
-                        step="0.01"
-                        [ngModelOptions]="{standalone: true}"
-                        [(ngModel)]="item.price"
-                        (ngModelChange)="recalculateOrder()"
-                        [readOnly]="!canEditOrder"
-                        [attr.tabindex]="!canEditOrder ? -1 : 0">
-                      <ng-template #readOnlyPrice>
-                        <span class="inline-flex h-7 min-w-20 items-center justify-center rounded-md border border-border bg-card px-2 text-[11px] font-semibold">
-                          ${{ item.price | number:'1.2-2' }}
-                        </span>
-                      </ng-template>
-                    </div>
-
-                    <div class="text-right">
-                      <p class="mb-0.5 text-[9px] font-semibold uppercase text-muted-foreground/70">Total</p>
-                      <p class="h-7 rounded-md bg-card px-2 py-1 text-xs font-bold text-foreground">
-                        ${{ ((item.total ?? 0) + (item.iva ?? 0)) | number:'1.2-2' }}
-                      </p>
-                    </div>
-
-                    <button
-                      *ngIf="!isReadOnlyView"
-                      type="button"
-                      (click)="removeProductFromOrder(i)"
-                      class="h-7 w-7 self-end rounded-md border border-red-200 bg-card text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      title="Eliminar"
-                      aria-label="Eliminar"
-                      [disabled]="!canEditOrder">
-                      <fa-icon [icon]="['fas', 'trash']" class="text-[10px]"></fa-icon>
-                    </button>
-                  </div>
+            <ul *ngIf="orderItems.length; else emptyItems" class="divide-y divide-border">
+              <li *ngFor="let item of orderItems; let i = index; trackBy: trackByIndex" class="flex flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap">
+                <div class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
+                  <img *ngIf="productImage(item.productId)" [src]="productImage(item.productId)" [alt]="item.productName || item.description" class="h-full w-full object-cover" />
+                  <span *ngIf="!productImage(item.productId)" class="text-xs font-bold text-muted-foreground">{{ (item.productName || '?').charAt(0) }}</span>
                 </div>
-              </div>
-            </div>
+
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm font-bold text-foreground">{{ item.productName || item.description }}</p>
+                  <p class="text-xs text-muted-foreground">
+                    <ng-container *ngIf="!(canEditPrice && canEditItems)">${{ item.price | number:'1.2-2' }} c/u · </ng-container>IVA {{ item.tax_value ?? 0 }}%
+                    <span *ngIf="item.discount" class="font-semibold text-emerald-600"> · desc. −${{ item.discount | number:'1.2-2' }}</span>
+                  </p>
+                  <p *ngIf="item.notes" class="mt-1 inline-flex rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-bold text-amber-700 dark:text-amber-300">📝 {{ item.notes }}</p>
+                </div>
+
+                <!-- Cantidad -->
+                <div *ngIf="canEditItems; else fixedQty" class="stepper" role="group" [attr.aria-label]="'Cantidad de ' + item.productName">
+                  <button type="button" (click)="decrementOrderQty(i)" [disabled]="item.quantity <= 1" aria-label="Restar uno">−</button>
+                  <input type="number" min="1" step="1" class="no-spinner" [(ngModel)]="item.quantity" [ngModelOptions]="{standalone: true}" (ngModelChange)="recalculateOrder()" aria-label="Cantidad" />
+                  <button type="button" (click)="incrementOrderQty(i)" aria-label="Sumar uno">+</button>
+                </div>
+                <ng-template #fixedQty><span class="text-sm font-bold text-foreground">{{ item.quantity }} ×</span></ng-template>
+
+                <!-- Precio (solo Gerente/Administrador) -->
+                <label *ngIf="canEditPrice && canEditItems" class="flex flex-col">
+                  <span class="text-[10px] font-bold uppercase text-muted-foreground">Precio</span>
+                  <input type="text" inputmode="decimal" appDecimalInput min="0" step="0.01"
+                    class="h-9 w-24 rounded-lg border border-border bg-card px-2 text-right text-sm text-foreground"
+                    [(ngModel)]="item.price" [ngModelOptions]="{standalone: true}" (ngModelChange)="recalculateOrder()" />
+                </label>
+
+                <p class="w-24 text-right text-base font-black tabular-nums text-foreground">${{ ((item.total ?? 0) + (item.iva ?? 0)) | number:'1.2-2' }}</p>
+
+                <button *ngIf="canEditItems" type="button" class="icon-btn !h-9 !w-9 text-destructive hover:!bg-destructive/10" (click)="removeProductFromOrder(i)" [attr.aria-label]="'Quitar ' + item.productName" title="Quitar">
+                  <fa-icon [icon]="['fas', 'trash']" class="text-xs"></fa-icon>
+                </button>
+              </li>
+            </ul>
 
             <ng-template #emptyItems>
-              <div class="rounded-lg border border-dashed border-border bg-muted/40 p-6 text-center text-[11px] text-muted-foreground">
-                No hay ítems en la orden.
-              </div>
+              <p class="px-4 py-10 text-center text-sm text-muted-foreground">La orden no tiene productos.</p>
             </ng-template>
+
+            <dl class="totals">
+              <div *ngIf="orderDiscount > 0"><dt>Descuentos aplicados</dt><dd class="!text-emerald-600">−${{ orderDiscount | number:'1.2-2' }}</dd></div>
+              <div><dt>Subtotal sin IVA</dt><dd>${{ orderSubtotal | number:'1.2-2' }}</dd></div>
+              <div><dt>IVA</dt><dd>${{ orderIva | number:'1.2-2' }}</dd></div>
+              <div class="is-total"><dt>Total</dt><dd>${{ orderTotal | number:'1.2-2' }}</dd></div>
+            </dl>
           </section>
 
-          <section *ngIf="supportsSplits" class="rounded-xl border border-border bg-card p-2.5 shadow-sm">
+          <!-- ============ 4. Subcuentas ============ -->
+          <section *ngIf="supportsSplits && (hasSplits || splitsLoading)" class="card">
             <app-order-splits-table
               [splits]="orderSplits"
               [orderGrandTotal]="orderTotal"
               [loading]="splitsLoading"
               [actionLoadingSplitName]="splitActionLoadingName"
               [deleteLoadingSplitName]="splitDeleteLoadingName"
-              [canInvoice]="canInvoiceSplit"
+              [canInvoice]="canInvoiceSplit && !emissionBlockMessage"
               [canDelete]="canDeleteSplit"
+              [canChangeCustomer]="canInvoiceSplit || canCreateSplit"
+              [customerChangingSplitName]="splitCustomerSavingName"
+              (changeCustomer)="changeSplitCustomer($event)"
               (invoiceSplit)="invoiceSplit($event)"
               (deleteSplit)="deleteSplit($event)"
               (viewInvoice)="goToInvoice($event)">
@@ -307,221 +190,138 @@
         </main>
 
         <aside class="space-y-3 xl:sticky xl:top-3 xl:self-start">
-          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <p class="text-[10px] font-semibold uppercase tracking-wide text-primary">Resumen</p>
-                <p class="mt-1 text-2xl font-bold leading-none text-foreground">${{ orderTotal | number:'1.2-2' }}</p>
-              </div>
-              <span *ngIf="supportsSplits" class="rounded-md border border-border bg-muted/40 px-2 py-1 text-[10px] font-semibold text-muted-foreground">
-                {{ orderSplits.length }} subcuentas
-              </span>
-            </div>
 
-            <div class="mt-3 space-y-1 rounded-lg border border-border bg-muted/40 p-2 text-[11px]">
-              <div class="flex items-center justify-between">
-                <span class="text-muted-foreground">Subtotal</span>
-                <span class="font-semibold text-foreground">${{ orderSubtotal | number:'1.2-2' }}</span>
+          <!-- ============ 3. Cliente ============ -->
+          <section class="card p-4">
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <p class="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Cliente</p>
+                <p class="truncate text-base font-bold text-foreground">{{ customerName }}</p>
+                <p *ngIf="customerIdentification" class="text-sm text-muted-foreground">{{ customerIdentification }}</p>
+                <p *ngIf="customerEmail || customerPhone" class="truncate text-xs text-muted-foreground">
+                  {{ customerEmail }}<span *ngIf="customerEmail && customerPhone"> · </span>{{ customerPhone }}
+                </p>
               </div>
-              <div class="flex items-center justify-between">
-                <span class="text-muted-foreground">IVA</span>
-                <span class="font-semibold text-foreground">${{ orderIva | number:'1.2-2' }}</span>
-              </div>
-              <div *ngIf="supportsSplits" class="flex items-center justify-between border-t border-border pt-1.5">
-                <span class="text-muted-foreground">Pendiente por dividir</span>
-                <span class="font-semibold" [ngClass]="pendingOrderToSplit > 0 ? 'text-amber-700' : 'text-emerald-700'">
-                  ${{ pendingOrderToSplit | number:'1.2-2' }}
-                </span>
-              </div>
+              <button *ngIf="canEditOrder" type="button" class="link-btn" (click)="showCustomerPicker = !showCustomerPicker">
+                {{ showCustomerPicker ? 'Cerrar' : 'Cambiar' }}
+              </button>
             </div>
-
-            <p *ngIf="supportsSplits" class="mt-2 rounded-lg px-2 py-1.5 text-[11px]" [ngClass]="pendingOrderToSplit > 0 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'">
-              {{ pendingOrderToSplit > 0 ? 'Hay consumo disponible para nuevas subcuentas.' : 'La orden ya fue distribuida completamente.' }}
-            </p>
+            <ng-select
+              *ngIf="canEditOrder && showCustomerPicker"
+              class="ng-select-tailwind mt-3"
+              [items]="customers"
+              bindLabel="nombre"
+              bindValue="name"
+              placeholder="Buscar cliente por nombre o identificación"
+              [searchable]="true"
+              [(ngModel)]="orderCustomerId"
+              [ngModelOptions]="{standalone: true}">
+              <ng-template ng-option-tmp let-item="item">
+                <div class="flex min-w-0 flex-col">
+                  <span class="truncate font-semibold text-foreground">{{ item.nombre }}</span>
+                  <span class="text-[11px] text-muted-foreground">{{ item.num_identificacion || item.identification_number || 'Sin identificación' }}</span>
+                </div>
+              </ng-template>
+            </ng-select>
+            <p *ngIf="orderCustomerId !== '' && hasUnsavedInvoiceChanges && showCustomerPicker" class="mt-2 text-xs text-muted-foreground">El cambio se aplica al guardar.</p>
           </section>
 
-          <section *ngIf="currentFiscalLocation || posTerminalBlockMessage" class="rounded-xl border px-3 py-2 text-[11px]" [ngClass]="posTerminalBlockMessage ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-border bg-card text-muted-foreground'">
-            <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-              <span class="font-bold uppercase tracking-wide text-primary">Ubicación de emisión</span>
-              <span *ngIf="currentFiscalLocation?.establishment"><b>Establecimiento:</b> {{ currentFiscalLocation.establishment.establishment_code || '—' }}</span>
-              <span *ngIf="currentFiscalLocation?.emissionPoint"><b>Punto:</b> {{ currentFiscalLocation.emissionPoint.emission_point_code || '—' }}</span>
-              <span *ngIf="currentFiscalLocation?.environment"><b>Ambiente:</b> {{ currentFiscalLocation.environment }}</span>
-            </div>
-            <p *ngIf="posTerminalBlockMessage" class="mt-1 font-semibold">{{ posTerminalBlockMessage }}</p>
-          </section>
+          <!-- ============ 5. Cobrar ============ -->
+          <section *ngIf="!isCancelled && !isLocked && (canShowCreateInvoice || supportsSplits)" class="card p-4">
+            <p class="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Cobrar</p>
 
-          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <h3 class="text-xs font-semibold text-primary">Acciones</h3>
+            <!-- Camino A: una sola factura -->
+            <ng-container *ngIf="canInvoiceWholeOrder">
+              <h2 class="mt-1 text-base font-bold text-foreground">Facturar toda la orden</h2>
 
-            <p *ngIf="canEditOrder && hasUnsavedInvoiceChanges" class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
-              Hay cambios pendientes. Guárdalos antes de facturar.
-            </p>
+              <div class="mt-3 space-y-2">
+                <div *ngFor="let payment of orderPayments; let i = index" class="flex flex-wrap items-end gap-2">
+                  <label class="min-w-0 flex-1">
+                    <span class="field-label">Forma de pago</span>
+                    <select class="field" [(ngModel)]="payment.payment_method" [ngModelOptions]="{standalone: true}" (ngModelChange)="onOrderPaymentMethodChange(payment, i)" [disabled]="!canEditOrder">
+                      <option value="">Seleccionar</option>
+                      <option *ngFor="let method of paymentMethods" [value]="method.name" [disabled]="isOrderPaymentMethodUsed(method.name, i)">{{ method.description || method.nombre || method.name }}</option>
+                    </select>
+                  </label>
+                  <label class="w-28">
+                    <span class="field-label">Monto</span>
+                    <input type="text" inputmode="decimal" appDecimalInput min="0" step="0.01" class="field text-right" [(ngModel)]="payment.amount" [ngModelOptions]="{standalone: true}" (focus)="!payment.amount && fillPaymentWithTotal(payment)" [disabled]="!canEditOrder" />
+                  </label>
+                  <button *ngIf="canEditOrder" type="button" class="icon-btn !h-10 !w-10 shrink-0 text-destructive" (click)="removeOrderPayment(i)" aria-label="Quitar pago">✕</button>
+                  <input *ngIf="isTransferMethod(payment.payment_method)" type="text" class="field basis-full" [(ngModel)]="payment.reference"
+                    [ngModelOptions]="{standalone: true}" [maxlength]="paymentReferenceMaxLength" [disabled]="!canEditOrder"
+                    placeholder="N.º de transferencia (opcional)" [attr.aria-label]="'Número de transferencia del pago ' + (i + 1)" autocomplete="off" />
+                </div>
 
-            <div class="mt-3 grid gap-2">
-              <app-button
-                *ngIf="!isReadOnlyView && canEditOrder"
-                type="button"
-                tone="primary"
-                impact="bold"
-                size="small"
-                shape="rounded"
-                (buttonClick)="saveOrderChanges()"
-                full
-                [disabled]="!canEditOrder || savingOrderChanges">
-                {{ savingOrderChanges ? 'Guardando...' : 'Guardar cambios' }}
-              </app-button>
 
-              <app-button
-                *ngIf="canStartPreparation"
-                type="button"
-                tone="info"
-                impact="bold"
-                size="small"
-                shape="rounded"
-                (buttonClick)="setOrderStatus('Preparacion')"
-                full
-                [disabled]="closingOrder">
-                Iniciar preparación
-              </app-button>
+                <button *ngIf="canEditOrder" type="button" class="link-btn" (click)="addOrderPayment()">+ Agregar forma de pago</button>
 
-              <app-button
-                *ngIf="canMarkReady"
-                type="button"
-                tone="success"
-                impact="bold"
-                size="small"
-                shape="rounded"
-                (buttonClick)="setOrderStatus('Lista')"
-                full
-                [disabled]="closingOrder">
-                Marcar lista
-              </app-button>
+                <p *ngIf="orderPayments.length" class="notice" [ngClass]="paymentsDifference === 0 ? 'notice-ok' : 'notice-warn'">
+                  {{ paymentsDifferenceLabel }}
+                </p>
+                <p *ngIf="!orderPayments.length" class="notice notice-warn">Agrega al menos una forma de pago.</p>
+              </div>
 
-              <app-button
-                *ngIf="canCloseOrder"
-                type="button"
-                tone="warning"
-                impact="light"
-                size="small"
-                shape="rounded"
-                (buttonClick)="closeOrder()"
-                full
-                [disabled]="closingOrder">
-                Cerrar orden
-              </app-button>
+              <button type="button" class="btn-main mt-3 w-full bg-emerald-600 hover:bg-emerald-700"
+                (click)="emitirFacturaOrden()" [disabled]="!canCreateInvoice || orderInvoiceEmitting || hasUnsavedInvoiceChanges">
+                <fa-icon [icon]="['fas','file-invoice']" class="mr-1.5"></fa-icon>
+                {{ orderInvoiceEmitting ? 'Facturando…' : 'Facturar $' + (orderTotal | number:'1.2-2') }}
+              </button>
+              <p *ngIf="hasUnsavedInvoiceChanges" class="mt-2 text-xs text-amber-700 dark:text-amber-300">Guarda los cambios antes de facturar.</p>
+            </ng-container>
 
-              <app-button
-                *ngIf="canCancelOrder"
-                type="button"
-                tone="danger"
-                impact="light"
-                size="small"
-                shape="rounded"
-                (buttonClick)="setOrderStatus('Cancelada')"
-                full
-                [disabled]="closingOrder">
-                Cancelar orden
-              </app-button>
+            <!-- Camino B: dividir la cuenta -->
+            <div *ngIf="supportsSplits && canCreateSplit" [class.mt-4]="canInvoiceWholeOrder" [class.border-t]="canInvoiceWholeOrder" [class.border-border]="canInvoiceWholeOrder" [class.pt-4]="canInvoiceWholeOrder">
+              <h2 class="text-base font-bold text-foreground">{{ hasSplits ? 'Cuenta dividida' : '¿Pagan por separado?' }}</h2>
+              <p *ngIf="!hasSplits" class="mt-0.5 text-xs text-muted-foreground">Divide la cuenta y factura cada parte por separado.</p>
 
-              <app-button
-                *ngIf="canShowCreateInvoice"
-                type="button"
-                tone="success"
-                impact="bold"
-                size="small"
-                shape="rounded"
-                shadow="small"
-                (buttonClick)="emitirFacturaOrden()"
-                full
-                [disabled]="!canCreateInvoice || orderInvoiceEmitting">
-                <fa-icon [icon]="['fas','file-invoice']" class="mr-1"></fa-icon>
-                {{ orderInvoiceEmitting ? 'Facturando...' : 'Facturar orden' }}
-              </app-button>
+              <ng-container *ngIf="hasSplits">
+                <div class="mt-2 h-2 overflow-hidden rounded-full bg-muted" role="progressbar" [attr.aria-valuenow]="splitProgressPct" aria-valuemin="0" aria-valuemax="100">
+                  <div class="h-full rounded-full bg-emerald-500 transition-all" [style.width.%]="splitProgressPct"></div>
+                </div>
+                <p class="mt-1.5 flex justify-between text-xs text-muted-foreground">
+                  <span>{{ orderSplits.length }} subcuenta(s) · {{ invoicedSplitsCount }} facturada(s)</span>
+                  <span class="font-bold" [ngClass]="pendingOrderToSplit > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-600'">
+                    {{ pendingOrderToSplit > 0 ? 'Falta $' + (pendingOrderToSplit | number:'1.2-2') : 'Todo dividido' }}
+                  </span>
+                </p>
+              </ng-container>
 
-              <app-button
-                *ngIf="supportsSplits && canCreateSplit && !isCancelled && !isLocked"
-                type="button"
-                tone="success"
-                impact="bold"
-                size="small"
-                shape="rounded"
-                (buttonClick)="openSplitDialog()"
-                full
-                [disabled]="splitSubmitting || !canOpenSplit">
-                Dividir cuenta
-              </app-button>
+              <button type="button" class="btn-outline mt-3 w-full" (click)="openSplitDialog()" [disabled]="splitSubmitting || !canOpenSplit">
+                {{ hasSplits ? '+ Nueva subcuenta' : 'Dividir cuenta' }}
+              </button>
             </div>
 
-            <p *ngIf="createInvoiceBlockedReason" class="mt-2 rounded-lg border border-border bg-muted/40 px-2 py-1.5 text-[11px] text-muted-foreground">
-              {{ createInvoiceBlockedReason }}
+            <p *ngIf="currentFiscalLocation && !emissionBlockMessage" class="mt-3 text-[11px] text-muted-foreground">
+              Emite en {{ currentFiscalLocation.establishment?.establishment_code || '—' }}-{{ currentFiscalLocation.emissionPoint?.emission_point_code || '—' }}
+              · {{ currentFiscalLocation.environment || '' }}
             </p>
-
-            <p *ngIf="supportsSplits && !isLocked && !isCancelled && !canOpenSplit" class="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-[11px] text-emerald-700">
-              La cuenta ya está totalmente dividida o pagada.
+            <p *ngIf="emissionBlockMessage && (canShowCreateInvoice || canInvoiceSplit)" class="notice notice-warn mt-3">
+              No se puede facturar: {{ emissionBlockMessage }}
             </p>
-          </section>
-
-          <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <p class="text-[10px] font-semibold uppercase tracking-wide text-primary">Impresión</p>
-            <div class="mt-2 grid grid-cols-1 gap-2">
-              <app-button type="button" tone="warning" impact="bold" size="small" shape="rounded" (buttonClick)="getComandaPdf()" full>
-                <fa-icon [icon]="['fas','print']" class="mr-1"></fa-icon>
-                Comanda
-              </app-button>
-
-              <app-button type="button" tone="light" impact="bold" size="small" shape="rounded" (buttonClick)="getRecibo()" full>
-                <fa-icon [icon]="['fas','print']" class="mr-1"></fa-icon>
-                Recibo
-              </app-button>
-
-              <app-button *ngIf="order?.sri?.invoice" type="button" tone="light" impact="bold" size="small" shape="rounded" (buttonClick)="getFacturaPdf()" full>
-                <fa-icon [icon]="['fas','file-invoice']" class="mr-1"></fa-icon>
-                Factura
-              </app-button>
-            </div>
           </section>
         </aside>
       </div>
+    </div>
 
-      <div class="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card p-2 shadow-sm md:hidden" *ngIf="orderItems.length > 0">
-        <div class="flex items-center justify-between gap-2">
-          <div>
-            <p class="text-[10px] text-muted-foreground">Total</p>
-            <p class="text-base font-bold text-foreground">${{ orderTotal | number:'1.2-2' }}</p>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <app-button
-              *ngIf="supportsSplits && canCreateSplit && !isCancelled && !isLocked"
-              type="button"
-              tone="light"
-              size="small"
-              shape="rounded"
-              (buttonClick)="openSplitDialog()"
-              [disabled]="splitSubmitting || !canOpenSplit">
-              Split
-            </app-button>
-            <app-button type="button" tone="light" size="small" shape="rounded" (buttonClick)="getComandaPdf()">Comanda</app-button>
-            <app-button *ngIf="canCloseOrder" type="button" tone="warning" impact="light" size="small" shape="rounded" (buttonClick)="closeOrder()" [disabled]="closingOrder">Cerrar</app-button>
-            <app-button *ngIf="!isReadOnlyView && canEditOrder" type="button" tone="primary" size="small" shape="rounded" (buttonClick)="saveOrderChanges()" [disabled]="!canEditOrder || savingOrderChanges">{{ savingOrderChanges ? 'Guardando...' : 'Guardar' }}</app-button>
-          </div>
-        </div>
+    <!-- ============ Cambios sin guardar ============ -->
+    <div *ngIf="canEditOrder && hasUnsavedInvoiceChanges" class="unsaved-bar" role="status">
+      <p class="text-sm font-semibold text-foreground">Tienes cambios sin guardar</p>
+      <div class="flex gap-2">
+        <button type="button" class="btn-outline" (click)="discardChanges()" [disabled]="savingOrderChanges">Descartar</button>
+        <button type="button" class="btn-main bg-primary hover:bg-primary/90" (click)="saveOrderChanges()" [disabled]="savingOrderChanges">
+          {{ savingOrderChanges ? 'Guardando…' : 'Guardar cambios' }}
+        </button>
       </div>
     </div>
   </ng-container>
 </ng-template>
 
 <ng-template #errorState>
-  <section class="rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm">
-    <p class="text-xs font-semibold text-red-700">No se pudo cargar la orden</p>
-    <p class="mt-1 text-[11px] text-red-600">{{ error }}</p>
-    <div class="mt-3">
-      <button
-        type="button"
-        class="rounded-lg border border-red-300 bg-card px-3 py-1.5 text-xs font-semibold text-red-700"
-        (click)="goBack()">
-        Volver
-      </button>
-    </div>
+  <section class="card p-6 text-center">
+    <p class="text-base font-bold text-destructive">No se pudo cargar la orden</p>
+    <p class="mt-1 text-sm text-muted-foreground">{{ error }}</p>
+    <button type="button" class="btn-outline mt-4" (click)="goBack()">Volver</button>
   </section>
 </ng-template>
 
@@ -530,6 +330,8 @@
   [open]="showSplitDialog"
   [orderName]="order?.name || ''"
   [customerDefault]="order?.customer_data?.name || order?.customer?.name || order?.customer?.fullName || order?.customer || ''"
+  [customerDefaultName]="customerName"
+  [customerDefaultIdentification]="customerIdentification"
   [orderItemsSource]="splitItemsSource"
   [remainingOrderTotal]="pendingOrderToSplit"
   [nextPaymentIndex]="orderSplits.length + 1"
@@ -538,17 +340,3 @@
   (close)="closeSplitDialog()"
   (submitSplit)="createSplit($event)">
 </app-split-order-dialog>
-
-<div *ngIf="showCustomerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-  <div class="relative w-full max-w-md rounded-lg bg-card p-4 text-xs shadow-xl">
-    <button class="absolute right-4 top-3 text-xl font-light text-muted-foreground/70 hover:text-foreground/80" (click)="closeCustomerModal()" aria-label="Cerrar">x</button>
-    <h3 class="mb-4 text-sm font-semibold text-foreground">Cambiar cliente</h3>
-
-    <form [formGroup]="customerForm" (ngSubmit)="saveCustomerForOrder()" class="space-y-3">
-      <div class="flex justify-end gap-2 pt-2">
-        <app-button type="button" impact="bold" size="small" (buttonClick)="closeCustomerModal()" tone="light" shape="rounded">Cancelar</app-button>
-        <app-button type="submit" impact="bold" size="small" tone="success" shape="rounded" [disabled]="!canEditOrder">Guardar</app-button>
-      </div>
-    </form>
-  </div>
-</div>

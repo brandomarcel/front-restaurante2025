@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { toast } from 'ngx-sonner';
 import { PosSaleService } from 'src/app/services/pos-sale.service';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 @Component({
   selector: 'app-pos-sale-note-detail-page',
@@ -20,7 +21,8 @@ export class PosSaleNoteDetailPageComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private posSaleService: PosSaleService
+    private posSaleService: PosSaleService,
+    private capabilities: CompanyCapabilitiesService
   ) {
     this.name = String(this.route.snapshot.paramMap.get('id') || '').trim();
   }
@@ -46,8 +48,17 @@ export class PosSaleNoteDetailPageComponent implements OnInit {
     this.runAction('cobrar', () => this.posSaleService.collect(this.name), 'Nota de venta cobrada.');
   }
 
+  /** Mismo control de emisión que el POS (permiso, plan, firma, configuración y cupo). */
+  get invoiceBlockMessage(): string | null {
+    return this.capabilities.getEmissionBlockMessage({ feature: 'billing' });
+  }
+
   invoice(): void {
     if (!this.note || this.note.status !== 'Cobrada' || this.linkedInvoice(this.note)) return;
+    if (this.invoiceBlockMessage) {
+      toast.error(this.invoiceBlockMessage);
+      return;
+    }
     this.runAction('facturar', () => this.posSaleService.invoice(this.name), 'Nota de venta facturada.', true);
   }
 

@@ -827,7 +827,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
 
   // ------------------ Factura ------------------
   finalizeInvoice(): void {
-    const planBlockMessage = this.capabilities.getPlanBlockMessage('direct_invoice');
+    const planBlockMessage = this.invoicePlanBlockMessage;
     if (planBlockMessage) {
       toast.error(planBlockMessage);
       return;
@@ -1088,16 +1088,15 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   }
 
   get canEmitInvoice(): boolean {
-    return this.capabilities.hasPermission('billing.create')
-      && this.capabilities.isEnabled('direct_invoice')
-      && !this.capabilities.getPlanBlockMessage('direct_invoice')
+    return !this.invoicePlanBlockMessage
       && !this.isEmitting
       && !this.isConfirmingEmission
       && !this.emissionInvoiceName;
   }
 
+  /** Mismo control de emisión que el POS (permiso, plan, firma, configuración y cupo). */
   get invoicePlanBlockMessage(): string | null {
-    return this.capabilities.getPlanBlockMessage('direct_invoice');
+    return this.capabilities.getEmissionBlockMessage({ feature: 'direct_invoice' });
   }
 
   get canUseAdditionalFields(): boolean {

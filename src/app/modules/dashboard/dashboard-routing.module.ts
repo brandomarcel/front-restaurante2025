@@ -58,7 +58,7 @@ const routes: Routes = [
       { path: 'invoicing', component: InvoicingComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', requiredFeatures: ['billing', 'direct_invoice'], permissionKey: 'billing.create' } },
 
       { path: 'invoices', component: InvoicesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', featureKeys: ['direct_invoice', 'generic_pos', 'api'], readOnlyFeature: true, permissionKey: 'billing.read' } },
-      { path: 'invoices/:id', component: InvoiceDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', featureKeys: ['direct_invoice', 'generic_pos', 'api'], readOnlyFeature: true, permissionKey: 'billing.read' } },
+      { path: 'invoices/:id', component: InvoiceDetailPageComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'direct_invoice', featureKeys: ['direct_invoice', 'generic_pos', 'api', 'billing'], readOnlyFeature: true, permissionKey: 'billing.read' } },
       { path: 'receivables', component: ReceivablesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'billing', featureKeys: ['billing', 'api'], readOnlyFeature: true, permissionKey: 'billing.read' } },
 
       { path: 'credit-notes', component: CreditNotesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'credit_note', featureKeys: ['credit_note', 'api'], readOnlyFeature: true, permissionKey: 'billing.read' } },

@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FaIconLibrary } from '@fortawesome/angular-fontawesome';
-import { faMinus, faPlus, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faMinus, faPlus, faTimes, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { of } from 'rxjs';
 import { CartService } from '../services/cart.service';
 import { PosCajaComponent } from './pos-caja.component';
@@ -98,7 +98,7 @@ describe('POS — componentes de interfaz', () => {
 
   it('el panel de venta es compacto: cantidades sí, descuentos no', () => {
     TestBed.configureTestingModule({ imports: [PosCartLinesComponent] });
-    TestBed.inject(FaIconLibrary).addIcons(faMinus, faPlus, faTimes);
+    TestBed.inject(FaIconLibrary).addIcons(faMinus, faPlus, faTimes, faTrash);
     const cart = TestBed.inject(CartService);
     cart.clear();
     cart.addProduct({ name: 'P-1', nombre: 'Camisa', precio: 10, tax_value: 0 });
@@ -111,13 +111,16 @@ describe('POS — componentes de interfaz', () => {
     // Un descuento ya aplicado en el cobro se ve como dato, sin campos.
     cart.setDiscountAmount(cart.cart[0], 2);
     fixture.detectChanges();
-    expect(element.textContent).toContain('Desc. −$2.00');
+    expect(element.textContent).toContain('−$2.00');
+    expect(element.textContent).toContain('$8.00');
+    expect(cart.cart[0].discount_total).toBe(2);
+    expect(cart.cart[0].total).toBe(8);
     cart.clear();
   });
 
   it('en el cobro cada línea tiene sus casillas de descuento directas y la cantidad es de solo lectura', () => {
     TestBed.configureTestingModule({ imports: [PosCartLinesComponent] });
-    TestBed.inject(FaIconLibrary).addIcons(faMinus, faPlus, faTimes);
+    TestBed.inject(FaIconLibrary).addIcons(faMinus, faPlus, faTimes, faTrash);
     const cart = TestBed.inject(CartService);
     cart.clear();
     cart.addProduct({ name: 'P-1', nombre: 'Camisa', precio: 10, tax_value: 0 });

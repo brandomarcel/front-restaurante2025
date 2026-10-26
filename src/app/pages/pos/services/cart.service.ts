@@ -2,44 +2,86 @@ import { Injectable } from '@angular/core';
 import { canSellProduct, canUseInventoryQuantity } from 'src/app/shared/utils/inventory.utils';
 import { clampDiscountAmount, clampDiscountPercentage, computeLineTotals } from 'src/app/shared/utils/line-discount.utils';
 
+/** Largo máximo de la nota de cocina de una línea ("sin azúcar", "sin cebolla"...). */
+export const LINE_NOTE_MAX_LENGTH = 140;
+
 @Injectable({ providedIn: 'root' })
 export class CartService {
 
     cart: any[] = [];
+    /** Identificador estable por línea: un mismo producto puede ocupar varias líneas con notas distintas. */
+    private lineSeq = 0;
+    /** Última línea agregada o incrementada: la UI la resalta y la deja a la vista. */
+    lastTouchedLineId: number | null = null;
 
+    /**
+     * Suma una unidad a la línea del producto sin nota (o crea una). Las líneas
+     * con nota quedan aparte para que cocina vea, por ejemplo, 1 jugo sin azúcar
+     * y 1 normal.
+     */
     addProduct(product: any): boolean {
-        const existing = this.cart.find(
-            i => (i.name ?? i.nombre) === (product.name ?? product.nombre)
-        );
+        const existing = this.cart.find(i => this.sameProduct(i, product) && !i.notes);
 
         const price = Number(product.precio ?? product.price ?? 0);
         const taxValue = this.getTaxPercent(product);
 
+        if (!this.canUseQuantity(product, this.quantityOf(product) + 1)) {
+            return false;
+        }
         if (existing) {
-            if (!this.canUseQuantity(product, Number(existing.quantity || 0) + 1)) {
-                return false;
-            }
             existing.quantity++;
             this.recalcItem(existing);
             this.syncInventorySnapshot(existing, product);
-            return true;
-        } else {
-            if (!this.canUseQuantity(product, 1)) {
-                return false;
-            }
-            const newItem = {
-                ...product,
-                nombre: product?.nombre ?? product?.name,
-                price,
-                quantity: 1,
-                discount_percentage: 0,
-                discount_amount: 0,
-                tax_value: taxValue
-            };
-            this.recalcItem(newItem);
-            this.cart.push(newItem);
+            this.lastTouchedLineId = existing.line_id ?? null;
             return true;
         }
+        const newItem = {
+            ...product,
+            line_id: ++this.lineSeq,
+            nombre: product?.nombre ?? product?.name,
+            price,
+            quantity: 1,
+            discount_percentage: 0,
+            discount_amount: 0,
+            tax_value: taxValue,
+            notes: ''
+        };
+        this.recalcItem(newItem);
+        this.cart.push(newItem);
+        this.lastTouchedLineId = newItem.line_id;
+        return true;
+    }
+
+    /**
+     * Guarda la nota de cocina de una línea. Con `onlyOneUnit` y cantidad > 1,
+     * separa una unidad en su propia línea con la nota. Si ya existe otra línea
+     * del mismo producto con la misma nota, se unen.
+     */
+    setNote(item: any, note: unknown, onlyOneUnit = false): void {
+        const clean = String(note ?? '').replace(/\s+/g, ' ').trim().slice(0, LINE_NOTE_MAX_LENGTH);
+        let target = item;
+        if (onlyOneUnit && Number(item.quantity) > 1 && clean !== (item.notes || '')) {
+            item.quantity--;
+            this.recalcItem(item);
+            target = { ...item, line_id: ++this.lineSeq, quantity: 1, discount_amount: 0 };
+            this.cart.splice(this.cart.indexOf(item) + 1, 0, target);
+        }
+        target.notes = clean;
+        this.recalcItem(target);
+
+        const twin = this.cart.find(i => i !== target && this.sameProduct(i, target) && (i.notes || '') === clean);
+        if (twin) {
+            twin.quantity += target.quantity;
+            this.recalcItem(twin);
+            this.cart.splice(this.cart.indexOf(target), 1);
+        }
+    }
+
+    /** Unidades del producto en todas sus líneas (para validar stock). */
+    quantityOf(product: any): number {
+        return this.cart
+            .filter(i => this.sameProduct(i, product))
+            .reduce((acc, i) => acc + Number(i.quantity || 0), 0);
     }
 
     /** Descuento porcentual de una línea (0-100). */
@@ -84,6 +126,11 @@ export class CartService {
 
     clear() {
         this.cart = [];
+        this.lastTouchedLineId = null;
+    }
+
+    private sameProduct(a: any, b: any): boolean {
+        return (a?.name ?? a?.nombre) === (b?.name ?? b?.nombre);
     }
 
     get subtotal(): number {
@@ -105,15 +152,11 @@ export class CartService {
     }
 
     canAddProduct(product: any): boolean {
-        const existing = this.cart.find(
-            i => (i.name ?? i.nombre) === (product.name ?? product.nombre)
-        );
-        const nextQuantity = Number(existing?.quantity || 0) + 1;
-        return canSellProduct(product) && this.canUseQuantity(product, nextQuantity);
+        return canSellProduct(product) && this.canUseQuantity(product, this.quantityOf(product) + 1);
     }
 
     canIncrease(item: any): boolean {
-        return canSellProduct(item) && this.canUseQuantity(item, Number(item?.quantity || 0) + 1);
+        return canSellProduct(item) && this.canUseQuantity(item, this.quantityOf(item) + 1);
     }
 
     private recalcItem(item: any) {

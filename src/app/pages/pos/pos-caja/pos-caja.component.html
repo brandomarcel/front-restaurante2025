@@ -155,7 +155,7 @@
           </span>
         </div>
         <div class="min-h-0 flex-1 overflow-y-auto pr-0.5">
-          <app-pos-cart-lines variant="panel" [retail]="isRetailPos" (increase)="increase($event)" (decrease)="decrease($event)" (remove)="remove($event)" />
+          <app-pos-cart-lines variant="panel" [retail]="isRetailPos" [allowNotes]="!genericMode" (increase)="increase($event)" (decrease)="decrease($event)" (remove)="remove($event)" />
         </div>
 
         <!-- 3. Totales y cobro -->
@@ -195,9 +195,9 @@
           <p>📍 {{ deliveryAddress || '—' }}</p>
           <p>📞 {{ deliveryPhone || '—' }}</p>
         </div>
-        <p class="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-primary">Detalle y descuentos</p>
+        <p class="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-primary">{{ genericMode ? 'Detalle y descuentos' : 'Detalle, notas y descuentos' }}</p>
         <div class="flex-1 lg:overflow-y-auto">
-          <app-pos-cart-lines variant="checkout" [retail]="isRetailPos" (changed)="onCartChanged()" />
+          <app-pos-cart-lines variant="checkout" [retail]="isRetailPos" [allowNotes]="!genericMode" (changed)="onCartChanged()" />
         </div>
         <div class="mt-2 rounded-lg border border-border bg-muted/40 p-2.5">
           <app-pos-totals [subtotal]="subtotal" [discount]="cartService.totalDiscount" [iva]="iva" [total]="total" />
@@ -206,35 +206,34 @@
 
       <!-- Cobro -->
       <div class="flex flex-col gap-3 p-3 lg:w-[56%] lg:overflow-y-auto">
-        <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-center">
-          <p class="text-xs font-semibold uppercase tracking-wide text-amber-900">Total a cobrar</p>
-          <p class="mt-1 text-5xl font-bold leading-none text-amber-700">${{ total | number:'1.2-2' }}</p>
+        <div class="rounded-xl bg-primary/10 px-4 py-3 text-center">
+          <p class="text-[11px] font-bold uppercase tracking-wide text-primary">Total a cobrar</p>
+          <p class="mt-0.5 text-5xl font-black leading-none tabular-nums text-foreground">${{ total | number:'1.2-2' }}</p>
         </div>
 
         <!-- Condición de pago (crédito, POS genérico) -->
-        <section *ngIf="genericMode && canUseCreditSales" class="rounded-xl border border-primary/20 bg-primary/5 p-2.5">
-          <p class="text-xs font-bold text-foreground">Condición de pago</p>
-          <div class="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Condición de pago">
+        <section *ngIf="genericMode && canUseCreditSales" class="rounded-xl border border-border p-2.5">
+          <div class="grid grid-cols-2 gap-1 rounded-lg bg-muted/60 p-1" role="radiogroup" aria-label="Condición de pago">
             <button type="button" role="radio" [attr.aria-checked]="!isCreditSale" (click)="setPaymentCondition('Contado')"
-              [ngClass]="!isCreditSale ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground hover:bg-muted'"
-              class="min-h-[40px] rounded-lg border px-2 text-xs font-semibold transition">Pago completo</button>
+              [ngClass]="!isCreditSale ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+              class="h-9 rounded-md text-xs font-bold transition">Pago completo</button>
             <button type="button" role="radio" [attr.aria-checked]="isCreditSale" (click)="setPaymentCondition('Credito')"
-              [ngClass]="isCreditSale ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground hover:bg-muted'"
-              class="min-h-[40px] rounded-lg border px-2 text-xs font-semibold transition">Venta a crédito</button>
+              [ngClass]="isCreditSale ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+              class="h-9 rounded-md text-xs font-bold transition">Venta a crédito</button>
           </div>
 
           <div *ngIf="isCreditSale" class="mt-2.5 space-y-2">
-            <p class="text-[10px] text-muted-foreground">El abono es el dinero que recibes ahora. Las formas de pago de abajo se completan por el total de la factura.</p>
+            <p class="text-[11px] text-muted-foreground">El abono es el dinero que recibes ahora. Las formas de pago de abajo se completan por el total de la factura.</p>
             <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <label class="text-[11px] font-semibold text-foreground">Vencimiento <span class="font-normal text-muted-foreground">(opcional)</span>
-                <input type="date" [(ngModel)]="paymentDueDate" class="mt-1 w-full rounded-md border border-border bg-card px-2.5 py-2 text-xs text-foreground" />
+                <input type="date" [(ngModel)]="paymentDueDate" class="mt-1 h-9 w-full rounded-lg border border-border bg-card px-2.5 text-xs text-foreground" />
               </label>
               <label class="text-[11px] font-semibold text-foreground">Abono inicial
                 <input type="text" inputmode="decimal" appDecimalInput [(ngModel)]="initialCollectionAmount" min="0" step="0.01" placeholder="0.00"
-                  class="mt-1 w-full rounded-md border border-border bg-card px-2.5 py-2 text-right text-xs text-foreground" />
+                  class="mt-1 h-9 w-full rounded-lg border border-border bg-card px-2.5 text-right text-xs text-foreground" />
               </label>
               <label class="text-[11px] font-semibold text-foreground">Método del abono
-                <select [(ngModel)]="initialCollectionMethod" class="mt-1 w-full rounded-md border border-border bg-card px-2.5 py-2 text-xs text-foreground">
+                <select [(ngModel)]="initialCollectionMethod" class="mt-1 h-9 w-full rounded-lg border border-border bg-card px-2.5 text-xs text-foreground">
                   <option value="">Seleccionar</option>
                   <option *ngFor="let item of payments" [value]="item.name || item.codigo">{{ item.description || item.nombre || item.name }}</option>
                 </select>
@@ -242,85 +241,109 @@
             </div>
             <div class="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
               <input type="text" [(ngModel)]="initialCollectionReference" maxlength="140" placeholder="Referencia (opcional)" aria-label="Referencia del abono"
-                class="w-full rounded-md border border-border bg-card px-2.5 py-2 text-xs text-foreground" />
+                class="h-9 w-full rounded-lg border border-border bg-card px-2.5 text-xs text-foreground" />
               <input type="text" [(ngModel)]="initialCollectionNotes" maxlength="240" placeholder="Observación (opcional)" aria-label="Observación del abono"
-                class="w-full rounded-md border border-border bg-card px-2.5 py-2 text-xs text-foreground" />
-              <div class="flex items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs sm:min-w-[160px]">
-                <span class="font-semibold text-amber-900">Saldo pendiente</span>
-                <strong class="text-base text-amber-800">${{ creditOutstandingAmount | number:'1.2-2' }}</strong>
+                class="h-9 w-full rounded-lg border border-border bg-card px-2.5 text-xs text-foreground" />
+              <div class="flex items-center justify-between gap-3 rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-xs sm:min-w-[160px]">
+                <span class="font-semibold text-amber-800 dark:text-amber-300">Saldo pendiente</span>
+                <strong class="text-base tabular-nums text-amber-800 dark:text-amber-300">${{ creditOutstandingAmount | number:'1.2-2' }}</strong>
               </div>
             </div>
           </div>
         </section>
 
-        <!-- Formas de pago -->
-        <section class="rounded-xl border border-border bg-muted/40 p-2.5">
+        <!-- Forma de pago -->
+        <section>
           <div class="mb-2 flex items-center justify-between gap-2">
-            <div>
-              <p class="text-xs font-bold text-foreground">{{ isCreditSale ? 'Forma de pago del comprobante' : 'Formas de pago' }}</p>
-              <p class="text-[10px] text-muted-foreground">{{ isCreditSale ? 'Debe sumar el total de la factura; no incluye el abono inicial.' : 'Puedes combinar varias; no repitas la misma.' }}</p>
-            </div>
-            <button type="button" (click)="addPaymentRow()" class="rounded-md border border-primary/20 bg-card px-2 py-1 text-[11px] font-semibold text-primary">+ Agregar</button>
+            <p class="text-xs font-bold text-foreground">{{ isCreditSale ? 'Forma de pago del comprobante' : '¿Cómo paga?' }}</p>
+            <button *ngIf="!splitPaymentsOpen" type="button" (click)="openSplitPayments()" class="text-[11px] font-semibold text-primary hover:underline">Pagar con varias formas</button>
+            <button *ngIf="splitPaymentsOpen" type="button" (click)="useSinglePayment()" class="text-[11px] font-semibold text-primary hover:underline">Usar una sola forma</button>
           </div>
-          <div class="space-y-2">
-            <div *ngFor="let payment of paymentRows; let index = index" class="grid grid-cols-[1fr_96px_28px] gap-1.5">
+
+          <!-- Una sola forma: un toque cobra el total -->
+          <div *ngIf="!splitPaymentsOpen" class="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Forma de pago">
+            <button *ngFor="let item of payments" type="button" role="radio" [attr.aria-checked]="isSinglePaymentSelected(item)"
+              (click)="selectSinglePaymentMethod(item)"
+              class="flex min-h-[52px] items-center gap-2 rounded-xl border-2 px-3 text-left text-sm font-bold transition"
+              [ngClass]="isSinglePaymentSelected(item) ? 'border-primary bg-primary/10 text-foreground' : 'border-border bg-card text-foreground/80 hover:border-primary/40'">
+              <span class="text-xl" aria-hidden="true">{{ paymentIcon(item) }}</span>
+              <span class="min-w-0 truncate">{{ item.description || item.nombre || item.name }}</span>
+            </button>
+          </div>
+
+          <!-- Número de transferencia (opcional) -->
+          <label *ngIf="!splitPaymentsOpen && paymentRows.length === 1 && isTransferRow(paymentRows[0])" class="mt-2 block">
+            <span class="mb-1 block text-xs font-bold text-foreground">N.º de transferencia <span class="font-normal text-muted-foreground">(opcional)</span></span>
+            <input type="text" [(ngModel)]="paymentRows[0].reference" [maxlength]="paymentReferenceMaxLength"
+              placeholder="Ej. 0012345678" autocomplete="off"
+              class="h-10 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20" />
+          </label>
+
+          <!-- Varias formas de pago -->
+          <div *ngIf="splitPaymentsOpen" class="space-y-2 rounded-xl border border-border p-2.5">
+            <p class="text-[11px] text-muted-foreground">{{ isCreditSale ? 'Debe sumar el total de la factura; no incluye el abono inicial.' : 'No repitas la misma forma de pago.' }}</p>
+            <div *ngFor="let payment of paymentRows; let index = index" class="grid grid-cols-[1fr_110px_32px] gap-1.5">
               <select [(ngModel)]="payment.method" (change)="onPaymentRowMethodChange(index)" [attr.aria-label]="'Forma de pago ' + (index + 1)"
-                class="min-w-0 rounded-md border border-border bg-card px-2 py-1.5 text-xs text-foreground">
-                <option value="">Método</option>
+                class="h-10 min-w-0 rounded-lg border border-border bg-card px-2 text-sm text-foreground">
+                <option value="">Forma de pago</option>
                 <option *ngFor="let item of payments" [value]="item.name || item.codigo">{{ item.description || item.nombre || item.name }}</option>
               </select>
               <input type="text" inputmode="decimal" appDecimalInput min="0.01" step="0.01" [(ngModel)]="payment.amount" (ngModelChange)="calcularCambio()"
                 [attr.aria-label]="'Monto de la forma de pago ' + (index + 1)" placeholder="0.00"
-                class="w-full rounded-md border border-border bg-card px-2 py-1.5 text-right text-xs font-semibold text-foreground" />
-              <button type="button" (click)="removePaymentRow(index)" [disabled]="paymentRows.length === 1" class="rounded-md text-lg text-red-600 disabled:opacity-30" aria-label="Quitar forma de pago">×</button>
+                class="h-10 w-full rounded-lg border border-border bg-card px-2 text-right text-sm font-bold tabular-nums text-foreground" />
+              <button type="button" (click)="removePaymentRow(index)" [disabled]="paymentRows.length === 1"
+                class="rounded-lg text-lg text-destructive hover:bg-destructive/10 disabled:opacity-30" aria-label="Quitar forma de pago">✕</button>
+              <input *ngIf="isTransferRow(payment)" type="text" [(ngModel)]="payment.reference" [maxlength]="paymentReferenceMaxLength"
+                [attr.aria-label]="'Número de transferencia de la forma de pago ' + (index + 1)" placeholder="N.º de transferencia (opcional)" autocomplete="off"
+                class="col-span-3 h-9 w-full rounded-lg border border-border bg-card px-3 text-xs text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20" />
             </div>
+            <button type="button" (click)="addPaymentRow()" class="text-[11px] font-semibold text-primary hover:underline">+ Agregar otra forma</button>
           </div>
-          <div class="mt-2 flex justify-between text-[11px] font-medium text-foreground">
-            <span>Pagado: ${{ paymentRowsTotal | number:'1.2-2' }}</span>
-            <span [class.text-emerald-600]="paymentRemaining === 0" [class.text-red-600]="paymentRemaining !== 0">
-              {{ paymentRemaining === 0 ? '✓ Cuadra con el total' : 'Restante: $' + (paymentRemaining | number:'1.2-2') }}
-            </span>
-          </div>
-          <div *ngIf="paymentRemaining !== 0" class="mt-2 rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-2 text-[11px] font-semibold text-red-700" role="alert">
-            {{ paymentRemaining > 0
-              ? ('Falta cobrar $' + (paymentRemaining | number:'1.2-2') + ' para completar el total.')
-              : ('El pago excede el total por $' + (-paymentRemaining | number:'1.2-2') + '.') }}
-          </div>
+
+          <p class="mt-2 rounded-lg px-3 py-2 text-xs font-bold" role="status"
+            [ngClass]="paymentRemaining === 0 ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'bg-destructive/10 text-destructive'">
+            <ng-container *ngIf="paymentRemaining === 0">✓ Pago completo: ${{ paymentRowsTotal | number:'1.2-2' }}</ng-container>
+            <ng-container *ngIf="paymentRemaining > 0">Falta cobrar ${{ paymentRemaining | number:'1.2-2' }}</ng-container>
+            <ng-container *ngIf="paymentRemaining < 0">El pago excede el total por ${{ -paymentRemaining | number:'1.2-2' }}</ng-container>
+          </p>
         </section>
 
-        <!-- Efectivo y cambio -->
-        <section *ngIf="isSelectedPaymentCash && !isCreditSale" class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <label class="text-[11px] font-semibold text-foreground">Efectivo recibido <span class="font-normal text-muted-foreground">(opcional)</span>
-            <input type="text" inputmode="decimal" appDecimalInput [(ngModel)]="amountReceived" (ngModelChange)="calcularCambio()" min="0" step="0.01" placeholder="0.00"
-              class="mt-1 w-full rounded-md border border-border bg-card px-3 py-2 text-center text-2xl font-semibold text-foreground focus:ring-2 focus:ring-primary" />
-          </label>
-          <div class="rounded-lg border px-3 py-2 text-center" [ngClass]="change < 0 ? 'border-red-200 bg-red-50' : 'border-emerald-200 bg-emerald-50'">
-            <p class="text-[11px] font-semibold uppercase tracking-wide" [ngClass]="change < 0 ? 'text-red-800' : 'text-emerald-800'">{{ change < 0 ? 'Falta' : 'Cambio a entregar' }}</p>
-            <p class="mt-1 text-4xl font-bold leading-none" [ngClass]="change < 0 ? 'text-red-600' : 'text-emerald-600'">${{ (change < 0 ? -change : change) | number:'1.2-2' }}</p>
+        <!-- Efectivo recibido y cambio -->
+        <section *ngIf="isSelectedPaymentCash && !isCreditSale" class="rounded-xl border border-border p-2.5">
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <input type="text" inputmode="decimal" appDecimalInput [(ngModel)]="amountReceived" (ngModelChange)="calcularCambio()" min="0" step="0.01" placeholder="Efectivo recibido"
+              aria-label="Efectivo recibido"
+              class="h-14 w-full rounded-xl border border-border bg-card px-3 text-center text-2xl font-bold tabular-nums text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20" />
+            <div class="flex flex-col items-center justify-center rounded-xl px-3 py-1.5"
+              [ngClass]="change < 0 ? 'bg-destructive/10' : 'bg-emerald-500/10'">
+              <p class="text-[11px] font-bold uppercase tracking-wide" [ngClass]="change < 0 ? 'text-destructive' : 'text-emerald-700 dark:text-emerald-300'">{{ change < 0 ? 'Falta' : 'Cambio a entregar' }}</p>
+              <p class="text-3xl font-black leading-none tabular-nums" [ngClass]="change < 0 ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400'">${{ (change < 0 ? -change : change) | number:'1.2-2' }}</p>
+            </div>
           </div>
         </section>
 
         <!-- Alias de orden (restaurante) -->
-        <label *ngIf="!genericMode" class="text-[11px] font-semibold text-foreground">Alias del pedido <span class="font-normal text-muted-foreground">(opcional)</span>
+        <label *ngIf="!genericMode" class="text-xs font-bold text-foreground">Alias del pedido <span class="font-normal text-muted-foreground">(opcional)</span>
           <input type="text" [(ngModel)]="alias" maxlength="20" oninput="this.value = this.value.toUpperCase()" placeholder="Ej.: MESA 4, JUAN"
-            class="mt-1 w-full rounded-md border border-border bg-card px-3 py-2 text-center text-sm uppercase text-foreground" />
+            class="mt-1 h-10 w-full rounded-lg border border-border bg-card px-3 text-center text-sm uppercase text-foreground" />
         </label>
       </div>
     </div>
 
     <!-- Acciones: siempre visibles -->
     <footer class="shrink-0 border-t border-border bg-card p-3">
-      <p *ngIf="invoicePlanBlockMessage" class="mb-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-[11px] font-semibold text-orange-700" role="alert">
+      <p *ngIf="invoicePlanBlockMessage" class="mb-2 rounded-lg bg-amber-500/10 px-3 py-2 text-[11px] font-semibold text-amber-800 dark:text-amber-300" role="alert">
+        No se puede facturar:
         {{ invoicePlanBlockMessage }}
       </p>
       <div class="grid gap-2" [ngClass]="genericMode && isCreditSale ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'">
         <button *ngIf="!genericMode || !isCreditSale" type="button" (click)="confirmarPago('Nota Venta')" [disabled]="paymentRemaining !== 0 || isSubmittingPosSale || checkingCashOpening"
-          class="rounded-lg border-2 border-amber-400 bg-amber-50 py-3 text-sm font-semibold text-amber-900 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50">
+          class="rounded-xl border-2 border-border bg-card py-3 text-sm font-bold text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50">
           {{ genericMode ? 'Guardar nota de venta' : 'Nota de venta' }}
           <span class="block text-[10px] font-normal">{{ genericMode ? 'Documento no tributario; se cobra después' : 'Registra el pedido sin facturar' }}</span>
         </button>
         <button type="button" (click)="confirmarPago('Factura')" [disabled]="!canEmitInvoice || paymentRemaining !== 0 || isSubmittingPosSale || checkingCashOpening"
-          class="rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
+          class="rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
           {{ isSubmittingPosSale || checkingCashOpening ? 'Procesando…' : (genericMode ? 'Cobrar y facturar' : 'Facturar') }}
           <span class="block text-[10px] font-normal opacity-90">Comprobante electrónico autorizado por el SRI</span>
         </button>

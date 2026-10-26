@@ -1,0 +1,89 @@
+@reference '../../../../../styles.css';
+
+/* Color por etapa definido una vez; tarjeta, borde y botones lo heredan */
+.kds-card.is-NEW   { --stage: var(--color-sky-500, #0ea5e9); }
+.kds-card.is-PREP  { --stage: var(--color-amber-500, #f59e0b); }
+.kds-card.is-READY { --stage: var(--color-emerald-500, #10b981); }
+
+.kds-card {
+  @apply rounded-2xl border border-border bg-card p-3.5 shadow-sm transition sm:p-4;
+  border-left: 6px solid var(--stage);
+}
+
+.kds-card.is-late {
+  box-shadow: 0 0 0 2px var(--color-rose-500, #f43f5e);
+}
+
+.kds-card.is-fresh {
+  animation: kds-fresh 1.2s ease-out 2;
+}
+
+@keyframes kds-fresh {
+  0%, 100% { background: var(--color-card); }
+  50% { background: color-mix(in oklab, var(--stage) 18%, var(--color-card)); }
+}
+
+.kds-timer {
+  @apply inline-flex items-baseline gap-0.5 rounded-xl border px-2.5 py-1 text-xl font-black tabular-nums leading-none;
+}
+
+.kds-timer small {
+  @apply text-[10px] font-bold;
+}
+
+.kds-icon-btn {
+  @apply grid h-9 w-9 place-items-center rounded-xl border border-border text-lg font-black text-muted-foreground transition hover:bg-muted hover:text-foreground;
+}
+
+.kds-order-note {
+  @apply mt-2 rounded-xl bg-amber-500/15 px-3 py-2 text-sm font-bold text-amber-800 dark:text-amber-300;
+}
+
+/* Producto: fila táctil grande; el estado se lee por color y texto */
+.kds-item {
+  @apply flex w-full items-start gap-3 rounded-xl border border-border bg-muted/30 px-3 py-2.5 text-left transition enabled:hover:border-primary/40 enabled:active:scale-[.99] disabled:cursor-default;
+}
+
+.kds-qty {
+  @apply grid h-8 min-w-8 shrink-0 place-items-center rounded-lg bg-foreground px-1.5 text-base font-black text-background tabular-nums;
+}
+
+.kds-item-name {
+  @apply block text-base font-bold leading-snug text-foreground;
+}
+
+.kds-item-note {
+  @apply mt-1 block rounded-md bg-rose-500/15 px-2 py-0.5 text-sm font-black text-rose-700 dark:text-rose-300;
+}
+
+.kds-item-state {
+  @apply shrink-0 self-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-bold text-muted-foreground;
+}
+
+.kds-item.is-prep .kds-item-state {
+  @apply bg-amber-500/20 text-amber-700 dark:text-amber-300;
+}
+
+.kds-item.is-ready {
+  @apply border-emerald-500/40 bg-emerald-500/10;
+}
+
+.kds-item.is-ready .kds-item-state {
+  @apply bg-emerald-500 text-white;
+}
+
+.kds-item.is-done {
+  @apply opacity-50;
+}
+
+.kds-item.is-done .kds-item-name {
+  @apply line-through;
+}
+
+.kds-primary {
+  @apply h-14 w-full rounded-xl text-base font-black text-white transition active:translate-y-px disabled:cursor-wait disabled:opacity-60;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kds-card.is-fresh { animation: none; }
+}

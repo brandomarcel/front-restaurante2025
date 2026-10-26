@@ -1,6 +1,7 @@
 import { Component, HostListener, Input, OnInit, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { CartService } from '../services/cart.service';
+import { LineNoteEditorComponent } from '../ui/line-note-editor.component';
 import { ProductsService } from 'src/app/services/products.service';
 import { CategoryService } from 'src/app/services/category.service';
 import { OrdersService } from 'src/app/services/orders.service';
@@ -22,7 +23,7 @@ type OrderType = 'Servirse' | 'Llevar' | 'Domicilio';
 @Component({
   selector: 'app-pos-mesero',
   standalone: true,
-  imports: [CommonModule, FormsModule, ProductVariantPickerComponent, BarcodeScanInputComponent, ProductSearchModalComponent, DecimalInputDirective],
+  imports: [CommonModule, FormsModule, ProductVariantPickerComponent, BarcodeScanInputComponent, ProductSearchModalComponent, DecimalInputDirective, LineNoteEditorComponent],
   templateUrl: './pos-mesero.component.html',
   styles: [':host { display: block; height: 100%; min-height: 0; }']
 })
@@ -48,6 +49,8 @@ export class PosMeseroComponent implements OnInit {
   deliveryPhone = '';
   cartExpanded = false;
   isSubmittingOrder = false;
+  /** Línea (line_id) cuya nota de cocina se está editando. */
+  editingNoteLine: number | null = null;
   isLoadingProducts = false;
   private readonly favoritesStorageKey = 'pos_mesero_favorites_v1';
   private favoriteProductKeys = new Set<string>();
@@ -92,6 +95,7 @@ export class PosMeseroComponent implements OnInit {
         if (!this.isSubmittingOrder) void this.saveOrderMesero();
         break;
       case 'Escape':
+        if (this.editingNoteLine !== null) { this.cancelNote(); break; }
         if (this.cartExpanded) { this.cartExpanded = false; this.refocusScanner(); }
         break;
     }
@@ -316,7 +320,17 @@ export class PosMeseroComponent implements OnInit {
   remove(item: any): void {
     const index = this.cartService.cart.indexOf(item);
     if (index !== -1) this.cartService.cart.splice(index, 1);
+    if (this.editingNoteLine === item?.line_id) this.cancelNote();
   }
+
+  openNote(item: any): void {
+    this.editingNoteLine = item.line_id;
+  }
+
+  cancelNote(): void {
+    this.editingNoteLine = null;
+  }
+
 
   toggleCartDetails(): void {
     this.cartExpanded = !this.cartExpanded;
@@ -372,7 +386,8 @@ export class PosMeseroComponent implements OnInit {
         rate: item.price,
         discount_percentage: Number(item.discount_percentage || 0),
         discount_amount: Number(item.discount_amount || 0),
-        tax_rate: item.tax_value
+        tax_rate: item.tax_value,
+        ...(item.notes ? { notes: item.notes } : {})
       })),
     };
 
@@ -409,7 +424,7 @@ export class PosMeseroComponent implements OnInit {
   }
 
   trackByProduct = (_: number, p: any) => p?.name || p?.nombre;
-  trackByCart = (_: number, it: any) => `${it?.name || it?.nombre}-${it?.price}`;
+  trackByCart = (_: number, it: any) => it?.line_id ?? `${it?.name || it?.nombre}-${it?.notes || ''}`;
 
   canAddProduct(product: any): boolean {
     return this.cartService.canAddProduct(product);
@@ -440,9 +455,7 @@ export class PosMeseroComponent implements OnInit {
   }
 
   getCartQuantityForProduct(product: any): number {
-    const key = product?.name ?? product?.nombre;
-    const item = this.cartService.cart.find((cartItem: any) => (cartItem.name ?? cartItem.nombre) === key);
-    return Number(item?.quantity || 0);
+    return this.cartService.quantityOf(product);
   }
 
   getStockLimitMessage(product: any): string {

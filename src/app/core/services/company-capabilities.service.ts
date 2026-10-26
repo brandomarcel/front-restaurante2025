@@ -1144,52 +1144,75 @@ export class CompanyCapabilitiesService {
       return { allowed: true };
     }
 
+    const readinessMessage = this.getEmissionReadinessMessage();
+    return readinessMessage ? { allowed: false, message: readinessMessage } : { allowed: true };
+  }
+
+  /**
+   * Requisitos comunes a toda emisión electrónica: configuración tributaria,
+   * certificado vigente, plan activo compatible y cupo de comprobantes.
+   */
+  private getEmissionReadinessMessage(): string | null {
     // En Lite la configuración tributaria debe estar lista antes de permitir
     // cualquier intento de emisión, incluso si se invoca la acción por código
     // y no únicamente desde un botón deshabilitado.
     const setupBlockMessage = this.getLiteSetupBlockMessage();
     if (setupBlockMessage) {
-      return { allowed: false, message: setupBlockMessage };
+      return setupBlockMessage;
     }
 
     if (this.isCertificateEmissionBlocked()) {
-      return { allowed: false, message: this.certificateLastError || `El certificado electrónico está ${this.certificateStatus || 'no vigente'}.` };
+      return this.certificateLastError || `El certificado electrónico está ${this.certificateStatus || 'no vigente'}.`;
     }
 
     const plan = this.plan;
     if (!plan) {
-      return { allowed: false, message: 'La empresa no tiene un plan asignado para emitir comprobantes.' };
+      return 'La empresa no tiene un plan asignado para emitir comprobantes.';
     }
 
     const planStatus = this.normalize(String(plan.status || ''));
     if (plan.active === false || ['VENCIDO', 'SUSPENDIDO', 'CANCELADO', 'INACTIVO', 'PENDIENTE', 'PENDING'].includes(planStatus)) {
-      return {
-        allowed: false,
-        message: planStatus === 'PENDIENTE' || planStatus === 'PENDING'
-          ? 'La suscripción de la empresa está pendiente de activación.'
-          : 'El plan de la empresa no está activo.'
-      };
+      return planStatus === 'PENDIENTE' || planStatus === 'PENDING'
+        ? 'La suscripción de la empresa está pendiente de activación.'
+        : 'El plan de la empresa no está activo.';
     }
 
     if (this.businessMode === 'RESTAURANTE' && plan.allow_restaurant_mode === false) {
-      return { allowed: false, message: 'El plan actual no permite operar en modo restaurante.' };
+      return 'El plan actual no permite operar en modo restaurante.';
     }
 
     if (this.businessMode === 'FACTURADOR' && plan.allow_invoice_mode === false) {
-      return { allowed: false, message: 'El plan actual no permite operar en modo facturador.' };
+      return 'El plan actual no permite operar en modo facturador.';
     }
 
     const remaining = plan.remaining_authorized_documents ?? plan.remaining_authorized_vouchers;
     if (!this.hasUnlimitedVouchers(plan) && (remaining === null || remaining === undefined || Number(remaining) <= 0)) {
-      return { allowed: false, message: 'No quedan comprobantes disponibles en el plan actual.' };
+      return 'No quedan comprobantes disponibles en el plan actual.';
     }
 
-    return { allowed: true };
+    return null;
   }
 
-  canEmit(): boolean {
-    const feature: CompanyFeatureKey = this.isEnabled('generic_pos') ? 'generic_pos' : 'direct_invoice';
-    return this.validateFeatureUse(feature).allowed && !this.getLiteSetupBlockMessage();
+  /**
+   * Control único para cualquier acción que emite un comprobante (el mismo del POS):
+   * permiso, funcionalidad del plan, configuración tributaria, certificado, plan
+   * activo, cupo y, si se pide, terminal POS. Devuelve el motivo del bloqueo o null.
+   * `feature`: la funcionalidad que habilita esa emisión (por defecto `billing`, la
+   * misma que exige el backend al emitir); `permission: ''` omite el permiso.
+   * El backend vuelve a validar todo; esto evita intentos que van a fallar.
+   */
+  getEmissionBlockMessage(options: { feature?: CompanyFeatureKey; requireTerminal?: boolean; permission?: string } = {}): string | null {
+    const permission = options.permission ?? 'billing.create';
+    if (permission && !this.hasPermission(permission)) {
+      return 'No tiene permisos para emitir comprobantes.';
+    }
+    const feature = options.feature ?? 'billing';
+    if (!this.isEnabled(feature)) {
+      return 'Este módulo no está incluido en el plan de la empresa.';
+    }
+    const readinessMessage = this.getEmissionReadinessMessage();
+    if (readinessMessage) return readinessMessage;
+    return options.requireTerminal ? this.getPosTerminalBlockMessage() : null;
   }
 
   getPlanBlockMessage(feature: CompanyFeatureKey = 'direct_invoice'): string | null {

@@ -6,124 +6,222 @@
   @apply block h-full;
 }
 
-.register-page {
-  @apply relative h-screen overflow-y-auto bg-gradient-to-br from-primary/10 via-background to-background;
+/* Layout: mismo esquema dividido que el login (marca izquierda + formulario) */
+.register-shell {
+  @apply flex h-[100dvh] bg-background;
+}
+
+.register-hero {
+  @apply relative hidden flex-1 items-center justify-center overflow-hidden bg-cover bg-center lg:flex;
+}
+
+.hero-benefit {
+  @apply flex items-start gap-3;
+}
+
+.hero-benefit-icon {
+  @apply mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-yellow-400/20 text-yellow-300 ring-1 ring-yellow-300/40;
+}
+
+.register-main {
+  @apply relative flex-1 overflow-y-auto bg-gradient-to-b from-primary/5 via-background to-background;
 }
 
 .register-topbar {
-  @apply sticky top-0 z-20 border-b border-border bg-card/90 backdrop-blur;
+  @apply sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border/60 bg-background/85 px-4 py-3 backdrop-blur sm:px-8;
 }
 
-.register-topbar-inner {
-  @apply mx-auto flex max-w-7xl items-center justify-between px-4 py-3 text-xs;
+.register-container {
+  @apply mx-auto w-full max-w-xl px-4 py-8 sm:px-6 sm:py-10;
 }
 
-.register-content {
-  @apply mx-auto max-w-7xl px-4 py-6;
-}
-
-.register-card {
-  @apply rounded-2xl border border-border bg-card shadow-xl;
-}
-
-.register-card-body {
-  @apply p-5 md:p-7;
-}
-
-.register-title {
-  @apply text-lg font-semibold text-primary;
-}
-
-.register-subtitle {
-  @apply text-[11px] text-muted-foreground;
-}
-
-.stepper-wrap {
-  @apply mb-5;
-}
-
-.step-progress-track {
-  @apply mb-3 h-1.5 rounded-full bg-muted;
-}
-
-.step-progress-fill {
-  @apply h-full rounded-full bg-primary transition-all duration-300;
-}
-
+/* Stepper */
 .stepper {
-  @apply grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-3;
+  @apply flex items-start;
 }
 
 .stepper-item {
-  @apply flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 text-muted-foreground;
+  @apply flex flex-1 items-center gap-2 last:flex-none;
+}
+
+.stepper-button {
+  @apply flex items-center gap-2.5 rounded-lg p-1 text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40;
+}
+
+.stepper-button:disabled {
+  @apply cursor-default;
+}
+
+.stepper-item.is-done .stepper-button:not(:disabled) {
+  @apply cursor-pointer hover:bg-primary/5;
 }
 
 .stepper-dot {
-  @apply inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-foreground/80;
+  @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-border bg-card text-xs font-bold transition-all duration-300;
 }
 
-.stepper-text {
-  @apply truncate font-medium;
+.stepper-label {
+  @apply block text-xs font-bold;
 }
 
-.stepper-item.is-active {
-  @apply border-primary/40 bg-primary/5 text-foreground;
+.stepper-hint {
+  @apply hidden truncate text-[11px] font-normal text-muted-foreground sm:block;
+}
+
+.stepper-line {
+  @apply mx-1 h-0.5 min-w-4 flex-1 rounded-full bg-border transition-colors duration-300;
+}
+
+.stepper-item.is-active .stepper-button {
+  @apply text-foreground;
 }
 
 .stepper-item.is-active .stepper-dot {
-  @apply bg-primary text-white;
+  @apply border-primary bg-primary text-primary-foreground shadow-md shadow-primary/30 ring-4 ring-primary/15;
 }
 
-.stepper-item.is-done {
-  @apply border-emerald-500/40 bg-emerald-500/10 text-foreground;
+.stepper-item.is-done .stepper-button {
+  @apply text-foreground/80;
 }
 
 .stepper-item.is-done .stepper-dot {
-  @apply bg-emerald-500 text-white;
+  @apply border-emerald-500 bg-emerald-500 text-white;
+}
+
+.stepper-item.is-done .stepper-line {
+  @apply bg-emerald-500;
+}
+
+/* Tarjeta y pasos */
+.register-card {
+  @apply rounded-2xl border border-border bg-card p-5 shadow-xl shadow-slate-900/5 sm:p-7;
 }
 
 .form-step {
+  @apply space-y-5 animate-fade-in-down;
+}
+
+.step-heading h3 {
+  @apply text-base font-bold text-foreground;
+}
+
+.step-heading p {
+  @apply mt-0.5 text-xs text-muted-foreground;
+}
+
+.field-grid {
+  @apply grid gap-4 sm:grid-cols-2;
+}
+
+.field {
+  @apply space-y-1.5;
+}
+
+.field-label {
+  @apply block text-[11px] font-bold uppercase tracking-wide text-muted-foreground;
+}
+
+.req {
+  @apply text-destructive;
+}
+
+.field-input {
+  @apply block h-11 w-full rounded-xl border border-border bg-card px-3 pl-10 text-sm font-medium text-foreground shadow-sm outline-none transition-all duration-200 placeholder:font-normal placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/15;
+}
+
+.field-input.is-invalid {
+  @apply border-destructive focus:border-destructive focus:ring-destructive/15;
+}
+
+.input-icon {
+  @apply pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-muted-foreground transition-colors duration-200;
+}
+
+.relative:focus-within .input-icon {
+  @apply text-primary;
+}
+
+.field-hint {
+  @apply block px-1 text-[11px] text-muted-foreground;
+}
+
+.field-error {
+  @apply block px-1 text-[11px] font-semibold text-destructive animate-fade-in-down;
+}
+
+.toggle-pass {
+  @apply absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground/70 transition hover:bg-muted hover:text-foreground/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40;
+}
+
+.match-icon {
+  @apply pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500;
+}
+
+/* Fuerza de contraseña */
+.strength-track {
+  @apply mb-1 grid grid-cols-4 gap-1;
+}
+
+.strength-bar {
+  @apply h-1 rounded-full bg-muted transition-colors duration-300;
+}
+
+.strength-bar.strength-1 { @apply bg-destructive; }
+.strength-bar.strength-2 { @apply bg-amber-500; }
+.strength-bar.strength-3 { @apply bg-lime-500; }
+.strength-bar.strength-4 { @apply bg-emerald-500; }
+
+/* Política de privacidad */
+.terms {
+  @apply flex items-start gap-3 rounded-xl border border-border bg-muted/40 p-3 transition-colors;
+}
+
+.terms.is-invalid {
+  @apply border-destructive/40 bg-destructive/5;
+}
+
+.terms-check {
+  @apply mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-border accent-primary;
+}
+
+/* Revisión */
+.review-block {
   @apply rounded-xl border border-border bg-muted/30 p-4;
 }
 
-.section-title {
-  @apply text-sm font-semibold text-foreground/80;
+.review-header {
+  @apply mb-3 flex items-center justify-between;
 }
 
+.review-header h4 {
+  @apply text-xs font-bold uppercase tracking-wide text-muted-foreground;
+}
+
+.review-edit {
+  @apply inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-primary transition hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50;
+}
+
+.review-list {
+  @apply grid gap-x-4 gap-y-3 sm:grid-cols-2;
+}
+
+.review-list dt {
+  @apply text-[11px] text-muted-foreground;
+}
+
+.review-list dd {
+  @apply text-sm font-semibold text-foreground;
+}
+
+.next-info {
+  @apply flex gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 text-xs leading-relaxed text-foreground/80;
+}
+
+/* Acciones */
 .actions-bar {
-  @apply mt-2 flex items-center justify-between border-t border-border pt-4;
+  @apply mt-6 flex items-center gap-3 border-t border-border pt-5;
 }
 
-.actions-right {
-  @apply flex gap-2;
-}
-
-.btn {
-  @apply inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-xs font-medium transition;
-}
-
-.btn:disabled {
-  @apply cursor-not-allowed opacity-60;
-}
-
-.btn-primary {
-  @apply border-primary bg-primary text-white hover:opacity-90;
-}
-
-.btn-outline {
-  @apply border-border bg-card text-foreground/80 hover:bg-muted;
-}
-
-.btn-light {
-  @apply border-border bg-card text-foreground/80 hover:bg-muted;
-}
-
-@media (max-width: 640px) {
-  .actions-bar {
-    @apply flex-col items-stretch gap-2;
-  }
-
-  .actions-right {
-    @apply w-full justify-end;
-  }
+.actions-primary {
+  @apply ml-auto block w-full sm:w-auto sm:min-w-52;
 }

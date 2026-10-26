@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { toast } from 'ngx-sonner';
@@ -12,7 +12,6 @@ import { EcuadorTimePipe } from 'src/app/core/pipes/ecuador-time-pipe.pipe';
 import { PrintService } from 'src/app/services/print.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { environment } from 'src/environments/environment';
-import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 import { OrdersService } from 'src/app/services/orders.service';
 import { OrderSplitService } from 'src/app/services/order-split.service';
 import { OrderSplitRow, SplitOrderPayload } from 'src/app/services/order-split.types';
@@ -22,13 +21,17 @@ import { PaymentsService } from 'src/app/services/payments.service';
 import { CustomersService } from 'src/app/services/customers.service';
 import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { AlertService } from 'src/app/core/services/alert.service';
-import { InvoicePaymentPayload, isPaymentMethodAlreadySelected, roundMoney, validatePaymentsTotal } from 'src/app/shared/utils/payment.utils';
+import { InvoicePaymentPayload, isPaymentMethodAlreadySelected, isTransferPayment, PAYMENT_REFERENCE_MAX_LENGTH, roundMoney, validatePaymentsTotal } from 'src/app/shared/utils/payment.utils';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { RestaurantRealtimeEvent, RestaurantRealtimeService } from 'src/app/services/restaurant-realtime.service';
 import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
+import { LineCents, fromCents, lineTotalsCents, toCents } from 'src/app/shared/utils/money-cents.utils';
 
 type Product = any; // usa tu modelo si lo tienes
 type OrderItem = {
+  /** Nombre de la fila en la orden: permite al backend conservar precio y nota de cocina. */
+  rowName?: string;
+  notes?: string;
   productId?: string;
   productName?: string;
   description?: string;
@@ -37,6 +40,10 @@ type OrderItem = {
   tax?: string | null;
   tax_value?: number;  // 0 o 15
   iva?: number;
+  /** Descuento en dólares de la línea (viene del POS); se conserva al guardar. */
+  discount?: number;
+  /** Totales de la línea en centavos (fuente de verdad para sumar sin residuos). */
+  cents?: LineCents;
   total?: number;      // subtotal SIN IVA (como haces en invoicing)
 };
 
@@ -47,16 +54,15 @@ type OrderItem = {
     CommonModule,
     RouterModule,
     FormsModule,
-    ReactiveFormsModule,
     NgSelectModule,
     EcuadorTimePipe,
     FontAwesomeModule,
-    ButtonComponent,
     DecimalInputDirective,
     SplitOrderDialogComponent,
     OrderSplitsTableComponent
   ],
-  templateUrl: './order-detail-page.component.html'
+  templateUrl: './order-detail-page.component.html',
+  styleUrl: './order-detail-page.component.css'
 })
 export class OrderDetailPageComponent implements OnInit, OnDestroy {
   loading = true;
@@ -68,12 +74,11 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   customers: any[] = [];
   orderCustomerId = '';
   orderItems: OrderItem[] = [];
-  showCustomerModal = false;
-  customerForm!: FormGroup;
   showSplitDialog = false;
   splitSubmitting = false;
   splitActionLoadingName = '';
   splitDeleteLoadingName = '';
+  splitCustomerSavingName = '';
   splitsLoading = false;
   splitsLoaded = false;
   closingOrder = false;
@@ -83,6 +88,10 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   splitRemainingItems: any[] = [];
   paymentMethods: any[] = [];
   orderPayments: any[] = [];
+  showMoreActions = false;
+  showCustomerPicker = false;
+  /** Etapas visibles en la barra de progreso de la orden. */
+  readonly progressSteps = ['Ingresada', 'Preparación', 'Lista', 'Cerrada', 'Facturada'];
 
   private baseUrl = environment.URL;
   private readonly realtimeSub = new Subscription();
@@ -93,7 +102,6 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     private productsSvc: ProductsService,
     private printSvc: PrintService,
     private router: Router,
-    private fb: FormBuilder,
     private ordersSvc: OrdersService,
     private orderSplitSvc: OrderSplitService,
     private paymentsSvc: PaymentsService,
@@ -105,16 +113,6 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.roleName = this.detectRole();
-    // modal cliente opcional
-    this.customerForm = this.fb.group({
-      nombre: [''],
-      num_identificacion: [''],
-      tipo_identificacion: ['05 - Cedula'],
-      correo: [''],
-      telefono: [''],
-      direccion: ['']
-    });
-
     const id = this.route.snapshot.paramMap.get('id')!;
     this.restaurantRealtime.activate();
     this.realtimeSub.add(this.restaurantRealtime.events$.subscribe((event) => this.applyRealtimeEvent(event, id)));
@@ -189,6 +187,8 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     // Para edición homogénea con invoicing, trabajamos con total = subtotal SIN IVA y tax_value = tax_rate.
     const items = order?.items || [];
     this.orderItems = items.map((it: any): OrderItem => ({
+      rowName: it.name,
+      notes: it.notes || '',
       productId: it.product ?? it.item ?? it.productId,
       productName: it.item_name ?? it.product_name ?? it.productName ?? it.nombre,
       description: it.item_name ?? it.product_name ?? it.productName ?? it.nombre,
@@ -196,11 +196,7 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
       price: this.safeMoney(it.rate ?? it.price),
       tax: null,
       tax_value: it.tax_rate ?? 0,
-      iva: this.safeMoney(
-        it.iva,
-        this.round2(this.safeNumber(it.qty ?? it.quantity, 1) * this.round2(this.safeMoney(it.rate ?? it.price) * ((it.tax_rate ?? 0) / 100)))
-      ),
-      total: this.round2(this.safeNumber(it.subtotal, this.safeNumber(it.qty ?? it.quantity, 1) * this.safeMoney(it.rate ?? it.price)))
+      discount: this.safeMoney(it.discount_amount, 0),
     }));
     this.recalculateOrder();
   }
@@ -251,14 +247,13 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   goToInvoice(invName?: string) {
     if (!invName) return;
-    this.router.navigate(['/invoices', invName]);
+    this.router.navigate(['/dashboard/invoices', invName]);
   }
 
   async emitirFacturaOrden(): Promise<void> {
     if (!this.order?.name || this.orderInvoiceEmitting) return;
-    const terminalBlockMessage = this.capabilities.getPosTerminalBlockMessage();
-    if (terminalBlockMessage) {
-      toast.error(terminalBlockMessage);
+    if (this.emissionBlockMessage) {
+      toast.error(this.emissionBlockMessage);
       return;
     }
     if (!this.canCreateInvoice) {
@@ -269,6 +264,10 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     }
     if (!this.belongsToActiveBusiness(this.order)) {
       toast.error('La orden no pertenece al negocio seleccionado.');
+      return;
+    }
+    if (this.hasSplits) {
+      toast.error('Esta orden se cobra por subcuentas: factura cada subcuenta.');
       return;
     }
     if (this.hasUnsavedInvoiceChanges) {
@@ -381,45 +380,43 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     this.recalculateOrder();
   }
 
+  /** Recalcula cada línea en centavos con el mismo redondeo que la factura Lite. */
   recalculateOrder(): void {
     this.orderItems.forEach(it => {
       const qty = Math.max(1, this.safeNumber(it.quantity, 1));
       const rate = Math.max(0, this.safeMoney(it.price));
-      const taxPct = this.getTaxPct(it);
-      const lineSubtotal = qty * rate; // SIN IVA
-      const unitIva = this.round2(rate * taxPct);
       it.quantity = qty;
       it.price = rate;
-      it.total = this.round2(lineSubtotal);
-      it.iva = this.round2(unitIva * qty);
+      it.cents = lineTotalsCents(qty, rate, it.discount ?? 0, this.getTaxPct(it) * 100);
+      it.total = fromCents(it.cents.taxable); // subtotal SIN IVA, ya con descuento
+      it.iva = fromCents(it.cents.tax);
     });
   }
 
-  // =================== Totales ===================
+  // =================== Totales (sumados en centavos) ===================
+  private sumCents(pick: (line: LineCents) => number): number {
+    return this.orderItems.reduce((acc, it) => acc + pick(it.cents ?? lineTotalsCents(it.quantity, it.price, it.discount ?? 0, this.getTaxPct(it) * 100)), 0);
+  }
+
   get orderSubtotal(): number {
-    return this.round2(this.orderItems.reduce((acc, it) => acc + (it.total ?? 0), 0));
+    return fromCents(this.sumCents((line) => line.taxable));
   }
 
   get orderIva(): number {
-    return this.round2(this.orderItems.reduce((acc, it) => {
-      const storedIva = Number(it.iva);
-      if (Number.isFinite(storedIva)) return acc + storedIva;
-
-      const pct = this.getTaxPct(it);
-      const unitIva = this.round2(this.safeMoney(it.price) * pct);
-      return acc + this.round2(unitIva * this.safeNumber(it.quantity, 1));
-    }, 0));
+    return fromCents(this.sumCents((line) => line.tax));
   }
 
   get orderTotal(): number {
-    return this.round2(this.orderSubtotal + this.orderIva);
+    return fromCents(this.sumCents((line) => line.total));
+  }
+
+  get orderDiscount(): number {
+    return fromCents(this.orderItems.reduce((acc, it) => acc + toCents(it.discount ?? 0), 0));
   }
 
   get pendingOrderToSplit(): number {
-    const splitTotal = this.round2(
-      (this.orderSplits || []).reduce((acc, row) => acc + this.safeMoney(row?.total, 0), 0)
-    );
-    return Math.max(0, this.round2(this.orderTotal - splitTotal));
+    const splitCents = (this.orderSplits || []).reduce((acc, row) => acc + toCents(row?.total ?? 0), 0);
+    return fromCents(Math.max(0, toCents(this.orderTotal) - splitCents));
   }
 
   get canOpenSplit(): boolean {
@@ -451,15 +448,19 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     return this.currentFiscalLocation?.terminal && this.capabilities.terminalAccessRequired ? 'Asignado a tu usuario' : '';
   }
 
+  /** Mismo control de emisión que el POS: permiso, plan, firma, configuración, cupo y terminal. */
+  get emissionBlockMessage(): string | null {
+    return this.capabilities.getEmissionBlockMessage({ feature: 'billing', requireTerminal: true });
+  }
+
   get canCreateInvoice(): boolean {
-    return this.canShowCreateInvoice && !this.isLocked && !this.posTerminalBlockMessage;
+    return this.canShowCreateInvoice && !this.isLocked && !this.emissionBlockMessage;
   }
 
   get createInvoiceBlockedReason(): string {
     if (!this.canShowCreateInvoice) return '';
     if (this.isLocked) return 'La orden ya tiene facturacion asociada.';
-    if (this.posTerminalBlockMessage) return this.posTerminalBlockMessage;
-    return '';
+    return this.emissionBlockMessage || '';
   }
 
   get splitItemsSource(): any[] {
@@ -489,12 +490,17 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
       : (it.tax === 'IVA-15' ? 15 : 0);
 
     return {
-      product:   it.productId || 'ADHOC',         //  fieldname del child
-      qty,                                        // 
-      rate:      this.round2(rate),               // 
-      tax:       it.tax ?? null,                  //  Link a "taxes" (ej. 'IVA-15'), opcional
-      total:     lineSubtotal,                    //  subtotal SIN IVA
-      tax_rate:  taxRate                          //  0 o 15
+      // La fila existente se identifica para conservar su precio y su nota de cocina.
+      ...(it.rowName ? { order_item: it.rowName } : {}),
+      product:   it.productId || 'ADHOC',
+      qty,
+      // El backend solo respeta el precio enviado para Gerente/Administrador.
+      ...(this.canEditPrice ? { rate: this.round2(rate) } : {}),
+      // Se reenvía el descuento puesto en el POS para no perderlo al guardar.
+      discount_amount: this.safeMoney(it.discount ?? 0),
+      tax:       it.tax ?? null,
+      total:     lineSubtotal,                    // subtotal SIN IVA
+      tax_rate:  taxRate
     };
   });
 
@@ -581,8 +587,116 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
 
 
-  // =================== Helpers ===================
+  // =================== Presentación ===================
   trackByIndex = (i: number) => i;
+
+  /** Solo Gerente/Administrador cambian precios (el backend aplica la misma regla). */
+  get canEditPrice(): boolean {
+    return this.canEditOrder && this.capabilities.hasPermission('restaurant.manage');
+  }
+
+  /** Con subcuentas creadas, los productos no se editan: cambiarían lo ya dividido. */
+  get canEditItems(): boolean {
+    return this.canEditOrder && !this.orderSplits.length;
+  }
+
+  get hasSplits(): boolean {
+    return this.orderSplits.length > 0;
+  }
+
+  /** Facturar la orden completa solo si no se está cobrando por subcuentas. */
+  get canInvoiceWholeOrder(): boolean {
+    return this.canShowCreateInvoice && !this.hasSplits;
+  }
+
+  get splitProgressPct(): number {
+    if (this.orderTotal <= 0) return 0;
+    return Math.min(100, Math.round(((this.orderTotal - this.pendingOrderToSplit) / this.orderTotal) * 100));
+  }
+
+  get invoicedSplitsCount(): number {
+    return this.orderSplits.filter((row) => this.splitHasInvoice(row)).length;
+  }
+
+  /** Índice de la etapa actual en `progressSteps` (-1 si está cancelada). */
+  get progressIndex(): number {
+    if (this.isCancelled) return -1;
+    if (this.isLocked) return 4;
+    const label = this.orderStatusLabel;
+    const index = this.progressSteps.indexOf(label);
+    return index >= 0 ? index : 0;
+  }
+
+  /** Lo primero que identifica a la orden en el salón: alias o mesa. */
+  get orderHeadline(): string {
+    // `table` llega como ID interno; el alias es lo que el personal reconoce.
+    const alias = String(this.order?.alias || '').trim();
+    return alias || `Orden ${this.order?.name || ''}`.trim();
+  }
+
+  get customerName(): string {
+    return this.order?.customer?.customer_name || this.order?.customer?.nombre || this.order?.customer_name
+      || this.order?.nombre_cliente || 'Consumidor final';
+  }
+
+  get customerIdentification(): string {
+    return this.order?.customer?.identification_number || this.order?.customer?.num_identificacion
+      || this.order?.customer_identification_number || this.order?.identificacion_cliente || '';
+  }
+
+  get customerEmail(): string {
+    return this.order?.customer?.email || this.order?.customer?.correo || this.order?.customer_email || this.order?.correo_cliente || '';
+  }
+
+  get customerPhone(): string {
+    return this.order?.customer?.phone || this.order?.customer?.telefono || this.order?.customer_phone || this.order?.telefono_cliente || '';
+  }
+
+  readonly paymentReferenceMaxLength = PAYMENT_REFERENCE_MAX_LENGTH;
+
+  /** Las transferencias muestran un campo para su número (opcional). */
+  isTransferMethod(method: string): boolean {
+    return isTransferPayment(this.paymentMethods, method);
+  }
+
+  get paymentsTotal(): number {
+    return this.round2(this.orderPayments.reduce((acc, payment) => acc + this.safeNumber(payment?.amount, 0), 0));
+  }
+
+  get paymentsDifference(): number {
+    return this.round2(this.orderTotal - this.paymentsTotal);
+  }
+
+  get paymentsDifferenceLabel(): string {
+    const diff = this.paymentsDifference;
+    if (diff === 0) return 'Los pagos cuadran con el total.';
+    return `${diff > 0 ? 'Faltan' : 'Sobran'} $${Math.abs(diff).toFixed(2)} para cuadrar con el total.`;
+  }
+
+  /** Completa el monto del único pago con el total (caso más común: un solo método). */
+  fillPaymentWithTotal(payment: any): void {
+    const others = this.orderPayments.filter((row) => row !== payment)
+      .reduce((acc, row) => acc + this.safeNumber(row?.amount, 0), 0);
+    payment.amount = Math.max(0, this.round2(this.orderTotal - others));
+  }
+
+  /** Vuelve a los datos guardados de la orden, descartando ediciones locales. */
+  discardChanges(): void {
+    if (!this.order) return;
+    this.orderCustomerId = this.getOrderCustomerId(this.order);
+    this.orderPayments = this.normalizeOrderPayments(this.order?.payments || []);
+    this.hydrateOrderItems(this.order);
+    this.showCustomerPicker = false;
+  }
+
+  printAndClose(kind: 'comanda' | 'recibo' | 'factura'): void {
+    this.showMoreActions = false;
+    if (kind === 'comanda') this.getComandaPdf();
+    else if (kind === 'recibo') this.getRecibo();
+    else this.getFacturaPdf();
+  }
+
+  // =================== Helpers ===================
 
   hasInventory(product: Product | null | undefined): boolean {
     return hasInventoryControl(product);
@@ -667,13 +781,12 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   invoiceSplit(row: OrderSplitRow): void {
     if (!row?.name || this.splitActionLoadingName || this.splitDeleteLoadingName) return;
-    const terminalBlockMessage = this.capabilities.getPosTerminalBlockMessage();
-    if (terminalBlockMessage) {
-      toast.error(terminalBlockMessage);
-      return;
-    }
     if (!this.canInvoiceSplit) {
       toast.error('No tiene permisos para facturar una cuenta dividida.');
+      return;
+    }
+    if (this.emissionBlockMessage) {
+      toast.error(this.emissionBlockMessage);
       return;
     }
     if (this.splitHasInvoice(row)) {
@@ -699,6 +812,27 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
         error: (e) => {
           toast.error(this.extractBackendError(e));
         }
+      });
+  }
+
+  /** Cada persona puede facturar su subcuenta a su propio nombre. */
+  changeSplitCustomer(event: { row: OrderSplitRow; customer: any }): void {
+    const splitName = event?.row?.name;
+    const customer = String(event?.customer?.name || '').trim();
+    if (!splitName || !customer || this.splitCustomerSavingName) return;
+    if (this.splitHasInvoice(event.row)) {
+      toast.info('La subcuenta ya fue facturada; su cliente no se puede cambiar.');
+      return;
+    }
+    this.splitCustomerSavingName = splitName;
+    this.orderSplitSvc.updateSplitCustomer(splitName, customer)
+      .pipe(finalize(() => { this.splitCustomerSavingName = ''; }))
+      .subscribe({
+        next: () => {
+          toast.success('Cliente de la subcuenta actualizado.');
+          this.loadOrderSplits();
+        },
+        error: (e) => toast.error(this.extractBackendError(e))
       });
   }
 
@@ -929,16 +1063,6 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   private round2(n: number): number {
     return Math.round((n + Number.EPSILON) * 100) / 100;
-  }
-
-  // ====== Modal Cliente (opc) ======
-  closeCustomerModal(): void {
-    this.showCustomerModal = false;
-  }
-  saveCustomerForOrder(): void {
-    // Hook si decides permitir cambiar el cliente de la orden
-    this.showCustomerModal = false;
-    toast.info('Conecta aquí el servicio para actualizar el cliente de la orden.');
   }
 
   get isLocked(): boolean {
@@ -1206,13 +1330,15 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   }
 
   get orderStatusClass(): string {
+    // Opacidades en lugar de tonos fijos: legibles en tema claro y oscuro.
+    if (this.isLocked) return 'border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
     const status = this.orderStatusLabel;
-    if (status === 'Ingresada') return 'border-red-200 bg-red-100 text-red-700';
-    if (status === 'Preparación') return 'border-amber-200 bg-amber-100 text-amber-700';
-    if (status === 'Lista') return 'border-sky-200 bg-sky-100 text-sky-700';
-    if (status === 'Cerrada') return 'border-emerald-200 bg-emerald-100 text-emerald-700';
-    if (status === 'Cancelada') return 'border-rose-200 bg-rose-100 text-rose-700';
-    return 'border-slate-200 bg-slate-100 text-slate-700';
+    if (status === 'Ingresada') return 'border-sky-500/30 bg-sky-500/15 text-sky-700 dark:text-sky-300';
+    if (status === 'Preparación') return 'border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-300';
+    if (status === 'Lista') return 'border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
+    if (status === 'Cerrada') return 'border-border bg-muted text-muted-foreground';
+    if (status === 'Cancelada') return 'border-destructive/30 bg-destructive/10 text-destructive';
+    return 'border-border bg-muted text-muted-foreground';
   }
 
   private detectRole(): 'Gerente' | 'Cajero' | 'Mesero' | 'Desconocido' {

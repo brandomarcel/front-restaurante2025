@@ -248,3 +248,93 @@ tras la migración a `angular-eslint` 22). No usar como validación hasta correg
 Despliegue: cualquier `push` a `main` dispara `.github/workflows/deploy.yml`, que
 compila y despliega automáticamente por SSH a producción. No hay ambiente de staging
 intermedio: un push a `main` es un despliegue real.
+
+---
+
+# 11. Contexto del ecosistema (no repetir al usuario)
+
+## Alcance de trabajo
+
+- **Front activo:** este repo (`/home/frappe/front-restaurante2025`, Angular).
+- **Backend activo:** apps `facturada_*` en `/home/frappe/frappe-bench/apps`:
+  `facturada_core`, `facturada_lite`, `facturada_restaurante`, `facturada_api`,
+  `facturada_platform` (legacy). `facturada_erpnext` / `facturada_erpnext_lab` son
+  integraciones ERPNext aparte (no leídas aún; leer solo si la tarea las toca).
+- **IGNORAR:** `restaurante_app` (antiguo) y `/home/frappe/front-gym` / `gym_management`
+  (otra app distinta; solo interactúa con Lite vía recibos y fuentes protegidas).
+- Cada app backend tiene `AGENTS.md` (reglas), `ESTADO.md` (estado/pendientes) y a veces
+  `docs/`. Releer su `ESTADO.md` antes de tocar esa app.
+- Contratos front↔back documentados en `facturada_lite/docs/`:
+  `frontend_electronic_states.md` (copia en este repo), `frontend_sales_reports.md`,
+  `frontend_invoice_cancellation.md`. Si cambia el backend, actualizar ambas copias.
+
+## Reparto de responsabilidades en el backend
+
+- **Core:** negocio, usuarios/roles, licencias/features, perfil tributario,
+  establecimientos, puntos de emisión, secuencias, terminales POS, bodegas,
+  `ui_capabilities`. Matriz de permisos en `api/business_permissions.py`.
+- **Lite:** facturas, NC, guías de remisión, productos/variantes, clientes, inventario,
+  notas de venta POS, recibos/cobros, reportes. API para el front en `api/frontend.py`
+  (`get_user_context`, `get_available_business_roles`).
+- **Restaurante:** mesas, órdenes, cocina, splits, caja (apertura/retiro/cierre),
+  tickets/comandas, `get_dashboard_metrics`.
+- **API:** adaptador externo `/api/v1/facturada` (clientes API, no lo usa el front).
+- Roles de negocio: Administrador, Gerente, Cajero, Facturacion, Mesero, Cocina, Usuario
+  (+ Recepcionista solo con feature `gym`). Roles autorizan acciones; features habilitan
+  módulos; nunca inferir uno del otro. `Administrator` de Frappe ≠ rol Administrador.
+
+## Reglas del backend que el front debe respetar
+
+- Usar `ui_capabilities` de `get_user_context` para decisiones de UI nuevas; no quitar
+  `features`/`permissions` legados. La visibilidad en front es solo orientativa: el
+  backend autoriza.
+- No confiar en totales/impuestos/stock calculados en front; el backend recalcula.
+- Estados SRI: consulta y reintento son distintos. `PROCESSING`/pendiente → solo
+  consultar (nunca reemitir). Códigos 43/70 → solo consultar. Facturas
+  `Reemplazada`/con `regenerated_invoice` no permiten reintento ni revisión manual.
+- Lista Facturas solo trae `Factura`; las NC van por `get_all_credit_notes`.
+  `credit_note_summary` (FULL/PARTIAL/PENDING/NONE): solo FULL se muestra como anulación
+  por compensación; el estado fiscal original no cambia.
+- Una orden de restaurante se factura una sola vez. Una nota POS con `lite_invoice` no se
+  cancela: se usa nota de crédito. Estados de cocina ≠ estados tributarios.
+- El stock sale al enviar la venta numerada (antes del SRI), no al autorizar; NC
+  reingresan al autorizar. Borradores no mueven stock.
+- Reportes comerciales: solo facturas vigentes; "cobrado" es acumulado actual, no caja
+  diaria. `posting_date` es fecha; para hora usar `creation`/`movement_datetime`.
+- Zona horaria de vigencia del certificado: Ecuador continental (backend valida en UTC).
+
+## Entorno de desarrollo
+
+- Sitio piloto: `facturada_core_simple_test`, backend en `127.0.0.1:8002`, Socket.IO en
+  `:9000`. Proxy en `src/proxy.conf.json` (alternativa red local: `proxy.conf_local.json`).
+- Arrancar front: `npx ng serve --host 0.0.0.0 --port 4200 --proxy-config src/proxy.conf.json`.
+- Tests backend: `bench --site facturada_core_simple_test run-tests --module <modulo>`;
+  Redis no disponible hace fallar varias suites (no afirmar que pasaron).
+- Cambios de DocType/campos requieren `bench --site <sitio> migrate`.
+- Mantener `ESTADO.md` (este repo y cada app) al cierre de sesión cuando el usuario lo pida.
+
+## Pendientes conocidos (a 2026-10-25)
+
+- Front: `npm run lint` roto; ruta de proxy del README; revisar `package-lock.json` y la
+  dependencia `@tailwindcss/oxide-linux-x64-gnu`; filtros estado/tipo/ambiente del
+  endpoint de métricas del dashboard.
+- Lite: Cuentas por Cobrar e Historial de Abonos (acordar contrato con el front antes);
+  reporte de ingresos por fecha real de abono; validación al desactivar `track_stock`.
+- Restaurante: repetir pruebas orden → factura → autorización sin doble salida de stock.
+
+## Lecturas al iniciar una sesión (si el usuario pide "retomar")
+
+1. `/home/frappe/front-restaurante2025/ESTADO.md` (estado del front).
+2. `ESTADO.md` de la app backend que toque la tarea, en `/home/frappe/frappe-bench/apps/<app>/`
+   (`facturada_lite`, `facturada_core`, `facturada_restaurante`, `facturada_api`).
+3. `AGENTS.md` de esa misma app, solo si se va a modificar su código.
+4. Contratos front↔back en `facturada_lite/docs/` si la tarea toca estados SRI, reportes
+   o anulaciones.
+No leer `restaurante_app` ni `front-gym` salvo que el usuario lo pida.
+
+## Pruebas: las hace Codex
+
+Por decisión del usuario, **Codex crea y ejecuta las pruebas** (front y backend) siguiendo
+`TESTING_CODEX.md`. Claude no escribe ni corre pruebas; si un cambio necesita pruebas,
+indícalo en el resumen final para que Codex las haga, y mantén `TESTING_CODEX.md` al día
+cuando cambien comandos, rutas o reglas.

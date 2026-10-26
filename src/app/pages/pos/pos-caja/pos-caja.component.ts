@@ -22,7 +22,7 @@ import { CartService } from '../services/cart.service';
 import { canSellProduct, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, resolveInventoryLabel, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { UtilsService } from 'src/app/core/services/utils.service';
-import { buildMultiplePaymentPayload, findPaymentMethod, getDefaultPaymentValue, getPaymentDisplayLabel, isCashPayment, isPaymentMethodAlreadySelected, PaymentRow, roundMoney } from 'src/app/shared/utils/payment.utils';
+import { buildMultiplePaymentPayload, findPaymentMethod, getDefaultPaymentValue, getPaymentDisplayLabel, isCashPayment, isPaymentMethodAlreadySelected, isTransferPayment, PAYMENT_REFERENCE_MAX_LENGTH, PaymentRow, roundMoney } from 'src/app/shared/utils/payment.utils';
 import { liteEmissionMessages, liteEmissionState } from 'src/app/core/utils/lite-invoice-emission';
 import { ProductVariantPickerComponent } from 'src/app/shared/components/product-variant-picker/product-variant-picker.component';
 import { BarcodeScanInputComponent } from 'src/app/shared/components/barcode-scan-input/barcode-scan-input.component';
@@ -94,6 +94,8 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   deliveryPhone = '';
   paymentMethod = '';
   paymentRows: PaymentRow[] = [{ method: '', amount: 0 }];
+  /** Editor de varias formas de pago abierto; por defecto se cobra con una sola. */
+  splitPaymentsOpen = false;
   paymentCondition: 'Contado' | 'Credito' = 'Contado';
   paymentDueDate = '';
   initialCollectionMethod = '';
@@ -221,10 +223,18 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     return this.router.url.includes('/pos-generic') && this.capabilities.isEnabled('generic_pos');
   }
 
+  /** Funcionalidad que habilita facturar aquí: POS genérico o restaurante (billing). */
+  private get emissionFeature(): 'generic_pos' | 'billing' {
+    return this.genericMode ? 'generic_pos' : 'billing';
+  }
+
+  /** Mismo control de emisión que el resto de la app (permiso, plan, cupo, firma, terminal). */
+  get emissionBlockMessage(): string | null {
+    return this.capabilities.getEmissionBlockMessage({ feature: this.emissionFeature, requireTerminal: true });
+  }
+
   get canEmitInvoice(): boolean {
-    return this.capabilities.hasPermission('billing.create')
-      && this.capabilities.canEmit()
-      && !this.capabilities.getPosTerminalBlockMessage();
+    return !this.emissionBlockMessage;
   }
 
   get currentFiscalLocation(): any | null {
@@ -273,8 +283,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   get invoicePlanBlockMessage(): string | null {
-    return this.capabilities.getPlanBlockMessage(this.genericMode ? 'generic_pos' : 'direct_invoice')
-      || this.capabilities.getPosTerminalBlockMessage();
+    return this.emissionBlockMessage;
   }
 
   get visibleProductList(): any[] {
@@ -356,6 +365,55 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     }
     this.paymentRows.splice(index, 1);
     this.onPaymentMethodChange();
+  }
+
+  // ---- Cobro rápido: una forma de pago con un toque ----
+
+  paymentValue(item: any): string {
+    return String(item?.name || item?.codigo || '');
+  }
+
+  isSinglePaymentSelected(item: any): boolean {
+    return this.paymentRows.length === 1 && this.paymentRows[0].method === this.paymentValue(item);
+  }
+
+  /** Cobra el total con una sola forma de pago (el caso más común). */
+  selectSinglePaymentMethod(item: any): void {
+    const method = this.paymentValue(item);
+    // Conserva el número de transferencia si se vuelve a tocar la misma forma.
+    const reference = this.paymentRows.length === 1 && this.paymentRows[0].method === method ? this.paymentRows[0].reference : '';
+    this.paymentRows = [{ method, amount: this.total, reference }];
+    this.splitPaymentsOpen = false;
+    this.onPaymentMethodChange();
+  }
+
+  openSplitPayments(): void {
+    this.splitPaymentsOpen = true;
+    if (this.paymentRows.length === 1) this.addPaymentRow();
+  }
+
+  /** Vuelve a una sola forma de pago conservando la primera elegida. */
+  useSinglePayment(): void {
+    const first = this.paymentRows[0];
+    this.paymentRows = [{ method: first?.method || '', amount: this.total, reference: first?.reference || '' }];
+    this.splitPaymentsOpen = false;
+    this.onPaymentMethodChange();
+  }
+
+  readonly paymentReferenceMaxLength = PAYMENT_REFERENCE_MAX_LENGTH;
+
+  /** Las transferencias muestran un campo para su número (opcional). */
+  isTransferRow(row: PaymentRow | null | undefined): boolean {
+    return isTransferPayment(this.payments, row?.method);
+  }
+
+  paymentIcon(item: any): string {
+    const label = `${item?.description || ''} ${item?.nombre || ''} ${item?.name || ''}`.toLowerCase();
+    const code = String(item?.codigo || '').trim();
+    if (code === '01' || label.includes('efectivo')) return '💵';
+    if (label.includes('tarjeta') || label.includes('credito') || label.includes('crédito') || label.includes('debito') || label.includes('débito')) return '💳';
+    if (label.includes('transfer') || label.includes('deposito') || label.includes('depósito')) return '🏦';
+    return '🧾';
   }
 
   onPaymentRowMethodChange(index: number): void {
@@ -525,6 +583,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     }
 
     if (this.paymentRows.length === 1) this.paymentRows[0].amount = this.total;
+    this.splitPaymentsOpen = this.paymentRows.length > 1;
     this.amountReceived = null;
     this.change = 0;
     this.showPaymentModal = true;
@@ -834,9 +893,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   getCartQuantityForProduct(product: any): number {
-    const key = product?.name ?? product?.nombre;
-    const item = this.cartService.cart.find((cartItem: any) => (cartItem.name ?? cartItem.nombre) === key);
-    return Number(item?.quantity || 0);
+    return this.cartService.quantityOf(product);
   }
 
   private loadInitialData(): void {
@@ -898,7 +955,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
           payment_method: litePayment.payment_method,
           payment_code: litePayment.payment_code,
           amount: row.monto,
-          reference: ''
+          reference: row.reference || ''
         } : null;
       }).filter(Boolean),
       notes: ''
@@ -1256,6 +1313,12 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       toast.warning('La nota debe estar cobrada antes de facturarla.');
       return;
     }
+    // La nota ya tiene su terminal: solo se valida permiso, plan, firma y cupo.
+    const blockMessage = this.capabilities.getEmissionBlockMessage({ feature: this.emissionFeature });
+    if (blockMessage) {
+      toast.error(blockMessage);
+      return;
+    }
     this.isSubmittingPosSale = true;
     this.posSaleService.invoice(name).pipe(finalize(() => this.isSubmittingPosSale = false)).subscribe({
       next: (response: any) => {
@@ -1315,16 +1378,9 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   }
 
   private submitOrder(payload: any): void {
-    if (payload?.estado === 'Factura') {
-      if (!this.capabilities.hasPermission('billing.create')) {
-        toast.error('No tiene permisos para emitir facturas.');
-        return;
-      }
-      const terminalBlockMessage = this.capabilities.getPosTerminalBlockMessage();
-      if (terminalBlockMessage) {
-        toast.error(terminalBlockMessage);
-        return;
-      }
+    if (payload?.estado === 'Factura' && this.emissionBlockMessage) {
+      toast.error(this.emissionBlockMessage);
+      return;
     }
     this.isSubmittingOrder = true;
     this.spinner.show();

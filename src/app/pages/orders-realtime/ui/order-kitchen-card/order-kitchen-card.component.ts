@@ -6,7 +6,8 @@ import { OrderVM } from 'src/app/services/realtime-orders.service';
   selector: 'app-order-kitchen-card',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './order-kitchen-card.component.html'
+  templateUrl: './order-kitchen-card.component.html',
+  styleUrl: './order-kitchen-card.component.css'
 })
 export class OrderKitchenCardComponent implements OnInit, OnDestroy {
 
@@ -48,25 +49,8 @@ export class OrderKitchenCardComponent implements OnInit, OnDestroy {
     this.minutes = Math.max(0, Math.floor(diff / 60000));
   }
 
-  badgeClass(): string {
-    if (this.kitchenStage === 'NEW') return 'bg-rose-100 text-rose-700';
-    if (this.kitchenStage === 'PREP') return 'bg-amber-100 text-amber-800';
-    if (this.kitchenStage === 'READY') return 'bg-emerald-100 text-emerald-800';
-    return 'bg-gray-100 text-gray-700';
-  }
 
-  borderClass(): string {
-    if (this.kitchenStage === 'NEW') return 'border-rose-300 bg-rose-50';
-    if (this.kitchenStage === 'PREP') return 'border-amber-300 bg-amber-50';
-    if (this.kitchenStage === 'READY') return 'border-emerald-300 bg-emerald-50';
-    return 'border-gray-200 bg-white';
-  }
 
-  kitchenStatusLabel(): string {
-    if (this.kitchenStage === 'PREP') return 'En preparación';
-    if (this.kitchenStage === 'READY') return 'Listo';
-    return 'Nuevo';
-  }
 
   urgencyText(): string {
     if (this.minutes >= 20) return 'Urgente';
@@ -74,16 +58,19 @@ export class OrderKitchenCardComponent implements OnInit, OnDestroy {
     return 'A tiempo';
   }
 
-  urgencyClass(): string {
-    if (this.minutes >= 20) return 'text-rose-700';
-    if (this.minutes >= 10) return 'text-amber-700';
-    return 'text-emerald-700';
-  }
 
   urgencyPillClass(): string {
-    if (this.minutes >= 20) return 'bg-rose-100 text-rose-700 border-rose-200';
-    if (this.minutes >= 10) return 'bg-amber-100 text-amber-700 border-amber-200';
-    return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    if (this.minutes >= 20) return 'border-rose-500/40 bg-rose-500/15 text-rose-700 dark:text-rose-300';
+    if (this.minutes >= 10) return 'border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300';
+    return 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
+  }
+
+  /** Lo primero que cocina necesita leer: mesa o alias del pedido. */
+  headline(): string {
+    const table = this.tableLabel();
+    const alias = String(this.order?.alias || '').trim();
+    if (table !== 'Sin mesa') return alias && alias !== table ? `${table} · ${alias}` : table;
+    return alias || this.order?.customer?.nombre || `#${this.order?.name}`;
   }
 
   get isDelayed(): boolean {
@@ -166,6 +153,26 @@ export class OrderKitchenCardComponent implements OnInit, OnDestroy {
     return 'En preparacion';
   }
 
+  itemStateKey(it: any): 'pending' | 'prep' | 'ready' | 'done' {
+    const status = this.normalizedItemStatus(it);
+    if (status.includes('entreg') || status.includes('cancel')) return 'done';
+    if (status.includes('list')) return 'ready';
+    if (status.includes('prepar')) return 'prep';
+    return 'pending';
+  }
+
+  itemStateLabel(it: any): string {
+    const status = this.normalizedItemStatus(it);
+    if (status.includes('cancel')) return 'Cancelado';
+    return { pending: 'Pendiente', prep: 'Preparando', ready: 'Listo', done: 'Entregado' }[this.itemStateKey(it)];
+  }
+
+  /** Texto de lo que hará el próximo toque sobre el producto (para lectores de pantalla). */
+  itemActionLabel(it: any): string {
+    const action = this.itemAction(it);
+    return action === 'En preparacion' ? 'en preparación' : action === 'Listo' ? 'listo' : action === 'Entregado' ? 'entregado' : '';
+  }
+
   isItemPending(it: any): boolean {
     const id = this.itemIdentifier(it);
     return !!id && this.pendingItemNames.includes(`${this.order?.name}:${id}`);
@@ -182,12 +189,5 @@ export class OrderKitchenCardComponent implements OnInit, OnDestroy {
     this.updateItem.emit({ order: this.order, item: it, kitchenStatus: 'Cancelado' });
   }
 
-  get visibleItems(): any[] {
-    return Array.isArray(this.order?.items) ? this.order.items.slice(0, 4) : [];
-  }
 
-  get remainingItems(): number {
-    const total = Array.isArray(this.order?.items) ? this.order.items.length : 0;
-    return Math.max(0, total - this.visibleItems.length);
-  }
 }

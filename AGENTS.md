@@ -248,3 +248,11 @@ tras la migración a `angular-eslint` 22). No usar como validación hasta correg
 Despliegue: cualquier `push` a `main` dispara `.github/workflows/deploy.yml`, que
 compila y despliega automáticamente por SSH a producción. No hay ambiente de staging
 intermedio: un push a `main` es un despliegue real.
+
+---
+
+# 11. Pruebas (responsabilidad de Codex)
+
+Codex es el responsable de **crear y ejecutar** las pruebas del frontend y del backend.
+Antes de hacerlo, lee y sigue [TESTING_CODEX.md](TESTING_CODEX.md): sitio de pruebas,
+mocks obligatorios del SRI, comandos verificados, línea base y formato del reporte.

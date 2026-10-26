@@ -1,53 +1,35 @@
-<article class="rounded-xl border border-primary/10 bg-card p-2.5 shadow-sm transition hover:border-primary/30 hover:shadow-md">
-  <div class="flex items-start justify-between gap-2">
-    <div class="min-w-0">
-      <p class="truncate text-sm font-bold text-foreground">{{ order.alias || order.name }}</p>
-      <p class="truncate text-[11px] text-muted-foreground">{{ order.customer.nombre || 'Consumidor final' }}</p>
-      <p class="text-[10px] text-muted-foreground">{{ order.name }}</p>
+<article class="rounded-xl border border-border bg-card p-3 shadow-sm"
+  [ngClass]="{ 'ring-2 ring-sky-400/50': order._flashType === 'insert' }">
+  <button type="button" class="block w-full text-left" (click)="open.emit(order)">
+    <div class="flex items-start justify-between gap-2">
+      <div class="min-w-0">
+        <p class="truncate text-base font-black text-foreground">{{ order.alias || order.customer.nombre || 'Consumidor final' }}</p>
+        <p class="truncate text-xs text-muted-foreground">
+          #{{ order.name }}<span *ngIf="table"> · {{ table }}</span> · {{ order.type || 'Servirse' }}
+        </p>
+      </div>
+      <span class="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold" [ngClass]="stageBadge[stage]">{{ stageLabel[stage] }}</span>
     </div>
 
-    <span class="badge shrink-0" [ngClass]="{
-      'badge-red': order.status === 'Ingresada',
-      'badge-yellow': order.status === 'Preparación',
-      'badge-green': order.status === 'Cerrada',
-      'badge-gray': order.status !== 'Ingresada' && order.status !== 'Preparación' && order.status !== 'Cerrada'
-    }">
-      {{ order.status }}
-    </span>
-  </div>
+    <div class="mt-2 flex items-end justify-between">
+      <span *ngIf="isActive; else hour" class="text-sm font-bold" [ngClass]="waitClass">⏱ {{ wait }}</span>
+      <ng-template #hour><span class="text-xs text-muted-foreground">{{ (order.createdAtISO || order.createdAt) | date:'dd/MM HH:mm' }}</span></ng-template>
+      <span class="text-lg font-black tabular-nums text-foreground">{{ order.total | currency:'USD':'symbol':'1.2-2' }}</span>
+    </div>
+  </button>
 
-  <div class="mt-2 grid grid-cols-3 gap-2 rounded-lg bg-muted/40 px-2 py-1.5 text-[11px] text-muted-foreground">
-    <p>
-      <span class="block text-[10px] font-bold uppercase text-primary">Fecha</span>
-      <span class="font-semibold text-foreground/80">{{ (order.createdAtISO || order.createdAt) | date:'dd/MM HH:mm' }}</span>
-    </p>
-    <p>
-      <span class="block text-[10px] font-bold uppercase text-primary">Tipo</span>
-      <span class="font-semibold text-foreground/80">{{ order.type || 'Nota Venta' }}</span>
-    </p>
-    <p class="text-right">
-      <span class="block text-[10px] font-bold uppercase text-primary">Total</span>
-      <span class="font-black text-primary">{{ order.total | currency:'USD':'symbol':'1.2-2' }}</span>
-    </p>
-  </div>
-
-  <div class="mt-2 flex gap-1.5">
-    <button (click)="open.emit(order)" type="button" class="btn btn-outline flex-1 !py-1.5 !text-[11px]">Detalle</button>
-
-    <button
-      *ngIf="allowActions && order.status === 'Ingresada'"
-      type="button"
-      (click)="toPreparacion.emit(order)"
-      class="btn bg-amber-500 text-white hover:bg-amber-600 !py-1.5 !text-[11px]">
-      Preparación
+  <div *ngIf="allowActions" class="mt-3">
+    <button *ngIf="stage === 'new'" type="button" class="h-11 w-full rounded-xl bg-amber-500 text-sm font-bold text-white active:translate-y-px" (click)="toPreparacion.emit(order)">
+      Enviar a cocina
     </button>
-
-    <button
-      *ngIf="allowActions && order.status === 'Preparación'"
-      type="button"
-      (click)="toCerrada.emit(order)"
-      class="btn bg-emerald-600 text-white hover:bg-emerald-700 !py-1.5 !text-[11px]">
-      Lista
+    <button *ngIf="stage === 'prep'" type="button" class="h-11 w-full rounded-xl bg-emerald-600 text-sm font-bold text-white active:translate-y-px" (click)="toCerrada.emit(order)">
+      Cerrar orden
+    </button>
+    <button *ngIf="stage === 'ready' || stage === 'closed'" type="button"
+      class="h-11 w-full rounded-xl text-sm font-bold active:translate-y-px"
+      [ngClass]="invoiced ? 'border border-border bg-card text-foreground' : 'bg-primary text-primary-foreground'"
+      (click)="goOrder.emit(order)">
+      {{ invoiced ? 'Ver orden' : 'Cobrar' }}
     </button>
   </div>
 </article>

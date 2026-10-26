@@ -279,6 +279,12 @@ export class CreditNoteDetailPageComponent implements OnInit {
   retryEmission(): void {
     const name = this.invoice?.name;
     if (!name || !this.canRetry || this.actionLoading || this.documentLoading) return;
+    // Mismo control de emisión que el POS: el reintento vuelve a enviar al SRI.
+    const blockMessage = this.capabilities.getEmissionBlockMessage({ feature: 'credit_note', permission: 'billing.manage' });
+    if (blockMessage) {
+      toast.error(blockMessage);
+      return;
+    }
     this.actionLoading = true;
     this.liteInvoicesSvc.retryLiteInvoice(name).pipe(finalize(() => { this.actionLoading = false; })).subscribe({
       next: (response: any) => {

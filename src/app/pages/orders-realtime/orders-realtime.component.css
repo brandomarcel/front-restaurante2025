@@ -1,0 +1,104 @@
+@reference '../../../styles.css';
+
+:host {
+  @apply block;
+}
+
+:host(:fullscreen) {
+  @apply overflow-y-auto bg-background;
+}
+
+.live-dot {
+  @apply relative inline-flex h-2 w-2 rounded-full bg-emerald-500;
+}
+.live-dot::after {
+  content: '';
+  @apply absolute inset-0 animate-ping rounded-full bg-emerald-500 opacity-60;
+}
+.live-dot.is-off {
+  @apply bg-amber-500;
+}
+.live-dot.is-off::after {
+  @apply hidden;
+}
+
+.segmented {
+  @apply flex gap-1 rounded-xl border border-border bg-muted/50 p-1;
+}
+
+.segment {
+  @apply inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm font-bold text-muted-foreground transition hover:text-foreground;
+}
+
+.segment.is-active {
+  @apply bg-card text-foreground shadow-sm;
+}
+
+.segment-count {
+  @apply rounded-full bg-muted px-1.5 text-[11px] tabular-nums;
+}
+
+.segment.is-active .segment-count {
+  @apply bg-primary/10 text-primary;
+}
+
+.dot {
+  @apply inline-block h-2 w-2 rounded-full;
+}
+
+.tool-btn {
+  @apply inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-3 text-sm font-bold text-foreground/80 transition hover:bg-muted;
+}
+
+.tool-btn.is-urgent {
+  @apply border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300;
+}
+
+.search {
+  @apply relative block w-full sm:max-w-72;
+}
+
+.search input {
+  @apply h-10 w-full rounded-xl border border-border bg-card pl-9 pr-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-primary/15;
+}
+
+.search-icon {
+  @apply pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lg leading-none text-muted-foreground;
+}
+
+/* Columnas del KDS */
+.kds-column.is-NEW   { --stage: var(--color-sky-500, #0ea5e9); }
+.kds-column.is-PREP  { --stage: var(--color-amber-500, #f59e0b); }
+.kds-column.is-READY { --stage: var(--color-emerald-500, #10b981); }
+
+.kds-column {
+  @apply flex min-h-80 flex-col overflow-hidden rounded-2xl border border-border bg-muted/30 lg:h-[calc(100dvh-210px)];
+}
+
+.kds-fullscreen .kds-column {
+  @apply lg:h-[calc(100dvh-150px)];
+}
+
+.kds-column-head {
+  @apply flex items-center justify-between px-3 py-2.5 text-foreground;
+  border-top: 4px solid var(--stage);
+  background: color-mix(in oklab, var(--stage) 10%, var(--color-card));
+}
+
+.kds-column-count {
+  @apply grid h-8 min-w-8 place-items-center rounded-full px-2 text-sm font-black text-white tabular-nums;
+  background: var(--stage);
+}
+
+.kds-column-body {
+  @apply min-h-0 flex-1 space-y-3 overflow-y-auto p-3;
+}
+
+/* En pantalla completa el fondo del KDS ocupa todo y no queda el layout de la app detrás */
+.kds-fullscreen {
+  @apply min-h-dvh bg-background p-3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot::after { animation: none; }
+}

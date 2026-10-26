@@ -9,6 +9,15 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-10-26: validacion segun TESTING_CODEX.md. Backend del sitio exclusivo
+  facturada_core_simple_test migrado: 282 pruebas aprobadas entre Core/Lite/
+  Restaurante/API. Agregadas 53 pruebas Angular y dos regresiones Jinja; fixtures
+  de importacion, facturacion y POS actualizados sin cambiar logica de produccion.
+  Front completo: 395 aprobadas de 421; quedan las 26 fallas heredadas de plantilla.
+  Build sin optimizacion aprobado; build normal bloqueado por DNS de Google Fonts
+  y Prettier por incompatibilidad ESM existente. E2E revisados, no ejecutados.
+  Detalle y comandos en PRUEBAS_CODEX_2026-10-26.md; sin commits ni despliegues.
+
 - Dashboard: período mensual en una barra compacta con nombre, fechas y marca «Mes actual»; mes/año y flechas agrupados en una fila, con vuelta al mes actual para períodos históricos. Adaptación móvil comprobada visualmente con los estilos reales y tema oscuro, sin desbordamiento. Al cargar otro mes oculta las cifras anteriores; la selección solo afecta comprobantes, no caja, actividad reciente ni consumo del plan, cuya tarjeta lo aclara. Once pruebas Chromium aprobadas (selectores, bisiesto, límites y respuestas atrasadas); compilación sin optimización aprobada, con aviso de tamaño del bundle. No cambia los filtros de estado/tipo/ambiente del endpoint de métricas; esa revisión sigue pendiente.
 - 2026-10-20: configuración de firma muestra fecha y hora de vigencia en Ecuador continental. El aviso de firma aún no vigente indica cuándo empieza, y el texto de contraseña aclara su almacenamiento cifrado en el servidor. Core unifica la validación de estas fechas en UTC.
 - Corregida mezcla de NC en la lista Facturas: Lite filtra por Factura antes de
