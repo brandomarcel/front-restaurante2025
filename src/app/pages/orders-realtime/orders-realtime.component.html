@@ -1,4 +1,4 @@
-<div class="app-container space-y-3 pb-4" [class.kds-fullscreen]="isFullscreen">
+<div class="app-container space-y-3 pb-4" [class.kds-fullscreen]="isFullscreen" [class.kds-large]="largeMode && viewMode === 'cocina'">
 
   <!-- Encabezado -->
   <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -28,6 +28,10 @@
           <span aria-hidden="true">{{ soundEnabled ? '🔔' : '🔕' }}</span>
           <span class="hidden sm:inline">{{ soundEnabled ? 'Sonido' : 'Silencio' }}</span>
         </button>
+ <button type="button" class="tool-btn" (click)="toggleLarge()" [attr.aria-pressed]="largeMode" title="Texto más grande para leer a distancia">
+          <span aria-hidden="true">Aa</span>
+          <span class="hidden sm:inline">{{ largeMode ? 'Normal' : 'Grande' }}</span>
+        </button>
         <button type="button" class="tool-btn" (click)="toggleFullscreen()" [title]="isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'">
           <span aria-hidden="true">⛶</span>
           <span class="hidden sm:inline">{{ isFullscreen ? 'Salir' : 'Pantalla completa' }}</span>
@@ -39,6 +43,11 @@
       </button>
     </div>
   </header>
+
+  <button *ngIf="showSoundHint" type="button" (click)="unlockAudio()"
+    class="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-900">
+    <span aria-hidden="true">🔕</span> Toca aquí para activar el aviso sonoro de pedidos nuevos
+  </button>
 
   <!-- ===================== VISTA CAJA ===================== -->
   <ng-container *ngIf="viewMode === 'normal'; else kitchenView">

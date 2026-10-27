@@ -24,7 +24,11 @@ type StatusFilter = 'ALL' | 'ACTIVAS' | 'Ingresada' | 'Preparación' | 'Lista' |
 
 /** Preferencia por dispositivo: la tablet de cocina recuerda si el aviso sonoro está activo. */
 const KDS_SOUND_KEY = 'facturada.kds.sound';
+/** Tamaño de lectura del KDS, también por dispositivo. */
+const KDS_LARGE_KEY = 'facturada.kds.large';
 const CLOCK_TICK_MS = 30_000;
+/** Ventana para deshacer un cambio de etapa tocado por error. */
+const KDS_UNDO_MS = 8_000;
 type RoleName = 'Gerente' | 'Cajero' | 'Mesero' | 'Cocina' | 'Desconocido';
 
 @Component({
@@ -65,6 +69,9 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   now = Date.now();
   soundEnabled = this.readSoundPreference();
   isFullscreen = false;
+  /** El navegador solo permite audio tras un gesto del usuario; hasta entonces el aviso sonoro no suena. */
+  audioUnlocked = false;
+  largeMode = this.readLargePreference();
 
   total$ = this.rt.streamTotal();
   private sub = new Subscription();
@@ -203,11 +210,40 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
 
   // ---- Aviso sonoro y pantalla completa (Cocina) ----
 
+  /** Un toque en cualquier parte habilita el audio, para no depender de que alguien pulse «Sonido». */
+  @HostListener('document:pointerdown')
+  @HostListener('document:keydown')
+  unlockAudio(): void {
+    if (this.audioUnlocked || typeof window === 'undefined') return;
+    try {
+      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!Ctx) return;
+      this.audioContext ??= new Ctx();
+      void this.audioContext.resume().then(() => { this.audioUnlocked = this.audioContext?.state === 'running'; });
+    } catch { /* sin audio: queda el aviso visual */ }
+  }
+
+  get showSoundHint(): boolean {
+    return this.viewMode === 'cocina' && this.soundEnabled && !this.audioUnlocked;
+  }
+
+  toggleLarge(): void {
+    this.largeMode = !this.largeMode;
+    try { localStorage.setItem(KDS_LARGE_KEY, this.largeMode ? '1' : '0'); } catch { /* solo esta sesión */ }
+  }
+
+  private readLargePreference(): boolean {
+    try { return localStorage.getItem(KDS_LARGE_KEY) === '1'; } catch { return false; }
+  }
+
   toggleSound(): void {
     this.soundEnabled = !this.soundEnabled;
     try { localStorage.setItem(KDS_SOUND_KEY, this.soundEnabled ? '1' : '0'); } catch { /* sin almacenamiento: solo esta sesión */ }
     // El clic del usuario habilita el audio en el navegador; se confirma con un aviso de prueba.
-    if (this.soundEnabled) this.playNewOrderSound();
+    if (this.soundEnabled) {
+      this.unlockAudio();
+      this.playNewOrderSound();
+    }
   }
 
   /** Dos tonos cortos generados con Web Audio (sin archivos). Si el navegador bloquea el audio, no hace nada. */
@@ -702,7 +738,7 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     }).add(() => { this.kitchenLoading = false; });
   }
 
-  private updateKitchenItems(order: OrderVM, kitchenStatus: 'En preparacion' | 'Listo' | 'Entregado'): void {
+  private updateKitchenItems(order: OrderVM, kitchenStatus: 'Pendiente' | 'En preparacion' | 'Listo' | 'Entregado', isUndo = false): void {
     if (this.pendingActions.has(order.name)) return;
     const rows = (order.items || [])
       // El backend espera el nombre de la fila hija, no el código del producto.
@@ -727,12 +763,25 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
           else this.loadKitchenOrders();
         },
         complete: () => {
+          if (isUndo) {
+            toast.success('Cambio deshecho.');
+            return;
+          }
+          // Entregado no se ofrece deshacer: el backend puede cerrar la orden y liberar la mesa.
+          const undoTo = kitchenStatus === 'Listo' ? 'En preparacion' : kitchenStatus === 'En preparacion' ? 'Pendiente' : null;
           const message = kitchenStatus === 'Listo'
             ? 'Ítems marcados como listos.'
             : kitchenStatus === 'Entregado'
               ? 'Pedido marcado como entregado.'
               : 'Ítems enviados a preparación.';
-          toast.success(message);
+          if (!undoTo) {
+            toast.success(message);
+            return;
+          }
+          toast.success(message, {
+            duration: KDS_UNDO_MS,
+            action: { label: 'Deshacer', onClick: () => this.updateKitchenItems(order, undoTo, true) }
+          });
         },
         error: (error: any) => {
           const message = this.readErrorMessage(error);

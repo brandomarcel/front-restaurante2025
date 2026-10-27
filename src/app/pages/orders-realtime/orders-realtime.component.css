@@ -102,3 +102,16 @@
 @media (prefers-reduced-motion: reduce) {
   .live-dot::after { animation: none; }
 }
+
+/* Modo grande: pensado para leer la tablet de cocina a distancia. */
+.kds-large .segment {
+  @apply h-12 px-4 text-base;
+}
+
+.kds-large .tool-btn {
+  @apply h-12 text-base;
+}
+
+.kds-large .kds-column-body {
+  zoom: 1.25;
+}
