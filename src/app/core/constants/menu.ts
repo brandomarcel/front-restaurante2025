@@ -131,6 +131,8 @@ export class Menu {
           uiVisibilityKey: 'restaurantOrders',
           permissionKeys: ['restaurant.orders.read', 'restaurant.orders.update'],
           hideInLite: true,
+          // Cocina trabaja desde su pantalla; la lista muestra totales en dinero.
+          hideForRoles: ['COCINA'],
         },
         {
           icon: 'assets/icons/heroicons/outline/building-storefront.svg',
@@ -139,6 +141,7 @@ export class Menu {
           featureKey: 'tables',
           uiVisibilityKey: 'restaurantTables',
           permissionKey: 'restaurant.orders.read',
+          hideForRoles: ['COCINA'],
         },
         {
           icon: 'assets/icons/tablericons/building-store.svg',

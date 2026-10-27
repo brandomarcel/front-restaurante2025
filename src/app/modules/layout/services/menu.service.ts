@@ -115,6 +115,7 @@ export class MenuService implements OnDestroy {
       if (this.capabilities.isApiOnlyMode && item.hideInApiOnly) return null;
       if (item.hideWhenFeature && this.capabilities.isEnabled(item.hideWhenFeature)) return null;
       if (item.hideWhenPermission && this.capabilities.hasPermission(item.hideWhenPermission)) return null;
+      if (item.hideForRoles?.includes(this._currentRole() as Role)) return null;
       if (item.requiresApiConfiguration && this.capabilities.apiConfiguration?.enabled !== true) return null;
 
       const rolesForThisItem = normRoles(item.allowedRoles) ?? normRoles(inheritedRoles);

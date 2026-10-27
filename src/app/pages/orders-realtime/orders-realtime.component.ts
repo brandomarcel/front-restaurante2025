@@ -58,7 +58,11 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   showPrintModal = false;
   pendingPrintOrderId: string | null = null;
   kitchenOnlyUrgent = false;
-  kitchenFilter: 'ALL' | 'NEW' | 'PREP' | 'READY' = 'ALL';
+  kitchenFilter: 'ALL' | 'NEW' | 'PREP' | 'READY' | 'DONE' = 'ALL';
+  /** Pedidos de hoy ya entregados; solo lectura, sin precios. Se consulta al abrir la pestaña. */
+  deliveredOrders: OrderVM[] = [];
+  deliveredLoading = false;
+  deliveredError = '';
   kitchenLoading = false;
   kitchenError = '';
   kitchenAccessChecked = false;
@@ -644,8 +648,38 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     return 'NEW';
   }
 
-  setKitchenFilter(filter: 'ALL' | 'NEW' | 'PREP' | 'READY'): void {
+  setKitchenFilter(filter: 'ALL' | 'NEW' | 'PREP' | 'READY' | 'DONE'): void {
     this.kitchenFilter = filter;
+    if (filter === 'DONE') this.loadDeliveredToday();
+  }
+
+  loadDeliveredToday(): void {
+    if (!this.kitchenAccessGranted || this.deliveredLoading) return;
+    const today = String(this.utils.getSoloFechaEcuador());
+    this.deliveredLoading = true;
+    this.deliveredError = '';
+    this.ordersApi.getAll(100, 0, today, today).subscribe({
+      next: (response: any) => {
+        const rows = response?.message?.data ?? [];
+        this.deliveredOrders = (Array.isArray(rows) ? rows : [])
+          .map((row: any) => this.rt.mapOne(row))
+          .filter((order: OrderVM) => this.isDeliveredOrder(order));
+      },
+      error: (error: any) => {
+        this.deliveredError = this.readErrorMessage(error) || 'No se pudieron cargar las entregas de hoy.';
+      }
+    }).add(() => { this.deliveredLoading = false; });
+  }
+
+  /** Cerrada, o con todos sus ítems (menos los cancelados) entregados. Las canceladas no cuentan. */
+  private isDeliveredOrder(order: OrderVM): boolean {
+    const status = this.normalize(order.status);
+    if (status.includes('cancel')) return false;
+    if (status.includes('cerrad')) return true;
+    const kitchen = ((order.items || []) as any[])
+      .map((item) => this.normalize(item?.kitchen_status ?? item?.kitchenStatus ?? item?.estado_cocina))
+      .filter((s) => !!s && !s.includes('cancel'));
+    return kitchen.length > 0 && kitchen.every((s) => s.includes('entreg'));
   }
 
   get kitchenFilterLabel(): string {

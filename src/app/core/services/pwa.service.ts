@@ -1,9 +1,17 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { NavigationEnd, Router } from '@angular/router';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { filter, interval } from 'rxjs';
 import { toast } from 'ngx-sonner';
+import { CartService } from 'src/app/pages/pos/services/cart.service';
 
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
+
+/**
+ * Pantallas donde recargar para aplicar una versión nueva no interrumpe trabajo en curso.
+ * Nunca el POS, el detalle de una orden (cobros) ni Cocina.
+ */
+const SAFE_UPDATE_ROUTES = ['/auth', '/dashboard/main', '/dashboard/tables', '/dashboard/orders'];
 
 /** Evento no estándar de Chromium con el que se ofrece instalar la app. */
 interface BeforeInstallPromptEvent extends Event {
@@ -18,6 +26,9 @@ interface BeforeInstallPromptEvent extends Event {
 @Injectable({ providedIn: 'root' })
 export class PwaService {
   private readonly swUpdate = inject(SwUpdate);
+  private readonly router = inject(Router);
+  private readonly cart = inject(CartService);
+  private updateReady = false;
   private offlineToastId: string | number | undefined;
   private installEvent: BeforeInstallPromptEvent | null = null;
   private readonly installable = signal(false);
@@ -75,6 +86,16 @@ export class PwaService {
     if (!navigator.onLine) this.showOffline();
   }
 
+  /** Recarga con la versión nueva solo en una pantalla segura y sin carrito de venta abierto. */
+  private applyPendingUpdate(url: string): void {
+    if (!this.updateReady || this.cart.cart.length > 0) return;
+    const path = url.split(/[?#]/)[0].replace(/\/+$/, '');
+    const safe = SAFE_UPDATE_ROUTES.some((route) => (route === '/auth' ? path.startsWith(route) : path === route));
+    if (!safe) return;
+    this.updateReady = false;
+    this.swUpdate.activateUpdate().then(() => document.location.reload()).catch(() => undefined);
+  }
+
   private checkForUpdate(): void {
     if (!navigator.onLine) return;
     this.swUpdate.checkForUpdate().catch(() => undefined);
@@ -97,6 +118,10 @@ export class PwaService {
 
   private watchUpdates(): void {
     if (!this.swUpdate.isEnabled) return;
+    // Si hay versión nueva lista, se aplica sola al llegar a una pantalla segura.
+    this.router.events
+      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
+      .subscribe((e) => this.applyPendingUpdate(e.urlAfterRedirects));
     // Un POS puede quedar abierto todo el día sin navegar: se consulta cada hora y al volver a la pestaña.
     interval(UPDATE_CHECK_INTERVAL_MS).subscribe(() => this.checkForUpdate());
     document.addEventListener('visibilitychange', () => {
@@ -105,6 +130,7 @@ export class PwaService {
     this.swUpdate.versionUpdates
       .pipe(filter((e): e is VersionReadyEvent => e.type === 'VERSION_READY'))
       .subscribe(() => {
+        this.updateReady = true;
         toast.info('Hay una nueva versión de FacturADA disponible.', {
           duration: Infinity,
           action: {

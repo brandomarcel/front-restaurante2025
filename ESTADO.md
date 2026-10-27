@@ -9,6 +9,35 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-10-27 (Claude, 2): mejoras posteriores a la PWA, todo sin commit y sin probar en
+  navegador (solo compilan con `ngc --noEmit`).
+  - Instalación: botón «Instalar app» en el menú de perfil y en el login (`PwaService`:
+    `canShowInstall`, `install()`); en iOS muestra los pasos de Safari. Accesos directos
+    del manifest (Mesas, Órdenes, Cocina, POS).
+  - Actualización: además del aviso, se aplica sola al llegar a una pantalla segura
+    (`SAFE_UPDATE_ROUTES`: /auth, dashboard, mesas, lista de órdenes) y solo con el carrito
+    vacío; nunca en POS, detalle de orden ni Cocina. Pendiente a futuro: modal obligatorio
+    solo si el backend declara una versión mínima incompatible.
+  - Cocina (KDS): pantalla encendida con `WakeLockService`; pestaña «Entregadas hoy»
+    (solo lectura, sin precios, consulta `get_all_orders` del día, máx. 100). Menú del rol
+    Cocina sin «Lista Órdenes» ni «Mesas» (`hideForRoles`); la ruta `/dashboard/orders`
+    sigue abierta por URL (la lista muestra totales): decidir si se bloquea en guard/API.
+  - Mesero: sin campo de escáner ni refocus en el POS (abría el teclado en tablet); el POS
+    de Caja lo conserva. Al crear la orden con mesas habilitadas vuelve a Mesas. Botón «←
+    Mesas» en el POS y «Mesas»/«Nueva orden» en el detalle de orden; «Orden sin mesa» en
+    Mesas abre el POS con `sin_mesa=1` (pos-shell no redirige). `goBack()` del detalle iba a
+    `/orders` (no existe), ahora `/dashboard/orders`.
+  - Mesas: mesas con «Listo» primero y filtro «Listas»; el mesero no ve «Cuentas abiertas $»
+    ni «Inactivas».
+  - Para Codex: `PwaService` (instalación, actualización en pantalla segura/carrito),
+    `WakeLockService`, pestaña «Entregadas hoy», `hideForRoles` (Cocina sola vs Cocina +
+    otro rol), orden y filtro de Mesas, vista de mesero en Mesas, `sin_mesa`, navegación a
+    Mesas tras crear la orden, botón «← Mesas» del POS.
+  - Pendiente: impresión desde celular/tablet (idea: Network Printer Settings de Frappe +
+    CUPS + endpoint propio; depende de si el servidor está en el mismo local o en la nube y
+    de las impresoras); fase 2 de Cocina (guardar quién preparó cada orden y mostrar «Mi
+    producción»); nginx sin caché para `ngsw.json`.
+
 - 2026-10-27 (Claude): PWA instalable, ya desplegada en producción (commit a `main`).
   - Manifest `src/manifest.webmanifest` (scope/start_url `/portal/`, standalone, colores
     `#1B1F3A`), service worker de Angular (`ngsw-config.json`, `provideServiceWorker` solo en

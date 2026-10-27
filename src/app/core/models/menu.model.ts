@@ -44,6 +44,8 @@ export interface SubMenuItem {
   hideInApiOnly?: boolean;
   /** Oculta la opción si el usuario tiene este permiso (evita duplicar un acceso ya mostrado en otro grupo). */
   hideWhenPermission?: string;
+  /** Oculta el ítem cuando el rol efectivo del usuario es uno de estos (p. ej. Cocina no usa listas con precios). */
+  hideForRoles?: Role[];
   /** Requiere que el contexto exponga api_configuration.enabled. */
   requiresApiConfiguration?: boolean;
   hideWhenFeature?: import('../services/company-capabilities.service').CompanyFeatureKey;

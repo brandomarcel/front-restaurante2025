@@ -117,6 +117,9 @@
           <button type="button" role="tab" class="segment" [class.is-active]="kitchenFilter === 'READY'" (click)="setKitchenFilter('READY')">
             <i class="dot bg-emerald-500"></i>Listos <span class="segment-count">{{ kitchenReadyCount }}</span>
           </button>
+          <button type="button" role="tab" class="segment" [class.is-active]="kitchenFilter === 'DONE'" (click)="setKitchenFilter('DONE')">
+            <i class="dot bg-slate-400"></i>Entregadas hoy
+          </button>
         </div>
 
         <div class="flex flex-1 items-center gap-2 lg:justify-end">
@@ -146,7 +149,32 @@
         </div>
       </section>
 
-      <div *ngIf="!kitchenLoading || orders.length" class="grid grid-cols-1 gap-3 lg:grid-cols-3">
+      <section *ngIf="kitchenFilter === 'DONE'" class="kds-column is-READY lg:col-span-3" aria-label="Pedidos entregados hoy">
+        <header class="kds-column-head">
+          <div>
+            <h2 class="text-base font-black">Entregadas hoy</h2>
+            <p class="text-[11px] font-semibold opacity-75">Solo consulta · sin precios</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" class="text-xs font-bold underline" (click)="loadDeliveredToday()" [disabled]="deliveredLoading">Actualizar</button>
+            <span class="kds-column-count">{{ deliveredOrders.length }}</span>
+          </div>
+        </header>
+        <p *ngIf="deliveredError" class="px-3 py-2 text-sm text-destructive">{{ deliveredError }}</p>
+        <div class="kds-column-body lg:grid lg:grid-cols-3 lg:gap-3 lg:space-y-0">
+          <app-order-kitchen-card
+            *ngFor="let o of deliveredOrders; trackBy: trackByName"
+            [order]="o"
+            [allowActions]="false"
+            [kitchenStage]="'READY'"
+            (open)="open($event)">
+          </app-order-kitchen-card>
+          <p *ngIf="!deliveredLoading && !deliveredOrders.length && !deliveredError" class="py-10 text-center text-sm text-muted-foreground">Aún no hay pedidos entregados hoy.</p>
+          <p *ngIf="deliveredLoading" class="py-10 text-center text-sm text-muted-foreground">Cargando entregas…</p>
+        </div>
+      </section>
+
+      <div *ngIf="kitchenFilter !== 'DONE' && (!kitchenLoading || orders.length)" class="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <ng-container *ngFor="let column of kitchenColumns; trackBy: trackByColumn">
           <section *ngIf="kitchenFilter === 'ALL' || kitchenFilter === column.key" class="kds-column"
             [ngClass]="['is-' + column.key, kitchenFilter !== 'ALL' ? 'lg:col-span-3' : '']">
