@@ -186,6 +186,14 @@ export class OrdersService {
     });
   }
 
+  /** Cambia en una sola operación todos los ítems activos de la orden (evita estados mezclados si falla una petición). */
+  updateKitchenOrderStatus(orderName: string, kitchenStatus: 'Pendiente' | 'En preparacion' | 'Listo' | 'Entregado'): Observable<any> {
+    return this.postRestaurant('update_kitchen_order_status', {
+      order_name: orderName,
+      kitchen_status: kitchenStatus
+    });
+  }
+
   create_order_v2(payload: any): Observable<any> {
     const business = this.activeBusinessOrError();
     if (business instanceof Error) return throwError(() => business);

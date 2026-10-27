@@ -9,6 +9,11 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-10-26 (Claude, 4): Cocina usa `update_kitchen_order_status` (una sola operación por
+  pedido) en lugar de una petición por ítem; un fallo a mitad ya no deja ítems en
+  estados distintos. Deshacer reutiliza el mismo endpoint. Para Codex: pruebas del
+  endpoint (ítems entregados/cancelados no cambian, estado inválido, sin ítems activos).
+
 - 2026-10-26 (Claude, 3): Gestión de cajas rediseñada. Filas desplegables: aperturas
   con terminal por nombre, duración y, si siguen abiertas, cobros por forma de pago,
   retiros y efectivo esperado; cierres con contado vs sistema por forma de pago (el

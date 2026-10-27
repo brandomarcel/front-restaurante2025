@@ -1,7 +1,7 @@
 import { Component, ElementRef, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { concatMap, from, Subscription } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { toast } from 'ngx-sonner';
 
 import { RealtimeOrdersService, OrderVM } from 'src/app/services/realtime-orders.service';
@@ -719,22 +719,9 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
 
   private updateKitchenItems(order: OrderVM, kitchenStatus: 'Pendiente' | 'En preparacion' | 'Listo' | 'Entregado', isUndo = false): void {
     if (this.pendingActions.has(order.name)) return;
-    const rows = (order.items || [])
-      // El backend espera el nombre de la fila hija, no el código del producto.
-      // Los distintos contratos han usado name, order_item, row_id o id.
-      .map((item: any) => String(item?.name ?? item?.order_item ?? item?.row_id ?? item?.id ?? '').trim())
-      .filter(Boolean);
-    if (!rows.length) {
-      toast.error('La orden no incluye identificadores de ítems para cocina.');
-      return;
-    }
 
     this.pendingActions.add(order.name);
-    from(rows).pipe(
-      // Las respuestas contienen la orden completa; se procesan en secuencia
-      // para que la última respuesta incluya el estado de todos los ítems.
-      concatMap((rowId) => this.ordersApi.updateKitchenItemStatus(order.name, rowId, kitchenStatus))
-    ).subscribe({
+    this.ordersApi.updateKitchenOrderStatus(order.name, kitchenStatus).subscribe({
         next: (response: any) => {
           const body = response?.message ?? response ?? {};
           const updated = body?.data ?? response?.data;
