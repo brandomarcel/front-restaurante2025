@@ -9,6 +9,14 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-10-26 (Claude, 3): Gestión de cajas rediseñada. Filas desplegables: aperturas
+  con terminal por nombre, duración y, si siguen abiertas, cobros por forma de pago,
+  retiros y efectivo esperado; cierres con contado vs sistema por forma de pago (el
+  efectivo se compara contra fondo + ventas − retiros). «Diferencia acumulada» ya no
+  queda en $0 (la clave del resumen no coincidía). Pendiente: enviar los filtros de
+  fecha al backend (hoy filtran en el front sobre 100 registros por tipo).
+  Para Codex: totales del turno abierto, desglose del cierre, diferencia acumulada.
+
 - 2026-10-26 (Claude, 2): Cocina, Usuarios, dashboard y subcuentas. Sin pruebas propias.
   - Cocina: rol y acceso salen del contexto ya cargado (antes una llamada fallida
     dejaba al usuario Cocina en la vista de Caja con totales).

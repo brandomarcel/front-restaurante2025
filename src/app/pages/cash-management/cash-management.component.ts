@@ -21,6 +21,8 @@ export class CashManagementComponent implements OnInit, OnDestroy {
   withdrawals: any[] = [];
   closings: any[] = [];
   summary: any = {};
+  /** Filas con el detalle abierto (por nombre del documento). */
+  expanded = new Set<string>();
   loading = false;
   error = '';
 
@@ -64,6 +66,7 @@ export class CashManagementComponent implements OnInit, OnDestroy {
     this.withdrawals = [];
     this.closings = [];
     this.summary = {};
+    this.expanded.clear();
 
     this.cajasService.getCashRegisterHistory().pipe(
       finalize(() => this.loading = false)
@@ -157,6 +160,100 @@ export class CashManagementComponent implements OnInit, OnDestroy {
   textSummary(...keys: string[]): string {
     const value = this.readSummary(...keys);
     return value === null || value === undefined || value === '' ? '0' : String(value);
+  }
+
+  isExpanded(row: any): boolean {
+    return this.expanded.has(String(row?.name || ''));
+  }
+
+  toggleRow(row: any): void {
+    const key = String(row?.name || '');
+    if (!key) return;
+    if (this.expanded.has(key)) this.expanded.delete(key);
+    else this.expanded.add(key);
+  }
+
+  isOpen(row: any): boolean {
+    return normalizeCashStatus(this.rowStatus(row)) === 'ABIERTA';
+  }
+
+  terminalLabel(row: any): string {
+    return String(row?.terminal_name || row?.pos_terminal || '').trim();
+  }
+
+  /** Duración legible del turno, de la apertura al cierre (o a ahora si sigue abierto). */
+  duration(from: unknown, to?: unknown): string {
+    const start = this.dateValue(from ? String(from) : null);
+    if (start === null) return '';
+    const end = to ? this.dateValue(String(to)) : Date.now();
+    if (end === null || end < start) return '';
+    const minutes = Math.floor((end - start) / 60000);
+    const hours = Math.floor(minutes / 60);
+    return hours ? `${hours} h ${minutes % 60} min` : `${minutes} min`;
+  }
+
+  /** Cobros de un turno abierto, por forma de pago, tal como los lleva el sistema hasta ahora. */
+  openingPayments(row: any): Array<{ method: string; code: string; amount: number }> {
+    const rows = Array.isArray(row?.payment_totals) ? row.payment_totals : [];
+    return rows.map((item: any) => ({
+      method: String(item?.payment_method || 'Otros'),
+      code: String(item?.payment_code || ''),
+      amount: this.toNumber(item?.amount)
+    }));
+  }
+
+  openingCashSales(row: any): number {
+    return this.openingPayments(row).filter((item) => item.code === '01').reduce((sum, item) => sum + item.amount, 0);
+  }
+
+  /**
+   * Detalle de un cierre por forma de pago. El efectivo se compara contra lo
+   * esperado en el cajón (apertura + ventas en efectivo − retiros), no contra
+   * las ventas solas, porque lo contado incluye el fondo inicial.
+   */
+  closingPayments(row: any): Array<{ method: string; code: string; system: number; counted: number; difference: number }> {
+    const rows = Array.isArray(row?.payments) ? row.payments : [];
+    return rows.map((item: any) => {
+      const code = String(item?.payment_code || '');
+      const isCash = code === '01';
+      const system = isCash ? this.toNumber(row?.cash_system ?? row?.efectivo_sistema) : this.toNumber(item?.system_amount);
+      const counted = isCash ? this.toNumber(row?.cash_counted ?? row?.efectivo_real) : this.toNumber(item?.counted_amount);
+      return {
+        method: String(item?.payment_method || 'Otros'),
+        code,
+        system,
+        counted,
+        difference: Math.round((counted - system) * 100) / 100
+      };
+    });
+  }
+
+  /** Ventas del cierre por forma de pago (sin el fondo ni los retiros del efectivo). */
+  private closingSales(row: any): Array<{ method: string; code: string; amount: number }> {
+    const rows = Array.isArray(row?.payments) ? row.payments : [];
+    return rows.map((item: any) => ({
+      method: String(item?.payment_method || 'Otros'),
+      code: String(item?.payment_code || ''),
+      amount: this.toNumber(item?.system_amount)
+    }));
+  }
+
+  /** Cobrado por forma de pago en lo que se está viendo (turnos abiertos + cierres, según filtros). */
+  get salesByMethod(): Array<{ method: string; code: string; amount: number }> {
+    const totals = new Map<string, { method: string; code: string; amount: number }>();
+    const add = (item: { method: string; code: string; amount: number }) => {
+      const key = item.code || item.method;
+      const current = totals.get(key);
+      if (current) current.amount += item.amount;
+      else totals.set(key, { ...item });
+    };
+    this.visibleOpenings.filter((row) => this.isOpen(row)).forEach((row) => this.openingPayments(row).forEach(add));
+    this.visibleClosings.forEach((row) => this.closingSales(row).forEach(add));
+    return Array.from(totals.values()).sort((a, b) => b.amount - a.amount);
+  }
+
+  get salesTotal(): number {
+    return this.salesByMethod.reduce((sum, item) => sum + item.amount, 0);
   }
 
   trackByName(index: number, row: any): string | number {

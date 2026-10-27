@@ -17,15 +17,18 @@
 
   <ng-container *ngIf="canView">
     <!-- Indicadores -->
-    <section class="grid grid-cols-2 gap-2 md:grid-cols-4" aria-label="Resumen">
+    <section class="grid grid-cols-2 gap-2 lg:grid-cols-4" aria-label="Resumen">
       <article class="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
         <p class="text-[10px] font-bold uppercase tracking-wide text-emerald-800">Abiertas ahora</p>
         <p class="mt-1 text-2xl font-black text-emerald-900">{{ countSummary('open_openings', 'currently_open', 'aperturas_abiertas', 'abiertas_actualmente') }}</p>
-        <p class="text-[10px] text-emerald-800/80">de {{ countSummary('total_openings', 'total_aperturas', 'aperturas_total', 'openings_count') }} aperturas</p>
+        <p class="text-[10px] text-emerald-800/80">
+          Efectivo esperado {{ moneySummary('open_expected_cash') | currency }} · {{ countSummary('total_openings', 'total_aperturas', 'aperturas_total', 'openings_count') }} aperturas
+        </p>
       </article>
       <article class="rounded-xl border border-border bg-card p-3">
-        <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Cierres</p>
-        <p class="mt-1 text-2xl font-black text-foreground">{{ countSummary('total_closings', 'total_cierres', 'cierres_total', 'closings_count') }}</p>
+        <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Cobrado</p>
+        <p class="mt-1 text-2xl font-black text-foreground">{{ salesTotal | currency }}</p>
+        <p class="text-[10px] text-muted-foreground">{{ countSummary('total_closings', 'total_cierres', 'cierres_total', 'closings_count') }} cierres · según filtros</p>
       </article>
       <article class="rounded-xl border border-border bg-card p-3">
         <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Retirado</p>
@@ -34,11 +37,18 @@
       </article>
       <article class="rounded-xl border border-border bg-card p-3">
         <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Diferencia acumulada</p>
-        <p class="mt-1 text-2xl font-black" [ngClass]="differenceClass(moneySummary('accumulated_difference', 'diferencia_acumulada', 'total_difference'))">
-          {{ moneySummary('accumulated_difference', 'diferencia_acumulada', 'total_difference') | currency }}
+        <p class="mt-1 text-2xl font-black" [ngClass]="differenceClass(moneySummary('accumulated_difference', 'difference_amount', 'diferencia_acumulada', 'total_difference'))">
+          {{ moneySummary('accumulated_difference', 'difference_amount', 'diferencia_acumulada', 'total_difference') | currency }}
         </p>
-        <p class="text-[10px] text-muted-foreground">negativo = faltantes</p>
+        <p class="text-[10px] text-muted-foreground">negativo = faltantes · positivo = sobrantes</p>
       </article>
+    </section>
+
+    <section *ngIf="salesByMethod.length" class="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2" aria-label="Cobrado por forma de pago">
+      <span class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Por forma de pago</span>
+      <span *ngFor="let item of salesByMethod" class="rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-foreground">
+        {{ item.method }} <b>{{ item.amount | currency }}</b>
+      </span>
     </section>
 
     <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
@@ -77,13 +87,51 @@
       <ng-container *ngIf="!loading && !error">
         <!-- Aperturas -->
         <ul *ngIf="activeTab === 'openings'" class="divide-y divide-border" aria-label="Aperturas">
-          <li *ngFor="let row of visibleOpenings; trackBy: trackByName" class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 sm:flex-nowrap">
-            <div class="min-w-0 flex-1 basis-full sm:basis-auto">
-              <p class="truncate text-sm font-semibold text-foreground">{{ rowUser(row) }}</p>
-              <p class="truncate text-[11px] text-muted-foreground"><span class="font-mono">{{ row.name || row.apertura || '—' }}</span> · {{ rowDate(row) | date:'short' }}<ng-container *ngIf="row.pos_terminal"> · {{ row.pos_terminal }}</ng-container></p>
+          <li *ngFor="let row of visibleOpenings; trackBy: trackByName">
+            <button type="button" class="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-left hover:bg-muted/40 sm:flex-nowrap"
+              [attr.aria-expanded]="isExpanded(row)" (click)="toggleRow(row)">
+              <div class="min-w-0 flex-1 basis-full sm:basis-auto">
+                <p class="truncate text-sm font-semibold text-foreground">{{ rowUser(row) }}</p>
+                <p class="truncate text-[11px] text-muted-foreground">
+                  <span class="font-mono">{{ row.name || row.apertura || '—' }}</span> · {{ rowDate(row) | date:'short' }}<ng-container *ngIf="terminalLabel(row)"> · {{ terminalLabel(row) }}</ng-container>
+                </p>
+              </div>
+              <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold" [ngClass]="statusClass(row)">{{ rowStatus(row) }}</span>
+              <div class="w-28 shrink-0 text-right">
+                <p class="text-[10px] text-muted-foreground">Fondo inicial</p>
+                <p class="text-sm font-bold text-foreground">{{ (row.opening_amount ?? row.monto_apertura ?? row.amount ?? 0) | currency }}</p>
+              </div>
+              <span class="shrink-0 text-muted-foreground" aria-hidden="true">{{ isExpanded(row) ? '▴' : '▾' }}</span>
+            </button>
+
+            <div *ngIf="isExpanded(row)" class="space-y-3 border-t border-border bg-muted/30 px-4 py-3">
+              <dl class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                <div><dt class="text-[10px] font-bold uppercase text-muted-foreground">Abierta el</dt><dd class="font-semibold text-foreground">{{ rowDate(row) | date:'medium' }}</dd></div>
+                <div><dt class="text-[10px] font-bold uppercase text-muted-foreground">Terminal</dt><dd class="font-semibold text-foreground">{{ terminalLabel(row) || 'Sin terminal' }}</dd></div>
+                <div><dt class="text-[10px] font-bold uppercase text-muted-foreground">Duración</dt><dd class="font-semibold text-foreground">{{ duration(rowDate(row)) || '—' }}{{ isOpen(row) ? ' (en curso)' : '' }}</dd></div>
+                <div *ngIf="row.notes"><dt class="text-[10px] font-bold uppercase text-muted-foreground">Observación</dt><dd class="font-semibold text-foreground">{{ row.notes }}</dd></div>
+              </dl>
+
+              <ng-container *ngIf="isOpen(row); else closedHint">
+                <div class="overflow-hidden rounded-lg border border-border bg-card">
+                  <table class="w-full text-xs">
+                    <thead class="bg-muted/50 text-[10px] uppercase text-muted-foreground">
+                      <tr><th class="px-3 py-1.5 text-left">Concepto</th><th class="px-3 py-1.5 text-right">Monto</th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-border">
+                      <tr><td class="px-3 py-1.5">Fondo inicial</td><td class="px-3 py-1.5 text-right">{{ (row.opening_amount ?? 0) | currency }}</td></tr>
+                      <tr *ngFor="let pay of openingPayments(row)"><td class="px-3 py-1.5">Cobrado en {{ pay.method }}</td><td class="px-3 py-1.5 text-right">{{ pay.amount | currency }}</td></tr>
+                      <tr *ngIf="!openingPayments(row).length"><td class="px-3 py-1.5 text-muted-foreground" colspan="2">Sin cobros todavía en este turno.</td></tr>
+                      <tr><td class="px-3 py-1.5">Retiros</td><td class="px-3 py-1.5 text-right text-rose-700">−{{ (row.withdrawals_total ?? 0) | currency }}</td></tr>
+                      <tr class="bg-muted/40 font-bold"><td class="px-3 py-1.5">Efectivo esperado en caja</td><td class="px-3 py-1.5 text-right">{{ (row.expected_cash ?? 0) | currency }}</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </ng-container>
+              <ng-template #closedHint>
+                <p class="text-[11px] text-muted-foreground">Turno cerrado: el detalle por forma de pago está en la pestaña Cierres.</p>
+              </ng-template>
             </div>
-            <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold" [ngClass]="statusClass(row)">{{ rowStatus(row) }}</span>
-            <p class="w-24 shrink-0 text-right text-sm font-bold text-foreground">{{ (row.opening_amount ?? row.monto_apertura ?? row.amount ?? 0) | currency }}</p>
           </li>
           <li *ngIf="!visibleOpenings.length" class="px-4 py-10 text-center text-xs text-muted-foreground">No hay aperturas para los filtros seleccionados.</li>
         </ul>
@@ -103,17 +151,56 @@
 
         <!-- Cierres -->
         <ul *ngIf="activeTab === 'closings'" class="divide-y divide-border" aria-label="Cierres">
-          <li *ngFor="let row of visibleClosings; trackBy: trackByName" class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 sm:flex-nowrap">
-            <div class="min-w-0 flex-1 basis-full sm:basis-auto">
-              <p class="truncate text-sm font-semibold text-foreground">{{ rowUser(row) }}</p>
-              <p class="truncate text-[11px] text-muted-foreground"><span class="font-mono">{{ row.name || row.cierre || '—' }}</span> · {{ rowDate(row) | date:'short' }}</p>
-            </div>
-            <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold" [ngClass]="statusClass(row)">{{ rowStatus(row) }}</span>
-            <div class="w-28 shrink-0 text-right">
-              <p class="text-[10px] text-muted-foreground">Esperado {{ (row.efectivo_sistema ?? row.system_cash ?? 0) | currency }}</p>
-              <p class="text-sm font-bold" [ngClass]="differenceClass(rowDifference(row))">
-                {{ rowDifference(row) > 0 ? '+' : '' }}{{ rowDifference(row) | currency }}
-              </p>
+          <li *ngFor="let row of visibleClosings; trackBy: trackByName">
+            <button type="button" class="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-left hover:bg-muted/40 sm:flex-nowrap"
+              [attr.aria-expanded]="isExpanded(row)" (click)="toggleRow(row)">
+              <div class="min-w-0 flex-1 basis-full sm:basis-auto">
+                <p class="truncate text-sm font-semibold text-foreground">{{ rowUser(row) }}</p>
+                <p class="truncate text-[11px] text-muted-foreground">
+                  <span class="font-mono">{{ row.name || row.cierre || '—' }}</span> · {{ rowDate(row) | date:'short' }}<ng-container *ngIf="terminalLabel(row)"> · {{ terminalLabel(row) }}</ng-container>
+                </p>
+              </div>
+              <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold" [ngClass]="statusClass(row)">{{ rowStatus(row) }}</span>
+              <div class="w-32 shrink-0 text-right">
+                <p class="text-[10px] text-muted-foreground">Esperado {{ (row.efectivo_sistema ?? row.system_cash ?? 0) | currency }} · Contado {{ (row.cash_counted ?? row.efectivo_real ?? 0) | currency }}</p>
+                <p class="text-sm font-bold" [ngClass]="differenceClass(rowDifference(row))">
+                  {{ rowDifference(row) > 0 ? '+' : '' }}{{ rowDifference(row) | currency }}
+                </p>
+              </div>
+              <span class="shrink-0 text-muted-foreground" aria-hidden="true">{{ isExpanded(row) ? '▴' : '▾' }}</span>
+            </button>
+
+            <div *ngIf="isExpanded(row)" class="space-y-3 border-t border-border bg-muted/30 px-4 py-3">
+              <dl class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                <div><dt class="text-[10px] font-bold uppercase text-muted-foreground">Apertura</dt><dd class="font-semibold text-foreground"><span class="font-mono">{{ row.cash_opening || '—' }}</span><ng-container *ngIf="row.opened_at"> · {{ row.opened_at | date:'short' }}</ng-container></dd></div>
+                <div><dt class="text-[10px] font-bold uppercase text-muted-foreground">Cierre</dt><dd class="font-semibold text-foreground">{{ rowDate(row) | date:'medium' }}</dd></div>
+                <div><dt class="text-[10px] font-bold uppercase text-muted-foreground">Terminal</dt><dd class="font-semibold text-foreground">{{ terminalLabel(row) || 'Sin terminal' }}</dd></div>
+                <div><dt class="text-[10px] font-bold uppercase text-muted-foreground">Duración</dt><dd class="font-semibold text-foreground">{{ duration(row.opened_at, rowDate(row)) || '—' }}</dd></div>
+              </dl>
+
+              <div class="overflow-x-auto rounded-lg border border-border bg-card">
+                <table class="w-full min-w-[420px] text-xs">
+                  <thead class="bg-muted/50 text-[10px] uppercase text-muted-foreground">
+                    <tr><th class="px-3 py-1.5 text-left">Forma de pago</th><th class="px-3 py-1.5 text-right">Sistema</th><th class="px-3 py-1.5 text-right">Contado</th><th class="px-3 py-1.5 text-right">Diferencia</th></tr>
+                  </thead>
+                  <tbody class="divide-y divide-border">
+                    <tr *ngFor="let pay of closingPayments(row)">
+                      <td class="px-3 py-1.5">{{ pay.method }}<span *ngIf="pay.code === '01'" class="ml-1 text-[10px] text-muted-foreground">(fondo + ventas − retiros)</span></td>
+                      <td class="px-3 py-1.5 text-right">{{ pay.system | currency }}</td>
+                      <td class="px-3 py-1.5 text-right">{{ pay.counted | currency }}</td>
+                      <td class="px-3 py-1.5 text-right font-semibold" [ngClass]="differenceClass(pay.difference)">{{ pay.difference > 0 ? '+' : '' }}{{ pay.difference | currency }}</td>
+                    </tr>
+                    <tr *ngIf="!closingPayments(row).length"><td class="px-3 py-1.5 text-muted-foreground" colspan="4">Este cierre no guardó detalle por forma de pago.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <dl class="grid grid-cols-3 gap-2 text-xs">
+                <div class="rounded-lg bg-card px-3 py-2"><dt class="text-[10px] font-bold uppercase text-muted-foreground">Fondo inicial</dt><dd class="font-bold text-foreground">{{ (row.monto_apertura ?? row.opened_amount ?? 0) | currency }}</dd></div>
+                <div class="rounded-lg bg-card px-3 py-2"><dt class="text-[10px] font-bold uppercase text-muted-foreground">Retiros</dt><dd class="font-bold text-rose-700">−{{ (row.total_retiros ?? row.withdrawals_total ?? 0) | currency }}</dd></div>
+                <div class="rounded-lg bg-card px-3 py-2"><dt class="text-[10px] font-bold uppercase text-muted-foreground">Diferencia total</dt><dd class="font-bold" [ngClass]="differenceClass(rowDifference(row))">{{ rowDifference(row) > 0 ? '+' : '' }}{{ rowDifference(row) | currency }}</dd></div>
+              </dl>
+              <p *ngIf="row.notes" class="rounded-lg bg-card px-3 py-2 text-xs text-muted-foreground"><b class="text-foreground">Observación:</b> {{ row.notes }}</p>
             </div>
           </li>
           <li *ngIf="!visibleClosings.length" class="px-4 py-10 text-center text-xs text-muted-foreground">No hay cierres para los filtros seleccionados.</li>
