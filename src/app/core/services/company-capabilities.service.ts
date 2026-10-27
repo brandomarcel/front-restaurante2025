@@ -1062,6 +1062,9 @@ export class CompanyCapabilitiesService {
       // ejemplo `restaurant.orders.create`. Comparar primero el permiso
       // completo evita perder el tercer segmento al separarlo.
       if (normalized.includes(resource)) return true;
+      // `restaurant.manage` cubre todo el módulo, igual que en el backend
+      // (`require_restaurant_permission`): un Gerente no trae `restaurant.orders.*`.
+      if (resource.startsWith('restaurant.') && normalized.includes('restaurant.manage')) return true;
       const [resourceName, ...actionParts] = resource.split('.');
       const action = actionParts.join('.');
       // El contexto Lite usa billing.* para las operaciones de facturación,
@@ -1088,6 +1091,7 @@ export class CompanyCapabilitiesService {
       const wildcard = (permissions as any)['*'];
       if (wildcard === true || wildcard === 1 || String(wildcard).toLowerCase() === 'true') return true;
     }
+    if (normalizedPermission.startsWith('restaurant.') && this.coerceOptionalBoolean((permissions as any)['restaurant.manage']) === true) return true;
     const candidates = [
       action ? undefined : `${normalizedPermission}.read`,
       action ? undefined : `${normalizedPermission}.manage`,
