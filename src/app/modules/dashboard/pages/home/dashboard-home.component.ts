@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { MenuService } from 'src/app/modules/layout/services/menu.service';
 import { Observable, Subject, forkJoin, of } from 'rxjs';
 import { catchError, map, switchMap, takeUntil, tap } from 'rxjs/operators';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
@@ -158,7 +159,8 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
     private ordersService: OrdersService,
     private liteDashboardService: FacturadaLiteDashboardService,
     private inventoryService: InventoryService,
-    private router: Router
+    private router: Router,
+    public menuService: MenuService
   ) {}
 
   ngOnInit(): void {
@@ -229,6 +231,13 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
   get showPlanCard(): boolean {
     if (this.layout.view === 'billing') return true;
     return this.layout.view === 'operations' && this.capabilities.dashboardScreen !== 'cashier_shift';
+  }
+
+  /** Sin panel asignado: se ofrecen los accesos del menú en lugar de una pantalla sin salida. */
+  get fallbackLinks(): { label: string; route: string }[] {
+    return this.menuService.quickActions
+      .filter((item) => !!item.route && item.route !== '/dashboard/main')
+      .map((item) => ({ label: String(item.label || item.route), route: String(item.route) }));
   }
 
   get heroCashOpen(): boolean | null {
@@ -375,7 +384,11 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
       return;
     }
     this.operationsLoad$.next();
-    if (this.capabilities.isRetailCashier && this.capabilities.isEnabled('inventory')) this.loadRetailStock();
+    // Alerta de stock para quien opera una tienda (Retail): el cajero y también
+    // quien administra, siempre que pueda consultar inventario.
+    if (this.capabilities.isRetailPos && this.capabilities.isEnabled('inventory') && this.capabilities.hasPermission('inventory.read')) {
+      this.loadRetailStock();
+    }
   }
 
   private fetchOperations(): Observable<OperationsResult> {
@@ -399,7 +412,7 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
     this.refreshAlerts();
   }
 
-  /** Bajo stock y agotados de la bodega activa, solo para el Cajero Retail. */
+  /** Bajo stock y agotados de la bodega activa en un POS Retail. */
   private loadRetailStock(): void {
     this.retailStock = { loading: true, lowStock: 0, outOfStock: 0 };
     this.inventoryService.getStockSummary().pipe(takeUntil(this.destroy$)).subscribe({

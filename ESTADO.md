@@ -9,6 +9,20 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-10-26 (Claude, 2): Cocina, Usuarios, dashboard y subcuentas. Sin pruebas propias.
+  - Cocina: rol y acceso salen del contexto ya cargado (antes una llamada fallida
+    dejaba al usuario Cocina en la vista de Caja con totales).
+  - Usuarios: el Gerente no ve Editar/Quitar acceso en filas Administrador/Gerente
+    (`canChange`); el backend lo valida y exige conservar un Administrador activo.
+    El catálogo de roles ya trae `label` y `description` (Usuario = solo consulta).
+  - Dashboard: el rol sin panel (Usuario) muestra accesos del menú en vez de un
+    callejón sin salida; la alerta de stock Retail también la ven Admin/Gerente.
+    Limitación: con Restaurante + POS genérico las cifras cuentan solo órdenes.
+  - Subcuenta: diálogo reorganizado (más ancho, cabecera compacta, paneles de
+    productos desde `lg`, pagos y resumen lado a lado, total en el pie).
+  - Para Codex: `canChange`, `resolveDashboardLayout` por rol/negocio, accesos del
+    rol sin panel, acceso a Cocina sin llamada extra. Revisar el diálogo en móvil.
+
 - 2026-10-26 (Claude): caja, menú y Cocina. Sin pruebas propias; pendientes para Codex abajo.
   - Caja: `CajaAbiertaGuard` obliga a abrir caja solo al Cajero; Administrador/Gerente
     reciben un aviso con botón «Abrir caja» y pasan; Mesero y otros roles no se validan.
