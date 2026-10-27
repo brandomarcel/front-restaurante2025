@@ -95,6 +95,15 @@ export class UsersComponent implements OnInit, DoCheck {
     return this.capabilities.hasPermission('*') || this.capabilities.usersModuleVisible;
   }
 
+  /**
+   * Un Gerente no puede modificar ni quitar el acceso a un Administrador o
+   * Gerente (el backend también lo rechaza; aquí solo se evita ofrecer el botón).
+   */
+  canChange(user: FacturadaBusinessUser): boolean {
+    if (this.normalized(this.capabilities.businessRole) !== 'GERENTE') return true;
+    return !['ADMINISTRADOR', 'GERENTE'].includes(this.normalized(this.roleName(user)));
+  }
+
   /** Conteos del negocio completo (no de lo filtrado): sirven también como filtro rápido. */
   get activeCount(): number {
     return this.users.filter((item) => this.isActive(item)).length;

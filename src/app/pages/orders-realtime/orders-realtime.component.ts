@@ -10,7 +10,6 @@ import { RestaurantRealtimeService } from 'src/app/services/restaurant-realtime.
 import { UtilsService } from 'src/app/core/services/utils.service';
 import { PrintService } from 'src/app/services/print.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
-import { CompanyService } from 'src/app/services/company.service';
 
 import { OrderCardComponent } from './ui/order-card/order-card.component';
 import { OrderKitchenCardComponent } from './ui/order-kitchen-card/order-kitchen-card.component';
@@ -92,7 +91,6 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     private printService: PrintService,
     private restaurantRealtime: RestaurantRealtimeService,
     private capabilities: CompanyCapabilitiesService,
-    private companyService: CompanyService,
     private host: ElementRef<HTMLElement>
   ) {}
 
@@ -101,37 +99,39 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     this.loadKitchenContext();
   }
 
+  /**
+   * Rol y acceso a Cocina salen del contexto que la app ya cargó (el cambio de
+   * negocio recarga la página). Antes se pedía otro contexto al backend y, si
+   * esa llamada fallaba, el usuario de Cocina caía en la vista de Caja con
+   * totales y ventas del día.
+   */
   private loadKitchenContext(): void {
     const business = String(this.capabilities.activeBusinessId || localStorage.getItem('active_business') || '').trim();
     this.currentBusinessId = business;
+    this.roleName = this.detectRole();
+    this.viewMode = this.roleName === 'Cocina' ? 'cocina' : 'normal';
+    this.statusFilter = this.viewMode === 'cocina' ? 'ACTIVAS' : 'ALL';
+    this.kitchenAccessChecked = true;
+
     if (!business) {
-      this.kitchenAccessChecked = true;
+      this.kitchenAccessGranted = false;
       this.kitchenAccessError = 'Debe seleccionar un negocio para consultar Cocina.';
+    } else if (!this.capabilities.isLoaded) {
+      this.kitchenAccessGranted = false;
+      this.kitchenAccessError = 'No se pudo validar el acceso a Cocina. Recarga la página.';
+    } else {
+      this.kitchenAccessGranted = this.canAccessKitchen();
+      this.kitchenAccessError = this.kitchenAccessGranted
+        ? ''
+        : 'No tiene permisos para consultar o actualizar la cola de Cocina en este negocio.';
+    }
+
+    if (!business) {
       this.initializeStreams();
       return;
     }
-
-    this.companyService.getLiteContext(business).subscribe({
-      next: (context: any) => {
-        this.roleName = this.detectRole();
-        this.viewMode = this.roleName === 'Cocina' ? 'cocina' : 'normal';
-        this.statusFilter = this.viewMode === 'cocina' ? 'ACTIVAS' : 'ALL';
-        this.kitchenAccessGranted = this.canAccessKitchen(context);
-        this.kitchenAccessError = this.kitchenAccessGranted
-          ? ''
-          : 'No tiene permisos para consultar o actualizar la cola de Cocina en este negocio.';
-        this.kitchenAccessChecked = true;
-        if (this.initialized) this.loadCurrentData();
-        else this.initializeStreams();
-      },
-      error: (error: any) => {
-        this.kitchenAccessChecked = true;
-        this.kitchenAccessGranted = false;
-        this.kitchenAccessError = this.readErrorMessage(error) || 'No se pudo validar el acceso a Cocina.';
-        if (this.initialized) this.loadCurrentData();
-        else this.initializeStreams();
-      }
-    });
+    if (this.initialized) this.loadCurrentData();
+    else this.initializeStreams();
   }
 
   private initializeStreams(): void {
@@ -658,36 +658,15 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     return status === filter;
   }
 
-  private canAccessKitchen(context: any): boolean {
-    const features = context?.features ?? this.capabilities.features;
-    if (features?.kitchen !== true) return false;
-    const permissions = context?.permissions ?? this.capabilities.permissions;
-    const hasPermission = (required: string): boolean => {
-      if (Array.isArray(permissions)) {
-        const values = permissions.map((item: any) => this.normalize(item));
-        return values.includes('*')
-          || values.includes(required)
-          || values.includes(required.replace('restaurant.orders.', 'orders.'))
-          || values.includes('restaurant.orders.manage')
-          || values.includes('restaurant.manage')
-          || values.includes('orders.manage');
-      }
-      if (!permissions || typeof permissions !== 'object') return false;
-      if (permissions['*'] === true || permissions['*'] === 1 || String(permissions['*']).toLowerCase() === 'true') return true;
-      const direct = permissions[required] ?? permissions[required.replace('restaurant.orders.', 'orders.')];
-      if (direct !== undefined) return direct === true || direct === 1 || direct === '1';
-      const grouped = permissions.restaurant?.orders ?? permissions.orders;
-      const action = required.endsWith('.read') ? 'read' : 'update';
-      return permissions.restaurant?.manage === true
-        || permissions.restaurant?.orders?.manage === true
-        || permissions.orders?.manage === true
-        || grouped?.[action] === true
-        || grouped?.[action] === 1
-        || grouped?.[action] === '1'
-        || grouped?.manage === true;
-    };
-
-    return hasPermission('restaurant.orders.read') && hasPermission('restaurant.orders.update');
+  /**
+   * Visibilidad de `ui_capabilities` (con respaldo a la feature) más permiso
+   * para ver y para actualizar órdenes; `restaurant.manage` cubre ambos.
+   */
+  private canAccessKitchen(): boolean {
+    const manage = this.capabilities.hasPermission('restaurant.manage');
+    return this.capabilities.restaurantKitchenVisible
+      && (manage || this.capabilities.hasPermission('restaurant.orders.read'))
+      && (manage || this.capabilities.hasPermission('restaurant.orders.update'));
   }
 
   private filterKitchenQueue(rows: OrderVM[]): OrderVM[] {
