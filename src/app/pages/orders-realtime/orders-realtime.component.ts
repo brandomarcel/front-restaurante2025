@@ -130,8 +130,10 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
       this.initializeStreams();
       return;
     }
-    if (this.initialized) this.loadCurrentData();
-    else this.initializeStreams();
+    if (this.initialized) {
+      this.loadCurrentData();
+      if (!this.realtimeConnected) this.startFallbackPolling();
+    } else this.initializeStreams();
   }
 
   private initializeStreams(): void {
@@ -143,7 +145,7 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
       if (!nextBusiness) {
         this.orders = [];
         this.selectedOrder = null;
-        this.stopKitchenFallbackPolling();
+        this.stopFallbackPolling();
         return;
       }
       if (nextBusiness === this.currentBusinessId) return;
@@ -153,7 +155,7 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
       this.selectedOrder = null;
       this.kitchenAccessChecked = false;
       this.kitchenAccessGranted = false;
-      this.stopKitchenFallbackPolling();
+      this.stopFallbackPolling();
       this.loadKitchenContext();
     }));
 
@@ -168,8 +170,8 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
 
     this.sub.add(this.restaurantRealtime.connected$.subscribe((connected) => {
       this.realtimeConnected = connected;
-      if (connected) this.stopKitchenFallbackPolling();
-      else if (this.viewMode === 'cocina' && this.kitchenAccessGranted) this.startKitchenFallbackPolling();
+      if (connected) this.stopFallbackPolling();
+      else this.startFallbackPolling();
     }));
 
     this.loadCurrentData();
@@ -190,9 +192,7 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
       })
     );
 
-    if (this.viewMode === 'cocina' && this.kitchenAccessGranted && !this.realtimeConnected) {
-      this.startKitchenFallbackPolling();
-    }
+    if (!this.realtimeConnected) this.startFallbackPolling();
   }
 
   private loadCurrentData(): void {
@@ -203,7 +203,7 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub.unsubscribe();
-    this.stopKitchenFallbackPolling();
+    this.stopFallbackPolling();
     if (this.clockTimer) clearInterval(this.clockTimer);
     void this.audioContext?.close().catch(() => undefined);
   }
@@ -307,12 +307,12 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     this.kitchenFilter = 'ALL';
     if (mode === 'cocina') {
       this.loadKitchenOrders();
-      if (!this.realtimeConnected) this.startKitchenFallbackPolling();
+      if (!this.realtimeConnected) this.startFallbackPolling();
     }
     else {
-      this.stopKitchenFallbackPolling();
       const today = this.utils.getSoloFechaEcuador();
       this.rt.loadInitial(80, 0, today, today, undefined, true);
+      if (!this.realtimeConnected) this.startFallbackPolling();
     }
     this.rt.markNewSeen();
   }
@@ -430,7 +430,7 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   }
 
   trackByName = (_: number, o: OrderVM) => o.name;
-  trackByColumn = (_: number, column: { key: string }) => column.key;
+  trackByColumn = (_: number, column: { key?: string; value?: string }) => column.key ?? column.value;
 
   /** Columnas del KDS en orden de flujo: nuevos → preparando → listos. */
   get kitchenColumns(): { key: 'NEW' | 'PREP' | 'READY'; title: string; hint: string; orders: OrderVM[]; empty: string }[] {
@@ -537,7 +537,9 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   }
 
   get totalSales(): number {
-    return this.orders.reduce((sum, o) => sum + Number(o.total ?? 0), 0);
+    return this.orders
+      .filter(o => !this.normalize(o.status).includes('cancel'))
+      .reduce((sum, o) => sum + Number(o.total ?? 0), 0);
   }
 
   get countIngresadas(): number {
@@ -683,16 +685,21 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
       .filter((order) => order.items.length > 0);
   }
 
-  private startKitchenFallbackPolling(): void {
-    if (this.kitchenPollTimer || !this.kitchenAccessGranted) return;
+  /** Sin socket, tanto Caja como Cocina consultan cada 10 s (el encabezado lo anuncia). */
+  private startFallbackPolling(): void {
+    if (this.kitchenPollTimer || !this.currentBusinessId) return;
     this.kitchenPollTimer = setInterval(() => {
-      if (!this.realtimeConnected && this.viewMode === 'cocina' && !this.kitchenLoading) {
-        this.loadKitchenOrders();
+      if (this.realtimeConnected) return;
+      if (this.viewMode === 'cocina' && this.kitchenAccessGranted) {
+        if (!this.kitchenLoading) this.loadKitchenOrders();
+      } else if (this.viewMode === 'normal') {
+        const today = this.utils.getSoloFechaEcuador();
+        this.rt.loadInitial(80, 0, today, today, undefined, true);
       }
     }, 10000);
   }
 
-  private stopKitchenFallbackPolling(): void {
+  private stopFallbackPolling(): void {
     if (this.kitchenPollTimer) {
       clearInterval(this.kitchenPollTimer);
       this.kitchenPollTimer = null;

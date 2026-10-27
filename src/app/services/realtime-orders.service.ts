@@ -134,7 +134,8 @@ export class RealtimeOrdersService {
     const merged = previous ? {
       ...previous,
       ...data,
-      customer: data.customer ?? previous.customer,
+      // `customer` llega como id en el evento; los datos del cliente vienen en `customer_data`.
+      customer: [data.customer_data, data.cliente, data.customer].find((c) => c && typeof c === 'object') ?? previous.customer,
       items: data.items ?? previous.items,
       payments: data.payments ?? previous.payments,
       electronic: data.electronic ?? data.sri ?? previous.sri
@@ -293,7 +294,7 @@ export class RealtimeOrdersService {
       name: o.name,
       alias: o.alias ?? '',
       table: typeof o.table === 'object' ? (o.table?.name ?? o.table?.id ?? '') : (o.table ?? o.mesa ?? o.table_name ?? ''),
-      tableName: typeof o.table === 'object' ? (o.table?.table_name ?? o.table?.label ?? '') : (o.table_name ?? o.mesa_name ?? o.table_label ?? ''),
+      tableName: typeof o.table === 'object' ? (o.table?.table_name ?? o.table?.label ?? '') : (o.table_name ?? o.mesa_name ?? o.table_label ?? o.tableName ?? ''),
       notes: o.notes ?? o.observaciones ?? '',
       status,
       type,
@@ -368,7 +369,8 @@ export class RealtimeOrdersService {
       action,
       evt?.name ?? '',
       evt?.data?.status ?? '',
-      evt?.data?.createdAtISO ?? evt?.data?.createdAt ?? ''
+      // `modified` distingue cambios sucesivos (p. ej. ítems de cocina) que no alteran el estado de la orden.
+      evt?.data?.modified ?? evt?.data?.createdAtISO ?? evt?.data?.createdAt ?? ''
     ].join('|');
 
     const now = Date.now();

@@ -57,6 +57,8 @@ export function tableLabel(order: OrderVM | null | undefined): string {
 
 /** Una orden ya facturada no se vuelve a cobrar: se abre para consultarla. */
 export function isInvoiced(order: OrderVM | null | undefined): boolean {
+  // El enlace a la factura llega en cada evento; el estado SRI no siempre.
+  if (order?.sri?.invoice) return true;
   const status = String(order?.sri?.status ?? '').toLowerCase();
   return !!status && !status.includes('sin factura');
 }
