@@ -9,6 +9,10 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-10-26 (Claude, 6): reporte «Cobros de restaurante» corregido en backend (ver ESTADO de
+  Restaurante) y textos de `frappe-report-definitions.ts` ajustados (fecha de cobro, incluye
+  subcuentas y órdenes abiertas ya pagadas). Sin probar en navegador.
+
 - 2026-10-26 (Claude, 5): revisión de `orders-realtime`. Eventos en vivo: la deduplicación
   ya no descarta cambios sucesivos de una orden (firma con `modified`); el merge conserva
   mesa y datos del cliente; `isInvoiced` usa `sri.invoice`. Caja sin socket consulta cada

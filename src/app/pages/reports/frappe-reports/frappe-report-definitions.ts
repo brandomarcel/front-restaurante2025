@@ -91,10 +91,10 @@ export function reportDefinitions(restaurant: boolean): ReportDefinition[] {
     },
     {
       name: 'FacturADA Restaurant Sales by Payment', title: 'Cobros de restaurante', category: 'restaurant', route: '/report/cobros-restaurante',
-      description: 'Pagos registrados en órdenes cerradas por método y código SRI.',
-      scopeNote: 'Las fechas seleccionan órdenes por su creación. Incluye órdenes con o sin factura; no sumar este reporte al de facturas.',
+      description: 'Cobros registrados en órdenes y subcuentas por método de pago y código SRI.',
+      scopeNote: 'Las fechas seleccionan cobros por su fecha de cobro. Incluye órdenes abiertas ya pagadas, subcuentas y órdenes con o sin factura; excluye canceladas. No sumar este reporte al de facturas.',
       badge: 'Restaurante', accent: 'from-emerald-500 to-teal-500', defaultLimit: 100,
-      visibleColumns: ['payment_method', 'payment_code', 'orders', 'total_collected', 'average', 'first_sale', 'last_sale'],
+      visibleColumns: ['payment_method', 'orders', 'total_collected', 'average', 'payment_code', 'first_sale', 'last_sale'],
       filters: [...dates(), { key: 'payment_method', label: 'Forma de pago', type: 'payment' }, limit()]
     },
     ...lite

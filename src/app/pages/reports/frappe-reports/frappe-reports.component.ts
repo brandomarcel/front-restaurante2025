@@ -218,6 +218,17 @@ export class FrappeReportsComponent implements OnInit, OnDestroy {
     return row?.[fieldname] ?? row?.[label] ?? row?.[this.normalizeKey(label)] ?? '';
   }
 
+  /** La fila de total de Frappe es la última cuando el reporte la agrega. */
+  isTotalRow(index: number): boolean {
+    return this.hasTotalRow && index === this.rows.length - 1;
+  }
+
+  /** Las celdas vacías (p. ej. promedio en la fila de total) no deben mostrarse como $0.00. */
+  hasCellValue(row: any, column: FrappeReportColumn, index: number): boolean {
+    const value = this.getCell(row, column, index);
+    return value !== null && value !== undefined && value !== '';
+  }
+
   isMoneyColumn(column: FrappeReportColumn): boolean {
     const type = String(column.fieldtype || '').toLowerCase();
     if (['int', 'float', 'percent', 'check', 'date', 'datetime'].includes(type)) return false;
