@@ -126,7 +126,7 @@ export class CajasService {
   }
 
   /** Historial administrativo de aperturas, retiros y cierres del negocio. */
-  getCashRegisterHistory() {
+  getCashRegisterHistory(range: { fromDate?: string; toDate?: string } = {}) {
     if (!this.capabilities.isEnabled('cash_register')) {
       return throwError(() => new Error('La gestión de cajas no está habilitada para este negocio.'));
     }
@@ -139,8 +139,17 @@ export class CajasService {
     if (business instanceof Error) return throwError(() => business);
     return this.http.get<any>(`${this.restaurantApi}.get_cash_register_history`, {
       context: new HttpContext().set(REQUIRE_AUTH, true),
-      params: new HttpParams().set('business', business)
+      params: this.historyParams(business, range)
     });
+  }
+
+  /** Con rango de fechas el backend filtra y puede devolver más registros (hasta 500). */
+  private historyParams(business: string, range: { fromDate?: string; toDate?: string }): HttpParams {
+    let params = new HttpParams().set('business', business);
+    if (range.fromDate) params = params.set('from_date', range.fromDate);
+    if (range.toDate) params = params.set('to_date', range.toDate);
+    if (range.fromDate || range.toDate) params = params.set('limit', '500');
+    return params;
   }
 
   /**

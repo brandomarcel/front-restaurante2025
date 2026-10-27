@@ -68,7 +68,7 @@ export class CashManagementComponent implements OnInit, OnDestroy {
     this.summary = {};
     this.expanded.clear();
 
-    this.cajasService.getCashRegisterHistory().pipe(
+    this.cajasService.getCashRegisterHistory({ fromDate: this.filters.fromDate, toDate: this.filters.toDate }).pipe(
       finalize(() => this.loading = false)
     ).subscribe({
       next: (response: any) => {
@@ -87,7 +87,16 @@ export class CashManagementComponent implements OnInit, OnDestroy {
   }
 
   clearFilters(): void {
+    const hadDates = !!(this.filters.fromDate || this.filters.toDate);
     this.filters = { user: '', status: '', fromDate: '', toDate: '' };
+    if (hadDates) this.loadHistory();
+  }
+
+  /** El rango de fechas se consulta en el backend: así no depende de los últimos 100 registros. */
+  onDateRangeChange(): void {
+    const { fromDate, toDate } = this.filters;
+    if (fromDate && toDate && fromDate > toDate) return;
+    this.loadHistory();
   }
 
   readonly tabs: ReadonlyArray<{ id: CashTab; label: string }> = [

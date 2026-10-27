@@ -72,8 +72,8 @@
           <option value="">Todos los estados</option>
           <option *ngFor="let status of statusOptions" [value]="status">{{ status }}</option>
         </select>
-        <label class="flex flex-col text-[10px] font-semibold text-muted-foreground">Desde<input class="input !h-9" type="date" [(ngModel)]="filters.fromDate" /></label>
-        <label class="flex flex-col text-[10px] font-semibold text-muted-foreground">Hasta<input class="input !h-9" type="date" [(ngModel)]="filters.toDate" /></label>
+        <label class="flex flex-col text-[10px] font-semibold text-muted-foreground">Desde<input class="input !h-9" type="date" [(ngModel)]="filters.fromDate" (ngModelChange)="onDateRangeChange()" /></label>
+        <label class="flex flex-col text-[10px] font-semibold text-muted-foreground">Hasta<input class="input !h-9" type="date" [(ngModel)]="filters.toDate" (ngModelChange)="onDateRangeChange()" /></label>
         <button *ngIf="hasActiveFilters" type="button" class="btn btn-ghost col-span-2 self-end !text-xs md:col-span-1" (click)="clearFilters()">Limpiar</button>
       </div>
 
