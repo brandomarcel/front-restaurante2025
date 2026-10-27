@@ -6,6 +6,7 @@ import { ResponsiveHelperComponent } from './shared/components/responsive-helper
 import { NgxSpinnerComponent } from 'ngx-spinner';
 import { AuthService } from './services/auth.service';
 import { MenuService } from './modules/layout/services/menu.service';
+import { PwaService } from './core/services/pwa.service';
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -15,7 +16,8 @@ import { MenuService } from './modules/layout/services/menu.service';
 export class AppComponent {
   title = 'Angular Tailwind';
 
-  constructor(public themeService: ThemeService, private auth: AuthService, private menu: MenuService) {
+  constructor(public themeService: ThemeService, private auth: AuthService, private menu: MenuService, pwa: PwaService) {
+    pwa.init();
     console.log('cargo');
 
     console.log('this.auth.getCurrentUser()', this.auth.getCurrentUser());

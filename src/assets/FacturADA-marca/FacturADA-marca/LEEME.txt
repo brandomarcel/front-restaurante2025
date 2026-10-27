@@ -1,0 +1,51 @@
+FACTURADA — PAQUETE DE MARCA
+============================
+
+CONTENIDO
+
+logo/svg y logo/png
+  facturada-logo-principal ............ Para fondos claros (uso principal)
+  facturada-logo-sobre-oscuro ......... Para fondos oscuros (fondo transparente)
+  facturada-logo-sobre-oscuro-con-fondo  Igual, con el fondo azul tinta incluido
+  facturada-logo-negro ................ Una tinta: impresión en negro, sellos, facturas
+  facturada-logo-blanco ............... Una tinta: grabados o fondos de foto
+
+icono/svg y icono/png
+  facturada-simbolo-color ............. Solo la A, para fondos claros
+  facturada-simbolo-sobre-oscuro ...... Solo la A, para fondos oscuros
+  facturada-simbolo-negro / -blanco ... Solo la A, una tinta
+  facturada-icono-app ................. Ícono de app (cuadrado redondeado)
+                                        PNG en 1024, 512, 192 y 180 px (180 = Apple)
+  facturada-avatar-redes .............. Foto de perfil circular (1024 px)
+
+favicon
+  favicon.ico ......................... Para tu sitio web (incluye 16, 32 y 48 px)
+  favicon-16/32/48.png
+
+Usa SVG siempre que puedas (web, imprenta, rotulación): escala sin perder calidad.
+Usa PNG para redes, documentos de Word o donde no acepten SVG.
+Los PNG tienen fondo transparente (excepto la versión "con-fondo" y los íconos de app/avatar).
+
+
+COLORES
+
+  Azul tinta   #1B1F3A   RGB 27, 31, 58     Renglones del símbolo y texto principal
+  Ámbar        #FFB020   RGB 255, 176, 32   Solo el travesaño de la A y "ADA"
+  Violeta      #5B3FD9   RGB 91, 63, 217    Acento de interfaz (botones, enlaces)
+
+
+TIPOGRAFÍA
+
+  Logo: Space Grotesk Bold (700), en mayúsculas. Ya va convertida a curvas
+        en los SVG, así que no necesitas instalarla para usar el logo.
+  Textos: Space Grotesk para títulos, Manrope para textos de interfaz.
+  Ambas son gratuitas en Google Fonts (licencia OFL).
+
+
+REGLAS RÁPIDAS
+
+  - Deja alrededor del logo un margen libre de al menos la altura de un renglón del símbolo.
+  - No cambies los colores, no estires el logo y no le agregues sombras ni efectos.
+  - El ámbar va solo en el travesaño y en "ADA"; no lo uses en el resto del símbolo.
+  - Tamaño mínimo del logo completo: 120 px de ancho en pantalla o 30 mm impreso.
+    Por debajo de eso, usa solo el símbolo.

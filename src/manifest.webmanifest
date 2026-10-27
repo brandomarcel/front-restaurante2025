@@ -1,0 +1,18 @@
+{
+  "name": "FacturADA",
+  "short_name": "FacturADA",
+  "description": "Sistema de facturación y punto de venta FacturADA",
+  "id": "/portal/",
+  "start_url": "/portal/",
+  "scope": "/portal/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1B1F3A",
+  "theme_color": "#1B1F3A",
+  "lang": "es",
+  "icons": [
+    { "src": "assets/pwa/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/pwa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/pwa/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

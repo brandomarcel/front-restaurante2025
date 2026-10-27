@@ -7,6 +7,7 @@ import { AppRoutingModule } from './app/app-routing.module';
 import { BrowserModule, bootstrapApplication } from '@angular/platform-browser';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideServiceWorker } from '@angular/service-worker';
 import { provideFontAwesome } from './app/providers/fontawesome.provider';
 import { frappeAuthInterceptor } from './app/core/interceptor/frappe-auth.interceptor';
 
@@ -24,7 +25,11 @@ bootstrapApplication(AppComponent, {
   importProvidersFrom(BrowserModule, AppRoutingModule),
   provideAnimations(),
   provideHttpClient(withInterceptors([frappeAuthInterceptor])),
-  provideFontAwesome()],
+  provideFontAwesome(),
+  provideServiceWorker('ngsw-worker.js', {
+    enabled: environment.production,
+    registrationStrategy: 'registerWhenStable:30000',
+  })],
 }).catch((err) => console.error(err));
 
 function selfXSSWarning() {
