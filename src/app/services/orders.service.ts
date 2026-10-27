@@ -178,6 +178,16 @@ export class OrdersService {
     });
   }
 
+  /** Pedidos de hoy ya entregados, sin precios ni pagos (para consulta de Cocina). */
+  getKitchenDeliveredOrders(limit: number = 100): Observable<any> {
+    const business = this.activeBusinessOrError();
+    if (business instanceof Error) return throwError(() => business);
+    return this.http.get<any>(`${this.urlBase}.get_kitchen_delivered_orders`, {
+      context: new HttpContext().set(REQUIRE_AUTH, true),
+      params: new HttpParams().set('business', business).set('limit', String(limit))
+    });
+  }
+
   updateKitchenItemStatus(orderName: string, itemName: string, kitchenStatus: 'Pendiente' | 'En preparacion' | 'Listo' | 'Entregado' | 'Cancelado'): Observable<any> {
     return this.postRestaurant('update_kitchen_item_status', {
       order_name: orderName,

@@ -41,6 +41,7 @@ export class RoleAccessGuard implements CanActivate {
 
   private evaluateAccess(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): boolean | UrlTree {
     const deniedRoles = this.normalizeRoles(route.data?.['deniedRoles']);
+    const deniedPrimaryRoles = this.normalizeRoles(route.data?.['deniedPrimaryRoles']);
     const allowedRoles = this.normalizeRoles(route.data?.['allowedRoles']);
     const currentRoles = this.readCurrentRoles();
     const featureKey = route.data?.['featureKey'] as CompanyFeatureKey | undefined;
@@ -137,6 +138,14 @@ export class RoleAccessGuard implements CanActivate {
       return this.redirectToAvailable(state.url, currentRoles, 'permission');
     }
     if (deniedRoles.length && currentRoles.some((role) => deniedRoles.includes(role))) {
+      toast.error('No tienes permisos para ingresar a esta sección.');
+      return this.redirectToAvailable(state.url, currentRoles, 'rol');
+    }
+
+    // A diferencia de `deniedRoles` (cualquier rol del usuario), solo cuenta el rol de negocio
+    // del contexto: quien además es Gerente o Cajero no queda bloqueado por tener también Cocina.
+    const businessRole = this.normalizeRole(String(this.capabilities.businessRole || ''));
+    if (deniedPrimaryRoles.length && deniedPrimaryRoles.includes(businessRole)) {
       toast.error('No tienes permisos para ingresar a esta sección.');
       return this.redirectToAvailable(state.url, currentRoles, 'rol');
     }

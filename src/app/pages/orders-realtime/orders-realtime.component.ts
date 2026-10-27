@@ -655,12 +655,12 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
 
   loadDeliveredToday(): void {
     if (!this.kitchenAccessGranted || this.deliveredLoading) return;
-    const today = String(this.utils.getSoloFechaEcuador());
     this.deliveredLoading = true;
     this.deliveredError = '';
-    this.ordersApi.getAll(100, 0, today, today).subscribe({
+    this.ordersApi.getKitchenDeliveredOrders(100).subscribe({
       next: (response: any) => {
-        const rows = response?.message?.data ?? [];
+        const body = response?.message ?? response ?? {};
+        const rows = body?.data ?? [];
         this.deliveredOrders = (Array.isArray(rows) ? rows : [])
           .map((row: any) => this.rt.mapOne(row))
           .filter((order: OrderVM) => this.isDeliveredOrder(order));

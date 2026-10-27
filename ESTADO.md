@@ -19,9 +19,11 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
     vacío; nunca en POS, detalle de orden ni Cocina. Pendiente a futuro: modal obligatorio
     solo si el backend declara una versión mínima incompatible.
   - Cocina (KDS): pantalla encendida con `WakeLockService`; pestaña «Entregadas hoy»
-    (solo lectura, sin precios, consulta `get_all_orders` del día, máx. 100). Menú del rol
+    (solo lectura, sin precios, consulta `get_kitchen_delivered_orders` (backend Restaurante, sin precios), máx. 100). Menú del rol
     Cocina sin «Lista Órdenes» ni «Mesas» (`hideForRoles`); la ruta `/dashboard/orders`
-    sigue abierta por URL (la lista muestra totales): decidir si se bloquea en guard/API.
+    ahora bloqueada para Cocina con `deniedPrimaryRoles` en el guard (rol de negocio) y su
+    ruta inicial es `/dashboard/orders-realtime`; `/dashboard/orders`, `orders/:id` y `tables`
+    quedan denegadas. Pendiente: `get_kitchen_orders` aún devuelve precios (el front los oculta).
   - Mesero: sin campo de escáner ni refocus en el POS (abría el teclado en tablet); el POS
     de Caja lo conserva. Al crear la orden con mesas habilitadas vuelve a Mesas. Botón «←
     Mesas» en el POS y «Mesas»/«Nueva orden» en el detalle de orden; «Orden sin mesa» en

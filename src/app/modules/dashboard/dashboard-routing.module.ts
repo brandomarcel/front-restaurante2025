@@ -48,9 +48,9 @@ const routes: Routes = [
       { path: 'inventory/stock-lookup', component: StockLookupComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'inventory', permissionKey: 'inventory.read' } },
       { path: 'products', component: ProductsComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'products', permissionKey: 'products.read' } },
       { path: 'company', component: CompanyComponent, canActivate: [RoleAccessGuard], data: { permissionKey: 'business.settings.manage' } },
-      { path: 'orders', component: OrdersComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'orders', permissionKey: 'restaurant.orders.read', liteBlocked: true } },
-      { path: 'orders/:id', component: OrderDetailPageComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { featureKey: 'orders', permissionKey: 'restaurant.orders.read', liteBlocked: true } },
-      { path: 'tables', component: TablesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'tables', permissionKey: 'restaurant.orders.read' } },
+      { path: 'orders', component: OrdersComponent, canActivate: [RoleAccessGuard], data: { deniedPrimaryRoles: ['COCINA'], featureKey: 'orders', permissionKey: 'restaurant.orders.read', liteBlocked: true } },
+      { path: 'orders/:id', component: OrderDetailPageComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { deniedPrimaryRoles: ['COCINA'], featureKey: 'orders', permissionKey: 'restaurant.orders.read', liteBlocked: true } },
+      { path: 'tables', component: TablesComponent, canActivate: [RoleAccessGuard], data: { deniedPrimaryRoles: ['COCINA'], featureKey: 'tables', permissionKey: 'restaurant.orders.read' } },
 
       { path: 'categories', component: CategorysComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'products', permissionKey: 'products.manage' } },
       { path: 'users', component: UsersComponent, canActivate: [RoleAccessGuard], data: { permissionKey: 'business.users.manage', apiOnlyBlocked: true } },

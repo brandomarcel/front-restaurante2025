@@ -1260,6 +1260,11 @@ export class CompanyCapabilitiesService {
     if (this.isEnabled('restaurant_pos') && this.hasPermission('billing.create')) return '/dashboard/pos';
     if (this.isEnabled('generic_pos') && this.hasPermission('billing.create')) return '/dashboard/pos-generic';
     if (this.isEnabled('direct_invoice') && this.hasPermission('billing.create')) return '/dashboard/invoicing';
+    // Cocina trabaja desde su pantalla: la lista de órdenes muestra totales en dinero.
+    if (this.normalize(this.businessRole || '') === 'COCINA'
+      && this.isEnabled('kitchen')
+      && this.hasPermission('restaurant.orders.read')
+      && this.hasPermission('restaurant.orders.update')) return '/dashboard/orders-realtime';
     if (this.isEnabled('orders') && this.hasPermission('restaurant.orders.read')) return '/dashboard/orders';
     if (this.isEnabled('kitchen')
       && this.hasPermission('restaurant.orders.read')
