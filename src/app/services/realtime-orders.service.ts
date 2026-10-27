@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Subject, debounceTime } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import { OrdersService, OrdersListResponse } from './orders.service';
 import { RestaurantRealtimeEvent, RestaurantRealtimeService } from './restaurant-realtime.service';
 
@@ -72,7 +72,6 @@ export class RealtimeOrdersService {
   private newCount$ = new BehaviorSubject<number>(0);
   private total$ = new BehaviorSubject<number>(0);
 
-  private refetchTrigger = new Subject<void>();
   private firstLoadDone = false;
   private isInitialLoading = false;
   private lastLoadKey = '';
@@ -103,16 +102,6 @@ export class RealtimeOrdersService {
       // Nunca conservar órdenes del negocio anterior mientras se cambia el
       // canal. La pantalla volverá a cargar el catálogo del nuevo negocio.
       this.clearOrders();
-    });
-
-    /* ============ Reconciliación suave ============ */
-
-    this.refetchTrigger.pipe(debounceTime(600)).subscribe(() => {
-      this.api.getAll(50, 0).subscribe((res: OrdersListResponse) => {
-        const list = this.mapList(res);
-        this.orders$.next([...list]);
-        this.total$.next((res as any)?.message?.total ?? list.length);
-      });
     });
   }
 
@@ -214,20 +203,6 @@ export class RealtimeOrdersService {
   }
 
   /* ================= Internos ================= */
-
-  private refreshOne(name: string, action: 'insert' | 'update') {
-    this.api.getById(name).subscribe({
-      next: (r) => {
-        const doc = (r as any)?.data || (r as any)?.message || r;
-        const vm = this.mapOne(doc);
-        const exists = this.orders$.value.some(o => o.name === vm.name);
-        this.upsert(vm, true, !exists);
-      },
-      error: () => {
-        this.refetchTrigger.next();
-      }
-    });
-  }
 
   private upsert(row: OrderVM, flash = false, isNew = false) {
     const list = [...this.orders$.value];

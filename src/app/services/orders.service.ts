@@ -187,10 +187,16 @@ export class OrdersService {
   }
 
   /** Cambia en una sola operación todos los ítems activos de la orden (evita estados mezclados si falla una petición). */
-  updateKitchenOrderStatus(orderName: string, kitchenStatus: 'Pendiente' | 'En preparacion' | 'Listo' | 'Entregado'): Observable<any> {
+  updateKitchenOrderStatus(
+    orderName: string,
+    kitchenStatus: 'Pendiente' | 'En preparacion' | 'Listo' | 'Entregado',
+    itemStatuses?: Record<string, string>
+  ): Observable<any> {
     return this.postRestaurant('update_kitchen_order_status', {
       order_name: orderName,
-      kitchen_status: kitchenStatus
+      kitchen_status: kitchenStatus,
+      // Deshacer: cada ítem vuelve a su estado anterior en vez de todos al mismo.
+      ...(itemStatuses ? { item_statuses: itemStatuses } : {})
     });
   }
 

@@ -371,15 +371,11 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     if (o.status !== 'Ingresada') return;
 
 
-    const prev = o.status;
-    o.status = 'Preparación';
     this.pendingActions.add(o.name);
 
     this.ordersApi.updateStatus(o.name, 'Preparación').subscribe({
-      error: () => {
-        o.status = prev;
-        toast.error('No se pudo actualizar la orden a Preparación.');
-      }
+      next: (response: any) => this.applyOrderResponse(response),
+      error: (error: any) => toast.error(this.readErrorMessage(error) || 'No se pudo actualizar la orden a Preparación.')
     }).add(() => this.pendingActions.delete(o.name));
   }
 
@@ -392,24 +388,23 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     }
     if (o.status !== 'Preparación') return;
 
-    const prev = o.status;
     this.pendingActions.add(o.name);
 
-    o.status = 'Cerrada';
-    (o as any)._flash = true;
-    (o as any)._flashType = 'update';
-
     this.ordersApi.updateStatus(o.name, 'Cerrada').subscribe({
-      next: () => {
+      next: (response: any) => {
+        this.applyOrderResponse(response);
         toast.success('Orden cerrada. Puedes abrirla para facturar cuando desees.');
       },
-      error: () => {
-        o.status = prev as any;
-        delete (o as any)._flash;
-        delete (o as any)._flashType;
-        toast.error('No se pudo cerrar la orden.');
-      }
+      error: (error: any) => toast.error(this.readErrorMessage(error) || 'No se pudo cerrar la orden.')
     }).add(() => this.pendingActions.delete(o.name));
+  }
+
+  /** El estado en pantalla sale de la respuesta del servidor, no de un cambio local anticipado. */
+  private applyOrderResponse(response: any): void {
+    const body = response?.message ?? response ?? {};
+    const updated = body?.data ?? response?.data;
+    if (updated?.name) this.rt.replaceOrder(updated);
+    else this.refreshRealtime();
   }
 
   toEntregado(o: OrderVM): void {
@@ -441,8 +436,10 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     ];
   }
 
+  /** Cambiar el estado exige permiso de actualizar órdenes (el Mesero y el rol Usuario no lo tienen). */
   get allowStatusActions(): boolean {
-    return this.roleName !== 'Mesero';
+    return this.capabilities.hasPermission('restaurant.manage')
+      || this.capabilities.hasPermission('restaurant.orders.update');
   }
 
   isActionPending(orderName: string): boolean {
@@ -458,7 +455,8 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   }
 
   get canSwitchView(): boolean {
-    return !this.isCocinaOnly && this.kitchenAccessGranted;
+    // Sin acciones de estado (Mesero) la vista de Cocina no aporta nada.
+    return !this.isCocinaOnly && this.kitchenAccessGranted && this.allowStatusActions;
   }
 
   get headerSubtitle(): string {
@@ -724,11 +722,23 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     }).add(() => { this.kitchenLoading = false; });
   }
 
-  private updateKitchenItems(order: OrderVM, kitchenStatus: 'Pendiente' | 'En preparacion' | 'Listo' | 'Entregado', isUndo = false): void {
+  private updateKitchenItems(
+    order: OrderVM,
+    kitchenStatus: 'Pendiente' | 'En preparacion' | 'Listo' | 'Entregado',
+    isUndo = false,
+    restore?: Record<string, string>
+  ): void {
     if (this.pendingActions.has(order.name)) return;
 
+    // Estado de cada ítem antes del cambio, para que Deshacer no iguale ítems que estaban distintos.
+    const previous: Record<string, string> = {};
+    for (const item of (order.items || []) as any[]) {
+      const status = String(item?.kitchen_status ?? item?.kitchenStatus ?? '').trim();
+      if (item?.name && ['Pendiente', 'En preparacion', 'Listo'].includes(status)) previous[item.name] = status;
+    }
+
     this.pendingActions.add(order.name);
-    this.ordersApi.updateKitchenOrderStatus(order.name, kitchenStatus).subscribe({
+    this.ordersApi.updateKitchenOrderStatus(order.name, kitchenStatus, restore).subscribe({
         next: (response: any) => {
           const body = response?.message ?? response ?? {};
           const updated = body?.data ?? response?.data;
@@ -753,7 +763,7 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
           }
           toast.success(message, {
             duration: KDS_UNDO_MS,
-            action: { label: 'Deshacer', onClick: () => this.updateKitchenItems(order, undoTo, true) }
+            action: { label: 'Deshacer', onClick: () => this.updateKitchenItems(order, undoTo, true, previous) }
           });
         },
         error: (error: any) => {
@@ -827,29 +837,33 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     return Math.max(0, Math.floor((Date.now() - time) / 60000));
   }
 
+  /**
+   * Manda el rol de negocio del contexto. Los roles Frappe solo se consultan si el
+   * contexto no trae rol (antes `admin` o `cocina` en cualquiera de ellos decidía la vista).
+   */
   private detectRole(): RoleName {
-    const contextRole = this.normalize(this.capabilities.businessRole || '');
-    if (contextRole.includes('cocina') || contextRole.includes('chef') || contextRole.includes('kitchen')) return 'Cocina';
-    if (contextRole.includes('gerente') || contextRole.includes('admin')) return 'Gerente';
-    if (contextRole.includes('cajero')) return 'Cajero';
-    if (contextRole.includes('mesero')) return 'Mesero';
+    const fromRole = (value: string): RoleName | null => {
+      switch (this.normalize(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '')) {
+        case 'cocina': return 'Cocina';
+        case 'administrador':
+        case 'gerente': return 'Gerente';
+        case 'cajero': return 'Cajero';
+        case 'mesero': return 'Mesero';
+        default: return null;
+      }
+    };
 
-    const raw = localStorage.getItem('user');
-    if (!raw) return 'Desconocido';
+    const businessRole = this.capabilities.businessRole;
+    if (businessRole) return fromRole(businessRole) ?? 'Desconocido';
 
     try {
-      const user = JSON.parse(raw);
-      const roles = Array.isArray(user?.roles) ? user.roles : [];
-      const joined = roles.map((r: string) => this.normalize(r)).join(' ');
-
-      if (joined.includes('cocina') || joined.includes('chef') || joined.includes('kitchen')) return 'Cocina';
-      if (joined.includes('gerente') || joined.includes('admin')) return 'Gerente';
-      if (joined.includes('cajero')) return 'Cajero';
-      if (joined.includes('mesero')) return 'Mesero';
-    } catch {
-      return 'Desconocido';
-    }
-
+      const user = JSON.parse(localStorage.getItem('user') || 'null');
+      const roles: string[] = Array.isArray(user?.roles) ? user.roles : [];
+      for (const role of roles) {
+        const match = fromRole(role);
+        if (match) return match;
+      }
+    } catch { /* sin datos de usuario: rol desconocido */ }
     return 'Desconocido';
   }
 

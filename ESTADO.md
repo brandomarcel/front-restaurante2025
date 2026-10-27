@@ -9,6 +9,23 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-10-26 (Claude, 5): revisión de `orders-realtime`. Eventos en vivo: la deduplicación
+  ya no descarta cambios sucesivos de una orden (firma con `modified`); el merge conserva
+  mesa y datos del cliente; `isInvoiced` usa `sri.invoice`. Caja sin socket consulta cada
+  10 s (antes solo Cocina). «Ventas hoy» excluye canceladas. Las pestañas de Caja ya
+  responden al clic (faltaba `trackBy`: se recreaban los botones entre pointerdown y click).
+  Caja aplica la respuesta del servidor en vez de cambiar el estado antes de tiempo.
+  «Deshacer» de Cocina restaura el estado de cada ítem (`item_statuses` en
+  `update_kitchen_order_status`). Mesero ya no ve la pestaña Cocina. Quitado código
+  muerto (`refreshOne`, `refetchTrigger`). Sin probar en navegador. Para Codex: dedupe con
+  `modified`, merge de mesa/cliente, `isInvoiced`, `totalSales`, polling de Caja, clic en
+  pestañas, deshacer con ítems en estados distintos (endpoint con `item_statuses`).
+  Rol de Cocina/Caja: manda `businessRole` (coincidencia exacta; los roles Frappe solo si no hay
+  rol de negocio) y las acciones de estado exigen `restaurant.orders.update`/`manage`, no
+  «no ser Mesero». Para Codex: Usuario/Facturación sin botones de estado.
+  Pendiente: decidir si una orden Lista sin cobrar se cierra desde Caja; «Ventas hoy» limitado
+  a 80 órdenes del día; dividir el componente; reiniciar workers.
+
 - 2026-10-26 (Claude, 4): Cocina usa `update_kitchen_order_status` (una sola operación por
   pedido) en lugar de una petición por ítem; un fallo a mitad ya no deja ítems en
   estados distintos. Deshacer reutiliza el mismo endpoint. Para Codex: pruebas del
