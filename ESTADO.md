@@ -1,6 +1,6 @@
 # Estado del proyecto Facturada
 
-Última actualización: 2026-10-06.
+Última actualización: 2026-10-26.
 
 ## Objetivo Actual
 
@@ -8,6 +8,27 @@ Mantener una memoria breve del progreso y los pendientes sin ampliar `CLAUDE.md`
 El trabajo local observado se concentra en la configuración de desarrollo del frontend Angular y su conexión con Frappe.
 
 ## Últimos Cambios (Hecho)
+
+- 2026-10-26 (Claude): caja, menú y Cocina. Sin pruebas propias; pendientes para Codex abajo.
+  - Caja: `CajaAbiertaGuard` obliga a abrir caja solo al Cajero; Administrador/Gerente
+    reciben un aviso con botón «Abrir caja» y pasan; Mesero y otros roles no se validan.
+    Manda el rol de negocio sobre los roles Frappe. Permisos de caja en una sola
+    constante `CASH_OPERATOR_PERMISSIONS` (`restaurant.cash.manage`, `restaurant.manage`);
+    `billing.*` ya no da acceso a caja (Facturación recibía 403).
+  - Apertura: aviso y botón bloqueado si otro usuario tiene abierta la terminal
+    (endpoint nuevo `get_terminal_cash_holder`). Una terminal, un turno a la vez.
+  - Menú: quitados duplicados (Órdenes en vivo, POS/POS Restaurante vía
+    `hideWhenPermission`), retirado el console.log de permisos, Mesas en accesos
+    rápidos del Mesero.
+  - Cocina (KDS): franja para activar el sonido (el navegador exige un gesto), modo
+    texto grande por dispositivo, «Deshacer» 8 s al empezar/terminar. Entregado no
+    se deshace (el backend puede cerrar la orden).
+  - Para Codex: pruebas del guard (3 modos), filtrado del menú por rol, bloqueo por
+    terminal ocupada, deshacer/audio/modo grande del KDS. Backend: apertura en
+    terminal ocupada y `get_terminal_cash_holder`.
+  - Pendiente: reiniciar workers del bench; probar a mano los flujos de caja y KDS.
+    Dividir `orders-realtime` (905 líneas) en Caja y Cocina; usar `ui_capabilities`
+    en vez de detectar rol/permisos a mano en Cocina.
 
 - 2026-10-26: validacion segun TESTING_CODEX.md. Backend del sitio exclusivo
   facturada_core_simple_test migrado: 282 pruebas aprobadas entre Core/Lite/
