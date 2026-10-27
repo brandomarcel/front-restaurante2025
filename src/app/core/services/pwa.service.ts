@@ -1,9 +1,15 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { filter, interval } from 'rxjs';
 import { toast } from 'ngx-sonner';
 
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
+
+/** Evento no estándar de Chromium con el que se ofrece instalar la app. */
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
 
 /**
  * Avisos de PWA: nueva versión disponible y pérdida/recuperación de conexión.
@@ -13,10 +19,54 @@ const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 export class PwaService {
   private readonly swUpdate = inject(SwUpdate);
   private offlineToastId: string | number | undefined;
+  private installEvent: BeforeInstallPromptEvent | null = null;
+  private readonly installable = signal(false);
+  private readonly installed = signal(this.isStandalone());
+
+  /** Chrome/Edge/Android ofrecen instalar; en iOS no existe el evento y se muestran los pasos manuales. */
+  readonly canShowInstall = computed(() => !this.installed() && (this.installable() || this.isIos()));
 
   init(): void {
     this.watchConnection();
     this.watchUpdates();
+    this.watchInstall();
+  }
+
+  async install(): Promise<void> {
+    if (this.installEvent) {
+      const event = this.installEvent;
+      this.installEvent = null;
+      this.installable.set(false);
+      await event.prompt();
+      const { outcome } = await event.userChoice;
+      if (outcome === 'accepted') this.installed.set(true);
+      return;
+    }
+    if (this.isIos()) {
+      toast.info('Para instalar: toca Compartir y elige «Agregar a pantalla de inicio».', { duration: 10000 });
+    }
+  }
+
+  private watchInstall(): void {
+    window.addEventListener('beforeinstallprompt', (event) => {
+      event.preventDefault();
+      this.installEvent = event as BeforeInstallPromptEvent;
+      this.installable.set(true);
+    });
+    window.addEventListener('appinstalled', () => {
+      this.installEvent = null;
+      this.installable.set(false);
+      this.installed.set(true);
+    });
+  }
+
+  private isStandalone(): boolean {
+    return window.matchMedia?.('(display-mode: standalone)').matches || (navigator as any).standalone === true;
+  }
+
+  /** iPadOS se identifica como Mac, por eso también se revisa el soporte táctil. */
+  private isIos(): boolean {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   }
 
   private watchConnection(): void {

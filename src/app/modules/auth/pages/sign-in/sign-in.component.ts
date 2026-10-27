@@ -1,5 +1,5 @@
 import { NgClass, NgFor, NgIf } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AngularSvgIconModule } from 'angular-svg-icon';
@@ -10,6 +10,7 @@ import { AlertService } from 'src/app/core/services/alert.service';
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { MenuService } from 'src/app/modules/layout/services/menu.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { PwaService } from 'src/app/core/services/pwa.service';
 
 
 @Component({
@@ -26,6 +27,7 @@ export class SignInComponent implements OnInit {
   needsBusinessSelection = false;
   businessOptions: any[] = [];
   selectedBusinessId = '';
+  readonly pwa = inject(PwaService);
 
   constructor(
     private readonly _formBuilder: FormBuilder,

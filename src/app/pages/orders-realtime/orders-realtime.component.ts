@@ -1,3 +1,4 @@
+import { WakeLockService } from '../../core/services/wake-lock.service';
 import { Component, ElementRef, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -91,7 +92,8 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     private printService: PrintService,
     private restaurantRealtime: RestaurantRealtimeService,
     private capabilities: CompanyCapabilitiesService,
-    private host: ElementRef<HTMLElement>
+    private host: ElementRef<HTMLElement>,
+    private wakeLock: WakeLockService
   ) {}
 
   ngOnInit(): void {
@@ -134,6 +136,13 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
       this.loadCurrentData();
       if (!this.realtimeConnected) this.startFallbackPolling();
     } else this.initializeStreams();
+    this.syncWakeLock();
+  }
+
+  /** En modo Cocina la pantalla no debe apagarse sola; en Caja se respeta el ajuste del equipo. */
+  private syncWakeLock(): void {
+    if (this.viewMode === 'cocina' && this.kitchenAccessGranted) void this.wakeLock.acquire();
+    else void this.wakeLock.release();
   }
 
   private initializeStreams(): void {
@@ -204,6 +213,7 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.sub.unsubscribe();
     this.stopFallbackPolling();
+    void this.wakeLock.release();
     if (this.clockTimer) clearInterval(this.clockTimer);
     void this.audioContext?.close().catch(() => undefined);
   }
@@ -305,6 +315,7 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     this.statusFilter = mode === 'cocina' ? 'ACTIVAS' : 'ALL';
     this.kitchenOnlyUrgent = false;
     this.kitchenFilter = 'ALL';
+    this.syncWakeLock();
     if (mode === 'cocina') {
       this.loadKitchenOrders();
       if (!this.realtimeConnected) this.startFallbackPolling();

@@ -11,6 +11,7 @@ import { Role } from 'src/app/core/models/menu.model';
 import { UtilsService } from '../../../../../core/services/utils.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { AlertService } from '../../../../../core/services/alert.service';
+import { PwaService } from '../../../../../core/services/pwa.service';
 
 interface ProfileItem {
   title: string;
@@ -51,6 +52,7 @@ interface ProfileItem {
 })
 export class ProfileMenuComponent implements OnInit {
   private utilsService = inject(UtilsService);
+  public pwa = inject(PwaService);
 
   ambiente$ = this.utilsService.ambiente$;
 

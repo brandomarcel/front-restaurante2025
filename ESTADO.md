@@ -9,6 +9,27 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-10-27 (Claude): PWA instalable, ya desplegada en producción (commit a `main`).
+  - Manifest `src/manifest.webmanifest` (scope/start_url `/portal/`, standalone, colores
+    `#1B1F3A`), service worker de Angular (`ngsw-config.json`, `provideServiceWorker` solo en
+    producción, registro a los 30 s). Solo cachea el shell y los assets; no hay `dataGroups`,
+    así que ninguna llamada a la API se cachea. Sin modo offline real.
+  - `src/app/core/services/pwa.service.ts`: toasts de sin conexión/restablecida y de nueva
+    versión con botón Actualizar; consulta versión nueva cada hora y al volver a la pestaña.
+  - Iconos de `src/assets/pwa/` (192, 512, apple-touch 180) tomados del paquete de marca;
+    el maskable 512 lo generé yo (símbolo al 80 % sobre fondo azul tinta). `favicon.ico`
+    reemplazado por el de marca. Paquete de marca completo en `brand/FacturADA-marca/`
+    (fuera de `src` para que no entre al build).
+  - Comprobado por el usuario: la app se instala en Chrome de escritorio con el icono y
+    el color correctos. Sin Lighthouse, sin probar en Android/iOS.
+  - Para Codex: pruebas de `PwaService` (toasts online/offline, `VERSION_READY`, chequeo
+    periódico sin red); revisar el build de producción con `ngsw.json`.
+  - Pendiente: confirmar que nginx sirve `ngsw-worker.js`, `ngsw.json` y
+    `manifest.webmanifest` sin caché; comprobar el aviso de actualización en el próximo
+    deploy; probar instalación en Android/iOS (desinstalar y reinstalar si ya estaba
+    instalada, por el icono); correr Lighthouse. Cambio de `package-lock.json` por
+    `@angular/service-worker` aún sin revisar a fondo.
+
 - 2026-10-26 (Claude, 6): reporte «Cobros de restaurante» corregido en backend (ver ESTADO de
   Restaurante) y textos de `frappe-report-definitions.ts` ajustados (fecha de cobro, incluye
   subcuentas y órdenes abiertas ya pagadas). Sin probar en navegador.
