@@ -25,6 +25,10 @@
               <p class="mt-0.5 text-sm text-muted-foreground">
                 #{{ order?.name }} · {{ order?.type || 'Servirse' }} · {{ order?.createdAt | ecuadorTime }}
               </p>
+              <div *ngIf="showTablesLink || showNewOrderLink" class="mt-2 flex flex-wrap gap-2">
+                <button *ngIf="showTablesLink" type="button" class="btn-outline" (click)="goToTables()">Mesas</button>
+                <button *ngIf="showNewOrderLink" type="button" class="btn-outline" (click)="newOrder()">Nueva orden</button>
+              </div>
             </div>
           </div>
 

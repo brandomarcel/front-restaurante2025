@@ -15,6 +15,11 @@
         aria-label="Actualizar mesas" title="Actualizar">
         <svg-icon src="assets/icons/heroicons/outline/refresh.svg" [svgClass]="'h-4 w-4'" [class.animate-spin]="loading"></svg-icon>
       </button>
+      <button *ngIf="canCreateOrders" type="button" class="btn-new-table" (click)="openOrderWithoutTable()"
+        title="Pedido para llevar o a domicilio, sin mesa">
+        <svg-icon src="assets/icons/heroicons/outline/plus.svg" [svgClass]="'h-4 w-4'"></svg-icon>
+        Orden sin mesa
+      </button>
       <button *ngIf="canManageTables" type="button" class="btn-new-table" (click)="openCreate()">
         <svg-icon src="assets/icons/heroicons/outline/plus.svg" [svgClass]="'h-4 w-4'"></svg-icon>
         Nueva mesa
@@ -27,7 +32,8 @@
   <div *ngIf="hasTablesModule; else unavailable" class="space-y-4">
 
     <!-- Resumen rápido del salón -->
-    <section class="summary-grid" aria-label="Resumen del salón">
+    <section class="summary-grid" aria-label="Resumen del salón"
+      [style.grid-template-columns]="isWaiterView ? 'repeat(3, minmax(0, 1fr))' : null">
       <div class="summary-card">
         <span class="summary-label"><i class="status-dot is-free"></i>Libres</span>
         <strong>{{ freeTablesCount }}</strong>
@@ -40,7 +46,7 @@
         <span class="summary-label"><i class="status-dot is-reserved"></i>Reservadas</span>
         <strong>{{ reservedTablesCount }}</strong>
       </div>
-      <div class="summary-card">
+      <div *ngIf="!isWaiterView" class="summary-card">
         <span class="summary-label">Cuentas abiertas</span>
         <strong>${{ openTotal | number:'1.2-2' }}</strong>
       </div>
@@ -62,7 +68,7 @@
           <svg-icon src="assets/icons/heroicons/outline/magnifying-glass.svg" [svgClass]="'h-4 w-4'" class="search-icon"></svg-icon>
           <input type="search" [(ngModel)]="tableSearch" placeholder="Buscar mesa o mesero" aria-label="Buscar mesa o mesero" />
         </div>
-        <label class="inactive-toggle">
+        <label *ngIf="!isWaiterView" class="inactive-toggle">
           <input type="checkbox" [checked]="showInactive" (change)="showInactive = !showInactive; refresh()" />
           Inactivas
         </label>

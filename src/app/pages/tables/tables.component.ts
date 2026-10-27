@@ -11,6 +11,8 @@ import { OrdersService } from 'src/app/services/orders.service';
 import { RestaurantRealtimeEvent, RestaurantRealtimeService } from 'src/app/services/restaurant-realtime.service';
 
 type TableStatus = 'Libre' | 'Ocupada' | 'Reservada' | 'Inactiva';
+/** «Listas» = mesas con una orden lista para servir */
+type TableFilter = 'Todas' | 'Listas' | TableStatus;
 
 /** Resumen de las órdenes activas de una mesa, recalculado al cambiar las órdenes */
 interface TableOrderSummary {
@@ -66,12 +68,13 @@ export class TablesComponent implements OnInit, OnDestroy {
   editingTable: any | null = null;
   showInactive = false;
   tableSearch = '';
-  statusFilter: 'Todas' | TableStatus = 'Todas';
+  statusFilter: TableFilter = 'Todas';
   error = '';
   readonly statuses: TableStatus[] = ['Libre', 'Ocupada', 'Reservada', 'Inactiva'];
   readonly activeOrderStatuses = new Set(['INGRESADA', 'PREPARACION', 'LISTA']);
-  readonly statusFilters: { value: 'Todas' | TableStatus; label: string }[] = [
+  readonly statusFilters: { value: TableFilter; label: string }[] = [
     { value: 'Todas', label: 'Todas' },
+    { value: 'Listas', label: 'Listas' },
     { value: 'Libre', label: 'Libres' },
     { value: 'Ocupada', label: 'Ocupadas' },
     { value: 'Reservada', label: 'Reservadas' },
@@ -185,18 +188,34 @@ export class TablesComponent implements OnInit, OnDestroy {
       && this.capabilities.hasPermission('restaurant.orders.create');
   }
 
+  /**
+   * Vista del mesero: puede tomar órdenes pero no cobrar (mismo criterio que el POS).
+   * No ve totales del salón ni mesas inactivas, que son de administración.
+   */
+  get isWaiterView(): boolean {
+    return this.canCreateOrders && !this.capabilities.hasPermission('billing.create') && !this.canManageTables;
+  }
+
   get visibleTables(): any[] {
-    return this.tables.filter((table) => this.showInactive || !this.isInactive(table));
+    return this.tables.filter((table) => (this.showInactive && !this.isWaiterView) || !this.isInactive(table));
   }
 
   get filteredTables(): any[] {
     const query = this.normalized(this.tableSearch);
-    return this.visibleTables.filter((table) => {
-      const matchesStatus = this.statusFilter === 'Todas' || this.tableStatus(table) === this.statusFilter;
+    const rows = this.visibleTables.filter((table) => {
+      const matchesStatus = this.statusFilter === 'Todas'
+        || (this.statusFilter === 'Listas' ? this.summary(table).ready : this.tableStatus(table) === this.statusFilter);
       if (!matchesStatus) return false;
       if (!query) return true;
       return this.normalized(`${this.tableLabel(table)} ${table?.assigned_waiter || ''}`).includes(query);
     });
+    // Las mesas con un pedido listo van primero para que el mesero lo sirva sin buscarlo.
+    // Array.sort es estable: el resto conserva su orden.
+    return rows.sort((a, b) => Number(this.summary(b).ready) - Number(this.summary(a).ready));
+  }
+
+  get readyTablesCount(): number {
+    return this.visibleTables.filter((table) => this.summary(table).ready).length;
   }
 
   get freeTablesCount(): number {
@@ -215,9 +234,10 @@ export class TablesComponent implements OnInit, OnDestroy {
     return this.visibleTables.filter((table) => this.isInactive(table)).length;
   }
 
-  get statusCounts(): Record<'Todas' | TableStatus, number> {
+  get statusCounts(): Record<TableFilter, number> {
     return {
       Todas: this.visibleTables.length,
+      Listas: this.readyTablesCount,
       Libre: this.freeTablesCount,
       Ocupada: this.occupiedTablesCount,
       Reservada: this.reservedTablesCount,
@@ -432,6 +452,15 @@ export class TablesComponent implements OnInit, OnDestroy {
       return;
     }
     this.router.navigate(['/dashboard/pos'], { queryParams: { table: table.name, table_label: this.tableLabel(table) } });
+  }
+
+  /** Pedido para llevar o a domicilio: abre el POS sin mesa (sin la redirección al plano). */
+  openOrderWithoutTable(): void {
+    if (!this.canCreateOrders) {
+      toast.error('No tiene permisos para crear órdenes en este negocio.');
+      return;
+    }
+    this.router.navigate(['/dashboard/pos'], { queryParams: { sin_mesa: 1 } });
   }
 
   openOrder(order: any): void {

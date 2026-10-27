@@ -2,6 +2,12 @@
   <header class="sticky top-0 z-30 border-b border-primary/10 bg-card/95 px-2.5 py-2 shadow-sm backdrop-blur">
     <div class="mx-auto flex w-full max-w-[980px] flex-col gap-2">
       <div class="flex items-center gap-2">
+        <button *ngIf="hasTables" type="button" (click)="goToTables()"
+          class="flex h-10 shrink-0 flex-col items-center justify-center rounded-xl border border-primary/20 bg-card px-2.5 text-primary"
+          aria-label="Volver a Mesas" title="Volver a Mesas">
+          <span class="text-sm font-black leading-none">←</span>
+          <span class="text-[10px] font-bold uppercase leading-none">Mesas</span>
+        </button>
         <div class="min-w-0 flex-1">
           <p class="text-[10px] font-bold uppercase tracking-wide text-primary">Mesa / alias</p>
           <input
@@ -76,7 +82,6 @@
           class="h-8 rounded-lg border border-primary/20 bg-card px-2.5 text-[11px] font-bold text-muted-foreground">
           Limpiar
         </button>
-        <app-barcode-scan-input></app-barcode-scan-input>
         <button type="button" (click)="productSearchModal?.open()" title="Búsqueda avanzada (Ctrl+K)"
           class="h-8 rounded-lg border border-primary/30 bg-primary/5 px-2.5 text-[11px] font-bold text-primary">
           🔍
@@ -394,13 +399,11 @@
 
   <app-product-variant-picker
     #productVariantPicker
-    (resolved)="onVariantResolved($event)"
-    (cancelled)="refocusScanner()">
+    (resolved)="onVariantResolved($event)">
   </app-product-variant-picker>
 
   <app-product-search-modal
     [products]="productsFlat"
-    (productSelected)="onProductCardClick($event)"
-    (closed)="refocusScanner()">
+    (productSelected)="onProductCardClick($event)">
   </app-product-search-modal>
 </div>

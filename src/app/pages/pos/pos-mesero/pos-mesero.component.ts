@@ -14,7 +14,6 @@ import { finalize } from 'rxjs';
 import { canSellProduct, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { ProductVariantPickerComponent } from 'src/app/shared/components/product-variant-picker/product-variant-picker.component';
-import { BarcodeScanInputComponent } from 'src/app/shared/components/barcode-scan-input/barcode-scan-input.component';
 import { ProductSearchModalComponent } from 'src/app/shared/components/product-search-modal/product-search-modal.component';
 import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 
@@ -23,13 +22,12 @@ type OrderType = 'Servirse' | 'Llevar' | 'Domicilio';
 @Component({
   selector: 'app-pos-mesero',
   standalone: true,
-  imports: [CommonModule, FormsModule, ProductVariantPickerComponent, BarcodeScanInputComponent, ProductSearchModalComponent, DecimalInputDirective, LineNoteEditorComponent],
+  imports: [CommonModule, FormsModule, ProductVariantPickerComponent, ProductSearchModalComponent, DecimalInputDirective, LineNoteEditorComponent],
   templateUrl: './pos-mesero.component.html',
   styles: [':host { display: block; height: 100%; min-height: 0; }']
 })
 export class PosMeseroComponent implements OnInit {
   @ViewChild('productVariantPicker') productVariantPicker!: ProductVariantPickerComponent;
-  @ViewChild(BarcodeScanInputComponent) barcodeScanInput?: BarcodeScanInputComponent;
   @ViewChild(ProductSearchModalComponent) productSearchModal?: ProductSearchModalComponent;
   @Input() selectedTableId = '';
   @Input() selectedTableLabel = '';
@@ -66,6 +64,15 @@ export class PosMeseroComponent implements OnInit {
     private capabilities: CompanyCapabilitiesService
   ) {}
 
+  get hasTables(): boolean {
+    return this.capabilities.isEnabled('tables');
+  }
+
+  /** El menú lateral se oculta dentro del POS: esta es la salida al plano de mesas. */
+  goToTables(): void {
+    void this.router.navigate(['/dashboard/tables']);
+  }
+
   /** Preferencia visual del POS configurada fuera del frontend; adapta solo presentación, nunca lógica de venta. */
   get isRetailPos(): boolean {
     return this.capabilities.isRetailPos;
@@ -96,7 +103,7 @@ export class PosMeseroComponent implements OnInit {
         break;
       case 'Escape':
         if (this.editingNoteLine !== null) { this.cancelNote(); break; }
-        if (this.cartExpanded) { this.cartExpanded = false; this.refocusScanner(); }
+        if (this.cartExpanded) this.cartExpanded = false;
         break;
     }
   }
@@ -263,13 +270,8 @@ export class PosMeseroComponent implements OnInit {
 
   onVariantResolved(resolved: any): void {
     this.addProduct(resolved);
-    this.refocusScanner();
   }
 
-  /** Se usa al cerrar el picker de variantes o la búsqueda avanzada sin elegir nada, y después de agregar un producto. */
-  refocusScanner(): void {
-    this.barcodeScanInput?.focus();
-  }
 
   addProduct(product: any): void {
     if (!this.canAddProduct(product)) {
@@ -334,9 +336,6 @@ export class PosMeseroComponent implements OnInit {
 
   toggleCartDetails(): void {
     this.cartExpanded = !this.cartExpanded;
-    // Al cerrar el carrito (no al abrirlo, ahí el mesero va a tocar la
-    // pantalla) vuelve el foco al escáner para seguir agregando productos.
-    if (!this.cartExpanded) this.refocusScanner();
   }
 
   async clearCart(): Promise<void> {
@@ -411,12 +410,11 @@ export class PosMeseroComponent implements OnInit {
         toast.success('Orden creada correctamente');
         this.refreshProductsSilently();
         window.dispatchEvent(new CustomEvent('facturada:restaurant-data-changed'));
-        const orderName = String(response?.message?.name ?? response?.message?.data?.name ?? response?.data?.name ?? '').trim();
-        if (this.selectedTableId && orderName) {
-          this.router.navigate(['/dashboard/orders', orderName]);
-          return;
-        }
         this.resetOrderForm();
+        // Con mesas configuradas el mesero vuelve al plano para atender la siguiente.
+        if (this.capabilities.isEnabled('tables')) {
+          void this.router.navigate(['/dashboard/tables']);
+        }
       },
       // OrdersService centraliza el mensaje del backend y normaliza HTTP 403.
       error: () => { }
@@ -485,9 +483,6 @@ export class PosMeseroComponent implements OnInit {
     this.deliveryAddress = '';
     this.deliveryPhone = '';
     this.cartExpanded = false;
-    // La comanda se envió y el carrito quedó vacío: el foco vuelve al input
-    // de escaneo para seguir tomando el siguiente pedido sin un clic extra.
-    this.barcodeScanInput?.focus();
   }
 
   private normalize(txt: any = ''): string {

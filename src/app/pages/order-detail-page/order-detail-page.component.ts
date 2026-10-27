@@ -242,7 +242,25 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   goBack() {
     if (window.history.length > 2) history.back();
-    else this.router.navigate(['/orders']);
+    else this.router.navigate(['/dashboard/orders']);
+  }
+
+  get showTablesLink(): boolean {
+    return this.capabilities.isEnabled('tables') && this.capabilities.hasPermission('restaurant.orders.read');
+  }
+
+  get showNewOrderLink(): boolean {
+    return this.capabilities.isEnabled('restaurant') && this.capabilities.hasPermission('restaurant.orders.create');
+  }
+
+  goToTables(): void {
+    this.router.navigate(['/dashboard/tables']);
+  }
+
+  /** Con mesas, quien no cobra (mesero) abre el POS sin mesa; el resto entra al POS normal. */
+  newOrder(): void {
+    const waiter = this.capabilities.isEnabled('tables') && !this.capabilities.hasPermission('billing.create');
+    this.router.navigate(['/dashboard/pos'], waiter ? { queryParams: { sin_mesa: 1 } } : {});
   }
 
   goToInvoice(invName?: string) {

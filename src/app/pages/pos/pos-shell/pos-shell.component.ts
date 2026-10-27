@@ -47,7 +47,8 @@ export class PosShellComponent implements OnInit {
       && this.capabilities.hasPermission('restaurant.orders.create')
       && !this.capabilities.hasPermission('billing.create')) {
       this.roleName = 'Mesero';
-      if (!this.selectedTableId) {
+      // `sin_mesa`: pedido para llevar o a domicilio, no se redirige al plano de mesas.
+      if (!this.selectedTableId && this.route.snapshot.queryParamMap.get('sin_mesa') !== '1') {
         this.resolveMeseroEntry();
       }
       return;
