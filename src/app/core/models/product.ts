@@ -19,6 +19,13 @@ export interface Product {
   variant_of_name?: string;
   /** Combinación de atributos (Color, Talla, etc.) que identifica a la variante. */
   attributes?: ProductAttributeValue[];
+  /** Insumo de cocina (lechuga, carne...): lleva stock, entra en recetas y no se vende. */
+  is_ingredient?: number | boolean;
+  /** Plato con receta: al venderse descuenta sus insumos en lugar de su propio stock. */
+  has_recipe?: boolean;
+  /** Insumos que el cliente puede pedir «sin» (para la nota de cocina del POS). */
+  removable_ingredients?: Array<{ ingredient: string; name: string }>;
+  recipe_count?: number;
   standard_rate?: number;
   rate?: number;
   categoria: string;

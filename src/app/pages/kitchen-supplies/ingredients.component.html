@@ -1,0 +1,240 @@
+<div *ngIf="enabled; else unavailable" class="app-container space-y-3">
+  <app-inventory-nav active="ingredients" />
+
+  <!-- Cabecera -->
+  <header class="rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div class="min-w-0">
+        <h1 class="text-lg font-bold text-foreground">Insumos de cocina</h1>
+        <p class="text-xs text-muted-foreground">Lo que compras para cocinar: carne, verduras, pan…</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <app-kitchen-warehouse-picker (changed)="load()" />
+        <button *ngIf="canCreate" type="button" class="btn btn-primary !px-3 !text-xs" [disabled]="needsWarehouse" (click)="openCreate()">+ Nuevo insumo</button>
+      </div>
+    </div>
+  </header>
+
+  <section *ngIf="needsWarehouse" class="rounded-xl border border-dashed border-border bg-card px-4 py-10 text-center">
+    <p class="text-sm font-bold text-foreground">Elige una bodega</p>
+    <p class="mx-auto mt-1 max-w-md text-xs text-muted-foreground">Este negocio maneja el stock por bodega. Elige una arriba, junto al título, para ver sus insumos.</p>
+  </section>
+
+  <ng-container *ngIf="!needsWarehouse">
+    <!-- Primer uso: guía en pasos en vez de una tabla vacía -->
+    <section *ngIf="isFirstRun" class="rounded-xl border border-dashed border-border bg-card px-5 py-10 text-center">
+      <p class="text-base font-bold text-foreground">Empieza con tus insumos</p>
+      <p class="mx-auto mt-1 max-w-lg text-xs text-muted-foreground">
+        Un insumo es algo que gastas al cocinar. Regístralo con su unidad y cuánto tienes hoy; después lo usarás en las recetas y el sistema descontará el stock en cada venta.
+      </p>
+      <ol class="mx-auto mt-5 grid max-w-2xl grid-cols-1 gap-2 text-left sm:grid-cols-3">
+        <li class="rounded-lg border border-border bg-muted/30 p-3"><span class="text-[10px] font-bold uppercase text-primary">Paso 1</span><p class="mt-0.5 text-xs font-semibold text-foreground">Crea tus insumos</p><p class="text-[11px] text-muted-foreground">Lechuga, tomate, carne…</p></li>
+        <li class="rounded-lg border border-border bg-muted/30 p-3"><span class="text-[10px] font-bold uppercase text-primary">Paso 2</span><p class="mt-0.5 text-xs font-semibold text-foreground">Arma las recetas</p><p class="text-[11px] text-muted-foreground">Cuánto lleva cada plato.</p></li>
+        <li class="rounded-lg border border-border bg-muted/30 p-3"><span class="text-[10px] font-bold uppercase text-primary">Paso 3</span><p class="mt-0.5 text-xs font-semibold text-foreground">Vende con normalidad</p><p class="text-[11px] text-muted-foreground">El stock baja solo.</p></li>
+      </ol>
+      <button *ngIf="canCreate" type="button" class="btn btn-primary mt-5" (click)="openCreate()">+ Crear mi primer insumo</button>
+    </section>
+
+    <ng-container *ngIf="!isFirstRun">
+      <!-- Filtros y búsqueda en una sola barra -->
+      <section class="flex flex-col gap-2 rounded-xl border border-border bg-card p-2 shadow-sm sm:flex-row sm:items-center" aria-label="Filtros">
+        <div class="inline-flex shrink-0 rounded-lg border border-border bg-muted/40 p-0.5" role="radiogroup" aria-label="Mostrar">
+          <button type="button" role="radio" [attr.aria-checked]="filter === 'all'" class="rounded-md px-3 py-1.5 text-xs font-semibold transition" [ngClass]="filter === 'all' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" (click)="filter = 'all'; load()">Todos <span class="ml-1 text-muted-foreground">{{ counts['all'] }}</span></button>
+          <button type="button" role="radio" [attr.aria-checked]="filter === 'low'" class="rounded-md px-3 py-1.5 text-xs font-semibold transition" [ngClass]="filter === 'low' ? 'bg-card text-amber-700 shadow-sm' : 'text-muted-foreground hover:text-foreground'" (click)="filter = 'low'; load()">Por reponer <span class="ml-1" [ngClass]="counts['low'] ? 'text-amber-600' : 'text-muted-foreground'">{{ counts['low'] }}</span></button>
+          <button type="button" role="radio" [attr.aria-checked]="filter === 'out'" class="rounded-md px-3 py-1.5 text-xs font-semibold transition" [ngClass]="filter === 'out' ? 'bg-card text-red-700 shadow-sm' : 'text-muted-foreground hover:text-foreground'" (click)="filter = 'out'; load()">Agotados <span class="ml-1" [ngClass]="counts['out'] ? 'text-red-600' : 'text-muted-foreground'">{{ counts['out'] }}</span></button>
+        </div>
+        <input class="input h-9 flex-1 text-xs md:!w-auto" type="search" [ngModel]="search" (ngModelChange)="onSearch($event)" placeholder="Buscar insumo…" aria-label="Buscar insumo" autocomplete="off" />
+      </section>
+
+      <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm" aria-live="polite">
+        <!-- Carga -->
+        <div *ngIf="loading" class="divide-y divide-border" aria-busy="true">
+          <div *ngFor="let n of [1, 2, 3, 4]" class="flex animate-pulse items-center gap-4 px-4 py-3">
+            <div class="h-4 w-40 rounded bg-muted"></div><div class="ml-auto h-4 w-20 rounded bg-muted"></div><div class="h-5 w-24 rounded-full bg-muted"></div>
+          </div>
+        </div>
+
+        <!-- Error con salida -->
+        <div *ngIf="!loading && loadError" class="px-4 py-10 text-center" role="alert">
+          <p class="text-sm font-semibold text-foreground">No pudimos cargar los insumos</p>
+          <p class="mt-1 text-xs text-muted-foreground">{{ loadError }}</p>
+          <button type="button" class="btn btn-outline mt-3 !text-xs" (click)="load()">Reintentar</button>
+        </div>
+
+        <!-- Sin resultados -->
+        <div *ngIf="!loading && !loadError && !rows.length" class="px-4 py-10 text-center">
+          <p class="text-sm font-semibold text-foreground">Ningún insumo coincide</p>
+          <p class="mt-1 text-xs text-muted-foreground">Prueba con otro nombre o quita el filtro.</p>
+          <button type="button" class="btn btn-outline mt-3 !text-xs" (click)="clearFilters()">Limpiar filtros</button>
+        </div>
+
+        <ng-container *ngIf="!loading && !loadError && rows.length">
+          <!-- Escritorio -->
+          <div class="hidden overflow-x-auto md:block">
+            <table class="app-table text-xs">
+              <thead class="app-thead">
+                <tr>
+                  <th class="app-th py-2">Insumo</th>
+                  <th class="app-th py-2">Stock</th>
+                  <th class="app-th py-2">Estado</th>
+                  <th class="app-th py-2">En recetas</th>
+                  <th class="app-th py-2"><span class="sr-only">Acciones</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of rows; trackBy: trackByName" class="app-tr">
+                  <td class="app-td py-2.5">
+                    <p class="max-w-[320px] truncate font-semibold text-foreground">{{ row.item_name }}</p>
+                    <p class="font-mono text-[10px] text-muted-foreground">{{ row.item_code }}</p>
+                  </td>
+                  <td class="app-td py-2.5">
+                    <div class="flex items-baseline gap-1">
+                      <span class="text-sm font-black" [ngClass]="row.state === 'out' ? 'text-red-600' : row.state === 'low' ? 'text-amber-600' : 'text-foreground'">{{ row.current_stock | number: '1.0-3' }}</span>
+                      <span class="text-[10px] text-muted-foreground">{{ row.unit }}</span>
+                    </div>
+                    <div class="mt-1 h-1 w-28 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+                      <div class="h-full rounded-full" [ngClass]="row.state === 'out' ? 'bg-red-500' : row.state === 'low' ? 'bg-amber-500' : 'bg-emerald-500'" [style.width.%]="fillPercent(row)"></div>
+                    </div>
+                    <p *ngIf="row.minimum_stock" class="mt-0.5 text-[10px] text-muted-foreground">Avisa en {{ row.minimum_stock | number: '1.0-3' }} {{ row.unit }}</p>
+                  </td>
+                  <td class="app-td py-2.5"><span class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold" [ngClass]="stateTone(row.state)">{{ stateLabel(row.state) }}</span></td>
+                  <td class="app-td py-2.5 text-muted-foreground">
+                    <ng-container *ngIf="row.used_in; else unused">{{ row.used_in }} {{ row.used_in === 1 ? 'plato' : 'platos' }}</ng-container>
+                    <ng-template #unused><span title="Aún no está en ninguna receta">Sin usar</span></ng-template>
+                  </td>
+                  <td class="app-td py-2.5">
+                    <div class="flex justify-end gap-1.5">
+                      <button *ngIf="canMove" type="button" class="btn btn-primary !h-8 !px-3 !text-[11px]" (click)="openMove(row, 'Entrada')">+ Compra</button>
+                      <button *ngIf="canCreate" type="button" class="btn btn-ghost !h-8 !px-3 !text-[11px]" (click)="openEdit(row)" [attr.aria-label]="'Editar ' + row.item_name">Editar</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Móvil: tarjetas con acciones a la mano -->
+          <ul class="divide-y divide-border md:hidden">
+            <li *ngFor="let row of rows; trackBy: trackByName" class="space-y-2 p-3">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-semibold text-foreground">{{ row.item_name }}</p>
+                  <p class="text-[11px] text-muted-foreground">{{ row.used_in ? 'En ' + row.used_in + (row.used_in === 1 ? ' plato' : ' platos') : 'Sin usar en recetas' }}</p>
+                </div>
+                <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold" [ngClass]="stateTone(row.state)">{{ stateLabel(row.state) }}</span>
+              </div>
+              <div class="flex items-end justify-between gap-3">
+                <div>
+                  <p class="text-xl font-black" [ngClass]="row.state === 'out' ? 'text-red-600' : row.state === 'low' ? 'text-amber-600' : 'text-foreground'">{{ row.current_stock | number: '1.0-3' }} <span class="text-xs font-semibold text-muted-foreground">{{ row.unit }}</span></p>
+                  <div class="mt-1 h-1 w-24 overflow-hidden rounded-full bg-muted" aria-hidden="true"><div class="h-full rounded-full" [ngClass]="row.state === 'out' ? 'bg-red-500' : row.state === 'low' ? 'bg-amber-500' : 'bg-emerald-500'" [style.width.%]="fillPercent(row)"></div></div>
+                </div>
+                <div class="flex gap-1.5">
+                  <button *ngIf="canMove" type="button" class="btn btn-primary !h-10 !px-4 !text-xs" (click)="openMove(row, 'Entrada')">+ Compra</button>
+                  <button *ngIf="canCreate" type="button" class="btn btn-ghost !h-10 !px-3 !text-xs" (click)="openEdit(row)" [attr.aria-label]="'Editar ' + row.item_name">Editar</button>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </ng-container>
+      </section>
+    </ng-container>
+  </ng-container>
+
+  <p *ngIf="canOfferWarehouses" class="px-1 text-center text-[11px] text-muted-foreground">
+    ¿Tienes más de un local, o una cocina central que abastece a otros locales?
+    <a routerLink="/settings/lite/warehouses" class="font-semibold text-primary hover:underline">Activa el manejo por bodegas</a>
+  </p>
+
+  <!-- ===== Modal: nuevo / editar insumo ===== -->
+  <div *ngIf="formOpen" class="app-modal-backdrop" (keydown.escape)="closeForm()">
+    <div class="app-modal !max-w-lg overflow-hidden !rounded-2xl !border-border !bg-card !shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="ing-form-title">
+      <header class="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
+        <div>
+          <h2 id="ing-form-title" class="text-base font-bold text-foreground">{{ editing ? 'Editar insumo' : 'Nuevo insumo' }}</h2>
+          <p class="text-xs text-muted-foreground">{{ editing ? 'El stock se cambia con una compra o un conteo.' : 'Solo lo necesario: lo demás se completa después.' }}</p>
+        </div>
+        <button type="button" class="btn btn-ghost !px-2" (click)="closeForm()" aria-label="Cerrar">×</button>
+      </header>
+      <form (ngSubmit)="save(false)" class="space-y-4 p-5" novalidate>
+        <div>
+          <label for="ing-name" class="mb-1 block text-xs font-semibold text-foreground/80">Nombre *</label>
+          <input id="ing-name" class="input !w-full" name="name" [(ngModel)]="form.name" autocomplete="off" autofocus placeholder="Ej. Lechuga, Carne molida, Pan de hamburguesa" [attr.aria-invalid]="nameInvalid" />
+          <p *ngIf="nameInvalid" class="field-error" role="alert">Escribe el nombre del insumo.</p>
+        </div>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div>
+            <label for="ing-unit" class="mb-1 block text-xs font-semibold text-foreground/80">Se mide en</label>
+            <select id="ing-unit" class="select !w-full" name="unit" [(ngModel)]="form.unit">
+              <option *ngFor="let unit of unitOptions" [value]="unit.value">{{ unit.label }}</option>
+            </select>
+          </div>
+          <div *ngIf="!editing">
+            <label for="ing-initial" class="mb-1 block text-xs font-semibold text-foreground/80">Tengo hoy</label>
+            <input id="ing-initial" class="input no-spinner !w-full" type="number" min="0" step="any" name="initial" [(ngModel)]="form.initial_stock" inputmode="decimal" />
+          </div>
+          <div>
+            <label for="ing-min" class="mb-1 block text-xs font-semibold text-foreground/80">Avisar cuando queden</label>
+            <input id="ing-min" class="input no-spinner !w-full" type="number" min="0" step="any" name="minimum" [(ngModel)]="form.minimum_stock" inputmode="decimal" />
+          </div>
+        </div>
+        <p class="text-[11px] text-muted-foreground">Usa la misma unidad en que cuentas y en que lo pones en las recetas.</p>
+        <footer class="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
+          <button *ngIf="editing" type="button" class="text-xs font-semibold text-red-600 hover:underline" [disabled]="saving" (click)="deactivate()">Desactivar</button>
+          <span *ngIf="!editing"></span>
+          <div class="flex gap-2">
+            <button type="button" class="btn btn-outline" [disabled]="saving" (click)="closeForm()">Cancelar</button>
+            <button *ngIf="!editing" type="button" class="btn btn-outline" [disabled]="saving" (click)="save(true)">Guardar y otro</button>
+            <button type="submit" class="btn btn-primary" [disabled]="saving">{{ saving ? 'Guardando…' : 'Guardar' }}</button>
+          </div>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== Modal: compra / salida / conteo ===== -->
+  <div *ngIf="moveTarget as target" class="app-modal-backdrop" (keydown.escape)="closeMove()">
+    <div class="app-modal !max-w-md overflow-hidden !rounded-2xl !border-border !bg-card !shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="ing-move-title">
+      <header class="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
+        <div class="min-w-0">
+          <h2 id="ing-move-title" class="text-base font-bold text-foreground">{{ moveCopy().title }}</h2>
+          <p class="truncate text-xs text-muted-foreground">{{ target.item_name }} · hay {{ target.current_stock | number: '1.0-3' }} {{ target.unit }}</p>
+        </div>
+        <button type="button" class="btn btn-ghost !px-2" (click)="closeMove()" aria-label="Cerrar">×</button>
+      </header>
+      <form (ngSubmit)="confirmMove()" class="space-y-4 p-5" novalidate>
+        <div class="grid grid-cols-3 gap-1 rounded-lg border border-border bg-muted/40 p-0.5" role="radiogroup" aria-label="Tipo de movimiento">
+          <button *ngFor="let kind of [['Entrada', 'Compra'], ['Salida', 'Se dañó'], ['Ajuste', 'Contar']]" type="button" role="radio"
+            [attr.aria-checked]="moveKind === kind[0]" class="rounded-md py-1.5 text-xs font-semibold transition"
+            [ngClass]="moveKind === kind[0] ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+            (click)="setMoveKind($any(kind[0]))">{{ kind[1] }}</button>
+        </div>
+        <div>
+          <label for="ing-qty" class="mb-1 block text-xs font-semibold text-foreground/80">{{ moveCopy().qtyLabel }} ({{ target.unit }}) *</label>
+          <input id="ing-qty" class="input no-spinner !h-11 !w-full !text-base" type="number" min="0" step="any" name="qty" [(ngModel)]="moveQty" inputmode="decimal" autofocus [attr.aria-invalid]="!!moveError" />
+          <p *ngIf="moveError" class="field-error" role="alert">{{ moveError }}</p>
+        </div>
+        <div>
+          <label for="ing-note" class="mb-1 block text-xs font-semibold text-foreground/80">Nota (opcional)</label>
+          <input id="ing-note" class="input !w-full" name="note" [(ngModel)]="moveNote" [placeholder]="moveCopy().placeholder" autocomplete="off" />
+        </div>
+        <p *ngIf="moveResult !== null" class="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2 text-xs">
+          <span class="text-muted-foreground">Quedará en</span>
+          <b class="text-sm text-foreground">{{ moveResult | number: '1.0-3' }} {{ target.unit }}</b>
+        </p>
+        <footer class="flex justify-end gap-2 border-t border-border pt-4">
+          <button type="button" class="btn btn-outline" [disabled]="saving" (click)="closeMove()">Cancelar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving">{{ saving ? 'Guardando…' : moveCopy().cta }}</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+</div>
+
+<ng-template #unavailable>
+  <div class="app-container">
+    <section class="rounded-xl border border-dashed border-border bg-card px-4 py-10 text-center">
+      <h1 class="text-base font-bold text-foreground">Insumos no disponible</h1>
+      <p class="mt-1 text-xs text-muted-foreground">Necesitas restaurante e inventario habilitados en el plan de este negocio.</p>
+    </section>
+  </div>
+</ng-template>

@@ -28,24 +28,16 @@ export class TaxesService {
   constructor(private http: HttpClient, private capabilities: CompanyCapabilitiesService) { }
 
   getAll() {
-    const campos = ["name", "value"];
-
-    if (this.capabilities.isLiteMode) {
-      const business = this.capabilities.businessId || localStorage.getItem('businessId') || '';
-      const params = business ? new HttpParams().set('business', business) : undefined;
-      return this.http.get(`${environment.apiUrl}${API_ENDPOINT.FacturadaLite}.get_taxes`, {
-        context: new HttpContext().set(REQUIRE_AUTH, true),
-        params
-      }).pipe(
-        map((res: any) => {
-          return { data: frappeList<any>(res).map((tax: any) => this.normalizeTax(tax)) };
-        })
-      );
-    }
-
-    return this.http.get(`${environment.apiUrl}/resource/taxes?fields=${JSON.stringify(campos)}`, {
-      context: new HttpContext().set(REQUIRE_AUTH, true)
-    });
+    // Los impuestos salen siempre de Lite: el recurso `taxes` del backend antiguo ya no existe,
+    // y en negocios de restaurante daba "Sin permiso para DocType".
+    const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('businessId') || '';
+    const params = business ? new HttpParams().set('business', business) : undefined;
+    return this.http.get(`${environment.apiUrl}${API_ENDPOINT.FacturadaLite}.get_taxes`, {
+      context: new HttpContext().set(REQUIRE_AUTH, true),
+      params
+    }).pipe(
+      map((res: any) => ({ data: frappeList<any>(res).map((tax: any) => this.normalizeTax(tax)) }))
+    );
   }
 
   create(data: CompanyInfo): Observable<CompanyInfo> {

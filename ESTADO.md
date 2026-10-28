@@ -1,6 +1,6 @@
 # Estado del proyecto Facturada
 
-Última actualización: 2026-10-26.
+Última actualización: 2026-10-28.
 
 ## Objetivo Actual
 
@@ -8,6 +8,98 @@ Mantener una memoria breve del progreso y los pendientes sin ampliar `CLAUDE.md`
 El trabajo local observado se concentra en la configuración de desarrollo del frontend Angular y su conexión con Frappe.
 
 ## Últimos Cambios (Hecho)
+
+- 2026-10-28 (Claude, 2): «Ajustar stock» sale de la ficha del producto. La edición ya no crea
+  movimientos; la ficha muestra «Cambiar la cantidad» con el botón «Ajustar en Inventario →»
+  (`irAjustarStock`) que navega a `/dashboard/inventory?adjust=<producto>`; Inventario abre el
+  movimiento con ese producto elegido y limpia la URL (`openPendingAdjust`). Si el inventario se
+  acaba de activar en la misma edición, avisa que primero se guarde. Se conserva «Stock
+  inicial» al crear (Entrada tras crear; Por Bodega usa la elegida/predeterminada). También:
+  la unidad «Unidad» de Lite ahora se muestra como «und» y una unidad no listada (kg…) ya no
+  deja el selector en blanco. Reemplaza la nota anterior del ajuste dentro de la ficha. Suite:
+  503 pruebas, mismas 26 heredadas; se retiró la prueba heredada del ajuste en la ficha.
+
+- 2026-10-28 (Claude): «Ajustar stock» (editar) y «Stock inicial» (crear) del formulario de
+  producto no hacían nada en negocios no-Lite: `ProductsService.toLiteProductPayload` descarta
+  `stock_actual`/`stock_ajuste`/`stock_inicial` porque el saldo solo cambia por movimientos, y el
+  componente nunca los creaba. Ahora `ProductsComponent` registra el movimiento tras guardar el
+  producto: «dejar en N» = Ajuste (acepta 0), «sumar/restar» = Entrada/Salida, stock inicial =
+  Entrada; en Por Bodega usa la bodega elegida en Inventario o la predeterminada. Si el
+  movimiento falla, el producto queda guardado y se avisa el motivo. Modo Lite sin cambios
+  (sigue mandando a Inventario). 10 pruebas nuevas; suite 501 con las mismas 26 heredadas.
+  No probado en el navegador contra datos reales (alteraría stock).
+
+- 2026-10-27 (Claude, 9): bodegas según el tipo de negocio. `CompanyCapabilitiesService`:
+  `isRestaurantBusiness` y `warehouseUiVisible` (restaurante en inventario Simple no ve
+  bodegas; con Por Bodega o en comercio sí). Se oculta «Bodegas y modo» + «Modo: Simple» en
+  la navegación de Inventario y «Bodegas» en el menú lateral (`hideUnlessWarehouseUi`). Insumos y
+  Recetas: selector `app-kitchen-warehouse-picker` (solo en Por Bodega) y, solo para
+  administradores en Simple, un enlace discreto «Activa el manejo por bodegas» (texto: «¿Tienes más de un local, o una cocina central que abastece a otros locales?»; ajustado tras revisar cómo lo usan los restaurantes). La pantalla
+  `/settings/lite/warehouses` sigue accesible por URL y desde ese enlace. 11 pruebas nuevas;
+  suite 491 con las mismas 26 heredadas. El spec de navegación de Codex ahora simula
+  `warehouseUiVisible`.
+
+- 2026-10-27 (Claude, 8): variantes según el tipo de negocio. Restaurante (`restaurant` activo
+  y POS no retail) habla de «opciones»: formulario de producto, lista, ejemplo «Jugo natural →
+  Mora, Naranja», atributo inicial «Sabor» y stock propio apagado con aviso hacia Recetas.
+  Boutique/retail conserva «variantes», Color/Talla y stock activado. Tarjetas del POS Caja y
+  Mesero dicen «opciones» en restaurante. Textos en `VariantCopy` de `products.component.ts`.
+  Los fixtures de `products.behavior.spec.ts` (Codex) ahora representan un comercio sin
+  `restaurant`; 6 pruebas nuevas cubren ambos lenguajes. Suite: 482 pruebas, mismas 26 heredadas.
+  Pendiente: el selector de variantes del POS usa los atributos tal cual vienen.
+
+- 2026-10-27 (Claude, 7): simplificación de Insumos y Recetas tras revisarlas en pantalla
+  (Playwright con las librerías de `~/.cache/facturada-test-libs`). Insumos: una sola barra
+  «Todos / Por reponer / Agotados» + búsqueda; filas con «+ Compra» y «Editar» (contar y
+  «se dañó» van dentro de Compra); unidades planas (kg, g, lb, lt, ml, und). Recetas: pestañas
+  «Con / Sin receta / Por agotarse»; el editor muestra por línea insumo + cantidad + «el cliente
+  puede pedirlo sin»; la merma sigue en datos/backend pero ya no se edita en pantalla. En el
+  POS, «Quitar del plato» va antes de las notas genéricas. Suite del front: 476 pruebas, las
+  mismas 26 fallas heredadas.
+
+- 2026-10-27 (Claude, 6): pruebas de recetas a pedido del usuario (coordinadas con las de
+  Codex, que ya cubrían servicio, utilidades de porciones, Recetas y navegación). Nuevas en el
+  front: `ingredients.component.spec.ts` (alta, «guardar y otro», movimientos, desactivar,
+  permisos, bodega), `pos/services/cart.service.spec.ts` (líneas con insumos quitados, límite
+  por porciones), `pos/ui/line-note-editor.component.spec.ts` («Sin X»),
+  `recipes.preview.spec.ts` (porciones con decimales). Suite completa: 476 pruebas, 450
+  aprobadas y 26 fallidas, todas de la lista heredada («should create»). Sin regresiones.
+
+- 2026-10-27 (Claude, 5): pantallas «Insumos» y «Recetas» (Inventario → pestañas nuevas, solo
+  con `restaurant` + `inventory`), sin commit y sin probar en navegador (compila con
+  `ngc --noEmit`). Rutas `/dashboard/inventory/ingredients` y `/recipes`
+  (`pages/kitchen-supplies/`, `KitchenSuppliesService`). Insumos: resumen filtrable
+  (disponibles / por reponer / agotados), alta rápida con «Guardar y otro», compra / salida /
+  conteo con vista previa del stock resultante, desactivar. Recetas: con / sin receta / pocas
+  porciones, editor con porciones disponibles en vivo e insumo limitante, opciones «sin» y
+  merma plegadas por línea, quitar receta. Guía de primer uso, estados de carga/error/vacío,
+  tarjetas en móvil. El formulario de producto enlaza a estas pantallas. Arreglado antes:
+  `TaxesService` ya no usa `/resource/taxes` (daba «Sin permiso para DocType» en restaurante).
+  Para Codex: ambas pantallas (alta, compra, conteo, salida mayor al stock, editor de receta,
+  plato con stock propio, sin insumos, modo Por Bodega sin bodega, permisos).
+
+- 2026-10-27 (Claude, 4): recetas fase 2, sin commit y sin probar en navegador (compila con
+  `ngc --noEmit`). Editor de receta: «El cliente puede pedirlo sin» y «Merma %» por insumo.
+  El editor de nota de cocina del POS (Mesero y Caja) muestra chips «Sin <insumo>» para los
+  insumos quitables; el carrito guarda `removed_ingredients` (separa líneas con distintos
+  quitados) y `create_order_v2` los recibe por línea. Quitar la nota limpia los quitados.
+  Para Codex: chips «Sin X», líneas separadas por quitados, payload de la orden.
+
+- 2026-10-27 (Codex): pruebas ejecutadas sobre el estado actual. Backend del sitio
+  exclusivo facturada_core_simple_test migrado: 292 aprobadas (75 Core, 144 Lite,
+  43 Restaurante, 30 API). Nueve pruebas nuevas de recetas con stock/cancelación/
+  deduplicación/aislamiento y cinco Angular de recetas y terminal ocupada. Front:
+  400 aprobadas de 426, con las 26 fallas heredadas. Mock de caja actualizado.
+  Build sin optimización aprobado; normal bloqueado por DNS de Google Fonts.
+  PWA validada solo en artefactos estáticos, no en móvil; sin E2E ni despliegues.
+  Detalle y límites: PRUEBAS_CODEX_2026-10-27.md. Implementación del usuario intacta.
+
+- 2026-10-27 (Claude, 3): recetas e insumos para restaurante (fase 1), sin commit y sin probar en
+  navegador (compila con `ngc --noEmit`). Formulario de producto: switch «Es insumo» y editor de
+  «Receta por porción» (insumo + cantidad, con porciones disponibles) solo con features
+  `restaurant` + `inventory`; badges «Insumo»/«Receta · n» en la lista. POS Mesero/Caja y
+  Facturación ocultan insumos. `ProductsService.getRecipe`. Para Codex: alta/edición de insumo
+  y de plato con receta, quitar receta, insumos ocultos en POS, payload `is_ingredient`/`recipe`.
 
 - 2026-10-27 (Claude, 2): mejoras posteriores a la PWA, todo sin commit y sin probar en
   navegador (solo compilan con `ngc --noEmit`).

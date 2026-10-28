@@ -8,6 +8,8 @@ export interface MenuItem {
   hideInLite?: boolean;
   hideInApiOnly?: boolean;
   hideWhenFeature?: import('../services/company-capabilities.service').CompanyFeatureKey;
+  /** Oculta el ítem en restaurantes que usan inventario Simple (no tienen bodegas que administrar). */
+  hideUnlessWarehouseUi?: boolean;
   featureKey?: import('../services/company-capabilities.service').CompanyFeatureKey;
   featureKeys?: import('../services/company-capabilities.service').CompanyFeatureKey[];
   requiredFeatures?: import('../services/company-capabilities.service').CompanyFeatureKey[];
@@ -49,6 +51,7 @@ export interface SubMenuItem {
   /** Requiere que el contexto exponga api_configuration.enabled. */
   requiresApiConfiguration?: boolean;
   hideWhenFeature?: import('../services/company-capabilities.service').CompanyFeatureKey;
+  hideUnlessWarehouseUi?: boolean;
   /** Ver `MenuItem.uiVisibilityKey`. */
   uiVisibilityKey?: 'pos' | 'reports' | 'users' | 'restaurantOrders' | 'restaurantTables' | 'restaurantKitchen';
 }

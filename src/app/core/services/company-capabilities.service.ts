@@ -275,6 +275,13 @@ export class CompanyCapabilitiesService {
   /** "Simple" hasta que `get_inventory_configuration` confirme lo contrario. */
   get inventoryMode(): 'Simple' | 'Por Bodega' { return this.state().inventoryMode === 'Por Bodega' ? 'Por Bodega' : 'Simple'; }
   get isWarehouseMode(): boolean { return this.inventoryMode === 'Por Bodega'; }
+  /** Restaurante (con restaurante activo y POS no retail): su catálogo e inventario hablan de cocina, no de comercio. */
+  get isRestaurantBusiness(): boolean { return this.isEnabled('restaurant') && !this.isRetailPos; }
+  /**
+   * Los restaurantes en modo Simple no ven nada de bodegas (un solo inventario). Quien necesite
+   * varios lugares de almacenamiento lo activa desde Configuración; entonces todo reaparece.
+   */
+  get warehouseUiVisible(): boolean { return this.isWarehouseMode || !this.isRestaurantBusiness; }
   get warehouses(): any[] { return this.state().warehouses || []; }
   get activeWarehouses(): any[] { return this.warehouses.filter((item: any) => this.isActiveRecord(item)); }
   get defaultWarehouse(): any | null {

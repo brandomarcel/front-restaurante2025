@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NgxSpinnerService } from 'ngx-spinner';
-import { of } from 'rxjs';
+import { Router } from '@angular/router';
+import { of, throwError } from 'rxjs';
 import { toast } from 'ngx-sonner';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
@@ -25,12 +26,15 @@ describe('Productos — reglas del catálogo', () => {
   function setup(overrides: Partial<Record<string, any>> = {}): void {
     capabilities = {
       isLiteMode: true,
-      isEnabled: () => true,
+      // Por defecto es un comercio (boutique/retail): sin restaurante. Los casos de restaurante lo activan.
+      isEnabled: (key: string) => key !== 'restaurant',
+      isRetailPos: false,
       hasPermission: () => true,
       ...overrides
     };
     products = {
       getAll: jasmine.createSpy('getAll').and.returnValue(of({ message: { data: [jean], total: 1, limit: 10, offset: 0 } })),
+      getRecipe: jasmine.createSpy('getRecipe').and.returnValue(of({ lines: [], portions_available: 0 })),
       create: jasmine.createSpy('create').and.returnValue(of({ name: 'ITEM-NEW', nombre: 'NUEVO' })),
       update: jasmine.createSpy('update').and.returnValue(of({ name: 'ITEM-1' })),
       delete: jasmine.createSpy('delete').and.returnValue(of({})),
@@ -114,18 +118,6 @@ describe('Productos — reglas del catálogo', () => {
     expect(component.f['tax'].disabled).toBeTrue();
   });
 
-  it('el ajuste de stock respeta el modo elegido (fijar o sumar/restar)', () => {
-    setup({ isLiteMode: false });
-    component.abrirModal({ ...jean, variant_count: 0, controlar_inventario: 1, stock_actual: 4 });
-    component.productoForm.patchValue({ stock_objetivo: 10 });
-    expect(component.buildPayload().stock_actual).toBe(10);
-    component.setStockMode('delta');
-    component.productoForm.patchValue({ stock_ajuste: -3 });
-    const payload = component.buildPayload();
-    expect(payload.stock_ajuste).toBe(-3);
-    expect(payload.stock_actual).toBeUndefined();
-  });
-
   it('la variante nueva con stock inicial registra una Entrada de inventario', () => {
     setup();
     component.abrirVariantes(jean);
@@ -151,6 +143,147 @@ describe('Productos — reglas del catálogo', () => {
     await fixture.whenStable();
     expect(products.update).toHaveBeenCalledWith('ITEM-1', jasmine.objectContaining({ isactive: false }));
     expect(products.getAll.calls.count()).toBe(before + 1);
+  });
+
+  describe('stock inicial al crear y ajuste de cantidad desde Inventario', () => {
+    const tracked: any = { ...jean, variant_count: 0, controlar_inventario: 1, track_stock: 1, stock_actual: 4, categoria: 'ROPA' };
+    let router: Router;
+
+    beforeEach(() => {
+      setup({ isLiteMode: false });
+      router = TestBed.inject(Router);
+      spyOn(router, 'navigate').and.resolveTo(true);
+    });
+
+    function createWith(patch: Record<string, any>) {
+      component.abrirModal();
+      component.seleccionarTipoProducto('simple');
+      component.productoForm.patchValue({ nombre: 'Pan', precio: 1, tax: 'IVA 15', categoria: 'ROPA', controlar_inventario: true, ...patch });
+      component.guardarProducto();
+    }
+
+    it('un producto nuevo con stock inicial registra la Entrada con el nombre que devolvió el backend', () => {
+      createWith({ stock_inicial: 10 });
+      expect(products.create).toHaveBeenCalled();
+      expect(inventory.createInventoryMovement).toHaveBeenCalledWith(
+        jasmine.objectContaining({ item: 'ITEM-NEW', movement_type: 'Entrada', quantity: 10 }));
+    });
+
+    it('un producto nuevo sin stock inicial no registra movimiento', () => {
+      createWith({ stock_inicial: 0 });
+      expect(inventory.createInventoryMovement).not.toHaveBeenCalled();
+    });
+
+    it('si no controla inventario, el stock inicial escrito se ignora', () => {
+      createWith({ controlar_inventario: false, stock_inicial: 10 });
+      expect(inventory.createInventoryMovement).not.toHaveBeenCalled();
+    });
+
+    it('si el stock inicial falla, el producto queda creado y se avisa el motivo', () => {
+      inventory.createInventoryMovement.and.returnValue(throwError(() => new Error('Sin permiso')));
+      createWith({ stock_inicial: 10 });
+      expect(products.create).toHaveBeenCalled();
+      expect(alert.error).toHaveBeenCalled();
+      expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it('en modo Por Bodega el stock inicial va a la bodega predeterminada', () => {
+      Object.assign(capabilities, { isWarehouseMode: true, activeBusinessId: 'B', activeWarehouses: [{ name: 'W1' }], defaultWarehouse: { name: 'W1' } });
+      createWith({ stock_inicial: 3 });
+      expect(inventory.createInventoryMovement).toHaveBeenCalledWith(jasmine.objectContaining({ warehouse: 'W1' }));
+    });
+
+    it('la unidad «Unidad» de Lite se muestra como «und» y una unidad distinta no se pierde', () => {
+      component.abrirModal({ ...tracked, unidad_inventario: 'Unidad' });
+      expect(component.productoForm.value.unidad_inventario).toBe('und');
+      component.cerrarModal();
+      component.abrirModal({ ...tracked, unidad_inventario: 'kg' });
+      expect(component.productoForm.value.unidad_inventario).toBe('kg');
+      expect(component.unitOptions.map((unit) => unit.value)).toContain('kg');
+    });
+
+    it('editar un producto ya no crea movimientos: guarda solo sus datos', () => {
+      component.abrirModal(tracked);
+      component.guardarProducto();
+      expect(products.update).toHaveBeenCalled();
+      expect(inventory.createInventoryMovement).not.toHaveBeenCalled();
+    });
+
+    it('la ficha muestra «Ajustar en Inventario» solo si el producto ya controla inventario', () => {
+      component.abrirModal(tracked);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('Ajustar en Inventario');
+      component.cerrarModal();
+      // Producto sin inventario al que se lo activa en esta misma edición: primero hay que guardarlo.
+      component.abrirModal({ ...tracked, controlar_inventario: 0, track_stock: 0 });
+      component.productoForm.patchValue({ controlar_inventario: true });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).not.toContain('Ajustar en Inventario');
+      expect(fixture.nativeElement.textContent).toContain('Guarda el producto con el inventario activado');
+    });
+
+    it('«Ajustar en Inventario» cierra la ficha y abre Inventario con ese producto', () => {
+      component.abrirModal(tracked);
+      component.irAjustarStock();
+      expect(component.mostrarModal).toBeFalse();
+      expect(router.navigate).toHaveBeenCalledWith(['/dashboard/inventory'], { queryParams: { adjust: 'ITEM-1' } });
+    });
+  });
+
+  describe('lenguaje y valores por defecto según el tipo de negocio', () => {
+    const restaurant = { isEnabled: () => true, isRetailPos: false };
+
+    it('boutique: habla de variantes y propone Color y Talla con stock activado', () => {
+      setup();
+      component.abrirVariantes(jean);
+      component.abrirFormVariante();
+      expect(component.copy.button).toBe('Variantes');
+      expect(component.vfAttributes.controls.map((group) => group.value.attribute)).toEqual(['Color', 'Talla']);
+      expect(component.varianteForm.value.track_stock).toBeTrue();
+    });
+
+    it('restaurante: habla de opciones, propone Sabor y deja el stock propio apagado', () => {
+      setup(restaurant);
+      component.abrirVariantes(jean);
+      component.abrirFormVariante();
+      expect(component.copy.button).toBe('Opciones');
+      expect(component.vfAttributes.controls.map((group) => group.value.attribute)).toEqual(['Sabor']);
+      expect(component.varianteForm.value.track_stock).toBeFalse();
+    });
+
+    it('restaurante: la lista muestra «Por opción» y no «Por variante»', () => {
+      setup(restaurant);
+      const text = fixture.nativeElement.textContent as string;
+      expect(text).toContain('Por opción');
+      expect(text).not.toContain('Por variante');
+      expect(text).not.toContain('Variantes');
+    });
+
+    it('restaurante: el paso de elegir tipo ofrece un ejemplo de plato, no de ropa', () => {
+      setup(restaurant);
+      component.abrirModal();
+      fixture.detectChanges();
+      const text = fixture.nativeElement.textContent as string;
+      expect(text).toContain('Jugo natural');
+      expect(text).not.toContain('Jean');
+      expect(text).not.toContain('tallas');
+    });
+
+    it('restaurante: una opción nueva se crea sin stock propio y sin movimiento de entrada', () => {
+      setup(restaurant);
+      component.abrirVariantes(jean);
+      component.abrirFormVariante();
+      component.varianteForm.patchValue({ item_name: 'jugo de mora', item_code: 'JM', standard_rate: 2 });
+      component.vfAttributes.at(0).patchValue({ value: 'Mora' });
+      component.guardarVariante();
+      expect(products.createVariante).toHaveBeenCalledWith(jasmine.objectContaining({ item_name: 'JUGO DE MORA', track_stock: 0 }));
+      expect(inventory.createInventoryMovement).not.toHaveBeenCalled();
+    });
+
+    it('si además el POS es retail, manda el lenguaje de comercio', () => {
+      setup({ isEnabled: () => true, isRetailPos: true });
+      expect(component.copy.button).toBe('Variantes');
+    });
   });
 });
 
@@ -178,7 +311,7 @@ describe('Productos — interfaz', () => {
         { provide: NgxSpinnerService, useValue: { show: () => undefined, hide: () => undefined } },
         { provide: AlertService, useValue: { error: () => undefined, confirm: () => Promise.resolve({ isConfirmed: true }) } },
         { provide: FrappeErrorService, useValue: { handle: () => '' } },
-        { provide: CompanyCapabilitiesService, useValue: { isLiteMode: true, isEnabled: () => true, hasPermission: () => true } }
+        { provide: CompanyCapabilitiesService, useValue: { isLiteMode: true, isEnabled: (key: string) => key !== 'restaurant', isRetailPos: false, hasPermission: () => true } }
       ]
     });
     fixture = TestBed.createComponent(ProductsComponent);

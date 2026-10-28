@@ -93,7 +93,21 @@ npx ng test --watch=false --browsers=ChromeHeadless
 (Con `CHROME_BIN` y `LD_LIBRARY_PATH` exportados, ver sección 3.) No uses `npm test` a
 secas: abre Chrome en modo watch y no termina.
 
-### Línea base conocida (2026-10-26)
+### Línea base conocida (2026-10-28)
+
+Última ejecución completa: **503 pruebas, 477 aprobadas y 26 fallidas heredadas**, sin error
+global asíncrono. Desde la línea base del 27/10 se añadieron specs de Insumos
+(`pages/kitchen-supplies/*.spec.ts`), carrito y editor de notas del POS
+(`pages/pos/services/cart.service.spec.ts`, `pages/pos/ui/line-note-editor.component.spec.ts`),
+lenguaje de variantes por tipo de negocio, stock inicial y «Ajustar en Inventario» en
+`products.behavior.spec.ts`, bodegas por tipo de negocio
+(`core/services/company-capabilities.warehouse-ui.spec.ts`, navegación de inventario) y la apertura del
+movimiento desde la ficha (`pages/inventory/inventory.adjust-from-product.spec.ts`).
+Los fixtures de `products.behavior.spec.ts` y del spec de navegación representan ahora un
+comercio **sin** `restaurant`; los casos de restaurante lo activan explícitamente.
+Detalle y comandos en [PRUEBAS_CODEX_2026-10-27.md](PRUEBAS_CODEX_2026-10-27.md).
+
+Referencia del 27/10: 426 pruebas, 400 aprobadas y 26 fallidas heredadas.
 
 La referencia anterior era 368 pruebas, 342 aprobadas y 26 fallidas. Al iniciar la
 validación del 26/10, el checkout tenía 321 aprobadas y 47 fallidas. Se corrigieron
@@ -101,7 +115,7 @@ fixtures desactualizados de facturación/POS y se añadieron 53 pruebas de accio
 fiscales, guard y capacidades. Resultado completo y comandos en
 [PRUEBAS_CODEX_2026-10-26.md](PRUEBAS_CODEX_2026-10-26.md).
 
-Resultado final actual: **421 pruebas, 395 aprobadas y 26 fallidas**, todas estas
+Resultado anterior (26/10): **421 pruebas, 395 aprobadas y 26 fallidas**, todas estas
 ultimas pertenecen a la lista heredada siguiente. Las 53 pruebas nuevas pasan.
 
 Las 26 fallas heredadas corresponden a specs
@@ -190,14 +204,19 @@ bench --site facturada_core_simple_test run-tests --app facturada_lite
 Si agregas o cambias campos de un DocType, corre antes
 `bench --site facturada_core_simple_test migrate`.
 
-### Línea base conocida (2026-10-26, Redis arriba y sitio migrado)
+### Línea base conocida (2026-10-27, Redis arriba y sitio migrado)
 
 | App | Pruebas | Resultado |
 |-----|---------|-----------|
-| facturada_core | 74 | OK |
-| facturada_lite | 144 | OK |
-| facturada_restaurante | 34 | OK, incluidas 2 regresiones nuevas de aislamiento Jinja |
+| facturada_core | 75 | OK |
+| facturada_lite | 165 | OK; `test_facturada_lite_recipe` (21): validaciones, merma, «sin», listados, solo restaurante |
+| facturada_restaurante | 59 | OK; recetas por orden, «sin», cancelación, permisos al cancelar, factura sin doble salida y Por Bodega |
 | facturada_api | 30 | OK |
+
+Total actual (28/10): **329 aprobadas** (core 75, lite 165, restaurante 59, api 30). Recetas focalizadas: 12 aprobadas con base real y
+rollback. El bloqueo HTTP/SMTP real se mantuvo activo durante las suites. Redis
+respondió PONG y los metadatos ya coincidían, por lo que esta última ejecución no
+requirió migración. Referencia anterior: 292 aprobadas.
 
 **Primera tarea completada:** se ejecutó `bench --site facturada_core_simple_test migrate`
 y se repitieron las cuatro suites (282 pruebas aprobadas). Los errores de `credit_days`

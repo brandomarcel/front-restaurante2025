@@ -90,6 +90,8 @@ export class InventoryComponent implements OnInit {
 
   inventoryProducts: InventoryProduct[] = [];
   productOptions: Product[] = [];
+  /** Producto que pidió abrirse con el movimiento ya listo (viene de la ficha del producto). */
+  private pendingAdjust = '';
   /**
    * Igual que `productOptions`, con una etiqueta ya armada (nombre + contexto
    * de variante) para el buscador de `ng-select`. Se recalcula una sola vez
@@ -172,6 +174,8 @@ export class InventoryComponent implements OnInit {
     // inventario pueda enlazar directo a Movimientos.
     this.route.queryParamMap.pipe(takeUntilDestroyed(destroyRef)).subscribe((params) => {
       this.activeTab = params.get('tab') === 'history' ? 'history' : 'overview';
+      // La ficha del producto enlaza aquí (?adjust=<producto>) para registrar el movimiento con su historial.
+      this.pendingAdjust = params.get('adjust') || '';
     });
   }
 
@@ -393,6 +397,20 @@ export class InventoryComponent implements OnInit {
     });
   }
 
+  /** Abre el movimiento del producto que mandó la ficha y limpia la URL para que recargar no lo repita. */
+  private openPendingAdjust(): void {
+    const name = this.pendingAdjust;
+    if (!name) return;
+    this.pendingAdjust = '';
+    this.router.navigate([], { relativeTo: this.route, queryParams: { adjust: null }, queryParamsHandling: 'merge', replaceUrl: true });
+    const product = this.productOptions.find((item) => item.name === name);
+    if (!product) {
+      this.alertService.error('Ese producto no controla inventario. Actívalo en su ficha y guárdalo primero.');
+      return;
+    }
+    this.abrirMovimientoParaProducto(product as InventoryProduct);
+  }
+
   cargarOpcionesProducto(): void {
     this.productsService.getAll(1, undefined, 0, '', undefined, undefined, false, true, this.isWarehouseMode ? this.selectedWarehouseId : undefined).subscribe({
       next: (res: any) => {
@@ -403,6 +421,7 @@ export class InventoryComponent implements OnInit {
           ...product,
           displayLabel: this.describeProductOption(product)
         }));
+        this.openPendingAdjust();
       },
       error: () => {
         this.productOptions = [];

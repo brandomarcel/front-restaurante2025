@@ -20,7 +20,7 @@ export class CartService {
      * y 1 normal.
      */
     addProduct(product: any): boolean {
-        const existing = this.cart.find(i => this.sameProduct(i, product) && !i.notes);
+        const existing = this.cart.find(i => this.sameProduct(i, product) && !i.notes && !i.removed_ingredients?.length);
 
         const price = Number(product.precio ?? product.price ?? 0);
         const taxValue = this.getTaxPercent(product);
@@ -44,7 +44,8 @@ export class CartService {
             discount_percentage: 0,
             discount_amount: 0,
             tax_value: taxValue,
-            notes: ''
+            notes: '',
+            removed_ingredients: []
         };
         this.recalcItem(newItem);
         this.cart.push(newItem);
@@ -57,19 +58,22 @@ export class CartService {
      * separa una unidad en su propia línea con la nota. Si ya existe otra línea
      * del mismo producto con la misma nota, se unen.
      */
-    setNote(item: any, note: unknown, onlyOneUnit = false): void {
+    setNote(item: any, note: unknown, onlyOneUnit = false, removed: string[] = item?.removed_ingredients ?? []): void {
         const clean = String(note ?? '').replace(/\s+/g, ' ').trim().slice(0, LINE_NOTE_MAX_LENGTH);
+        const removedKey = [...removed].sort().join('|');
+        const sameRemoved = (i: any) => [...(i.removed_ingredients ?? [])].sort().join('|') === removedKey;
         let target = item;
-        if (onlyOneUnit && Number(item.quantity) > 1 && clean !== (item.notes || '')) {
+        if (onlyOneUnit && Number(item.quantity) > 1 && (clean !== (item.notes || '') || !sameRemoved(item))) {
             item.quantity--;
             this.recalcItem(item);
             target = { ...item, line_id: ++this.lineSeq, quantity: 1, discount_amount: 0 };
             this.cart.splice(this.cart.indexOf(item) + 1, 0, target);
         }
         target.notes = clean;
+        target.removed_ingredients = [...removed];
         this.recalcItem(target);
 
-        const twin = this.cart.find(i => i !== target && this.sameProduct(i, target) && (i.notes || '') === clean);
+        const twin = this.cart.find(i => i !== target && this.sameProduct(i, target) && (i.notes || '') === clean && sameRemoved(i));
         if (twin) {
             twin.quantity += target.quantity;
             this.recalcItem(twin);
@@ -196,5 +200,6 @@ export class CartService {
         target.stock_minimo = source?.stock_minimo ?? target.stock_minimo;
         target.is_out_of_stock = source?.is_out_of_stock ?? target.is_out_of_stock;
         target.unidad_inventario = source?.unidad_inventario ?? target.unidad_inventario;
+        target.portions_available = source?.portions_available ?? target.portions_available;
     }
 }

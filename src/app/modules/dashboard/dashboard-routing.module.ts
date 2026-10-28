@@ -23,6 +23,8 @@ import { CajaAbiertaGuard } from 'src/app/core/guards/caja-abierta.guard';
 import { RoleAccessGuard } from 'src/app/core/guards/role-access.guard';
 import { SuppliersComponent } from 'src/app/pages/suppliers/suppliers.component';
 import { InventoryComponent } from 'src/app/pages/inventory/inventory.component';
+import { IngredientsComponent } from 'src/app/pages/kitchen-supplies/ingredients.component';
+import { RecipesComponent } from 'src/app/pages/kitchen-supplies/recipes.component';
 import { StockLookupComponent } from 'src/app/pages/stock-lookup/stock-lookup.component';
 import { NoAccessComponent } from 'src/app/pages/no-access.component';
 import { TablesComponent } from 'src/app/pages/tables/tables.component';
@@ -45,6 +47,8 @@ const routes: Routes = [
       { path: 'customers', component: CustomersComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'customers', permissionKey: 'customers.read' } },
       { path: 'suppliers', component: SuppliersComponent, canActivate: [RoleAccessGuard], data: { allowedRoles: ['GERENTE'], liteBlocked: true } },
       { path: 'inventory', component: InventoryComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'inventory', permissionKey: 'inventory.read' } },
+      { path: 'inventory/ingredients', component: IngredientsComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'inventory', requiredFeatures: ['inventory', 'restaurant'], permissionKey: 'inventory.read' } },
+      { path: 'inventory/recipes', component: RecipesComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'inventory', requiredFeatures: ['inventory', 'restaurant'], permissionKey: 'inventory.read' } },
       { path: 'inventory/stock-lookup', component: StockLookupComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'inventory', permissionKey: 'inventory.read' } },
       { path: 'products', component: ProductsComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'products', permissionKey: 'products.read' } },
       { path: 'company', component: CompanyComponent, canActivate: [RoleAccessGuard], data: { permissionKey: 'business.settings.manage' } },

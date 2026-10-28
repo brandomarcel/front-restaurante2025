@@ -17,7 +17,20 @@ export const LINE_NOTE_PRESETS = ['Sin azúcar', 'Sin hielo', 'Sin cebolla', 'Si
   imports: [CommonModule, FormsModule],
   template: `
     <div class="space-y-2 rounded-lg border border-amber-300 bg-card p-2">
-      <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Nota para cocina</p>
+      <div *ngIf="removable.length" class="space-y-1">
+        <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Quitar del plato</p>
+        <div class="flex flex-wrap gap-1.5">
+          <button *ngFor="let line of removable" type="button"
+            class="rounded-full border px-2.5 py-1 text-[11px] font-semibold transition"
+            [ngClass]="isRemoved(line.ingredient) ? 'border-red-500 bg-red-500 text-white' : 'border-border bg-muted/50 text-foreground/80 hover:bg-muted'"
+            [attr.aria-pressed]="isRemoved(line.ingredient)"
+            (click)="toggleRemoved(line)">
+            Sin {{ line.name }}
+          </button>
+        </div>
+      </div>
+      <p *ngIf="removable.length" class="pt-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Otras indicaciones</p>
+      <p *ngIf="!removable.length" class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Nota para cocina</p>
       <div class="flex flex-wrap gap-1.5">
         <button *ngFor="let preset of presets" type="button"
           class="rounded-full border px-2.5 py-1 text-[11px] font-semibold transition"
@@ -53,11 +66,27 @@ export class LineNoteEditorComponent implements OnInit {
   readonly presets = LINE_NOTE_PRESETS;
   readonly maxLength = LINE_NOTE_MAX_LENGTH;
   draft = '';
+  /** Ingredientes del plato que el cliente puede pedir «sin» (vienen del producto). */
+  removable: Array<{ ingredient: string; name: string }> = [];
+  private removed = new Set<string>();
 
   constructor(private readonly cart: CartService) {}
 
   ngOnInit(): void {
     this.draft = this.item?.notes || '';
+    this.removable = this.item?.removable_ingredients || [];
+    this.removed = new Set<string>(this.item?.removed_ingredients || []);
+  }
+
+  isRemoved(ingredient: string): boolean {
+    return this.removed.has(ingredient);
+  }
+
+  /** Marca el insumo como quitado y deja «Sin X» en la nota para que cocina lo vea. */
+  toggleRemoved(line: { ingredient: string; name: string }): void {
+    if (this.removed.has(line.ingredient)) this.removed.delete(line.ingredient);
+    else this.removed.add(line.ingredient);
+    this.togglePreset(`Sin ${line.name}`);
   }
 
   hasPreset(preset: string): boolean {
@@ -74,7 +103,8 @@ export class LineNoteEditorComponent implements OnInit {
 
   /** `onlyOneUnit`: con cantidad > 1, la nota va solo a una unidad (línea aparte). */
   save(note: string, onlyOneUnit = false): void {
-    this.cart.setNote(this.item, note, onlyOneUnit);
+    // Sin nota no hay insumos quitados: la nota es lo que ve cocina.
+    this.cart.setNote(this.item, note, onlyOneUnit, note.trim() ? [...this.removed] : []);
     this.done.emit();
   }
 

@@ -1,0 +1,167 @@
+<div *ngIf="enabled; else unavailable" class="app-container space-y-3">
+  <app-inventory-nav active="recipes" />
+
+  <header class="rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div class="min-w-0">
+        <h1 class="text-lg font-bold text-foreground">Recetas</h1>
+        <p class="text-xs text-muted-foreground">Lo que lleva cada plato. Al venderlo, el sistema descuenta los insumos solo.</p>
+      </div>
+      <app-kitchen-warehouse-picker (changed)="load()" />
+    </div>
+  </header>
+
+  <section *ngIf="needsWarehouse" class="rounded-xl border border-dashed border-border bg-card px-4 py-10 text-center">
+    <p class="text-sm font-bold text-foreground">Elige una bodega</p>
+    <p class="mx-auto mt-1 max-w-md text-xs text-muted-foreground">Este negocio maneja el stock por bodega. Elige una arriba, junto al título, para ver sus insumos.</p>
+  </section>
+
+  <ng-container *ngIf="!needsWarehouse">
+    <section class="flex flex-col gap-2 rounded-xl border border-border bg-card p-2 shadow-sm sm:flex-row sm:items-center" aria-label="Filtros">
+      <div class="inline-flex shrink-0 rounded-lg border border-border bg-muted/40 p-0.5" role="radiogroup" aria-label="Mostrar">
+        <button type="button" role="radio" [attr.aria-checked]="filter === 'with'" class="rounded-md px-3 py-1.5 text-xs font-semibold transition" [ngClass]="filter === 'with' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" (click)="setFilter('with')">Con receta <span class="ml-1 text-muted-foreground">{{ counts['with'] }}</span></button>
+        <button type="button" role="radio" [attr.aria-checked]="filter === 'without'" class="rounded-md px-3 py-1.5 text-xs font-semibold transition" [ngClass]="filter === 'without' ? 'bg-card text-amber-700 shadow-sm' : 'text-muted-foreground hover:text-foreground'" (click)="setFilter('without')">Sin receta <span class="ml-1" [ngClass]="counts['without'] ? 'text-amber-600' : 'text-muted-foreground'">{{ counts['without'] }}</span></button>
+        <button *ngIf="counts['low']" type="button" role="radio" [attr.aria-checked]="filter === 'low'" class="rounded-md px-3 py-1.5 text-xs font-semibold transition" [ngClass]="filter === 'low' ? 'bg-card text-red-700 shadow-sm' : 'text-muted-foreground hover:text-foreground'" (click)="setFilter('low')">Por agotarse <span class="ml-1 text-red-600">{{ counts['low'] }}</span></button>
+      </div>
+      <input class="input h-9 flex-1 text-xs md:!w-auto" type="search" [ngModel]="search" (ngModelChange)="onSearch($event)" placeholder="Buscar plato…" aria-label="Buscar plato" autocomplete="off" />
+    </section>
+
+    <!-- Primer uso -->
+    <section *ngIf="isFirstRun" class="rounded-xl border border-dashed border-border bg-card px-5 py-10 text-center">
+      <p class="text-base font-bold text-foreground">Aún no hay recetas</p>
+      <p class="mx-auto mt-1 max-w-lg text-xs text-muted-foreground">Primero crea tus insumos. Después elige un plato en «Sin receta» y dile cuánto lleva de cada uno.</p>
+      <div class="mt-4 flex flex-wrap justify-center gap-2">
+        <a routerLink="/dashboard/inventory/ingredients" class="btn btn-outline">Ir a Insumos</a>
+        <button *ngIf="counts['without']" type="button" class="btn btn-primary" (click)="setFilter('without')">Ver platos sin receta ({{ counts['without'] }})</button>
+      </div>
+    </section>
+
+    <section *ngIf="!isFirstRun" class="overflow-hidden rounded-xl border border-border bg-card shadow-sm" aria-live="polite">
+      <div *ngIf="loading" class="divide-y divide-border" aria-busy="true">
+        <div *ngFor="let n of [1, 2, 3]" class="flex animate-pulse items-center gap-4 px-4 py-4">
+          <div class="h-4 w-44 rounded bg-muted"></div><div class="ml-auto h-5 w-24 rounded-full bg-muted"></div>
+        </div>
+      </div>
+
+      <div *ngIf="!loading && loadError" class="px-4 py-10 text-center" role="alert">
+        <p class="text-sm font-semibold text-foreground">No pudimos cargar las recetas</p>
+        <p class="mt-1 text-xs text-muted-foreground">{{ loadError }}</p>
+        <button type="button" class="btn btn-outline mt-3 !text-xs" (click)="load()">Reintentar</button>
+      </div>
+
+      <div *ngIf="!loading && !loadError && !dishes.length" class="px-4 py-10 text-center">
+        <p class="text-sm font-semibold text-foreground">
+          {{ filter === 'without' ? '¡Todos tus platos tienen receta!' : filter === 'low' ? 'Ningún plato está por agotarse' : 'Ningún plato coincide' }}
+        </p>
+        <p *ngIf="filter === 'without'" class="mt-1 text-xs text-muted-foreground">Los productos con stock propio (como una gaseosa) no necesitan receta.</p>
+      </div>
+
+      <ul *ngIf="!loading && !loadError && dishes.length" class="divide-y divide-border">
+        <li *ngFor="let dish of dishes; trackBy: trackByName" class="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-4">
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-semibold text-foreground">{{ dish.item_name }}</p>
+            <ng-container *ngIf="dish.has_recipe; else noRecipe">
+              <div class="mt-1 flex flex-wrap gap-1">
+                <span *ngFor="let line of chips(dish)" class="rounded-full bg-muted px-2 py-0.5 text-[10px] text-foreground/80">{{ line.quantity | number: '1.0-3' }} {{ line.unit }} {{ line.ingredient_name }}</span>
+                <span *ngIf="dish.lines.length > 4" class="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">+{{ dish.lines.length - 4 }} más</span>
+              </div>
+            </ng-container>
+            <ng-template #noRecipe>
+              <p class="mt-0.5 text-[11px] text-muted-foreground">Hoy este plato no descuenta ningún insumo{{ dish.standard_rate ? ' · $' + (dish.standard_rate | number: '1.2-2') : '' }}.</p>
+            </ng-template>
+          </div>
+
+          <div *ngIf="dish.has_recipe" class="sm:w-52 sm:text-right">
+            <span class="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold" [ngClass]="portionsTone(dish.state)">{{ portionsLabel(dish) }}</span>
+            <p *ngIf="dish.limiting_ingredient && dish.state !== 'ok'" class="mt-0.5 text-[10px] text-muted-foreground">Limita: {{ dish.limiting_ingredient }}</p>
+          </div>
+
+          <button *ngIf="canEdit" type="button" class="btn !h-9 !px-4 !text-xs sm:shrink-0" [ngClass]="dish.has_recipe ? 'btn-outline' : 'btn-primary'" (click)="open(dish)">
+            {{ dish.has_recipe ? 'Editar receta' : 'Crear receta' }}
+          </button>
+        </li>
+      </ul>
+    </section>
+  </ng-container>
+
+  <!-- ===== Editor de receta ===== -->
+  <div *ngIf="editing as dish" class="app-modal-backdrop" (keydown.escape)="close()">
+    <div class="app-modal !max-w-2xl overflow-hidden !rounded-2xl !border-border !bg-card !shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="recipe-title">
+      <header class="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
+        <div class="min-w-0">
+          <h2 id="recipe-title" class="truncate text-base font-bold text-foreground">Receta de {{ dish.item_name }}</h2>
+          <p class="text-xs text-muted-foreground">Escribe lo que lleva <b>1 porción</b>.</p>
+        </div>
+        <button type="button" class="btn btn-ghost !px-2" [disabled]="saving" (click)="close()" aria-label="Cerrar">×</button>
+      </header>
+
+      <div class="max-h-[62vh] space-y-3 overflow-y-auto p-5">
+        <p *ngIf="dish.track_stock" class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+          Este plato controla stock propio. Al guardar la receta dejará de hacerlo (su saldo debe estar en 0) y descontará solo los insumos.
+        </p>
+
+        <div *ngIf="!insumosLoaded" class="animate-pulse space-y-2" aria-busy="true"><div class="h-10 rounded bg-muted"></div><div class="h-10 rounded bg-muted"></div></div>
+
+        <div *ngIf="insumosLoaded && !insumos.length" class="rounded-lg border border-dashed border-border px-4 py-6 text-center">
+          <p class="text-sm font-semibold text-foreground">Aún no tienes insumos</p>
+          <p class="mt-1 text-xs text-muted-foreground">Crea primero lo que usas para cocinar y vuelve a armar esta receta.</p>
+          <a routerLink="/dashboard/inventory/ingredients" class="btn btn-primary mt-3 !text-xs">Crear insumos</a>
+        </div>
+
+        <ng-container *ngIf="insumosLoaded && insumos.length">
+          <div *ngFor="let line of lines; let i = index" class="rounded-lg border border-border p-2.5">
+            <div class="grid grid-cols-[1fr_7.5rem_auto] items-start gap-2">
+              <div>
+                <label class="sr-only" [attr.for]="'line-ing-' + i">Insumo {{ i + 1 }}</label>
+                <select [id]="'line-ing-' + i" class="select !w-full" [(ngModel)]="line.ingredient" [name]="'ing' + i" [attr.aria-invalid]="!!lineError(line) && !line.ingredient">
+                  <option value="" disabled>Elige un insumo</option>
+                  <option *ngFor="let insumo of insumosFor(i)" [value]="insumo.name">{{ insumo.item_name }} · hay {{ insumo.current_stock | number: '1.0-3' }} {{ insumo.unit }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="sr-only" [attr.for]="'line-qty-' + i">Cantidad {{ i + 1 }}</label>
+                <div class="flex items-center gap-1">
+                  <input [id]="'line-qty-' + i" class="input no-spinner !w-full" type="number" min="0" step="any" inputmode="decimal" [(ngModel)]="line.quantity" [name]="'qty' + i" placeholder="Cant." [attr.aria-invalid]="!!lineError(line) && !!line.ingredient" />
+                  <span class="w-8 shrink-0 text-[11px] text-muted-foreground">{{ unitOf(line) }}</span>
+                </div>
+              </div>
+              <button type="button" class="btn btn-ghost !h-9 !px-2 text-red-600" (click)="removeLine(i)" [attr.aria-label]="'Quitar insumo ' + (i + 1)">×</button>
+            </div>
+            <p *ngIf="lineError(line)" class="field-error" role="alert">{{ lineError(line) }}</p>
+            <label class="mt-1.5 flex cursor-pointer items-center gap-2 text-[11px] text-muted-foreground" title="Aparece como botón «Sin …» en el POS y no se descuenta.">
+              <input type="checkbox" [(ngModel)]="line.removable" [name]="'rem' + i" />
+              El cliente puede pedirlo «sin»
+            </label>
+          </div>
+
+          <button type="button" class="btn btn-outline w-full !text-xs" [disabled]="lines.length >= insumos.length" (click)="addLine()">+ Agregar insumo</button>
+
+          <!-- Qué pasa con el stock de hoy -->
+          <div *ngIf="preview.portions !== null" class="flex items-center justify-between rounded-lg px-3 py-2 text-xs"
+            [ngClass]="preview.portions === 0 ? 'bg-red-50 text-red-800 dark:bg-red-500/10 dark:text-red-300' : preview.portions <= 5 ? 'bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200' : 'bg-emerald-50 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300'" role="status">
+            <span>Con el stock de hoy alcanza para</span>
+            <b class="text-sm">{{ preview.portions }} {{ preview.portions === 1 ? 'porción' : 'porciones' }}<span *ngIf="preview.portions <= 5" class="font-normal"> · limita {{ preview.limiting }}</span></b>
+          </div>
+        </ng-container>
+      </div>
+
+      <footer class="flex flex-wrap items-center justify-between gap-2 border-t border-border px-5 py-4">
+        <button *ngIf="dish.has_recipe" type="button" class="text-xs font-semibold text-red-600 hover:underline" [disabled]="saving" (click)="removeRecipe()">Quitar receta</button>
+        <span *ngIf="!dish.has_recipe"></span>
+        <div class="flex gap-2">
+          <button type="button" class="btn btn-outline" [disabled]="saving" (click)="close()">Cancelar</button>
+          <button type="button" class="btn btn-primary" [disabled]="saving || !insumos.length" (click)="save()">{{ saving ? 'Guardando…' : 'Guardar receta' }}</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+</div>
+
+<ng-template #unavailable>
+  <div class="app-container">
+    <section class="rounded-xl border border-dashed border-border bg-card px-4 py-10 text-center">
+      <h1 class="text-base font-bold text-foreground">Recetas no disponible</h1>
+      <p class="mt-1 text-xs text-muted-foreground">Necesitas restaurante e inventario habilitados en el plan de este negocio.</p>
+    </section>
+  </div>
+</ng-template>

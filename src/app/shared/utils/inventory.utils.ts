@@ -58,6 +58,17 @@ function isVariantGrouper(product: Partial<Product> | null | undefined): boolean
   return Number(product?.variant_count) > 0;
 }
 
+/** Porciones que alcanzan de un plato con receta (según el stock de sus insumos), o null si no aplica. */
+export function recipePortions(product: Partial<Product> | null | undefined): number | null {
+  const portions = (product as any)?.portions_available;
+  if (!(product as any)?.has_recipe || portions === null || portions === undefined) return null;
+  const value = Number(portions);
+  return Number.isFinite(value) ? value : null;
+}
+
+/** Desde cuántas porciones restantes se avisa «bajo»; coincide con la pantalla Recetas. */
+export const LOW_PORTIONS = 5;
+
 export function isOutOfStockProduct(product: Partial<Product> | null | undefined): boolean {
   if (isVariantGrouper(product)) {
     const hasStock = product?.has_stock;
@@ -67,6 +78,9 @@ export function isOutOfStockProduct(product: Partial<Product> | null | undefined
     if (hasStock === null || hasStock === undefined) return false;
     return !hasStock;
   }
+
+  const portions = recipePortions(product);
+  if (portions !== null) return portions <= 0;
 
   if (!hasInventoryControl(product)) {
     return false;
@@ -88,6 +102,9 @@ export function isLowStockProduct(product: Partial<Product> | null | undefined):
       : false;
   }
 
+  const portions = recipePortions(product);
+  if (portions !== null) return portions > 0 && portions <= LOW_PORTIONS;
+
   if (!hasInventoryControl(product)) {
     return false;
   }
@@ -105,7 +122,13 @@ export function canSellProduct(product: Partial<Product> | null | undefined): bo
 export function canUseInventoryQuantity(product: Partial<Product> | null | undefined, quantity: number): boolean {
   // Un agrupador no tiene stock propio (aunque arrastre track_stock): el
   // selector de variantes valida la cantidad contra la variante elegida.
-  if (isVariantGrouper(product) || !hasInventoryControl(product)) {
+  if (isVariantGrouper(product)) return true;
+
+  // Un plato con receta se limita por las porciones que alcanzan con sus insumos.
+  const portions = recipePortions(product);
+  if (portions !== null) return toInventoryNumber(quantity, 0) <= portions;
+
+  if (!hasInventoryControl(product)) {
     return true;
   }
 
@@ -131,6 +154,8 @@ export function resolveInventoryLabel(product: Partial<Product> | null | undefin
     const count = Number(product?.variant_count) || 0;
     return `${count} ${count === 1 ? 'variante' : 'variantes'}`;
   }
+  const portions = recipePortions(product);
+  if (portions !== null) return `${portions} ${portions === 1 ? 'porción' : 'porciones'}`;
   if (!hasInventoryControl(product)) {
     return 'Sin control';
   }

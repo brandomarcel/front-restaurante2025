@@ -186,7 +186,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     this.productsService.getAll(1).subscribe({
       next: (res: any) => {
         const all = (Array.isArray(res) ? res : (res?.message?.data || [])) as Product[];
-        this.products = all.filter(p => (p as any).isactive === undefined || (p as any).isactive === true || Number((p as any).isactive) === 1);
+        this.products = all.filter(p => !(p as any).is_ingredient && ((p as any).isactive === undefined || (p as any).isactive === true || Number((p as any).isactive) === 1));
         this.refreshProductSuggestions();
       },
       error: () => toast.error('Error al cargar la lista de productos.'),
@@ -1179,7 +1179,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     this.productsService.getAll(1).subscribe({
       next: (response: any) => {
         const products = Array.isArray(response) ? response : response?.message?.data;
-        if (Array.isArray(products)) this.products = products;
+        if (Array.isArray(products)) this.products = products.filter((p: any) => !p.is_ingredient);
       },
       error: () => { }
     });

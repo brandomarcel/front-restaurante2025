@@ -11,7 +11,7 @@ import { AlertService } from 'src/app/core/services/alert.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
-import { canSellProduct, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
+import { recipePortions, canSellProduct, getAvailableStock, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { ProductVariantPickerComponent } from 'src/app/shared/components/product-variant-picker/product-variant-picker.component';
 import { ProductSearchModalComponent } from 'src/app/shared/components/product-search-modal/product-search-modal.component';
@@ -165,7 +165,7 @@ export class PosMeseroComponent implements OnInit {
       finalize(() => this.isLoadingProducts = false)
     ).subscribe({
       next: (res: any) => {
-        this.products = Array.isArray(res) ? res : (res?.message?.data || []);
+        this.products = (Array.isArray(res) ? res : (res?.message?.data || [])).filter((p: any) => !p.is_ingredient);
         this.applyFilters();
       },
       error: (error: any) => {
@@ -185,7 +185,7 @@ export class PosMeseroComponent implements OnInit {
   private loadProductsFlat(): void {
     this.productsService.getAll(1, undefined, 0, '', undefined, undefined, false, true).subscribe({
       next: (res: any) => {
-        this.productsFlat = Array.isArray(res) ? res : (res?.message?.data || []);
+        this.productsFlat = (Array.isArray(res) ? res : (res?.message?.data || [])).filter((p: any) => !p.is_ingredient);
       },
       error: () => undefined
     });
@@ -386,7 +386,8 @@ export class PosMeseroComponent implements OnInit {
         discount_percentage: Number(item.discount_percentage || 0),
         discount_amount: Number(item.discount_amount || 0),
         tax_rate: item.tax_value,
-        ...(item.notes ? { notes: item.notes } : {})
+        ...(item.notes ? { notes: item.notes } : {}),
+    ...(item.removed_ingredients?.length ? { removed_ingredients: item.removed_ingredients } : {})
       })),
     };
 
@@ -430,6 +431,11 @@ export class PosMeseroComponent implements OnInit {
 
   canIncreaseItem(item: any): boolean {
     return this.cartService.canIncrease(item);
+  }
+
+  /** Porciones que quedan de un plato con receta (null si no tiene). */
+  portionsLeft(product: any): number | null {
+    return recipePortions(product);
   }
 
   hasInventory(product: any): boolean {
@@ -544,7 +550,7 @@ export class PosMeseroComponent implements OnInit {
   private refreshProductsSilently(): void {
     this.productsService.getAll(1).subscribe({
       next: (res: any) => {
-        this.products = Array.isArray(res) ? res : (res?.message?.data || []);
+        this.products = (Array.isArray(res) ? res : (res?.message?.data || [])).filter((p: any) => !p.is_ingredient);
         this.applyFilters();
       }
     });

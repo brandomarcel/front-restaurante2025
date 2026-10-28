@@ -22,6 +22,7 @@ describe('Caja — apertura', () => {
     localStorage.setItem('user', JSON.stringify({ email: 'ana@x.com' }));
     cajas = {
       verificarAperturaActiva: jasmine.createSpy('verificar').and.returnValue(of({ message: { apertura: opts.opening ?? null } })),
+      getTerminalCashHolder: jasmine.createSpy('holder').and.returnValue(of({ message: { data: null } })),
       getDashboardMetrics: jasmine.createSpy('metrics').and.returnValue(of({ message: { data: { cash: { opening_amount: 50 } } } })),
       create_apertura_de_caja: jasmine.createSpy('create').and.returnValue(of({}))
     };
@@ -91,6 +92,20 @@ describe('Caja — apertura', () => {
     component.apertura.monto_apertura = 100;
     expect(component.needsTerminalConfiguration).toBeTrue();
     expect(component.canSubmit).toBeFalse();
+  });
+
+  it('una terminal ocupada por otro usuario bloquea la apertura, la del mismo usuario no', () => {
+    setup({ usesTerminals: true, terminals: [t1, t2], active: t1 });
+    component.apertura.monto_apertura = 100;
+    cajas.getTerminalCashHolder.and.returnValue(of({ message: { data: { user: 'otro@example.com' } } }));
+    component.onTerminalChange('T2');
+    expect(cajas.getTerminalCashHolder).toHaveBeenCalledWith('T2');
+    expect(component.terminalHolder?.user).toBe('otro@example.com');
+    expect(component.canSubmit).toBeFalse();
+    cajas.getTerminalCashHolder.and.returnValue(of({ message: { data: { user: 'ana@x.com' } } }));
+    component.onTerminalChange('T1');
+    expect(component.terminalHolder).toBeNull();
+    expect(component.canSubmit).toBeTrue();
   });
 
   it('con una caja abierta no permite abrir otra y muestra sus métricas', () => {

@@ -3,7 +3,7 @@ import { Component, Input } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
-export type InventorySection = 'stock' | 'history' | 'lookup' | 'transfer' | 'warehouses';
+export type InventorySection = 'stock' | 'history' | 'lookup' | 'transfer' | 'warehouses' | 'ingredients' | 'recipes';
 
 interface InventoryNavItem {
   id: InventorySection;
@@ -29,7 +29,7 @@ interface InventoryNavItem {
         [ngClass]="item.id === active ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'">
         {{ item.label }}
       </a>
-      <span *ngIf="warehouseMode !== null" class="ml-auto hidden shrink-0 items-center gap-1 self-center pr-2 text-[11px] text-muted-foreground sm:flex">
+      <span *ngIf="warehouseMode !== null && warehouseUiVisible" class="ml-auto hidden shrink-0 items-center gap-1 self-center pr-2 text-[11px] text-muted-foreground sm:flex">
         Modo: <b class="text-foreground">{{ warehouseMode ? 'Por bodega' : 'Simple' }}</b>
       </span>
     </nav>
@@ -39,6 +39,10 @@ export class InventoryNavComponent {
   @Input() active: InventorySection = 'stock';
 
   constructor(private capabilities: CompanyCapabilitiesService) {}
+
+  get warehouseUiVisible(): boolean {
+    return this.capabilities.warehouseUiVisible;
+  }
 
   get warehouseMode(): boolean | null {
     return this.capabilities.isEnabled('inventory') ? this.capabilities.isWarehouseMode : null;
@@ -59,13 +63,18 @@ export class InventoryNavComponent {
       items.push({ id: 'stock', label: 'Stock', route: '/dashboard/inventory' });
       items.push({ id: 'history', label: 'Movimientos', route: '/dashboard/inventory', queryParams: { tab: 'history' } });
     }
+    // Insumos y recetas: solo para restaurantes con inventario.
+    if (canRead && this.capabilities.isEnabled('restaurant')) {
+      items.push({ id: 'ingredients', label: 'Insumos', route: '/dashboard/inventory/ingredients' });
+      items.push({ id: 'recipes', label: 'Recetas', route: '/dashboard/inventory/recipes' });
+    }
     if (canRead && warehouseMode && enoughWarehouses) {
       items.push({ id: 'lookup', label: 'Stock por bodega', route: '/dashboard/inventory/stock-lookup' });
     }
     if (canTransfer && warehouseMode && enoughWarehouses) {
       items.push({ id: 'transfer', label: 'Traslados', route: '/settings/lite/warehouses/transfer' });
     }
-    if (canSettings) {
+    if (canSettings && this.warehouseUiVisible) {
       items.push({ id: 'warehouses', label: 'Bodegas y modo', route: '/settings/lite/warehouses' });
     }
     return items;

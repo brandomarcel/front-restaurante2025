@@ -159,6 +159,11 @@
               class="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-bold text-amber-700 shadow-sm">
               BAJO
             </span>
+            <span
+              *ngIf="portionsLeft(product) !== null && !isOutOfStock(product)"
+              class="rounded-full bg-white/90 px-2 py-0.5 text-[9px] font-bold text-foreground shadow-sm">
+              {{ portionsLeft(product) }} {{ portionsLeft(product) === 1 ? 'porción' : 'porciones' }}
+            </span>
           </div>
           <div class="pointer-events-none absolute right-2 top-2 z-10">
             <button
@@ -207,8 +212,8 @@
               <span
                 *ngIf="(product.variant_count || 0) > 0"
                 class="inline-flex w-fit rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary"
-                title="Este producto tiene variantes; el precio depende de la que elijas.">
-                {{ product.variant_count }} {{ product.variant_count === 1 ? 'variante' : 'variantes' }}
+                title="Este plato tiene opciones; el precio depende de la que elijas.">
+                {{ product.variant_count }} {{ product.variant_count === 1 ? 'opción' : 'opciones' }}
               </span>
               <span
                 *ngIf="hasInventory(product)"

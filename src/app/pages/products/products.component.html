@@ -85,7 +85,8 @@
               <p class="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-foreground">
                 <span class="truncate">{{ p.nombre | uppercase }}</span>
                 <span *ngIf="(p.variant_count || 0) > 0" class="rounded-full bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold text-sky-800"
-                  title="Se vende por variante: cada una tiene su propio precio y stock.">{{ p.variant_count }} {{ p.variant_count === 1 ? 'variante' : 'variantes' }}</span>
+                  [title]="copy.badgeTitle">{{ p.variant_count }} {{ p.variant_count === 1 ? copy.one : copy.many }}</span>
+                <span *ngIf="p.has_recipe" class="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800" title="Al venderse descuenta sus insumos.">Receta · {{ p.recipe_count }}</span>
               </p>
               <p class="truncate text-[11px] text-muted-foreground">
                 <span *ngIf="p.codigo" class="font-mono">{{ p.codigo }}</span>
@@ -99,7 +100,7 @@
           <!-- Precio y stock -->
           <div class="w-24 shrink-0 text-left lg:text-right">
             <p class="text-sm font-bold text-foreground">
-              <ng-container *ngIf="(p.variant_count || 0) > 0; else simplePrice"><span class="text-[11px] font-semibold text-muted-foreground">Por variante</span></ng-container>
+              <ng-container *ngIf="(p.variant_count || 0) > 0; else simplePrice"><span class="text-[11px] font-semibold text-muted-foreground">{{ copy.perVariant }}</span></ng-container>
               <ng-template #simplePrice>{{ p.precio | currency }}</ng-template>
             </p>
           </div>
@@ -109,14 +110,14 @@
               <p *ngIf="isOutOfStock(p)" class="text-[10px] font-bold uppercase text-red-700">Agotado</p>
               <p *ngIf="!isOutOfStock(p) && isLowStock(p)" class="text-[10px] font-bold uppercase text-amber-700">Poco stock</p>
             </ng-container>
-            <ng-template #noStockData><p class="text-[11px] text-muted-foreground">{{ (p.variant_count || 0) > 0 ? 'En variantes' : 'Sin control' }}</p></ng-template>
+            <ng-template #noStockData><p class="text-[11px] text-muted-foreground">{{ (p.variant_count || 0) > 0 ? copy.inVariants : 'Sin control' }}</p></ng-template>
           </div>
           <span *ngIf="!isActiveProduct(p)" class="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">Inactivo</span>
 
           <!-- Acciones -->
           <div *ngIf="canManageProducts" class="ml-auto flex shrink-0 items-center gap-1.5">
             <button *ngIf="canHaveVariants(p)" type="button" class="btn btn-outline !px-2.5 !py-1 !text-[11px]" (click)="abrirVariantes(p)"
-              [attr.aria-label]="'Variantes de ' + p.nombre">Variantes<span *ngIf="(p.variant_count || 0) > 0" class="ml-1 text-muted-foreground">{{ p.variant_count }}</span></button>
+              [attr.aria-label]="copy.button + ' de ' + p.nombre">{{ copy.button }}<span *ngIf="(p.variant_count || 0) > 0" class="ml-1 text-muted-foreground">{{ p.variant_count }}</span></button>
             <app-icon-action-button variant="edit" [label]="'Editar ' + p.nombre" (action)="abrirModal(p)"></app-icon-action-button>
             <div class="relative" clickOutside (clickOutside)="closeRowMenu(p)">
               <button type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-muted-foreground transition hover:bg-muted"
@@ -153,11 +154,11 @@
       <header class="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
         <div>
           <h2 id="product-modal-title" class="text-base font-bold text-foreground">
-            {{ productoEditando ? 'Editar producto' : (productModalStep === 'grouped' ? 'Nuevo producto con variantes' : 'Nuevo producto') }}
+            {{ productoEditando ? 'Editar producto' : (productModalStep === 'grouped' ? copy.groupedModalTitle : 'Nuevo producto') }}
           </h2>
           <p class="mt-0.5 text-xs text-muted-foreground">
             <ng-container *ngIf="productModalStep === 'choose'">Primero elige cómo lo vendes.</ng-container>
-            <ng-container *ngIf="productModalStep === 'grouped'">Solo el nombre que agrupa. Precio y stock se definen en cada variante.</ng-container>
+            <ng-container *ngIf="productModalStep === 'grouped'">{{ copy.groupedHint }}</ng-container>
             <ng-container *ngIf="productModalStep === 'simple'">Los campos con * son obligatorios.</ng-container>
           </p>
         </div>
@@ -169,22 +170,22 @@
         <button type="button" class="group rounded-xl border-2 border-border bg-card p-5 text-left transition hover:border-primary hover:bg-primary/5" (click)="seleccionarTipoProducto('simple')">
           <span class="text-2xl" aria-hidden="true">📦</span>
           <p class="mt-2 text-sm font-bold text-foreground">Producto simple</p>
-          <p class="mt-1 text-xs text-muted-foreground">Un precio y un stock. Es lo más común.</p>
-          <p class="mt-2 text-[11px] text-foreground/70"><b>Ej.:</b> Coca-Cola 500 ml, Almuerzo del día, Corte de cabello.</p>
+          <p class="mt-1 text-xs text-muted-foreground">{{ copy.simpleDesc }}</p>
+          <p class="mt-2 text-[11px] text-foreground/70"><b>Ej.:</b> {{ copy.simpleExample }}</p>
         </button>
         <button type="button" class="group rounded-xl border-2 border-border bg-card p-5 text-left transition hover:border-primary hover:bg-primary/5" (click)="seleccionarTipoProducto('grouped')">
-          <span class="text-2xl" aria-hidden="true">👕</span>
-          <p class="mt-2 text-sm font-bold text-foreground">Con variantes</p>
-          <p class="mt-1 text-xs text-muted-foreground">El mismo producto en varios colores, tallas o tamaños; cada uno con su precio y stock.</p>
-          <p class="mt-2 text-[11px] text-foreground/70"><b>Ej.:</b> Jean clásico → Azul 32, Negro 34…</p>
+          <span class="text-2xl" aria-hidden="true">{{ copy.groupedIcon }}</span>
+          <p class="mt-2 text-sm font-bold text-foreground">{{ copy.groupedTitle }}</p>
+          <p class="mt-1 text-xs text-muted-foreground">{{ copy.groupedDesc }}</p>
+          <p class="mt-2 text-[11px] text-foreground/70"><b>Ej.:</b> {{ copy.groupedExample }}</p>
         </button>
       </div>
 
       <form *ngIf="productModalStep !== 'choose'" [formGroup]="productoForm" (ngSubmit)="guardarProducto()" class="flex max-h-[78vh] flex-col">
         <div class="space-y-5 overflow-y-auto p-5 text-sm">
           <div *ngIf="isEditingWithVariants" class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
-            <span>Se vende por variante ({{ productoEditando?.variant_count }}). Precio, impuesto y stock se editan en cada una.</span>
-            <button type="button" class="btn btn-outline !bg-card !px-2.5 !py-1 !text-[11px]" (click)="irAVariantesDesdeEdicion()">Ir a variantes →</button>
+            <span>{{ copy.editNote }} ({{ productoEditando?.variant_count }})</span>
+            <button type="button" class="btn btn-outline !bg-card !px-2.5 !py-1 !text-[11px]" (click)="irAVariantesDesdeEdicion()">{{ copy.goTo }}</button>
           </div>
 
           <!-- Datos básicos + imagen -->
@@ -284,7 +285,7 @@
                 <div>
                   <label for="product-unit" class="mb-1 block text-xs font-semibold text-foreground/80">Unidad</label>
                   <select id="product-unit" class="select" formControlName="unidad_inventario">
-                    <option *ngFor="let unit of inventoryUnitOptions" [value]="unit.value">{{ unit.label }}</option>
+                    <option *ngFor="let unit of unitOptions" [value]="unit.value">{{ unit.label }}</option>
                   </select>
                   <p *ngIf="submitted && f['unidad_inventario'].invalid" class="field-error">Elige la unidad.</p>
                 </div>
@@ -309,23 +310,16 @@
                 Se crea con stock 0. Luego registra la existencia inicial en <b>Inventario → Entrada</b>.
               </p>
 
-              <!-- Ajuste de stock (solo Restaurante, al editar) -->
+              <!-- Cambiar la cantidad: se hace en Inventario, donde queda el historial con el motivo -->
               <div *ngIf="productoEditando && !isLiteMode" class="rounded-lg border border-border p-3">
-                <p class="mb-2 text-xs font-semibold text-foreground/80">Ajustar stock</p>
-                <div class="inline-flex rounded-lg border border-border bg-muted/40 p-0.5" role="radiogroup" aria-label="Tipo de ajuste">
-                  <button type="button" role="radio" [attr.aria-checked]="stockEditMode === 'absolute'" class="rounded-md px-3 py-1.5 text-xs font-semibold transition"
-                    [ngClass]="stockEditMode === 'absolute' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'" (click)="setStockMode('absolute')">Lo conté: dejar en…</button>
-                  <button type="button" role="radio" [attr.aria-checked]="stockEditMode === 'delta'" class="rounded-md px-3 py-1.5 text-xs font-semibold transition"
-                    [ngClass]="stockEditMode === 'delta' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'" (click)="setStockMode('delta')">Sumar o restar</button>
-                </div>
-                <div *ngIf="stockEditMode === 'absolute'" class="mt-2 max-w-[220px]">
-                  <input class="input no-spinner" type="number" min="0" formControlName="stock_objetivo" placeholder="Vacío = no cambiar" aria-label="Stock final" />
-                  <p *ngIf="submitted && f['stock_objetivo'].invalid" class="field-error">Valor inválido.</p>
-                </div>
-                <div *ngIf="stockEditMode === 'delta'" class="mt-2 max-w-[220px]">
-                  <input class="input no-spinner" type="number" step="1" formControlName="stock_ajuste" placeholder="Ej.: 5 o -3" aria-label="Cantidad a sumar o restar" />
-                  <p class="mt-1 text-[10px] text-muted-foreground">Positivo suma (reposición), negativo resta (merma).</p>
-                </div>
+                <p class="text-xs font-semibold text-foreground/80">Cambiar la cantidad</p>
+                <ng-container *ngIf="hasInventory(productoEditando); else saveFirst">
+                  <p class="mt-0.5 text-[11px] text-muted-foreground">Una compra, un conteo o una baja se registran en Inventario: queda el historial con el motivo.</p>
+                  <button type="button" class="btn btn-outline mt-2 !text-xs" (click)="irAjustarStock()">Ajustar en Inventario →</button>
+                </ng-container>
+                <ng-template #saveFirst>
+                  <p class="mt-0.5 text-[11px] text-muted-foreground">Guarda el producto con el inventario activado y luego ajusta su cantidad en Inventario.</p>
+                </ng-template>
               </div>
             </div>
           </section>
@@ -349,7 +343,7 @@
           <div class="ml-auto flex gap-2">
             <button type="button" class="btn btn-outline" (click)="cerrarModal()">Cancelar</button>
             <button type="submit" class="btn btn-primary">
-              {{ productoEditando ? 'Guardar cambios' : (productModalStep === 'grouped' ? 'Crear y agregar variantes' : 'Crear producto') }}
+              {{ productoEditando ? 'Guardar cambios' : (productModalStep === 'grouped' ? copy.createGrouped : 'Crear producto') }}
             </button>
           </div>
         </footer>
@@ -362,9 +356,9 @@
     <section class="app-modal !max-w-4xl overflow-hidden !rounded-2xl !border-border !bg-card !p-0 !shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="variants-title">
       <header class="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
         <div class="min-w-0">
-          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Variantes</p>
+          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{{ copy.listTitle }}</p>
           <h2 id="variants-title" class="truncate text-base font-bold text-foreground">{{ variantesParent?.nombre }}</h2>
-          <p class="mt-0.5 text-xs text-muted-foreground">En el POS y al facturar siempre se elige una variante concreta.</p>
+          <p class="mt-0.5 text-xs text-muted-foreground">{{ copy.listHint }}</p>
         </div>
         <button type="button" class="btn btn-ghost !px-2" (click)="cerrarVariantes()" aria-label="Cerrar">×</button>
       </header>
@@ -379,7 +373,7 @@
               <option *ngFor="let value of def.values" [value]="value">{{ def.attribute }}: {{ value }}</option>
             </select>
           </div>
-          <button *ngIf="canManageProducts" type="button" class="btn btn-primary !text-xs" (click)="abrirFormVariante()">+ Nueva variante</button>
+          <button *ngIf="canManageProducts" type="button" class="btn btn-primary !text-xs" (click)="abrirFormVariante()">{{ copy.newButton }}</button>
         </div>
 
         <div *ngIf="variantesLoading" class="space-y-2" aria-busy="true">
@@ -388,9 +382,9 @@
 
         <ng-container *ngIf="!variantesLoading">
           <div *ngIf="!variantesFiltradas.length" class="rounded-xl border border-dashed border-border px-4 py-8 text-center">
-            <p class="text-sm font-semibold text-foreground">{{ variantes.length ? 'Ninguna variante coincide con el filtro.' : 'Todavía no tiene variantes' }}</p>
-            <p *ngIf="!variantes.length" class="mt-1 text-xs text-muted-foreground">Crea la primera, por ejemplo "Azul · Talla 32". Luego usa "Duplicar" para las demás.</p>
-            <button *ngIf="!variantes.length && canManageProducts" type="button" class="btn btn-primary mt-3 !text-xs" (click)="abrirFormVariante()">Crear variante</button>
+            <p class="text-sm font-semibold text-foreground">{{ variantes.length ? copy.noneMatch : copy.noneYet }}</p>
+            <p *ngIf="!variantes.length" class="mt-1 text-xs text-muted-foreground">{{ copy.firstHint }}</p>
+            <button *ngIf="!variantes.length && canManageProducts" type="button" class="btn btn-primary mt-3 !text-xs" (click)="abrirFormVariante()">{{ copy.createButton }}</button>
           </div>
 
           <ul *ngIf="variantesFiltradas.length" class="divide-y divide-border overflow-hidden rounded-xl border border-border" aria-label="Variantes">
@@ -436,7 +430,7 @@
     <section class="app-modal !max-w-2xl overflow-hidden !rounded-2xl !border-border !bg-card !p-0 !shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="variant-form-title">
       <header class="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
         <div class="min-w-0">
-          <h2 id="variant-form-title" class="text-base font-bold text-foreground">{{ varianteEditando ? 'Editar variante' : 'Nueva variante' }}</h2>
+          <h2 id="variant-form-title" class="text-base font-bold text-foreground">{{ varianteEditando ? copy.editTitle : copy.newTitle }}</h2>
           <p class="mt-0.5 truncate text-xs text-muted-foreground">de {{ variantesParent?.nombre }}</p>
         </div>
         <button type="button" class="btn btn-ghost !px-2" (click)="cerrarFormVariante()" aria-label="Cerrar">×</button>
@@ -446,14 +440,14 @@
         <div class="space-y-5 overflow-y-auto p-5 text-sm">
           <!-- Atributos primero: es lo que distingue a la variante -->
           <section formArrayName="attributes">
-            <h3 class="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">¿Qué la distingue?</h3>
+            <h3 class="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">{{ copy.distinguish }}</h3>
             <div *ngFor="let group of vfAttributes.controls; let i = index" [formGroupName]="i" class="mb-2 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_32px] items-start gap-2">
               <div>
-                <input type="text" class="input" formControlName="attribute" placeholder="Atributo (Color)" [attr.aria-label]="'Atributo ' + (i + 1)" />
+                <input type="text" class="input" formControlName="attribute" [placeholder]="copy.attrPlaceholder" [attr.aria-label]="'Atributo ' + (i + 1)" />
                 <p *ngIf="varianteSubmitted && group.get('attribute')?.invalid" class="field-error">Requerido.</p>
               </div>
               <div>
-                <input type="text" class="input" formControlName="value" placeholder="Valor (Azul)" [attr.aria-label]="'Valor del atributo ' + (i + 1)" />
+                <input type="text" class="input" formControlName="value" [placeholder]="copy.valuePlaceholder" [attr.aria-label]="'Valor del atributo ' + (i + 1)" />
                 <p *ngIf="varianteSubmitted && group.get('value')?.invalid" class="field-error">Requerido.</p>
               </div>
               <button type="button" class="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-red-50 hover:text-red-700 disabled:opacity-30"
@@ -464,14 +458,14 @@
 
           <section class="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div class="sm:col-span-2">
-              <label for="variant-name" class="mb-1 block text-xs font-semibold text-foreground/80">Nombre de la variante *</label>
-              <input id="variant-name" type="text" class="input" formControlName="item_name" placeholder="JEAN CLÁSICO AZUL 32" autocomplete="off"
+              <label for="variant-name" class="mb-1 block text-xs font-semibold text-foreground/80">{{ copy.nameLabel }}</label>
+              <input id="variant-name" type="text" class="input" formControlName="item_name" [placeholder]="copy.namePlaceholder" autocomplete="off"
                 (input)="varianteForm.patchValue({ item_name: ($any($event.target)?.value || '').toUpperCase() }, { emitEvent: false })" />
               <p *ngIf="varianteSubmitted && vf['item_name'].invalid" class="field-error">Ingresa el nombre.</p>
             </div>
             <div>
               <label for="variant-code" class="mb-1 block text-xs font-semibold text-foreground/80">Código interno *</label>
-              <input id="variant-code" type="text" class="input" formControlName="item_code" placeholder="JEAN-AZUL-32" autocomplete="off" />
+              <input id="variant-code" type="text" class="input" formControlName="item_code" [placeholder]="copy.codePlaceholder" autocomplete="off" />
               <p *ngIf="varianteSubmitted && vf['item_code'].invalid" class="field-error">Ingresa el código.</p>
             </div>
             <div>
@@ -499,7 +493,8 @@
             <label class="flex cursor-pointer items-start justify-between gap-3">
               <span>
                 <span class="block text-xs font-bold uppercase tracking-wide text-muted-foreground">Inventario</span>
-                <span class="mt-0.5 block text-xs text-foreground/80">Controlar stock de esta variante</span>
+                <span class="mt-0.5 block text-xs text-foreground/80">{{ copy.stockLabel }}</span>
+                <span *ngIf="copy.stockHint" class="block text-[11px] text-muted-foreground">{{ copy.stockHint }}</span>
               </span>
               <input type="checkbox" class="peer sr-only" formControlName="track_stock" />
               <span class="relative mt-1 h-5 w-9 shrink-0 rounded-full bg-muted-foreground/30 transition after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow after:transition peer-checked:bg-primary peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-primary/40" aria-hidden="true"></span>
@@ -526,7 +521,7 @@
 
         <footer class="flex justify-end gap-2 border-t border-border px-5 py-3">
           <button type="button" class="btn btn-outline" (click)="cerrarFormVariante()">Cancelar</button>
-          <button type="submit" class="btn btn-primary">{{ varianteEditando ? 'Guardar cambios' : 'Crear variante' }}</button>
+          <button type="submit" class="btn btn-primary">{{ varianteEditando ? 'Guardar cambios' : copy.createButton }}</button>
         </footer>
       </form>
     </section>

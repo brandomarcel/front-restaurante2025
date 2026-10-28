@@ -182,6 +182,17 @@ export class ProductsService {
     }));
   }
 
+  /** Receta de un plato (`get_producto_receta`): insumos, stock y porciones disponibles. */
+  getRecipe(productId: string) {
+    let params = new HttpParams().set('product_id', productId);
+    params = this.withLiteBusiness(params);
+    params = this.withWarehouse(params);
+    return this.http.get<any>(`${this.apiUrl}${API_ENDPOINT.FacturadaLite}.get_producto_receta`, {
+      context: new HttpContext().set(REQUIRE_AUTH, true),
+      params,
+    }).pipe(map((res: any) => frappeData<any>(res)));
+  }
+
   getById(id: number) {
     let params = new HttpParams().set('product_id', String(id));
     params = this.withLiteBusiness(params);

@@ -64,7 +64,8 @@ export function orderItemsFromCart(cart: any[]): any[] {
     discount_amount: Number(item.discount_amount || 0),
     tax_rate: item.tax_value,
     // Nota de cocina de la línea ("sin azúcar"); el backend la muestra en cocina y comanda.
-    ...(item.notes ? { notes: item.notes } : {})
+    ...(item.notes ? { notes: item.notes } : {}),
+    ...(item.removed_ingredients?.length ? { removed_ingredients: item.removed_ingredients } : {})
   }));
 }
 

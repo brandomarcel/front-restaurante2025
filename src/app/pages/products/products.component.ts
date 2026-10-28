@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, HostListener, OnInit, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toast } from 'ngx-sonner';
 import { NgxSpinnerService } from 'ngx-spinner';
@@ -33,7 +34,49 @@ import {
   VariantAttributeDefinition,
 } from 'src/app/shared/utils/product-variants.utils';
 
-type StockEditMode = 'absolute' | 'delta';
+
+interface VariantCopy {
+  one: string; many: string; button: string; badgeTitle: string; perVariant: string; inVariants: string;
+  groupedModalTitle: string; groupedHint: string; simpleDesc: string; simpleExample: string; groupedIcon: string;
+  groupedTitle: string; groupedDesc: string; groupedExample: string; editNote: string; goTo: string; createGrouped: string;
+  listTitle: string; listHint: string; newButton: string; noneYet: string; noneMatch: string; firstHint: string; createButton: string;
+  editTitle: string; newTitle: string; distinguish: string; attrPlaceholder: string; valuePlaceholder: string; nameLabel: string;
+  namePlaceholder: string; codePlaceholder: string; stockLabel: string; stockHint: string;
+}
+
+const RETAIL_VARIANT_COPY: VariantCopy = {
+  one: 'variante', many: 'variantes', button: 'Variantes', badgeTitle: 'Se vende por variante: cada una tiene su propio precio y stock.',
+  perVariant: 'Por variante', inVariants: 'En variantes', groupedModalTitle: 'Nuevo producto con variantes',
+  groupedHint: 'Solo el nombre que agrupa. Precio y stock se definen en cada variante.',
+  simpleDesc: 'Un precio y un stock. Es lo más común.', simpleExample: 'Coca-Cola 500 ml, Almuerzo del día, Corte de cabello.',
+  groupedIcon: '👕', groupedTitle: 'Con variantes',
+  groupedDesc: 'El mismo producto en varios colores, tallas o tamaños; cada uno con su precio y stock.',
+  groupedExample: 'Jean clásico → Azul 32, Negro 34…',
+  editNote: 'Se vende por variante. Precio, impuesto y stock se editan en cada una.', goTo: 'Ir a variantes →',
+  createGrouped: 'Crear y agregar variantes', listTitle: 'Variantes', listHint: 'En el POS y al facturar siempre se elige una variante concreta.',
+  newButton: '+ Nueva variante', noneYet: 'Todavía no tiene variantes', noneMatch: 'Ninguna variante coincide con el filtro.',
+  firstHint: 'Crea la primera, por ejemplo "Azul · Talla 32". Luego usa "Duplicar" para las demás.', createButton: 'Crear variante',
+  editTitle: 'Editar variante', newTitle: 'Nueva variante', distinguish: '¿Qué la distingue?', attrPlaceholder: 'Atributo (Color)',
+  valuePlaceholder: 'Valor (Azul)', nameLabel: 'Nombre de la variante *', namePlaceholder: 'JEAN CLÁSICO AZUL 32',
+  codePlaceholder: 'JEAN-AZUL-32', stockLabel: 'Controlar stock de esta variante', stockHint: '',
+};
+
+const RESTAURANT_VARIANT_COPY: VariantCopy = {
+  one: 'opción', many: 'opciones', button: 'Opciones', badgeTitle: 'Se vende por opción: cada una tiene su propio precio.',
+  perVariant: 'Por opción', inVariants: 'En opciones', groupedModalTitle: 'Nuevo plato con opciones',
+  groupedHint: 'Solo el nombre del plato. El precio se define en cada opción.',
+  simpleDesc: 'Un plato o bebida con un solo precio.', simpleExample: 'Encebollado, Coca-Cola 500 ml, Almuerzo del día.',
+  groupedIcon: '🍹', groupedTitle: 'Con opciones',
+  groupedDesc: 'El mismo plato en varios sabores o tamaños; cada uno con su precio.', groupedExample: 'Jugo natural → Mora, Naranja…',
+  editNote: 'Se vende por opción. El precio y el impuesto se editan en cada una.', goTo: 'Ir a opciones →',
+  createGrouped: 'Crear y agregar opciones', listTitle: 'Opciones', listHint: 'En el POS y al facturar siempre se elige una opción.',
+  newButton: '+ Nueva opción', noneYet: 'Todavía no tiene opciones', noneMatch: 'Ninguna opción coincide con el filtro.',
+  firstHint: 'Crea la primera, por ejemplo "Mora" o "Grande". Luego usa "Duplicar" para las demás.', createButton: 'Crear opción',
+  editTitle: 'Editar opción', newTitle: 'Nueva opción', distinguish: '¿En qué se diferencia?', attrPlaceholder: 'Atributo (Sabor)',
+  valuePlaceholder: 'Valor (Mora)', nameLabel: 'Nombre de la opción *', namePlaceholder: 'JUGO NATURAL DE MORA',
+  codePlaceholder: 'JUGO-MORA', stockLabel: 'Controlar stock de esta opción',
+  stockHint: 'Para platos y jugos preparados déjalo apagado: se descuentan los insumos con su receta (Inventario → Recetas). Actívalo solo si lo compras ya hecho.',
+};
 
 @Component({
   selector: 'app-products',
@@ -90,7 +133,6 @@ export class ProductsComponent implements OnInit {
    * quedó definido por si tiene variantes o no.
    */
   productModalStep: 'choose' | 'simple' | 'grouped' = 'simple';
-  stockEditMode: StockEditMode = 'absolute';
   selectedImageFile: File | null = null;
   imagePreview = '';
 
@@ -139,7 +181,8 @@ export class ProductsComponent implements OnInit {
     private frappeErrorService: FrappeErrorService,
     private alertService: AlertService,
     private capabilities: CompanyCapabilitiesService,
-    private inventoryService: InventoryService
+    private inventoryService: InventoryService,
+    private router: Router
   ) { }
 
   ngOnInit() {
@@ -165,6 +208,32 @@ export class ProductsComponent implements OnInit {
 
   get inventoryEnabled(): boolean {
     return this.capabilities.isEnabled('inventory');
+  }
+
+  /**
+   * Restaurante: el catálogo habla de platos y opciones (sabor, tamaño). Boutique/retail y
+   * demás negocios conservan el lenguaje de variantes (color, talla). El POS retail manda.
+   */
+  get isRestaurantCatalog(): boolean {
+    return this.capabilities.isEnabled('restaurant') && !this.capabilities.isRetailPos;
+  }
+
+  get copy() {
+    return this.isRestaurantCatalog ? RESTAURANT_VARIANT_COPY : RETAIL_VARIANT_COPY;
+  }
+
+  /** «Unidad», «unidades»… (el valor por defecto de Lite) equivalen a «und», que es lo que ofrece el selector. */
+  private normalizeUnit(value: unknown): string {
+    const unit = String(value ?? '').trim();
+    return !unit || ['unidad', 'unidades', 'und', 'u'].includes(unit.toLowerCase()) ? 'und' : unit;
+  }
+
+  /** Opciones de unidad; si el producto trae una que no está en la lista (kg, lt…) se agrega para no perderla. */
+  get unitOptions() {
+    const current = String(this.f?.['unidad_inventario']?.value || '');
+    return current && !this.inventoryUnitOptions.some((unit) => unit.value === current)
+      ? [...this.inventoryUnitOptions, { value: current, label: current }]
+      : this.inventoryUnitOptions;
   }
 
   get canReadProducts(): boolean {
@@ -374,7 +443,6 @@ export class ProductsComponent implements OnInit {
     // Al crear, primero preguntamos qué tipo de producto es. Al editar, el
     // tipo ya está definido por si el producto tiene variantes o no.
     this.productModalStep = producto ? 'simple' : 'choose';
-    this.stockEditMode = 'absolute';
     this.selectedImageFile = null;
     this.imagePreview = producto?.image_url || producto?.image || '';
     this.resetForm();
@@ -394,13 +462,11 @@ export class ProductsComponent implements OnInit {
       barcode: producto.barcode || producto.codigo_barras || '',
       isactive: toInventoryBool(producto.isactive),
       controlar_inventario: this.hasInventory(producto),
-      unidad_inventario: producto.unidad_inventario || 'und',
+      unidad_inventario: this.normalizeUnit(producto.unidad_inventario || producto.unidad),
       stock_minimo: toInventoryNumber(producto.stock_minimo, 0),
       permitir_stock_negativo: toInventoryBool(producto.permitir_stock_negativo),
       stock_inicial: '',
       stock_actual: toInventoryNumber(producto.stock_actual, 0),
-      stock_objetivo: '',
-      stock_ajuste: '',
       ultima_actualizacion_stock: producto.ultima_actualizacion_stock || '',
       is_out_of_stock: toInventoryBool(producto.is_out_of_stock),
     });
@@ -421,7 +487,6 @@ export class ProductsComponent implements OnInit {
     this.submitted = false;
     this.productoEditando = null;
     this.productModalStep = 'simple';
-    this.stockEditMode = 'absolute';
     this.selectedImageFile = null;
     this.imagePreview = '';
     this.resetForm();
@@ -478,13 +543,15 @@ export class ProductsComponent implements OnInit {
     // 'simple' apenas la petición resuelve.
     const isGroupedCreation = this.productModalStep === 'grouped';
     this.productsService.create(data).pipe(
-      switchMap((created: any) => {
+      // El stock inicial es un movimiento de Entrada: el producto no lo guarda directamente.
+      switchMap((created: any) => this.applyInitialStock(String(created?.name || created?.item || ''), created, data)),
+      switchMap(({ product: created, stockError }) => {
         const itemName = String(created?.name || created?.item || '').trim();
-        if (!image) return of({ product: created, imageError: null });
-        if (!itemName) return of({ product: created, imageError: new Error('El backend no devolvió el nombre del producto creado para cargar la imagen.') });
+        if (!image) return of({ product: created, imageError: null, stockError });
+        if (!itemName) return of({ product: created, imageError: new Error('El backend no devolvió el nombre del producto creado para cargar la imagen.'), stockError });
         return this.productsService.uploadImage(itemName, image).pipe(
-          map((uploaded: any) => ({ product: { ...created, ...uploaded }, imageError: null })),
-          catchError((error: any) => of({ product: created, imageError: error }))
+          map((uploaded: any) => ({ product: { ...created, ...uploaded }, imageError: null, stockError })),
+          catchError((error: any) => of({ product: created, imageError: error, stockError }))
         );
       }),
       finalize(() => this.spinner.hide())
@@ -492,10 +559,13 @@ export class ProductsComponent implements OnInit {
       next: (result: any) => {
         this.upsertProduct(result.product);
         this.cerrarModal();
+        if (result.stockError) {
+          this.alertService.error(this.frappeErrorService.handle(result.stockError) || 'El producto se creó, pero no se pudo registrar el stock inicial.');
+        }
         if (result.imageError) {
           this.alertService.error(this.frappeErrorService.handle(result.imageError) || 'Producto creado, pero no se pudo cargar la imagen.');
           toast.success('Producto creado');
-        } else {
+        } else if (!result.stockError) {
           toast.success(image ? 'Producto creado con imagen' : 'Producto creado con exito');
         }
         // El producto agrupador ya existe; se pasa directo a definir su
@@ -543,6 +613,52 @@ export class ProductsComponent implements OnInit {
         this.alertService.error(mensaje);
       }
     });
+  }
+
+  /**
+   * Cambiar la cantidad de un producto existente (compra, conteo, baja) se hace en Inventario:
+   * ahí queda el historial con el motivo. La ficha solo lleva hasta allí con el producto elegido.
+   */
+  irAjustarStock(): void {
+    const name = this.productoEditando?.name;
+    if (!name) return;
+    this.cerrarModal();
+    this.router.navigate(['/dashboard/inventory'], { queryParams: { adjust: name } });
+  }
+
+  /** Movimiento de Entrada para el «Stock inicial» de un producto recién creado, o null si no se pidió. */
+  private initialStockMovement(data: any): { quantity: number } | null {
+    if (!data?.controlar_inventario) return null;
+    const initial = Number(data.stock_inicial || 0);
+    return initial > 0 ? { quantity: initial } : null;
+  }
+
+  /** Registra el stock inicial; un fallo no deshace la creación del producto. */
+  private applyInitialStock(itemName: string, product: any, data: any) {
+    const movement = itemName ? this.initialStockMovement(data) : null;
+    if (!movement) return of({ product, stockError: null as unknown });
+    const payload: any = { item: itemName, movement_type: 'Entrada', quantity: movement.quantity, notes: 'Stock inicial al crear el producto' };
+    const warehouse = this.inventoryWarehouse();
+    if (warehouse) payload.warehouse = warehouse;
+    return this.inventoryService.createInventoryMovement(payload).pipe(
+      map(() => ({ product, stockError: null as unknown })),
+      catchError((stockError: any) => of({ product, stockError }))
+    );
+  }
+
+  /** Bodega del movimiento en modo Por Bodega: la elegida en Inventario o, si no, la predeterminada. */
+  private inventoryWarehouse(): string {
+    if (!this.capabilities.isWarehouseMode) return '';
+    const business = this.capabilities.activeBusinessId || '';
+    let persisted = '';
+    try {
+      persisted = localStorage.getItem(`inventory_active_warehouse:${business}`) || '';
+    } catch {
+      persisted = '';
+    }
+    const options = this.capabilities.activeWarehouses || [];
+    if (persisted && options.some((item: any) => String(item?.name || '') === persisted)) return persisted;
+    return String(this.capabilities.defaultWarehouse?.name || '');
   }
 
   private upsertProduct(product: Product | null | undefined): void {
@@ -634,22 +750,10 @@ export class ProductsComponent implements OnInit {
       this.f['stock_minimo'].setValue(0);
       this.f['permitir_stock_negativo'].setValue(false);
       this.f['stock_inicial'].setValue(0);
-      this.f['stock_objetivo'].setValue('');
-      this.f['stock_ajuste'].setValue('');
     } else if (!this.f['unidad_inventario'].value) {
       this.f['unidad_inventario'].setValue('und');
     }
 
-    this.syncInventoryValidators();
-  }
-
-  setStockMode(mode: StockEditMode) {
-    this.stockEditMode = mode;
-    if (mode === 'absolute') {
-      this.f['stock_ajuste'].setValue('');
-    } else {
-      this.f['stock_objetivo'].setValue('');
-    }
     this.syncInventoryValidators();
   }
 
@@ -670,8 +774,6 @@ export class ProductsComponent implements OnInit {
       permitir_stock_negativo: [false],
       stock_inicial: [0],
       stock_actual: [{ value: 0, disabled: false }],
-      stock_objetivo: [''],
-      stock_ajuste: [''],
       ultima_actualizacion_stock: [''],
       is_out_of_stock: [false],
     });
@@ -703,8 +805,6 @@ export class ProductsComponent implements OnInit {
     this.f['unidad_inventario'].clearValidators();
     this.f['stock_minimo'].clearValidators();
     this.f['stock_inicial'].clearValidators();
-    this.f['stock_objetivo'].clearValidators();
-    this.f['stock_ajuste'].clearValidators();
 
     if (controlsInventory) {
       this.f['unidad_inventario'].setValidators([Validators.required, Validators.maxLength(12)]);
@@ -712,16 +812,12 @@ export class ProductsComponent implements OnInit {
 
       if (!this.isLiteMode && !this.productoEditando) {
         this.f['stock_inicial'].setValidators([Validators.required, Validators.min(0)]);
-      } else if (!this.isLiteMode && this.stockEditMode === 'absolute') {
-        this.f['stock_objetivo'].setValidators([Validators.min(0)]);
       }
     }
 
     this.f['unidad_inventario'].updateValueAndValidity({ emitEvent: false });
     this.f['stock_minimo'].updateValueAndValidity({ emitEvent: false });
     this.f['stock_inicial'].updateValueAndValidity({ emitEvent: false });
-    this.f['stock_objetivo'].updateValueAndValidity({ emitEvent: false });
-    this.f['stock_ajuste'].updateValueAndValidity({ emitEvent: false });
   }
 
   buildPayload(): any {
@@ -764,10 +860,6 @@ export class ProductsComponent implements OnInit {
 
       if (!this.productoEditando) {
         payload.stock_inicial = Number(raw.stock_inicial || 0);
-      } else if (this.stockEditMode === 'absolute' && raw.stock_objetivo !== '' && raw.stock_objetivo !== null) {
-        payload.stock_actual = Number(raw.stock_objetivo);
-      } else if (this.stockEditMode === 'delta' && raw.stock_ajuste !== '' && raw.stock_ajuste !== null && Number(raw.stock_ajuste) !== 0) {
-        payload.stock_ajuste = Number(raw.stock_ajuste);
       }
     }
 
@@ -1054,7 +1146,8 @@ export class ProductsComponent implements OnInit {
       barcode: [''],
       standard_rate: [null, [Validators.required, Validators.min(0)]],
       tax_rate: [0, Validators.required],
-      track_stock: [true],
+      // Restaurante: los platos preparados descuentan insumos por receta, no stock propio.
+      track_stock: [!this.isRestaurantCatalog],
       isactive: [true],
       // Solo se usa al crear (nunca al editar): registra un movimiento de
       // Entrada después de crear la variante, igual que si se hiciera desde
@@ -1069,8 +1162,12 @@ export class ProductsComponent implements OnInit {
     this.vfAttributes.clear();
     // Color y Talla son los atributos habituales en boutique; quedan como
     // punto de partida editable, no como una lista cerrada de opciones.
-    this.addAtributoRow('Color', '');
-    this.addAtributoRow('Talla', '');
+    if (this.isRestaurantCatalog) {
+      this.addAtributoRow('Sabor', '');
+    } else {
+      this.addAtributoRow('Color', '');
+      this.addAtributoRow('Talla', '');
+    }
   }
 
   addAtributoRow(attribute = '', value = ''): void {

@@ -454,7 +454,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.spinner.show();
     this.productsService.getAll(1).pipe(finalize(() => this.spinner.hide())).subscribe({
       next: (res: any) => {
-        this.products = Array.isArray(res) ? res : (res?.message?.data || []);
+        this.products = (Array.isArray(res) ? res : (res?.message?.data || [])).filter((p: any) => !p.is_ingredient);
         this.applyFilters();
       },
       error: () => {
@@ -1539,7 +1539,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.productVariantPicker?.clearCache();
     this.productsService.getAll(1).subscribe({
       next: (res: any) => {
-        this.products = Array.isArray(res) ? res : (res?.message?.data || []);
+        this.products = (Array.isArray(res) ? res : (res?.message?.data || [])).filter((p: any) => !p.is_ingredient);
         this.applyFilters();
       }
     });
@@ -1555,7 +1555,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   private loadProductsFlat(): void {
     this.productsService.getAll(1, undefined, 0, '', undefined, undefined, false, true).subscribe({
       next: (res: any) => {
-        this.productsFlat = Array.isArray(res) ? res : (res?.message?.data || []);
+        this.productsFlat = (Array.isArray(res) ? res : (res?.message?.data || [])).filter((p: any) => !p.is_ingredient);
       },
       error: () => undefined
     });

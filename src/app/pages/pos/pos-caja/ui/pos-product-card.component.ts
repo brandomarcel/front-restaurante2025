@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
-import { hasInventoryControl, isLowStockProduct, isOutOfStockProduct, resolveInventoryLabel } from 'src/app/shared/utils/inventory.utils';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { hasInventoryControl, recipePortions, isLowStockProduct, isOutOfStockProduct, resolveInventoryLabel } from 'src/app/shared/utils/inventory.utils';
 
 /**
  * Tarjeta de producto del POS. Solo presenta: si se puede agregar, si está en
@@ -26,7 +27,7 @@ import { hasInventoryControl, isLowStockProduct, isOutOfStockProduct, resolveInv
         <ng-container *ngTemplateOutlet="favoriteButton; context: { $implicit: 'retail' }"></ng-container>
         <div class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-1.5 pb-1 pt-4">
           <p class="line-clamp-1 text-[10px] font-bold leading-tight text-white">{{ product.nombre }}</p>
-          <p class="text-[11px] font-black leading-tight text-white">{{ hasVariants ? 'Ver variantes' : ('$' + (product.precio | number:'1.2-2')) }}</p>
+          <p class="text-[11px] font-black leading-tight text-white">{{ hasVariants ? (restaurantWording ? 'Ver opciones' : 'Ver variantes') : ('$' + (product.precio | number:'1.2-2')) }}</p>
         </div>
       </div>
       <!-- El stock queda fuera de la foto: sobre una imagen nunca hay contraste garantizado. -->
@@ -54,15 +55,15 @@ import { hasInventoryControl, isLowStockProduct, isOutOfStockProduct, resolveInv
 
         <div class="mt-auto pt-1">
           <div class="flex items-end justify-between gap-2">
-            <p *ngIf="hasVariants" class="text-xs font-bold leading-none text-primary">Ver variantes</p>
+            <p *ngIf="hasVariants" class="text-xs font-bold leading-none text-primary">{{ restaurantWording ? 'Ver opciones' : 'Ver variantes' }}</p>
             <ng-container *ngIf="!hasVariants">
               <p class="text-base font-bold leading-none text-foreground">\${{ product.precio | number:'1.2-2' }}</p>
               <span class="text-[10px] font-semibold text-muted-foreground">{{ product.tax_value }}% IVA</span>
             </ng-container>
           </div>
           <div class="mt-1 flex flex-wrap gap-1">
-            <span *ngIf="hasVariants" class="badge badge-blue" title="El precio depende de la variante que elijas.">
-              {{ product.variant_count }} {{ product.variant_count === 1 ? 'variante' : 'variantes' }}
+            <span *ngIf="hasVariants" class="badge badge-blue" [title]="restaurantWording ? 'El precio depende de la opción que elijas.' : 'El precio depende de la variante que elijas.'">
+              {{ product.variant_count }} {{ product.variant_count === 1 ? (restaurantWording ? 'opción' : 'variante') : (restaurantWording ? 'opciones' : 'variantes') }}
             </span>
             <span *ngIf="hasInventory" class="badge" [ngClass]="outOfStock ? 'badge-red' : (lowStock ? 'badge-yellow' : 'badge-gray')">
               {{ outOfStock ? 'Sin stock' : (lowStock ? 'Bajo · ' + inventoryLabel : inventoryLabel) }}
@@ -88,6 +89,12 @@ import { hasInventoryControl, isLowStockProduct, isOutOfStockProduct, resolveInv
   `
 })
 export class PosProductCardComponent {
+  private readonly capabilities = inject(CompanyCapabilitiesService);
+
+  /** Restaurante: «opciones» (sabor, tamaño); comercio: «variantes» (color, talla). */
+  get restaurantWording(): boolean {
+    return this.capabilities.isEnabled('restaurant') && !this.capabilities.isRetailPos;
+  }
   @Input({ required: true }) product: any;
   @Input() retail = false;
   @Input() canAdd = true;
@@ -97,7 +104,7 @@ export class PosProductCardComponent {
   @Output() toggleFavorite = new EventEmitter<any>();
 
   get hasVariants(): boolean { return (this.product?.variant_count || 0) > 0; }
-  get hasInventory(): boolean { return hasInventoryControl(this.product); }
+  get hasInventory(): boolean { return hasInventoryControl(this.product) || recipePortions(this.product) !== null; }
   get outOfStock(): boolean { return isOutOfStockProduct(this.product); }
   get lowStock(): boolean { return !this.outOfStock && isLowStockProduct(this.product); }
   get inventoryLabel(): string { return resolveInventoryLabel(this.product); }
