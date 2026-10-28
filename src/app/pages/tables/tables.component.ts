@@ -192,6 +192,11 @@ export class TablesComponent implements OnInit, OnDestroy {
    * Vista del mesero: puede tomar órdenes pero no cobrar (mismo criterio que el POS).
    * No ve totales del salón ni mesas inactivas, que son de administración.
    */
+  /** Órdenes activas sin mesa (para llevar / domicilio): ninguna mesa las muestra, se listan aparte. */
+  get ordersWithoutTable(): any[] {
+    return this.activeOrders.filter((order) => !this.orderTableName(order));
+  }
+
   get isWaiterView(): boolean {
     return this.canCreateOrders && !this.capabilities.hasPermission('billing.create') && !this.canManageTables;
   }

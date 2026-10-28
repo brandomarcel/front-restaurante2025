@@ -129,7 +129,8 @@ export class Menu {
           route: '/dashboard/orders',
           featureKey: 'orders',
           uiVisibilityKey: 'restaurantOrders',
-          permissionKeys: ['restaurant.orders.read', 'restaurant.orders.update'],
+          // El mesero crea pero no actualiza órdenes: sin esto no veía sus pedidos sin mesa.
+          anyPermissionKeys: ['restaurant.orders.update', 'restaurant.orders.create'],
           hideInLite: true,
           // Cocina trabaja desde su pantalla; la lista muestra totales en dinero.
           hideForRoles: ['COCINA'],

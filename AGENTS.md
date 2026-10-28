@@ -149,6 +149,10 @@ Funciones:
 - Lenguaje según el negocio: restaurante dice «opciones» y propone «Sabor»; comercio dice
   "variantes" y propone Color/Talla. Un restaurante en inventario Simple no ve bodegas.
 
+## Pedidos sin mesa
+
+- Se listan en la sección «Pedidos sin mesa» de Mesas y en «Lista Órdenes» (visible al mesero por `restaurant.orders.create`).
+
 ## Cierre administrativo de órdenes
 
 - «Cerrar manualmente…» (detalle de la orden; permiso `restaurant.orders.force_close`, Administrador y

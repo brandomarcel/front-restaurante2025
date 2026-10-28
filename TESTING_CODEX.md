@@ -314,3 +314,9 @@ Cerrada, mesa Libre, comentario y campos `force_closed*`; orden cobrada no se ma
 Facturación y Usuario sin permiso). Front: opción del menú solo con el permiso, `ForceCloseDialogComponent`
 (botón deshabilitado sin motivo; «otro» exige detalle), chip «Cierre manual». Verifiqué el backend con
 un script temporal ya borrado.
+
+## Pendiente de pruebas: pedidos sin mesa del mesero (2026-10-28)
+
+Menú «Lista Órdenes» visible para Mesero (create sin update) y oculto para Usuario/Facturación/Cocina;
+`TablesComponent.ordersWithoutTable` (solo activas sin mesa, se actualiza por eventos en vivo, sin importe en vista
+de mesero). Manual: mesero crea «Orden sin mesa» y la ve en Mesas y en Lista Órdenes.

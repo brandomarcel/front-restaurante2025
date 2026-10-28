@@ -163,6 +163,31 @@
       </p>
     </section>
 
+    <!-- Pedidos sin mesa (para llevar / domicilio): no aparecen en ninguna mesa, se listan aquí -->
+    <section *ngIf="ordersWithoutTable.length" class="floor-card" aria-label="Pedidos sin mesa">
+      <div class="mb-3">
+        <h2 class="text-base font-black text-foreground">Pedidos sin mesa</h2>
+        <p class="text-xs text-muted-foreground">Para llevar y a domicilio · {{ ordersWithoutTable.length }} activos</p>
+      </div>
+      <div class="grid gap-2 md:grid-cols-2">
+        <button *ngFor="let order of ordersWithoutTable; trackBy: trackByName" type="button" class="order-row" (click)="openOrder(order)">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <span class="truncate text-sm font-bold text-foreground">{{ order.alias || order.customer_name || order.name }}</span>
+              <span class="order-status" [class.is-ready]="isReadyOrder(order)">{{ orderStatusLabel(order) }}</span>
+            </div>
+            <p class="mt-0.5 truncate text-xs text-muted-foreground">
+              {{ order.order_type || order.type_orden || 'Para llevar' }} · {{ order.waiter_name || order.waiter || 'Sin mesero' }}
+              · {{ orderItemsCount(order) }} ítems
+              <ng-container *ngIf="orderSince(order)"> · {{ elapsedLabel(orderSince(order)) }}</ng-container>
+            </p>
+          </div>
+          <span *ngIf="!isWaiterView" class="text-sm font-black text-foreground">${{ (order.total || 0) | number:'1.2-2' }}</span>
+          <svg-icon src="assets/icons/heroicons/outline/arrow-sm-right.svg" [svgClass]="'h-4 w-4 text-muted-foreground'"></svg-icon>
+        </button>
+      </div>
+    </section>
+
     <!-- Panel de detalle (lateral en escritorio, hoja inferior en móvil) -->
     <div *ngIf="showTablePopup && selectedTable" class="sheet-backdrop" (click)="closeTablePopup()">
       <aside class="sheet" role="dialog" aria-modal="true" [attr.aria-label]="'Mesa ' + tableLabel(selectedTable)"

@@ -9,6 +9,15 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-10-28 (Claude, 6): el mesero no veía los pedidos sin mesa. Causa: «Lista Órdenes» exigía
+  `restaurant.orders.read` **y** `update` y el Mesero solo tiene `read`/`create`, así que el menú no
+  aparecía, y el plano de Mesas solo muestra órdenes ligadas a una mesa. Arreglo: el menú se muestra con
+  `update` o `create` (`anyPermissionKeys` en `menu.ts`; Cocina sigue oculta por `hideForRoles`) y Mesas
+  tiene la sección «Pedidos sin mesa» (para llevar/domicilio, activos, con estado, mesero y tiempo; en
+  vivo; sin importe para el mesero). Compila con `ngc --noEmit`; sin probar en navegador.
+  Pendiente: «Lista Órdenes» le muestra al mesero todas las órdenes del negocio (como ya permitía la API);
+  valorar un filtro «Mis órdenes» por defecto.
+
 - 2026-10-28 (Claude, 5): cierre administrativo de órdenes. Detalle de la orden → menú «⋯» →
   «Cerrar manualmente…» (solo con `restaurant.orders.force_close`: Administrador y Gerente), sobre
   órdenes Ingresada/Preparación/Lista. Diálogo `shared/components/force-close-dialog` con motivo
