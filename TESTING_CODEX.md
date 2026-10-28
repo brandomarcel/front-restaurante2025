@@ -289,3 +289,10 @@ Pendientes / riesgos:
 ```
 
 Reporta los resultados tal como salieron: si algo no se ejecutó o falló, dilo.
+
+## Pendiente de pruebas: planes por módulos (2026-10-28)
+
+Core `api/plans.py` y `effective_features`: cada plan del catálogo (roles y features resultantes),
+`apply_plan` (crea/actualiza suscripción, solo System Manager), `expand_payload` (lo explícito gana),
+restaurante con `tables` y/o `kitchen` apagados. Probar en navegador un RESTO_BASICO: POS, Lista de
+órdenes y cobro sin Mesas ni Cocina.

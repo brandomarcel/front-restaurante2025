@@ -9,6 +9,12 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-10-28 (Claude, 3): planes por módulos (el trabajo está en Core, ver su ESTADO). El front no
+  cambió: ya oculta Mesas (`tables`) y Cocina (`kitchen`) por `featureKey` y el POS Mesero no exige
+  mesa sin `tables`. Un restaurante pequeño se configura aplicando un plan en el Desk
+  (Suscripción → «Aplicar plan»). Pendiente: probarlo en pantalla (RESTO_BASICO: sin mesas ni cocina;
+  revisar POS, Lista de órdenes y cobro desde Caja sin la pantalla de cocina).
+
 - 2026-10-28 (Claude, 2): «Ajustar stock» sale de la ficha del producto. La edición ya no crea
   movimientos; la ficha muestra «Cambiar la cantidad» con el botón «Ajustar en Inventario →»
   (`irAjustarStock`) que navega a `/dashboard/inventory?adjust=<producto>`; Inventario abre el

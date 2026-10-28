@@ -149,6 +149,13 @@ Funciones:
 - Lenguaje según el negocio: restaurante dice «opciones» y propone «Sabor»; comercio dice
   "variantes" y propone Color/Talla. Un restaurante en inventario Simple no ve bodegas.
 
+## Planes y módulos por negocio
+
+- Cada negocio activa solo lo que su plan incluye; el front lo deriva de `features` (no hay pantalla
+  de módulos en el front). Los planes se aplican en el Desk (Suscripción → «Aplicar plan»), catálogo en
+  `facturada_core/api/plans.py`: FACTURADOR, RESTO_BASICO (mostrador, sin mesas ni cocina), RESTO_MESAS,
+  RESTO_COCINA, RESTO_COMPLETO (+ inventario/insumos/recetas). Mesas y cocina son independientes de `restaurant`.
+
 ## Ventas
 
 Funciones:
