@@ -49,8 +49,11 @@
               <button type="button" class="action-btn mr-1.5 bg-primary text-primary-foreground hover:bg-primary/90" (click)="printComanda.emit(o)">
                 Imprimir comanda
               </button>
-              <button type="button" class="action-btn bg-amber-500 text-white hover:bg-amber-600" (click)="toPreparacion.emit(o)">
+              <button *ngIf="kitchenEnabled" type="button" class="action-btn bg-amber-500 text-white hover:bg-amber-600" (click)="toPreparacion.emit(o)">
                 Enviar a cocina
+              </button>
+              <button *ngIf="!kitchenEnabled" type="button" class="action-btn border border-border bg-card text-foreground hover:bg-muted" (click)="goOrder.emit(o)">
+                Ver y cobrar
               </button>
             </ng-container>
             <button *ngIf="stage(o) === 'prep'" type="button" class="action-btn bg-emerald-600 text-white hover:bg-emerald-700" (click)="toCerrada.emit(o)">

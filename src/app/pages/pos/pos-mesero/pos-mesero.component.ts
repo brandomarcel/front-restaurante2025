@@ -4,6 +4,7 @@ import { CartService } from '../services/cart.service';
 import { LineNoteEditorComponent } from '../ui/line-note-editor.component';
 import { ProductsService } from 'src/app/services/products.service';
 import { CategoryService } from 'src/app/services/category.service';
+import { PrintService } from 'src/app/services/print.service';
 import { OrdersService } from 'src/app/services/orders.service';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { toast } from 'ngx-sonner';
@@ -31,6 +32,8 @@ export class PosMeseroComponent implements OnInit {
   @ViewChild(ProductSearchModalComponent) productSearchModal?: ProductSearchModalComponent;
   @Input() selectedTableId = '';
   @Input() selectedTableLabel = '';
+  /** Orden abierta a la que se agregan productos; con valor, el POS no crea una orden nueva. */
+  @Input() addToOrder = '';
 
   products: any[] = [];
   /** Solo para la búsqueda avanzada (Ctrl+K): mismo catálogo pero con variantes ya expandidas. Ver `loadProductsFlat`. */
@@ -61,8 +64,18 @@ export class PosMeseroComponent implements OnInit {
     private spinner: NgxSpinnerService,
     private alertService: AlertService,
     private router: Router,
-    private capabilities: CompanyCapabilitiesService
+    private capabilities: CompanyCapabilitiesService,
+    private printService: PrintService
   ) {}
+
+  get isAddMode(): boolean {
+    return !!this.addToOrder;
+  }
+
+  /** Salida del modo agregar: vuelve al detalle de la orden. */
+  backToOrder(): void {
+    void this.router.navigate(['/dashboard/orders', this.addToOrder]);
+  }
 
   get hasTables(): boolean {
     return this.capabilities.isEnabled('tables');
@@ -351,13 +364,52 @@ export class PosMeseroComponent implements OnInit {
     this.cartExpanded = false;
   }
 
+  /** Modo agregar: suma los productos del carrito a la orden abierta, sin tocar lo ya pedido. */
+  private async saveAdditions(): Promise<void> {
+    const items = this.cartService.cart.map(item => ({
+      product: item.name ?? item.nombre,
+      qty: item.quantity,
+      ...(item.notes ? { notes: item.notes } : {}),
+      ...(item.removed_ingredients?.length ? { removed_ingredients: item.removed_ingredients } : {})
+    }));
+    const result = await this.alertService.confirm('¿Agregar estos productos a la orden?', 'Confirmación');
+    if (!result.isConfirmed) return;
+
+    this.isSubmittingOrder = true;
+    this.spinner.show();
+    this.ordersService.addItems(this.addToOrder, items).pipe(
+      finalize(() => {
+        this.isSubmittingOrder = false;
+        this.spinner.hide();
+      })
+    ).subscribe({
+      next: () => {
+        window.dispatchEvent(new CustomEvent('facturada:restaurant-data-changed'));
+        this.cartService.clear();
+        const canPrint = this.capabilities.hasPermission('billing.create');
+        toast.success('Productos agregados. Cocina ya los ve.', canPrint ? {
+          duration: 15000,
+          action: {
+            label: 'Imprimir comanda adicional',
+            onClick: () => {
+              if (!this.printService.openComanda(this.addToOrder, true)) toast.error('El navegador bloqueó la ventana de impresión.');
+            }
+          }
+        } : undefined);
+        this.backToOrder();
+      },
+      error: () => { }
+    });
+  }
+
   async saveOrderMesero(): Promise<void> {
     if (this.isSubmittingOrder) return;
 
     if (this.cartService.cart.length === 0) {
-      toast.error('Agrega productos a la comanda.');
+      toast.error(this.isAddMode ? 'Agrega los productos que pidió el cliente.' : 'Agrega productos a la comanda.');
       return;
     }
+    if (this.isAddMode) return this.saveAdditions();
 
     if (!this.alias.trim()) {
       toast.error('Ingresa la mesa o alias.');

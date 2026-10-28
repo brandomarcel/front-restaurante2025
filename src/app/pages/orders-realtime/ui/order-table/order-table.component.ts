@@ -23,6 +23,8 @@ export class OrderTableComponent {
   @Output() toPreparacion = new EventEmitter<OrderVM>();
   @Output() toCerrada = new EventEmitter<OrderVM>();
   @Output() goOrder = new EventEmitter<OrderVM>();
+  /** Sin cocina no hay a quién «enviar»: en vez de eso el pedido nuevo se imprime y se cobra. */
+  @Input() kitchenEnabled = true;
   @Output() printComanda = new EventEmitter<OrderVM>();
 
   readonly stageLabel = ORDER_STAGE_LABEL;

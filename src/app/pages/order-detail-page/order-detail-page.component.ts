@@ -1267,13 +1267,28 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   }
 
   get canStartPreparation(): boolean {
-    return !!this.order?.name && !this.isLocked && this.capabilities.hasPermission('restaurant.orders.update')
+    return !!this.order?.name && !this.isLocked && this.capabilities.isEnabled('kitchen')
+      && this.capabilities.hasPermission('restaurant.orders.update')
       && this.normalizeStatus(this.order?.status).includes('ingres');
   }
 
   get canMarkReady(): boolean {
     return !!this.order?.name && !this.isLocked && this.capabilities.hasPermission('restaurant.orders.update')
       && this.normalizeStatus(this.order?.status).includes('prepar');
+  }
+
+  /** «El cliente pidió algo más»: orden abierta, sin factura, pagos ni subcuentas. */
+  get canAddItems(): boolean {
+    const status = this.normalizeStatus(this.order?.status);
+    const active = status.includes('ingres') || status.includes('prepar') || status.includes('lista');
+    return !!this.order?.name && active && !this.isLocked && !this.order?.sri?.invoice
+      && !(this.order?.payments?.length) && !this.orderSplits.length
+      && this.capabilities.isEnabled('orders') && this.capabilities.hasPermission('restaurant.orders.create');
+  }
+
+  addProducts(): void {
+    if (!this.order?.name) return;
+    void this.router.navigate(['/dashboard/pos'], { queryParams: { agregar: this.order.name } });
   }
 
   /** Cierre administrativo: solo Administrador/Gerente, sobre órdenes aún activas. */

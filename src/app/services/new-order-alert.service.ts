@@ -37,8 +37,8 @@ export class NewOrderAlertService {
     this.baseTitle = document.title;
     this.realtime.activate();
     this.realtime.events$.subscribe((event) => {
-      if (event.event_type !== 'order.created') return;
-      this.onOrderCreated(event.data);
+      if (event.event_type === 'order.created') this.onOrderCreated(event.data);
+      else if (event.event_type === 'order.updated' && event.action === 'items_added') this.onItemsAdded(event.data);
     });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) this.clearTitleBadge(); });
     window.addEventListener('focus', () => this.clearTitleBadge());
@@ -106,6 +106,37 @@ export class NewOrderAlertService {
         label: autoPrint ? 'Reimprimir' : 'Imprimir comanda',
         onClick: () => {
           if (!this.printService.openComanda(name)) toast.error('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes.');
+        },
+      },
+    });
+  }
+
+  /** «El cliente pidió algo más»: avisa y manda a imprimir solo la comanda adicional. */
+  private onItemsAdded(order: any): void {
+    const name = String(order?.name || '').trim();
+    const batch = Number(order?.addition_batch) || 0;
+    const key = `${name}#${batch}`;
+    if (!name || !batch || this.seen.has(key) || !this.shouldAlert()) return;
+    this.seen.add(key);
+    const me = this.currentUserEmail();
+    if (me && String(order?.added_by || '').toLowerCase() === me) return;
+
+    const added = (order?.items || []).filter((row: any) => Number(row?.addition_batch) === batch);
+    const count = added.reduce((sum: number, row: any) => sum + (Number(row?.qty) || 0), 0);
+    const where = order?.table_name || order?.table ? `Mesa ${order.table_name || order.table}` : (order?.alias || 'Sin mesa');
+    const detail = [count ? `+${count} ${count === 1 ? 'producto' : 'productos'}` : '', order?.added_by || ''].filter(Boolean).join(' · ');
+
+    this.playSound();
+    this.addTitleBadge();
+    const autoPrint = this.autoPrint;
+    if (autoPrint) this.printService.printComandaHidden(name, true);
+    toast.success(`Pedido ampliado · ${where}`, {
+      description: [detail, autoPrint ? 'Comanda adicional enviada a la impresora' : ''].filter(Boolean).join(' · ') || undefined,
+      duration: ALERT_DURATION_MS,
+      action: {
+        label: autoPrint ? 'Reimprimir' : 'Imprimir comanda adicional',
+        onClick: () => {
+          if (!this.printService.openComanda(name, true)) toast.error('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes.');
         },
       },
     });

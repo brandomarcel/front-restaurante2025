@@ -83,7 +83,8 @@ export class OrdersService {
     createdFrom?: string,
     createdTo?: string,
     order: 'asc' | 'desc' = 'desc',
-    status?: string
+    status?: string,
+    mine = false
   ): Observable<OrdersListResponse> {
     const pageSize = Math.max(1, Number(limit) || 10);
     let params = new HttpParams()
@@ -97,6 +98,7 @@ export class OrdersService {
     if (createdFrom) params = params.set('created_from', createdFrom);
     if (createdTo) params = params.set('created_to', createdTo);
     if (status) params = params.set('status', status);
+    if (mine) params = params.set('mine', '1');
 
     return this.http.get<OrdersListResponse>(`${this.urlBase}.get_all_orders`, {
       context: new HttpContext().set(REQUIRE_AUTH, true),
@@ -354,6 +356,17 @@ updateStatus(
   return this.http.post<any>(
     `${this.urlBase}.set_order_status`,
     { name, status: normalizedStatus, business },
+    { context: new HttpContext().set(REQUIRE_AUTH, true) }
+  ).pipe(map((response: any) => this.normalizeDetailResponse(response)));
+}
+
+/** Agrega productos a una orden abierta (el cliente pidió algo más); no toca lo ya pedido. */
+addItems(orderName: string, items: any[]): Observable<any> {
+  const business = this.activeBusinessOrError();
+  if (business instanceof Error) return throwError(() => business);
+  return this.http.post<any>(
+    `${this.urlBase}.add_order_items`,
+    { order_name: orderName, items, business },
     { context: new HttpContext().set(REQUIRE_AUTH, true) }
   ).pipe(map((response: any) => this.normalizeDetailResponse(response)));
 }

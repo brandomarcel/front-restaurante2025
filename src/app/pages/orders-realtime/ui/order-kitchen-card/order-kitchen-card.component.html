@@ -25,6 +25,7 @@
         <span class="kds-qty">{{ getItemQty(it) }}</span>
         <span class="min-w-0 flex-1">
           <span class="kds-item-name">{{ getItemName(it) }}</span>
+          <span *ngIf="(it.addition_batch ?? 0) > 0" class="ml-1.5 rounded bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-black uppercase text-sky-700 dark:text-sky-300">Agregado</span>
           <span *ngIf="getItemModifiers(it)" class="block text-xs font-medium text-muted-foreground">+ {{ getItemModifiers(it) }}</span>
           <span *ngIf="getItemNotes(it)" class="kds-item-note">📝 {{ getItemNotes(it) }}</span>
         </span>

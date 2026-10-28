@@ -257,6 +257,11 @@ export class CompanyCapabilitiesService {
     return valid.includes(value) ? value : null;
   }
 
+  /** Mesero puro: crea órdenes pero no cobra ni administra el restaurante. Sus listas se limitan a lo suyo. */
+  get isWaiterOnly(): boolean {
+    return this.hasPermission('restaurant.orders.create') && !this.hasPermission('billing.create') && !this.hasPermission('restaurant.manage');
+  }
+
   /** Regla 6: submódulos de Restaurante — nunca se muestran si su `visible` explícito es `false`. */
   get restaurantOrdersVisible(): boolean { return this.isUiModuleVisible2('restaurant', 'orders', 'orders'); }
   get restaurantTablesVisible(): boolean { return this.isUiModuleVisible2('restaurant', 'tables', 'tables'); }

@@ -181,6 +181,14 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
       }
     }));
 
+    // Agregaron productos a una orden en curso: Cocina lo oye y lo ve marcado «Agregado».
+    this.sub.add(this.restaurantRealtime.events$.subscribe((event) => {
+      if (this.viewMode === 'cocina' && event.event_type === 'order.updated' && event.action === 'items_added') {
+        this.playNewOrderSound();
+        toast.info(`Agregaron productos a la orden #${event.data?.name ?? ''}`);
+      }
+    }));
+
     this.sub.add(this.restaurantRealtime.connected$.subscribe((connected) => {
       this.realtimeConnected = connected;
       if (connected) this.stopFallbackPolling();
@@ -374,6 +382,11 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     if (option === 'ambas') this.openPrintWindow(this.printService.getOrderPdf(this.pendingPrintOrderId));
 
     this.closePrintModal();
+  }
+
+  /** Sin cocina habilitada no se «envía a cocina»: Caja imprime y cobra. */
+  get kitchenEnabled(): boolean {
+    return this.capabilities.isEnabled('kitchen');
   }
 
   /** Imprime la comanda directo desde la tarjeta «Nuevas», sin pasar por el modal. */

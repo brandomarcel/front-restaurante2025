@@ -2,13 +2,24 @@
   <header class="sticky top-0 z-30 border-b border-primary/10 bg-card/95 px-2.5 py-2 shadow-sm backdrop-blur">
     <div class="mx-auto flex w-full max-w-[980px] flex-col gap-2">
       <div class="flex items-center gap-2">
-        <button *ngIf="hasTables" type="button" (click)="goToTables()"
+        <button *ngIf="isAddMode" type="button" (click)="backToOrder()"
+          class="flex h-10 shrink-0 flex-col items-center justify-center rounded-xl border border-primary/20 bg-card px-2.5 text-primary"
+          aria-label="Volver a la orden" title="Volver a la orden">
+          <span class="text-sm font-black leading-none">←</span>
+          <span class="text-[10px] font-bold uppercase leading-none">Orden</span>
+        </button>
+        <button *ngIf="hasTables && !isAddMode" type="button" (click)="goToTables()"
           class="flex h-10 shrink-0 flex-col items-center justify-center rounded-xl border border-primary/20 bg-card px-2.5 text-primary"
           aria-label="Volver a Mesas" title="Volver a Mesas">
           <span class="text-sm font-black leading-none">←</span>
           <span class="text-[10px] font-bold uppercase leading-none">Mesas</span>
         </button>
-        <div class="min-w-0 flex-1">
+        <div *ngIf="isAddMode" class="min-w-0 flex-1">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-primary">Agregando a la orden</p>
+          <p class="truncate text-sm font-black text-foreground">#{{ addToOrder }}</p>
+          <p class="text-[11px] text-muted-foreground">Cocina verá solo lo nuevo; lo ya pedido no cambia.</p>
+        </div>
+        <div *ngIf="!isAddMode" class="min-w-0 flex-1">
           <p class="text-[10px] font-bold uppercase tracking-wide text-primary">Mesa / alias</p>
           <input
             type="text"
@@ -28,7 +39,7 @@
         </button>
       </div>
 
-      <div class="grid grid-cols-3 gap-1 rounded-xl border border-border bg-muted p-1">
+      <div *ngIf="!isAddMode" class="grid grid-cols-3 gap-1 rounded-xl border border-border bg-muted p-1">
         <button
           type="button"
           class="h-8 rounded-lg text-[11px] font-bold transition"
@@ -52,7 +63,7 @@
         </button>
       </div>
 
-      <div *ngIf="orderType === 'Domicilio'" class="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+      <div *ngIf="orderType === 'Domicilio' && !isAddMode" class="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
         <input
           type="text"
           [(ngModel)]="deliveryAddress"
@@ -395,7 +406,7 @@
             class="h-12 w-full rounded-xl bg-primary px-4 text-sm font-black text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
             [disabled]="isSubmittingOrder"
             (click)="saveOrderMesero()">
-            {{ isSubmittingOrder ? 'Enviando...' : 'Enviar comanda' }}
+            {{ isSubmittingOrder ? 'Enviando...' : (isAddMode ? 'Agregar a la orden' : 'Enviar comanda') }}
           </button>
         </div>
       </div>

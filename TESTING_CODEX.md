@@ -320,3 +320,18 @@ un script temporal ya borrado.
 Menú «Lista Órdenes» visible para Mesero (create sin update) y oculto para Usuario/Facturación/Cocina;
 `TablesComponent.ordersWithoutTable` (solo activas sin mesa, se actualiza por eventos en vivo, sin importe en vista
 de mesero). Manual: mesero crea «Orden sin mesa» y la ve en Mesas y en Lista Órdenes.
+
+## Pendiente de pruebas: agregar productos a una orden abierta (2026-10-28)
+
+Restaurante `add_order_items`: suma renglones con `addition_batch` 1, 2…; stock/insumos solo por lo agregado (aunque el
+producto ya estuviera en la orden); una orden Lista vuelve a preparación; totales recalculados; cancelar devuelve todos los
+movimientos; falla con orden cerrada/cancelada, facturada, con pagos, con subcuentas o sin productos; formato de impresión
+«FacturADA Restaurant Kitchen Ticket Addition» muestra solo el último lote. Front: botón visible solo con las condiciones,
+POS modo agregar (sin alias/tipo), marca «Agregado» en cocina, aviso «Pedido ampliado» a Caja (no al autor). Verifiqué el
+backend con un script temporal ya borrado.
+
+## Pendiente de pruebas: sin cocina y «Mis órdenes» (2026-10-28)
+
+`OrderCard`/`OrderTable` con `kitchenEnabled=false` (sin «Enviar a cocina», con «Ver y cobrar»); detalle sin «Iniciar
+preparación» sin `kitchen`; `isWaiterOnly` (Mesero sí; Cajero, Gerente, Administrador no); `get_all_orders(mine=1)` filtra
+por `waiter` del usuario y `total` coincide. Verifiqué `mine` con un script temporal ya borrado.

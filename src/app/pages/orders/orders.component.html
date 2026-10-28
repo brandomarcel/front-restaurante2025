@@ -6,6 +6,7 @@
         <span class="rounded-md bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">
           {{ totalOrders }} total
         </span>
+        <span *ngIf="onlyMine" class="rounded-md bg-muted px-2 py-1 text-[10px] font-semibold text-muted-foreground">Solo tus órdenes de hoy</span>
       </div>
 
       <div class="flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">

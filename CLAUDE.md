@@ -149,6 +149,17 @@ Funciones:
 - Lenguaje según el negocio: restaurante dice «opciones» y propone «Sabor»; comercio dice
   "variantes" y propone Color/Talla. Un restaurante en inventario Simple no ve bodegas.
 
+## Agregar productos a una orden abierta
+
+- Si el cliente pide algo más, en el detalle de la orden «+ Agregar productos» (POS en modo agregar). Solo suma;
+  no edita lo ya pedido. Bloqueado con factura, pagos o subcuentas. Cocina lo ve «Agregado», el stock se descuenta
+  solo por lo agregado y la comanda adicional imprime únicamente ese lote. Quitar lo ya enviado: cancelar o cierre manual.
+
+## Sin cocina y «Mis órdenes»
+
+- Sin la función `kitchen` no hay «Enviar a cocina» ni «Iniciar preparación»: Caja imprime la comanda y cobra; la orden
+  se cierra al cobrarse. El mesero puro ve en «Lista Órdenes» solo sus órdenes de hoy (filtro de pantalla `mine=1`).
+
 ## Pedidos sin mesa
 
 - Un pedido para llevar o a domicilio no pertenece a ninguna mesa: aparece en la sección «Pedidos sin mesa»

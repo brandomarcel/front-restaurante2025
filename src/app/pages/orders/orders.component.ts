@@ -11,6 +11,7 @@ import { ButtonComponent } from 'src/app/shared/components/button/button.compone
 import { RouterModule } from '@angular/router';
 import { environment } from 'src/environments/environment.prod';
 import { UtilsService } from 'src/app/core/services/utils.service';
+import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { OrderModalComponent } from '../orders-realtime/ui/order-modal/order-modal.component';
 import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
 
@@ -55,8 +56,13 @@ export class OrdersComponent implements OnInit {
     public spinner: NgxSpinnerService,
     private printService: PrintService,
     private utils: UtilsService,
-
+    private capabilities: CompanyCapabilitiesService,
   ) { }
+
+  /** El mesero solo ve las órdenes que creó. */
+  get onlyMine(): boolean {
+    return this.capabilities.isWaiterOnly;
+  }
 
   ngOnInit() {
     this.roleName = this.detectRole();
@@ -72,7 +78,7 @@ export class OrdersComponent implements OnInit {
     const createdTo = this.isMeseroOrCajero ? today : undefined;
     const status = this.estadoFiltro === 'Preparación' ? 'Preparacion' : (this.estadoFiltro || undefined);
 
-    this.ordersService.getAll(this.pageSize, offset, createdFrom, createdTo, 'desc', status).subscribe({
+    this.ordersService.getAll(this.pageSize, offset, createdFrom, createdTo, 'desc', status, this.onlyMine).subscribe({
       next: (res: any) => {
         console.log('res', res);
         const rows = res.message.data || [];

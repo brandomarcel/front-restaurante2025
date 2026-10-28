@@ -23,6 +23,11 @@ export class PrintService {
     return url;
   }
   
+  /** Comanda solo con lo último que se agregó a la orden. */
+  getComandaAdicional(orderId: string) {
+    return `/printview?doctype=FacturADA Restaurant Order&name=${orderId}&trigger_print=1&format=FacturADA Restaurant Kitchen Ticket Addition&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
+  }
+
   getRecibo(orderId: string) {
     const url = `/printview?doctype=FacturADA Restaurant Order&name=${orderId}&trigger_print=1&format=FacturADA Restaurant Sale Note&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
     return url;
@@ -33,13 +38,13 @@ export class PrintService {
     return url;
   }
   /** Abre la comanda en una ventana lista para imprimir. Devuelve false si el navegador bloqueó la ventana. */
-  openComanda(orderId: string): boolean {
+  openComanda(orderId: string, additional = false): boolean {
     const width = 900;
     const height = 820;
     const left = window.screenX + (window.innerWidth - width) / 2;
     const top = window.screenY + (window.innerHeight - height) / 2;
     const features = `width=${width},height=${height},left=${left},top=${top},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`;
-    return !!window.open(environment.URL + this.getComanda(orderId), '_blank', features);
+    return !!window.open(environment.URL + (additional ? this.getComandaAdicional(orderId) : this.getComanda(orderId)), '_blank', features);
   }
 
   /**
@@ -47,12 +52,12 @@ export class PrintService {
    * Sin diálogo solo si Chrome corre con `--kiosk-printing` y la térmica es la impresora
    * predeterminada; en un navegador normal igual aparece el diálogo de impresión.
    */
-  printComandaHidden(orderId: string): void {
+  printComandaHidden(orderId: string, additional = false): void {
     const frame = document.createElement('iframe');
     frame.setAttribute('aria-hidden', 'true');
     frame.tabIndex = -1;
     frame.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none;';
-    frame.src = environment.URL + this.getComanda(orderId);
+    frame.src = environment.URL + (additional ? this.getComandaAdicional(orderId) : this.getComanda(orderId));
     document.body.appendChild(frame);
     setTimeout(() => frame.remove(), 30000);
   }

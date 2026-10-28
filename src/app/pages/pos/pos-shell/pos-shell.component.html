@@ -5,5 +5,5 @@
     <p class="mt-1 text-xs text-muted-foreground">Estamos revisando si tu salón tiene mesas configuradas.</p>
   </div>
 </div>
-<app-pos-mesero *ngIf="posReady && roleName === 'Mesero'" [selectedTableId]="selectedTableId" [selectedTableLabel]="selectedTableLabel"></app-pos-mesero>
+<app-pos-mesero *ngIf="posReady && roleName === 'Mesero'" [addToOrder]="addToOrder" [selectedTableId]="selectedTableId" [selectedTableLabel]="selectedTableLabel"></app-pos-mesero>
 <app-pos-caja *ngIf="posReady && roleName !== 'Mesero'" [selectedTableId]="selectedTableId" [selectedTableLabel]="selectedTableLabel"></app-pos-caja>

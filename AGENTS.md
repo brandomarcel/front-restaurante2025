@@ -149,6 +149,16 @@ Funciones:
 - Lenguaje según el negocio: restaurante dice «opciones» y propone «Sabor»; comercio dice
   "variantes" y propone Color/Talla. Un restaurante en inventario Simple no ve bodegas.
 
+## Agregar productos a una orden abierta
+
+- «+ Agregar productos» (detalle de la orden → POS `?agregar=<orden>`) llama a `add_order_items`: solo suma renglones
+  (lote `addition_batch`), cocina los ve «Agregado», comanda adicional solo del último lote.
+
+## Sin cocina y «Mis órdenes»
+
+- Sin `kitchen` no se ofrece «Enviar a cocina»/«Iniciar preparación». El mesero puro ve solo sus órdenes de hoy en
+  «Lista Órdenes» (`get_all_orders(mine=1)`, filtro de pantalla, no de seguridad).
+
 ## Pedidos sin mesa
 
 - Se listan en la sección «Pedidos sin mesa» de Mesas y en «Lista Órdenes» (visible al mesero por `restaurant.orders.create`).

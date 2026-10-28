@@ -23,6 +23,8 @@ export class PosShellComponent implements OnInit {
   selectedTableLabel = '';
   resolvingMeseroEntry = false;
   posReady = true;
+  /** Orden a la que se agregan productos (modo «agregar»); vacío = orden nueva. */
+  addToOrder = '';
 
   constructor(
     private auth: AuthService,
@@ -37,6 +39,13 @@ export class PosShellComponent implements OnInit {
     this.selectedTableLabel = String(this.route.snapshot.queryParamMap.get('table_label') || '').trim();
     if (this.selectedTableId && this.capabilities.activeBusinessId) {
       localStorage.setItem(`mesero_tables_available:${this.capabilities.activeBusinessId}`, '1');
+    }
+    // Modo agregar: cualquiera que pueda crear órdenes usa el POS ligero de mesero, sea cual sea su rol.
+    const addTo = String(this.route.snapshot.queryParamMap.get('agregar') || '').trim();
+    if (addTo && this.capabilities.isEnabled('orders') && this.capabilities.hasPermission('restaurant.orders.create')) {
+      this.addToOrder = addTo;
+      this.roleName = 'Mesero';
+      return;
     }
     const me: any = this.auth.getCurrentUser();
     // La variante de Mesero se determina por el contexto funcional, no por

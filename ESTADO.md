@@ -9,14 +9,33 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-10-28 (Claude, 8): dos pendientes cerrados. (1) Sin cocina habilitada ya no sale «Enviar a cocina»: en
+  Órdenes en vivo (tarjeta y tabla, `kitchenEnabled`) el pedido nuevo muestra «Imprimir comanda» y «Ver y cobrar»,
+  y el detalle de la orden no ofrece «Iniciar preparación»; las órdenes se cierran al cobrarse (`_is_served`).
+  (2) El mesero puro (`CompanyCapabilitiesService.isWaiterOnly`: crea órdenes, sin `billing.create` ni
+  `restaurant.manage`) ve en «Lista Órdenes» solo sus órdenes de hoy (`get_all_orders(mine=1)`, chip «Solo tus
+  órdenes de hoy»). El plano de Mesas sigue cargando todas para mostrar la ocupación. Es un filtro de pantalla, no
+  una restricción de seguridad: la API sigue permitiendo leer todas con `restaurant.orders.read`.
+  Compila con `ngc --noEmit`; backend verificado con script temporal (59 OK). Sin probar en navegador.
+
+- 2026-10-28 (Claude, 7): «Agregar productos» a una orden abierta (el cliente pidió algo más). Detalle de
+  la orden → «+ Agregar productos» (con `restaurant.orders.create`, orden Ingresada/Preparación/Lista, sin
+  factura, pagos ni subcuentas) abre el POS en modo agregar (`/dashboard/pos?agregar=<orden>`, usa el POS de
+  mesero con cualquier rol): sin mesa ni alias, botón «Agregar a la orden». `OrdersService.addItems` →
+  `add_order_items`. Cocina ve lo nuevo como Pendiente con la marca «Agregado» y suena un aviso; Caja recibe
+  «Pedido ampliado · Mesa 5 · +2 productos» con «Imprimir comanda adicional» (o impresión automática con
+  `PrintService.getComandaAdicional`, solo el último lote). Quien agrega no recibe el aviso de su propio
+  cambio; si tiene `billing.create` el toast de éxito ofrece imprimir la comanda adicional. Compila con
+  `ngc --noEmit`; sin probar en navegador.
+  Pendiente: quitar o cambiar lo ya enviado a cocina (se usa cancelar/cierre manual); editar una cantidad ya
+  agregada; probar con mesero + cajero + cocina a la vez.
+
 - 2026-10-28 (Claude, 6): el mesero no veía los pedidos sin mesa. Causa: «Lista Órdenes» exigía
   `restaurant.orders.read` **y** `update` y el Mesero solo tiene `read`/`create`, así que el menú no
   aparecía, y el plano de Mesas solo muestra órdenes ligadas a una mesa. Arreglo: el menú se muestra con
   `update` o `create` (`anyPermissionKeys` en `menu.ts`; Cocina sigue oculta por `hideForRoles`) y Mesas
   tiene la sección «Pedidos sin mesa» (para llevar/domicilio, activos, con estado, mesero y tiempo; en
   vivo; sin importe para el mesero). Compila con `ngc --noEmit`; sin probar en navegador.
-  Pendiente: «Lista Órdenes» le muestra al mesero todas las órdenes del negocio (como ya permitía la API);
-  valorar un filtro «Mis órdenes» por defecto.
 
 - 2026-10-28 (Claude, 5): cierre administrativo de órdenes. Detalle de la orden → menú «⋯» →
   «Cerrar manualmente…» (solo con `restaurant.orders.force_close`: Administrador y Gerente), sobre
@@ -46,8 +65,7 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
   Chrome con `--kiosk-printing` y la térmica es la impresora predeterminada; si no, aparece el
   diálogo normal. Ejemplo (Windows): `chrome.exe --kiosk-printing --app=https://<dominio>/portal/`.
   Activarlo solo en la PC de la impresora (si hay dos cajas con el interruptor, sale doble).
-  Pendiente: el botón «Enviar a cocina» sigue saliendo en negocios sin cocina (RESTO_BASICO) y
-  debería ocultarse; probar con la térmica real; si luego hay impresoras de red/cocina, evaluar
+  Pendiente: probar con la térmica real; si luego hay impresoras de red/cocina, evaluar
   impresión desde el servidor (solo con servidor local o VPN) o un programa local (QZ Tray).
 
 - 2026-10-28 (Claude, 3): planes por módulos (el trabajo está en Core, ver su ESTADO). El front no

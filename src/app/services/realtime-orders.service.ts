@@ -24,6 +24,8 @@ export interface OrderItemVM {
   subtotal?: number;
   iva?: number;
   total?: number;
+  /** 0 = pedido original; 1, 2… = productos agregados después. */
+  addition_batch?: number;
 }
 
 export interface SriVM {
