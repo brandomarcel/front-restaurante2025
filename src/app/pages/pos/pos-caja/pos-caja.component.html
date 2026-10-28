@@ -69,13 +69,13 @@
       <!-- ================= PRODUCTOS ================= -->
       <section class="flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card p-2.5 shadow-sm" aria-label="Catálogo de productos">
         <div *ngIf="isRetailPos" class="mb-2 flex flex-shrink-0 items-center gap-2">
-          <app-barcode-scan-input [wide]="true"></app-barcode-scan-input>
+          <app-barcode-scan-input *ngIf="scannerEnabled" [wide]="true"></app-barcode-scan-input>
           <button type="button" (click)="productSearchModal?.open()" title="Búsqueda avanzada (Ctrl+K)" class="btn btn-outline !px-3 !text-[11px]">🔍 Buscar</button>
         </div>
 
         <div class="mb-2 flex flex-shrink-0 flex-col gap-2 lg:flex-row lg:items-center">
           <div *ngIf="!isRetailPos" class="flex flex-shrink-0 items-center gap-2">
-            <app-barcode-scan-input></app-barcode-scan-input>
+            <app-barcode-scan-input *ngIf="scannerEnabled"></app-barcode-scan-input>
             <button type="button" (click)="productSearchModal?.open()" title="Búsqueda avanzada (Ctrl+K)" class="btn btn-outline !px-3 !text-[11px]">🔍 Buscar</button>
           </div>
           <div class="relative min-w-0 flex-1">

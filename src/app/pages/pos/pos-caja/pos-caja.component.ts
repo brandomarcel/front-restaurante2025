@@ -259,6 +259,14 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     return this.capabilities.needsPosTerminalSelection;
   }
 
+  /**
+   * El lector de código de barras (y su foco automático) es para comercio y POS genérico.
+   * En el POS de restaurante se vende por carta: el foco no debe irse al input de escaneo.
+   */
+  get scannerEnabled(): boolean {
+    return this.isRetailPos || this.genericMode || !this.capabilities.isEnabled('restaurant');
+  }
+
   /** Preferencia visual del POS configurada fuera del frontend; adapta solo presentación, nunca lógica de venta. */
   get isRetailPos(): boolean {
     return this.capabilities.isRetailPos;
