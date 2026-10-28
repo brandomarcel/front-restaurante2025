@@ -13,6 +13,20 @@ Mantener una arquitectura limpia, escalable y segura, permitiendo agregar nuevos
 
 ---
 
+# REGLA DE ORO: documentación siempre al día
+
+**Cada vez que hagamos cambios, actualiza el funcionamiento y el estado de la app, sin esperar a que el usuario lo pida.** Antes de dar una tarea por terminada:
+
+1. `ESTADO.md` del repo o app tocada: qué se hizo, qué quedó pendiente y la fecha.
+2. Funcionamiento: este `CLAUDE.md` y `AGENTS.md` si cambia un módulo, una regla de negocio o algo que el usuario ve en pantalla. En las apps backend, su `AGENTS.md` si cambia un invariante.
+3. `TESTING_CODEX.md` si cambian comandos, rutas o la línea base de pruebas.
+4. Contratos front↔back (`docs/`) si cambia lo que el front y el backend se envían.
+5. Si un cambio hace falsa una nota anterior, corrígela o bórrala; no dejes dos versiones.
+
+Los .md se actualizan en la misma sesión del cambio, y el resumen final lo menciona.
+
+---
+
 # 2. Rol de Claude Code
 
 Actúa como un desarrollador senior encargado de mantener y evolucionar el sistema.
@@ -119,6 +133,21 @@ Funciones:
 Funciones:
 - Catálogo, precios y categorías
 - Control de stock (módulo Inventario)
+- El saldo de un producto solo cambia con movimientos (Entrada, Salida, Ajuste). La ficha del
+  producto no ajusta stock: «Stock inicial» al crear y «Ajustar en Inventario →» al editar.
+
+### Insumos y recetas (solo restaurante)
+
+- Un **insumo** (`is_ingredient`) lleva stock y no se vende. Un **plato** tiene receta (insumo +
+  cantidad por porción, merma, «el cliente puede pedirlo sin») y no lleva stock propio.
+- Al crear la orden de restaurante se descuentan los insumos de la receta, no el plato.
+  Cancelar la orden los devuelve. Una nota de crédito no los devuelve.
+- Pantallas: Inventario → **Insumos** y **Recetas** (`/dashboard/inventory/ingredients` y
+  `/recipes`, `pages/kitchen-supplies/`). El formulario de producto no crea insumos ni recetas.
+- Requieren las funciones `restaurant` e `inventory`; el backend lo exige.
+- El POS muestra las porciones que alcanzan (estimación) y el backend decide al crear la orden.
+- Lenguaje según el negocio: restaurante dice «opciones» y propone «Sabor»; comercio dice
+  "variantes" y propone Color/Talla. Un restaurante en inventario Simple no ve bodegas.
 
 ## Ventas
 
