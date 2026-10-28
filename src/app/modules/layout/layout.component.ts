@@ -6,6 +6,7 @@ import { FooterComponent } from './components/footer/footer.component';
 import { NavbarComponent } from './components/navbar/navbar.component';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
 import { MenuService } from './services/menu.service';
+import { NewOrderAlertService } from 'src/app/services/new-order-alert.service';
 
 @Component({
   selector: 'app-layout',
@@ -19,6 +20,7 @@ export class LayoutComponent implements OnInit {
   constructor(
     private router: Router,
     public menuService: MenuService,
+    private newOrderAlerts: NewOrderAlertService,
   ) {
     this.router.events.subscribe((event: Event) => {
       if (event instanceof NavigationEnd) {
@@ -31,5 +33,6 @@ export class LayoutComponent implements OnInit {
 
   ngOnInit(): void {
     this.mainContent = document.getElementById('main-content');
+    this.newOrderAlerts.start();
   }
 }

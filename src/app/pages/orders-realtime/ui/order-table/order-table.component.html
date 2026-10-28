@@ -45,9 +45,14 @@
 
         <td class="px-3 py-2.5 text-right" (click)="$event.stopPropagation()">
           <ng-container *ngIf="allowActions; else detailOnly">
-            <button *ngIf="stage(o) === 'new'" type="button" class="action-btn bg-amber-500 text-white hover:bg-amber-600" (click)="toPreparacion.emit(o)">
-              Enviar a cocina
-            </button>
+            <ng-container *ngIf="stage(o) === 'new'">
+              <button type="button" class="action-btn mr-1.5 bg-primary text-primary-foreground hover:bg-primary/90" (click)="printComanda.emit(o)">
+                Imprimir comanda
+              </button>
+              <button type="button" class="action-btn bg-amber-500 text-white hover:bg-amber-600" (click)="toPreparacion.emit(o)">
+                Enviar a cocina
+              </button>
+            </ng-container>
             <button *ngIf="stage(o) === 'prep'" type="button" class="action-btn bg-emerald-600 text-white hover:bg-emerald-700" (click)="toCerrada.emit(o)">
               Cerrar orden
             </button>

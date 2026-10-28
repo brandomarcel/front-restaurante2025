@@ -23,6 +23,7 @@ export class OrderTableComponent {
   @Output() toPreparacion = new EventEmitter<OrderVM>();
   @Output() toCerrada = new EventEmitter<OrderVM>();
   @Output() goOrder = new EventEmitter<OrderVM>();
+  @Output() printComanda = new EventEmitter<OrderVM>();
 
   readonly stageLabel = ORDER_STAGE_LABEL;
   readonly stageBadge = ORDER_STAGE_BADGE;

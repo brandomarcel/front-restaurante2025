@@ -149,6 +149,12 @@ Funciones:
 - Lenguaje según el negocio: restaurante dice «opciones» y propone «Sabor»; comercio dice
   "variantes" y propone Color/Talla. Un restaurante en inventario Simple no ve bodegas.
 
+## Aviso de pedidos a Caja
+
+- Quien cobra (`billing.create`) recibe en cualquier pantalla un aviso sonoro y un toast con «Imprimir
+  comanda» cuando otra persona crea una orden (`NewOrderAlertService`). La comanda también se imprime
+  desde las tarjetas «Nuevas» de Órdenes en vivo. El navegador siempre muestra el diálogo de impresión.
+
 ## Planes y módulos por negocio
 
 - Cada negocio activa solo lo que su plan incluye; el front lo deriva de `features` (no hay pantalla

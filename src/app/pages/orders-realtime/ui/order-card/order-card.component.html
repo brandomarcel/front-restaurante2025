@@ -19,9 +19,14 @@
   </button>
 
   <div *ngIf="allowActions" class="mt-3">
-    <button *ngIf="stage === 'new'" type="button" class="h-11 w-full rounded-xl bg-amber-500 text-sm font-bold text-white active:translate-y-px" (click)="toPreparacion.emit(order)">
-      Enviar a cocina
-    </button>
+    <div *ngIf="stage === 'new'" class="flex gap-2">
+      <button type="button" class="h-11 flex-1 rounded-xl bg-primary text-sm font-bold text-primary-foreground active:translate-y-px" (click)="printComanda.emit(order)">
+        Imprimir comanda
+      </button>
+      <button type="button" class="h-11 flex-1 rounded-xl bg-amber-500 text-sm font-bold text-white active:translate-y-px" (click)="toPreparacion.emit(order)">
+        Enviar a cocina
+      </button>
+    </div>
     <button *ngIf="stage === 'prep'" type="button" class="h-11 w-full rounded-xl bg-emerald-600 text-sm font-bold text-white active:translate-y-px" (click)="toCerrada.emit(order)">
       Cerrar orden
     </button>

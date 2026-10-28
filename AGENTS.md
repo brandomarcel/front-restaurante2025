@@ -149,6 +149,11 @@ Funciones:
 - Lenguaje según el negocio: restaurante dice «opciones» y propone «Sabor»; comercio dice
   "variantes" y propone Color/Talla. Un restaurante en inventario Simple no ve bodegas.
 
+## Aviso de pedidos a Caja
+
+- `NewOrderAlertService` avisa (sonido + toast con «Imprimir comanda») a quien cobra cuando otra persona
+  crea una orden; también hay «Imprimir comanda» en las tarjetas «Nuevas» de Órdenes en vivo.
+
 ## Planes y módulos por negocio
 
 - El front deriva módulos de `features`; los planes (FACTURADOR, RESTO_BASICO, RESTO_MESAS, RESTO_COCINA,

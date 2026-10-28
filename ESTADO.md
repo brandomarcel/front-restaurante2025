@@ -9,6 +9,20 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-10-28 (Claude, 4): aviso de pedido nuevo para Caja. `NewOrderAlertService`
+  (`services/new-order-alert.service.ts`, iniciado por el layout): al llegar `order.created` de otra
+  persona (mesero) suena un aviso de tres tonos, sale un toast «Nuevo pedido · Mesa 5» con mesero y
+  cantidad de productos y un botón «Imprimir comanda» (30 s), y la pestaña muestra «(n) Nuevo pedido»
+  si no se está mirando. Solo para quien cobra (`billing.create`) con `orders` y
+  `restaurant.orders.read`; Mesero y Cocina no lo reciben; lo creado por el propio usuario no avisa.
+  `PrintService.openComanda` abre la comanda lista para imprimir. En «Órdenes en vivo» (Caja) las
+  tarjetas «Nuevas» tienen «Imprimir comanda» junto a «Enviar a cocina» (tarjeta y tabla).
+  Backend Restaurante: `serialize_order` ahora trae `table_name` y `waiter_name` (reiniciar workers).
+  Compila con `ngc --noEmit`; Restaurante 59 OK. Sin probar en navegador ni con dos usuarios.
+  Pendiente: el botón «Enviar a cocina» sigue saliendo en negocios sin cocina (RESTO_BASICO) y
+  debería ocultarse; impresión automática sin diálogo (kiosco o servicio de impresión);
+  preferencia de sonido de Caja sin interruptor en pantalla (`setSoundEnabled` listo).
+
 - 2026-10-28 (Claude, 3): planes por módulos (el trabajo está en Core, ver su ESTADO). El front no
   cambió: ya oculta Mesas (`tables`) y Cocina (`kitchen`) por `featureKey` y el POS Mesero no exige
   mesa sin `tables`. Un restaurante pequeño se configura aplicando un plan en el Desk

@@ -32,6 +32,16 @@ export class PrintService {
     const url = `/printview?doctype=FacturADA Restaurant Order&name=${orderId}&trigger_print=1&format=FacturADA Restaurant Kitchen Ticket&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
     return url;
   }
+  /** Abre la comanda en una ventana lista para imprimir. Devuelve false si el navegador bloqueó la ventana. */
+  openComanda(orderId: string): boolean {
+    const width = 900;
+    const height = 820;
+    const left = window.screenX + (window.innerWidth - width) / 2;
+    const top = window.screenY + (window.innerHeight - height) / 2;
+    const features = `width=${width},height=${height},left=${left},top=${top},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`;
+    return !!window.open(environment.URL + this.getComanda(orderId), '_blank', features);
+  }
+
   getSalesInvoiceTicket(orderId: string) {
     const url = `/printview?doctype=FacturADA Lite Invoice&name=${orderId}&trigger_print=1&format=FacturADA Lite Ticket&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
     return url;

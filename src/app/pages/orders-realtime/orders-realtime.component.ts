@@ -376,6 +376,12 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     this.closePrintModal();
   }
 
+  /** Imprime la comanda directo desde la tarjeta «Nuevas», sin pasar por el modal. */
+  printComanda(o: OrderVM): void {
+    if (!o?.name) return;
+    if (!this.printService.openComanda(o.name)) toast.error('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes.');
+  }
+
   toPreparacion(o: OrderVM) {
     if (!this.allowStatusActions || this.pendingActions.has(o.name)) return;
     if (this.viewMode === 'cocina') {

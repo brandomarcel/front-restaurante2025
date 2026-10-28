@@ -296,3 +296,10 @@ Core `api/plans.py` y `effective_features`: cada plan del catálogo (roles y fea
 `apply_plan` (crea/actualiza suscripción, solo System Manager), `expand_payload` (lo explícito gana),
 restaurante con `tables` y/o `kitchen` apagados. Probar en navegador un RESTO_BASICO: POS, Lista de
 órdenes y cobro sin Mesas ni Cocina.
+
+## Pendiente de pruebas: aviso de pedido nuevo a Caja (2026-10-28)
+
+`NewOrderAlertService`: avisa solo con `billing.create` + `orders` + `restaurant.orders.read`; no avisa a
+Mesero/Cocina ni por órdenes propias, canceladas o repetidas; `openComanda` bloqueado por el navegador
+muestra error; botón «Imprimir comanda» en tarjeta y tabla de «Nuevas». Prueba manual con dos
+sesiones (mesero crea, cajero ve y oye el aviso).
