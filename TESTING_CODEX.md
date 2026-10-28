@@ -305,3 +305,12 @@ muestra error; botón «Imprimir comanda» en tarjeta y tabla de «Nuevas». Pru
 sesiones (mesero crea, cajero ve y oye el aviso).
 Impresión automática: `printComandaHidden` (marco oculto que se elimina a los 30 s), interruptor
 `autoPrint` por equipo, toast «Reimprimir». Prueba manual con Chrome `--kiosk-printing` y la térmica real.
+
+## Pendiente de pruebas: cierre administrativo de órdenes (2026-10-28)
+
+Restaurante `force_close_order`: motivo inválido / «otro» sin detalle / orden ya cerrada fallan; deja
+Cerrada, mesa Libre, comentario y campos `force_closed*`; orden cobrada no se marca `force_closed`;
+`get_dashboard_metrics` no suma las `force_closed`; solo Administrador y Gerente (Cajero, Mesero, Cocina,
+Facturación y Usuario sin permiso). Front: opción del menú solo con el permiso, `ForceCloseDialogComponent`
+(botón deshabilitado sin motivo; «otro» exige detalle), chip «Cierre manual». Verifiqué el backend con
+un script temporal ya borrado.

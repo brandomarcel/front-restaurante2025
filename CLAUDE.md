@@ -149,6 +149,13 @@ Funciones:
 - Lenguaje según el negocio: restaurante dice «opciones» y propone «Sabor»; comercio dice
   "variantes" y propone Color/Talla. Un restaurante en inventario Simple no ve bodegas.
 
+## Cierre administrativo de órdenes
+
+- «Cerrar» en Caja significa servida (se factura después). Para una orden que nunca se cerró (cliente se
+  fue, duplicado, cobrada fuera del sistema) Administrador y Gerente usan «Cerrar manualmente…» en el
+  detalle de la orden: motivo obligatorio, mesa libre, sin factura ni stock, auditado, y si no estaba
+  cobrada no cuenta como venta. Permiso `restaurant.orders.force_close`.
+
 ## Aviso de pedidos a Caja
 
 - Quien cobra (`billing.create`) recibe en cualquier pantalla un aviso sonoro y un toast con «Imprimir

@@ -15,6 +15,7 @@ import { environment } from 'src/environments/environment';
 import { OrdersService } from 'src/app/services/orders.service';
 import { OrderSplitService } from 'src/app/services/order-split.service';
 import { OrderSplitRow, SplitOrderPayload } from 'src/app/services/order-split.types';
+import { ForceCloseDialogComponent } from 'src/app/shared/components/force-close-dialog/force-close-dialog.component';
 import { SplitOrderDialogComponent } from './components/split-order-dialog/split-order-dialog.component';
 import { OrderSplitsTableComponent } from './components/order-splits-table/order-splits-table.component';
 import { PaymentsService } from 'src/app/services/payments.service';
@@ -59,7 +60,8 @@ type OrderItem = {
     FontAwesomeModule,
     DecimalInputDirective,
     SplitOrderDialogComponent,
-    OrderSplitsTableComponent
+    OrderSplitsTableComponent,
+    ForceCloseDialogComponent
   ],
   templateUrl: './order-detail-page.component.html',
   styleUrl: './order-detail-page.component.css'
@@ -1272,6 +1274,24 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   get canMarkReady(): boolean {
     return !!this.order?.name && !this.isLocked && this.capabilities.hasPermission('restaurant.orders.update')
       && this.normalizeStatus(this.order?.status).includes('prepar');
+  }
+
+  /** Cierre administrativo: solo Administrador/Gerente, sobre órdenes aún activas. */
+  get canForceClose(): boolean {
+    const status = this.normalizeStatus(this.order?.status);
+    return !!this.order?.name && this.capabilities.hasPermission('restaurant.orders.force_close')
+      && (status.includes('ingres') || status.includes('prepar') || status.includes('lista'));
+  }
+
+  get isForceClosed(): boolean {
+    return Number(this.order?.force_closed) === 1;
+  }
+
+  showForceClose = false;
+
+  onForceClosed(): void {
+    this.showForceClose = false;
+    if (this.order?.name) this.fetch(this.order.name);
   }
 
   get canCancelOrder(): boolean {

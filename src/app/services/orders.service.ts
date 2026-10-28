@@ -61,6 +61,8 @@ export interface OrdersListResponse {
   }
 }
 
+export type ForceCloseReason = 'unpaid' | 'paid_outside' | 'duplicate' | 'other';
+
 @Injectable({ providedIn: 'root' })
 export class OrdersService {
   private readonly apiUrl = environment.apiUrl;
@@ -352,6 +354,20 @@ updateStatus(
   return this.http.post<any>(
     `${this.urlBase}.set_order_status`,
     { name, status: normalizedStatus, business },
+    { context: new HttpContext().set(REQUIRE_AUTH, true) }
+  ).pipe(map((response: any) => this.normalizeDetailResponse(response)));
+}
+
+/**
+ * Cierre administrativo (Administrador/Gerente) de una orden activa que no se cerró sola.
+ * No factura ni mueve stock; si no estaba cobrada, no cuenta como venta.
+ */
+forceClose(name: string, reason: ForceCloseReason, comment?: string): Observable<any> {
+  const business = this.activeBusinessOrError();
+  if (business instanceof Error) return throwError(() => business);
+  return this.http.post<any>(
+    `${this.urlBase}.force_close_order`,
+    { name, reason, comment: comment?.trim() || undefined, business },
     { context: new HttpContext().set(REQUIRE_AUTH, true) }
   ).pipe(map((response: any) => this.normalizeDetailResponse(response)));
 }

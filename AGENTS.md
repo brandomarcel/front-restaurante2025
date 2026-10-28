@@ -149,6 +149,11 @@ Funciones:
 - Lenguaje según el negocio: restaurante dice «opciones» y propone «Sabor»; comercio dice
   "variantes" y propone Color/Talla. Un restaurante en inventario Simple no ve bodegas.
 
+## Cierre administrativo de órdenes
+
+- «Cerrar manualmente…» (detalle de la orden; permiso `restaurant.orders.force_close`, Administrador y
+  Gerente): motivo obligatorio, mesa libre, sin factura ni stock; no cobrada = no cuenta como venta.
+
 ## Aviso de pedidos a Caja
 
 - `NewOrderAlertService` avisa (sonido + toast con «Imprimir comanda») a quien cobra cuando otra persona

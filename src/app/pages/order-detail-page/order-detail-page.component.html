@@ -21,6 +21,7 @@
               <div class="flex flex-wrap items-center gap-2">
                 <h1 class="truncate text-2xl font-black tracking-tight text-foreground">{{ orderHeadline }}</h1>
                 <span class="status-chip" [ngClass]="orderStatusClass">{{ isLocked ? 'Facturada' : orderStatusLabel }}</span>
+                <span *ngIf="isForceClosed" class="status-chip border-destructive/30 bg-destructive/10 text-destructive" [attr.title]="order?.force_close_reason">Cierre manual</span>
               </div>
               <p class="mt-0.5 text-sm text-muted-foreground">
                 #{{ order?.name }} · {{ order?.type || 'Servirse' }} · {{ order?.createdAt | ecuadorTime }}
@@ -59,6 +60,7 @@
                 <button *ngIf="order?.sri?.invoice" type="button" role="menuitem" class="menu-item" (click)="printAndClose('factura')">📄 Factura PDF</button>
                 <button *ngIf="canMarkReady && canCloseOrder" type="button" role="menuitem" class="menu-item" (click)="showMoreActions = false; closeOrder()">Cerrar orden sin marcar lista</button>
                 <button *ngIf="canCancelOrder" type="button" role="menuitem" class="menu-item text-destructive" (click)="showMoreActions = false; setOrderStatus('Cancelada')">Cancelar orden</button>
+                <button *ngIf="canForceClose" type="button" role="menuitem" class="menu-item text-destructive" (click)="showMoreActions = false; showForceClose = true">Cerrar manualmente…</button>
               </div>
             </div>
           </div>
@@ -344,3 +346,10 @@
   (close)="closeSplitDialog()"
   (submitSplit)="createSplit($event)">
 </app-split-order-dialog>
+
+<app-force-close-dialog
+  *ngIf="showForceClose && order?.name"
+  [orderName]="order.name"
+  (closed)="onForceClosed()"
+  (dismissed)="showForceClose = false">
+</app-force-close-dialog>

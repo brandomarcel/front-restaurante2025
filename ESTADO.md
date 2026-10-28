@@ -9,6 +9,17 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-10-28 (Claude, 5): cierre administrativo de órdenes. Detalle de la orden → menú «⋯» →
+  «Cerrar manualmente…» (solo con `restaurant.orders.force_close`: Administrador y Gerente), sobre
+  órdenes Ingresada/Preparación/Lista. Diálogo `shared/components/force-close-dialog` con motivo
+  obligatorio (se fue sin pagar, cobrada fuera del sistema, duplicado/prueba, otro con detalle);
+  `OrdersService.forceClose`. La orden queda Cerrada, la mesa Libre, sin factura ni devolución de stock;
+  si no estaba cobrada se marca «Cierre manual» y no cuenta como venta en el panel. Detalle con
+  chip «Cierre manual» y motivo. El cierre normal de Caja («Cerrar orden» = servida, se factura
+  después) no cambió. Compila con `ngc --noEmit`; sin probar en navegador.
+  Pendiente: acceso desde Órdenes en vivo (hoy solo desde el detalle); listar/filtrar cierres manuales
+  en un reporte; las subcuentas sin facturar de una orden cerrada manualmente quedan como están.
+
 - 2026-10-28 (Claude, 4): aviso de pedido nuevo para Caja. `NewOrderAlertService`
   (`services/new-order-alert.service.ts`, iniciado por el layout): al llegar `order.created` de otra
   persona (mesero) suena un aviso de tres tonos, sale un toast «Nuevo pedido · Mesa 5» con mesero y

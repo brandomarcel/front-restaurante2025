@@ -1,0 +1,44 @@
+<div class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 backdrop-blur-sm sm:items-center sm:p-3"
+  role="dialog" aria-modal="true" aria-labelledby="force-close-title" (click)="dismissed.emit()">
+  <div class="w-full max-w-md rounded-t-3xl border border-border bg-card p-5 shadow-2xl sm:rounded-2xl" (click)="$event.stopPropagation()">
+    <div class="mb-3 flex items-start justify-between gap-3">
+      <div>
+        <h3 id="force-close-title" class="text-lg font-black text-foreground">Cerrar orden manualmente</h3>
+        <p class="text-xs text-muted-foreground">Orden <span class="font-semibold text-foreground/80">#{{ orderName }}</span></p>
+      </div>
+      <button type="button" class="h-9 w-9 rounded-lg border border-border text-muted-foreground hover:bg-muted" (click)="dismissed.emit()" aria-label="Cerrar">✕</button>
+    </div>
+
+    <p class="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+      Esto no emite factura ni devuelve inventario, y libera la mesa. Queda registrado con tu nombre y el motivo.
+    </p>
+
+    <fieldset class="space-y-2">
+      <legend class="mb-1 text-xs font-bold uppercase text-muted-foreground">Motivo</legend>
+      <label *ngFor="let option of reasons"
+        class="flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 transition"
+        [ngClass]="reason === option.value ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'">
+        <input type="radio" name="force-close-reason" class="mt-1" [value]="option.value" [(ngModel)]="reason" />
+        <span>
+          <span class="block text-sm font-semibold text-foreground">{{ option.label }}</span>
+          <span class="block text-xs text-muted-foreground">{{ option.hint }}</span>
+        </span>
+      </label>
+    </fieldset>
+
+    <div *ngIf="reason" class="mt-3">
+      <label for="force-close-comment" class="mb-1 block text-xs font-bold uppercase text-muted-foreground">
+        Detalle <span *ngIf="reason !== 'other'" class="font-normal normal-case">(opcional)</span>
+      </label>
+      <textarea id="force-close-comment" rows="2" maxlength="300" class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+        [(ngModel)]="comment" placeholder="Ej. el cliente salió por la puerta lateral"></textarea>
+    </div>
+
+    <div class="mt-4 flex gap-2">
+      <button type="button" class="h-11 flex-1 rounded-xl border border-border text-sm font-bold text-foreground hover:bg-muted" (click)="dismissed.emit()" [disabled]="saving">Volver</button>
+      <button type="button" class="h-11 flex-1 rounded-xl bg-destructive text-sm font-bold text-white disabled:opacity-50" (click)="confirm()" [disabled]="!canConfirm">
+        {{ saving ? 'Cerrando…' : 'Cerrar orden' }}
+      </button>
+    </div>
+  </div>
+</div>
