@@ -5,6 +5,7 @@ import { PrintService } from './print.service';
 import { RestaurantRealtimeService } from './restaurant-realtime.service';
 
 const ALERT_SOUND_KEY = 'facturada.caja.sound';
+const AUTO_PRINT_KEY = 'facturada.caja.autoprint';
 const ALERT_DURATION_MS = 30000;
 
 /**
@@ -60,6 +61,20 @@ export class NewOrderAlertService {
     if (enabled) this.playSound();
   }
 
+  /** Imprimir la comanda sola al llegar el pedido. Es por equipo: solo la PC de la impresora debe activarlo. */
+  get autoPrint(): boolean {
+    try { return localStorage.getItem(AUTO_PRINT_KEY) === '1'; } catch { return false; }
+  }
+
+  setAutoPrint(enabled: boolean): void {
+    try { localStorage.setItem(AUTO_PRINT_KEY, enabled ? '1' : '0'); } catch { /* solo esta sesión */ }
+  }
+
+  /** El usuario actual recibe avisos de pedidos (cobra y ve órdenes). */
+  get available(): boolean {
+    return this.shouldAlert();
+  }
+
   private shouldAlert(): boolean {
     return this.capabilities.isEnabled('orders')
       && this.capabilities.hasPermission('restaurant.orders.read')
@@ -82,11 +97,13 @@ export class NewOrderAlertService {
 
     this.playSound();
     this.addTitleBadge();
+    const autoPrint = this.autoPrint;
+    if (autoPrint) this.printService.printComandaHidden(name);
     toast.success(`Nuevo pedido · ${where}`, {
-      description: detail || undefined,
+      description: [detail, autoPrint ? 'Comanda enviada a la impresora' : ''].filter(Boolean).join(' · ') || undefined,
       duration: ALERT_DURATION_MS,
       action: {
-        label: 'Imprimir comanda',
+        label: autoPrint ? 'Reimprimir' : 'Imprimir comanda',
         onClick: () => {
           if (!this.printService.openComanda(name)) toast.error('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes.');
         },

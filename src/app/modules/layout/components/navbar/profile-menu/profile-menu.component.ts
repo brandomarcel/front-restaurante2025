@@ -12,6 +12,7 @@ import { UtilsService } from '../../../../../core/services/utils.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { AlertService } from '../../../../../core/services/alert.service';
 import { PwaService } from '../../../../../core/services/pwa.service';
+import { NewOrderAlertService } from 'src/app/services/new-order-alert.service';
 
 interface ProfileItem {
   title: string;
@@ -53,6 +54,7 @@ interface ProfileItem {
 export class ProfileMenuComponent implements OnInit {
   private utilsService = inject(UtilsService);
   public pwa = inject(PwaService);
+  public orderAlerts = inject(NewOrderAlertService);
 
   ambiente$ = this.utilsService.ambiente$;
 

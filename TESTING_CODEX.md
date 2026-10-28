@@ -303,3 +303,5 @@ restaurante con `tables` y/o `kitchen` apagados. Probar en navegador un RESTO_BA
 Mesero/Cocina ni por órdenes propias, canceladas o repetidas; `openComanda` bloqueado por el navegador
 muestra error; botón «Imprimir comanda» en tarjeta y tabla de «Nuevas». Prueba manual con dos
 sesiones (mesero crea, cajero ve y oye el aviso).
+Impresión automática: `printComandaHidden` (marco oculto que se elimina a los 30 s), interruptor
+`autoPrint` por equipo, toast «Reimprimir». Prueba manual con Chrome `--kiosk-printing` y la térmica real.

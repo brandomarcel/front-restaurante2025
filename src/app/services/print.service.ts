@@ -42,6 +42,21 @@ export class PrintService {
     return !!window.open(environment.URL + this.getComanda(orderId), '_blank', features);
   }
 
+  /**
+   * Imprime la comanda sin abrir ventana: la carga en un marco oculto del mismo sitio.
+   * Sin diálogo solo si Chrome corre con `--kiosk-printing` y la térmica es la impresora
+   * predeterminada; en un navegador normal igual aparece el diálogo de impresión.
+   */
+  printComandaHidden(orderId: string): void {
+    const frame = document.createElement('iframe');
+    frame.setAttribute('aria-hidden', 'true');
+    frame.tabIndex = -1;
+    frame.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none;';
+    frame.src = environment.URL + this.getComanda(orderId);
+    document.body.appendChild(frame);
+    setTimeout(() => frame.remove(), 30000);
+  }
+
   getSalesInvoiceTicket(orderId: string) {
     const url = `/printview?doctype=FacturADA Lite Invoice&name=${orderId}&trigger_print=1&format=FacturADA Lite Ticket&no_letterhead=1&letterhead=Sin%20Membrete&settings=%7B%7D&_lang=es-EC`;
     return url;

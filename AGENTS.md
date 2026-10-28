@@ -152,7 +152,8 @@ Funciones:
 ## Aviso de pedidos a Caja
 
 - `NewOrderAlertService` avisa (sonido + toast con «Imprimir comanda») a quien cobra cuando otra persona
-  crea una orden; también hay «Imprimir comanda» en las tarjetas «Nuevas» de Órdenes en vivo.
+  crea una orden; también hay «Imprimir comanda» en las tarjetas «Nuevas» de Órdenes en vivo y un interruptor por equipo
+  «Imprimir comandas solas» (marco oculto; sin diálogo solo con Chrome `--kiosk-printing`).
 
 ## Planes y módulos por negocio
 

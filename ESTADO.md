@@ -19,9 +19,16 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
   tarjetas «Nuevas» tienen «Imprimir comanda» junto a «Enviar a cocina» (tarjeta y tabla).
   Backend Restaurante: `serialize_order` ahora trae `table_name` y `waiter_name` (reiniciar workers).
   Compila con `ngc --noEmit`; Restaurante 59 OK. Sin probar en navegador ni con dos usuarios.
+  Impresión automática (servidor en la nube + térmica USB: no sirve imprimir desde el servidor):
+  menú del perfil → «Imprimir comandas solas» (por equipo, `facturada.caja.autoprint`) y «Sonido de
+  pedidos nuevos»; la comanda se carga en un marco oculto (`PrintService.printComandaHidden`, no una
+  ventana emergente, que el navegador bloquea sin clic). Sale sin diálogo solo si la PC de caja abre
+  Chrome con `--kiosk-printing` y la térmica es la impresora predeterminada; si no, aparece el
+  diálogo normal. Ejemplo (Windows): `chrome.exe --kiosk-printing --app=https://<dominio>/portal/`.
+  Activarlo solo en la PC de la impresora (si hay dos cajas con el interruptor, sale doble).
   Pendiente: el botón «Enviar a cocina» sigue saliendo en negocios sin cocina (RESTO_BASICO) y
-  debería ocultarse; impresión automática sin diálogo (kiosco o servicio de impresión);
-  preferencia de sonido de Caja sin interruptor en pantalla (`setSoundEnabled` listo).
+  debería ocultarse; probar con la térmica real; si luego hay impresoras de red/cocina, evaluar
+  impresión desde el servidor (solo con servidor local o VPN) o un programa local (QZ Tray).
 
 - 2026-10-28 (Claude, 3): planes por módulos (el trabajo está en Core, ver su ESTADO). El front no
   cambió: ya oculta Mesas (`tables`) y Cocina (`kitchen`) por `featureKey` y el POS Mesero no exige

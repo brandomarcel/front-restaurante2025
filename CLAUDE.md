@@ -153,7 +153,8 @@ Funciones:
 
 - Quien cobra (`billing.create`) recibe en cualquier pantalla un aviso sonoro y un toast con «Imprimir
   comanda» cuando otra persona crea una orden (`NewOrderAlertService`). La comanda también se imprime
-  desde las tarjetas «Nuevas» de Órdenes en vivo. El navegador siempre muestra el diálogo de impresión.
+  desde las tarjetas «Nuevas» de Órdenes en vivo. «Imprimir comandas solas» (menú del perfil, por equipo) la
+  manda sin ventana; sin diálogo solo con Chrome `--kiosk-printing` y la térmica como predeterminada.
 
 ## Planes y módulos por negocio
 
