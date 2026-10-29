@@ -51,7 +51,7 @@
                 <a class="font-semibold text-primary hover:underline" [routerLink]="['/dashboard/invoices', inv.name]">
                   {{ documentNumber(inv) }}
                 </a>
-                <div class="text-[11px] text-muted-foreground">{{ inv.name || '—' }}</div>
+                <div class="text-[11px] text-muted-foreground">{{ inv.name || '—' }} <span *ngIf="inv.legacy_import" class="font-semibold text-primary">· Migrado · {{ inv.legacy_source_name }}</span></div>
                 <div *ngIf="isCancelled(inv)" class="text-[11px] font-semibold text-red-700 dark:text-red-300">Documento anulado · Ver historial</div>
                 <div *ngIf="accessKey(inv) as key" class="max-w-[200px] truncate font-mono text-[10px] text-muted-foreground"
                   [title]="key">{{ key }}</div>
@@ -92,6 +92,7 @@
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <p class="truncate text-sm font-bold text-foreground">{{ documentNumber(inv) }}</p>
+                <p *ngIf="inv.legacy_import" class="text-[11px] font-semibold text-primary">Migrado · {{ inv.legacy_source_name }}</p>
                 <p class="truncate text-xs text-foreground/80">{{ customerName(inv) }}</p>
                 <p class="text-[11px] text-muted-foreground">{{ postingDate(inv) }} · {{ customerIdentification(inv) }}</p>
               </div>

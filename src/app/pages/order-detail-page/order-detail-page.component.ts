@@ -1086,6 +1086,7 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   }
 
   get isLocked(): boolean {
+    if (this.order?.name?.startsWith('MIG-')) return true;
   // Elige la condición que prefieras:
   // A) bloquear si es de tipo Factura
   // return this.order?.type === 'Factura';

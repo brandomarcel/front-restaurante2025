@@ -152,7 +152,7 @@ export class InvoiceDetailPageComponent implements OnInit {
   }
 
   get canManageCollections(): boolean {
-    return !this.isCancelled && (this.capabilities.hasPermission('*')
+    return !this.invoice?.legacy_import && !this.isCancelled && (this.capabilities.hasPermission('*')
       || this.capabilities.hasPermission('billing.manage')
       || this.capabilities.hasPermission('billing.create'));
   }
@@ -661,6 +661,7 @@ export class InvoiceDetailPageComponent implements OnInit {
   }
 
   get annulBlockReason(): string {
+    if (this.invoice?.legacy_import) return 'Documento migrado: historial de solo lectura.';
     if (!this.invoice) return 'Factura no disponible.';
     if (this.isCancelled) return 'La factura ya está anulada. Consulta su historial y las notas de crédito relacionadas.';
     if (['PARTIAL', 'PENDING'].includes(this.invoice?.credit_note_summary?.state)) return 'La factura ya tiene notas de crédito relacionadas. Revisa su importe y estado antes de crear otra.';
@@ -778,6 +779,7 @@ export class InvoiceDetailPageComponent implements OnInit {
   }
 
   get canSendEmail(): boolean {
+    if (this.invoice?.legacy_import) return false;
     if (this.isCancelled) return false;
     return this.capabilities.isLiteMode && this.isLiteAuthorized && this.capabilities.hasPermission('billing.manage');
   }

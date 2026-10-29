@@ -32,6 +32,7 @@ import { RemissionGuidesComponent } from 'src/app/pages/remission-guides/remissi
 import { RemissionGuideDetailComponent } from 'src/app/pages/remission-guide-detail/remission-guide-detail.component';
 import { RemissionGuideFormComponent } from 'src/app/pages/remission-guide-form/remission-guide-form.component';
 import { ReceivablesComponent } from 'src/app/pages/receivables/receivables.component';
+import { CompanyMigrationComponent } from 'src/app/pages/company-migration/company-migration.component';
 
 const routes: Routes = [
   {
@@ -52,6 +53,7 @@ const routes: Routes = [
       { path: 'inventory/stock-lookup', component: StockLookupComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'inventory', permissionKey: 'inventory.read' } },
       { path: 'products', component: ProductsComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'products', permissionKey: 'products.read' } },
       { path: 'company', component: CompanyComponent, canActivate: [RoleAccessGuard], data: { permissionKey: 'business.settings.manage' } },
+      { path: 'company-migration', component: CompanyMigrationComponent, canActivate: [RoleAccessGuard], data: { allowedRoles: ['ADMINISTRADOR'], permissionKey: 'business.settings.manage' } },
       { path: 'orders', component: OrdersComponent, canActivate: [RoleAccessGuard], data: { deniedPrimaryRoles: ['COCINA'], featureKey: 'orders', permissionKey: 'restaurant.orders.read', liteBlocked: true } },
       { path: 'orders/:id', component: OrderDetailPageComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { deniedPrimaryRoles: ['COCINA'], featureKey: 'orders', permissionKey: 'restaurant.orders.read', liteBlocked: true } },
       { path: 'tables', component: TablesComponent, canActivate: [RoleAccessGuard], data: { deniedPrimaryRoles: ['COCINA'], featureKey: 'tables', permissionKey: 'restaurant.orders.read' } },

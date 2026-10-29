@@ -10,6 +10,7 @@
 
 <ng-template #loadedState>
   <ng-container *ngIf="!error; else errorState">
+    <p *ngIf="order?.name?.startsWith('MIG-')" class="rounded-xl border border-border bg-muted p-3 text-sm text-foreground" role="status">Migrado desde Restaurante. Esta orden es histórica y de solo lectura.</p>
     <div class="space-y-3 pb-28 md:pb-4">
 
       <!-- ============ 1. Encabezado: qué orden es y cuál es el siguiente paso ============ -->

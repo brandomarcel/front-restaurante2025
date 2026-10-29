@@ -1,6 +1,10 @@
 import { canConsultLiteInvoice, canRetryLiteInvoice, getLiteInvoiceAction } from './lite-invoice-actions';
 
 describe('Acciones seguras de comprobantes Lite', () => {
+  it('un comprobante migrado no permite consultar ni reemitir desde acciones operativas', () => {
+    expect(getLiteInvoiceAction({ legacy_import: 'IMPORT-TEST', status: 'Rechazada' })).toBe('none');
+    expect(getLiteInvoiceAction({ legacy_import: 'IMPORT-TEST', status: 'Emitida', sri_code: '70' })).toBe('none');
+  });
   for (const code of ['43', '70']) {
     for (const fields of [
       { sri: { sri_code: code } },

@@ -19,6 +19,11 @@
     </span>
   </header>
 
+  <a *ngIf="isLiteMode && capabilities.hasRole(capabilities.roles, ['ADMINISTRADOR'])" routerLink="/dashboard/company-migration"
+    class="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-primary hover:bg-muted">
+    Importar datos e historial desde Restaurante →
+  </a>
+
   <div *ngIf="isLiteMode && !canEditLiteSetup" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
     Solo Administrador o Gerente pueden modificar la configuración de la empresa.
   </div>

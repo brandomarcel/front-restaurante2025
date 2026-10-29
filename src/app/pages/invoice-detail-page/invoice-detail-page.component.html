@@ -13,6 +13,9 @@
   </section>
 
   <ng-container *ngIf="!loadFailed">
+  <p *ngIf="invoice?.legacy_import" class="mb-3 rounded-xl border border-border bg-muted p-3 text-sm text-foreground" role="status">
+    Migrado desde Restaurante · {{ invoice.legacy_source_name }}. Historial de solo lectura; no genera nuevos cobros ni emisiones.
+  </p>
   <header class="mb-3 rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
     <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
       <div class="flex min-w-0 items-center gap-2">

@@ -93,7 +93,7 @@
               <div class="min-w-0 flex-1 basis-full sm:basis-auto">
                 <p class="truncate text-sm font-semibold text-foreground">{{ rowUser(row) }}</p>
                 <p class="truncate text-[11px] text-muted-foreground">
-                  <span class="font-mono">{{ row.name || row.apertura || '—' }}</span> · {{ rowDate(row) | date:'short' }}<ng-container *ngIf="terminalLabel(row)"> · {{ terminalLabel(row) }}</ng-container>
+                  <span class="font-mono">{{ row.name || row.apertura || '—' }} <span *ngIf="row.name?.startsWith('MIG-')" class="text-primary">· Migrado</span></span> · {{ rowDate(row) | date:'short' }}<ng-container *ngIf="terminalLabel(row)"> · {{ terminalLabel(row) }}</ng-container>
                 </p>
               </div>
               <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold" [ngClass]="statusClass(row)">{{ rowStatus(row) }}</span>
@@ -141,7 +141,7 @@
           <li *ngFor="let row of visibleWithdrawals; trackBy: trackByName" class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 sm:flex-nowrap">
             <div class="min-w-0 flex-1 basis-full sm:basis-auto">
               <p class="truncate text-sm font-semibold text-foreground">{{ row.reason || row.motivo || 'Retiro de caja' }}</p>
-              <p class="truncate text-[11px] text-muted-foreground">{{ rowUser(row) }} · {{ rowDate(row) | date:'short' }} · <span class="font-mono">{{ row.name || '—' }}</span></p>
+              <p class="truncate text-[11px] text-muted-foreground">{{ rowUser(row) }} · {{ rowDate(row) | date:'short' }} · <span class="font-mono">{{ row.name || '—' }} <span *ngIf="row.name?.startsWith('MIG-')" class="text-primary">· Migrado</span></span></p>
             </div>
             <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold" [ngClass]="statusClass(row)">{{ rowStatus(row) }}</span>
             <p class="w-24 shrink-0 text-right text-sm font-bold text-rose-700">−{{ rowAmount(row) | currency }}</p>
@@ -157,7 +157,7 @@
               <div class="min-w-0 flex-1 basis-full sm:basis-auto">
                 <p class="truncate text-sm font-semibold text-foreground">{{ rowUser(row) }}</p>
                 <p class="truncate text-[11px] text-muted-foreground">
-                  <span class="font-mono">{{ row.name || row.cierre || '—' }}</span> · {{ rowDate(row) | date:'short' }}<ng-container *ngIf="terminalLabel(row)"> · {{ terminalLabel(row) }}</ng-container>
+                  <span class="font-mono">{{ row.name || row.cierre || '—' }} <span *ngIf="row.name?.startsWith('MIG-')" class="text-primary">· Migrado</span></span> · {{ rowDate(row) | date:'short' }}<ng-container *ngIf="terminalLabel(row)"> · {{ terminalLabel(row) }}</ng-container>
                 </p>
               </div>
               <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold" [ngClass]="statusClass(row)">{{ rowStatus(row) }}</span>

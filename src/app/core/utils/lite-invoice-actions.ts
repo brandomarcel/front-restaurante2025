@@ -16,6 +16,7 @@ function normalized(value: unknown): string {
  * otra vez el mismo documento mientras está en procesamiento.
  */
 export function getLiteInvoiceAction(invoice: any): LiteInvoiceAction {
+	if (invoice?.legacy_import) return 'none';
   if (isClosedElectronicDocument(invoice)) return 'none';
   const sri = invoice?.sri && typeof invoice.sri === 'object' ? invoice.sri : {};
   const electronic = invoice?.electronic && typeof invoice.electronic === 'object' ? invoice.electronic : {};

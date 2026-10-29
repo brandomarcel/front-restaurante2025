@@ -117,7 +117,7 @@
           class="rounded-xl border border-border bg-card p-2.5 shadow-sm transition hover:-translate-y-[1px] hover:border-primary/30 hover:shadow-md">
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
-              <p class="truncate text-xs font-bold text-foreground">{{ order.name }}</p>
+              <p class="truncate text-xs font-bold text-foreground">{{ order.name }} <span *ngIf="order.name?.startsWith('MIG-')" class="font-semibold text-primary">· Migrado</span></p>
               <p *ngIf="order.alias" class="truncate text-[10px] text-muted-foreground">Alias: {{ order.alias }}</p>
             </div>
             <span class="badge" [ngClass]="getEstadoBadgeClass(order.status)">
@@ -180,7 +180,7 @@
             <tr *ngFor="let order of ordersFiltradosList" class="app-tr hover:bg-muted/40/70">
               <td class="app-td">
                 <div class="flex flex-col">
-                  <span class="font-semibold text-foreground">{{ order.name }}</span>
+                  <span class="font-semibold text-foreground">{{ order.name }} <span *ngIf="order.name?.startsWith('MIG-')" class="font-semibold text-primary">· Migrado</span></span>
                   <span class="text-[11px] text-muted-foreground" *ngIf="order.alias">Alias: {{ order.alias }}</span>
                 </div>
               </td>
