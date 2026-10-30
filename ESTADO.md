@@ -9,6 +9,10 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-10-29 (Claude): al abrir «Cobrar pedido/venta» en el POS de Caja el foco va al campo «Efectivo recibido»
+  (`abrirModalPago`, `cashReceivedInput`). Si la forma de pago inicial no es efectivo el campo no existe y no se enfoca
+  nada. Compila con `ngc --noEmit`; sin probar en navegador.
+
 - 2026-10-29 (Claude): POS sin imagen de producto. En lugar del cuadro «Sin imagen», el recuadro de la foto muestra el
   nombre del producto (negrita, hasta 3 líneas, `title` con el nombre completo) y se quita el nombre repetido de debajo;
   con foto no cambia. Tarjeta de Caja (general y retail, `pos-product-card.component.ts`) y de Mesero

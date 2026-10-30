@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -58,6 +58,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
   @ViewChild('productVariantPicker') productVariantPicker!: ProductVariantPickerComponent;
   @ViewChild(BarcodeScanInputComponent) barcodeScanInput?: BarcodeScanInputComponent;
   @ViewChild(ProductSearchModalComponent) productSearchModal?: ProductSearchModalComponent;
+  @ViewChild('cashReceivedInput') cashReceivedInput?: ElementRef<HTMLInputElement>;
   ambiente = '';
   showPaymentModal = false;
   showPrintModal = false;
@@ -595,6 +596,8 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.amountReceived = null;
     this.change = 0;
     this.showPaymentModal = true;
+    // El modal se pinta en el siguiente ciclo: el foco va al efectivo recibido (si la forma de pago es efectivo).
+    setTimeout(() => this.cashReceivedInput?.nativeElement.focus());
   }
 
   setPaymentCondition(condition: 'Contado' | 'Credito'): void {

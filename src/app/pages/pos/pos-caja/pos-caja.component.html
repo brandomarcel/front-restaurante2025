@@ -311,7 +311,7 @@
         <!-- Efectivo recibido y cambio -->
         <section *ngIf="isSelectedPaymentCash && !isCreditSale" class="rounded-xl border border-border p-2.5">
           <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <input type="text" inputmode="decimal" appDecimalInput [(ngModel)]="amountReceived" (ngModelChange)="calcularCambio()" min="0" step="0.01" placeholder="Efectivo recibido"
+            <input #cashReceivedInput type="text" inputmode="decimal" appDecimalInput [(ngModel)]="amountReceived" (ngModelChange)="calcularCambio()" min="0" step="0.01" placeholder="Efectivo recibido"
               aria-label="Efectivo recibido"
               class="h-14 w-full rounded-xl border border-border bg-card px-3 text-center text-2xl font-bold tabular-nums text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20" />
             <div class="flex flex-col items-center justify-center rounded-xl px-3 py-1.5"
