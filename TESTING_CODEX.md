@@ -209,7 +209,7 @@ Si agregas o cambias campos de un DocType, corre antes
 | App | Pruebas | Resultado |
 |-----|---------|-----------|
 | facturada_core | 79 | OK 29/10; incluye 4 casos de corrección de secuencia solo Desk |
-| facturada_lite | 238 | OK 29/10; incluye históricos sin número de autorización (advertencia, no autorización inventada) |
+| facturada_lite | 251 | OK 29/10; incluye 13 pruebas de limpieza Desk por ambiente/negocio |
 | facturada_restaurante | 59 | OK 29/10 en revisión anterior, no repetida para traslado al Desk |
 | facturada_api | 30 | Referencia previa; no repetida el 29/10 |
 
@@ -355,3 +355,14 @@ bloqueando. Casos factura/NC, vínculos, estado declarado/UNKNOWN técnico, núm
 vacío, nota explícita, solo lectura, sin proveedor/correo/cuota. XML firmado sin
 envoltura se admite sin inventar número; DTD/ajeno permanece bloqueado.
 Reporte: PRUEBAS_HISTORICOS_SIN_AUTORIZACION_2026-10-29.md.
+
+## Limpieza de documentos de Pruebas en Desk (2026-10-29)
+
+Última ejecución: Core 79 OK y Lite 251 OK (330 en total), HTTP/SMTP bloqueados,
+datos ficticios y rollback en facturada_core_simple_test. Nuevo módulo
+facturada_lite.api.test_sandbox_cleanup (13 pruebas). No ejecutar execute contra
+una empresa real como parte de pruebas ni instalación.
+Navegador: playwright.desk-migration.config.ts ahora incluye desk-cleanup.spec.ts
+y desk-migration.spec.ts, 6 OK con Frappe/API simulados. No requieren servidor
+real; no equivalen a una sesión completa del Desk conectado a Frappe.
+Reporte: PRUEBAS_LIMPIEZA_DESK_2026-10-29.md.

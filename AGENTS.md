@@ -333,3 +333,9 @@ En la migración histórica se permite número de autorización ausente con
 advertencia: estado declarado del origen, número vacío, notas/mensaje de
 autorización no acreditada, estados técnicos UNKNOWN y recepción no confirmada.
 No cambia el carácter Migrado/solo lectura ni habilita reemisión o cobro.
+
+La eliminación administrativa de comprobantes de Pruebas por negocio está solo
+en Desk: FacturADA Business → Mantenimiento → Eliminar documentos de Pruebas.
+No ofrecerla desde Angular. Requiere superadministración, revisión y confirmación;
+no borra Producción ni operaciones vinculadas, no reinicia secuencias ni cupos.
+Backend: facturada_lite.api.sandbox_cleanup; guía en Lite docs/LIMPIEZA_PRUEBAS_DESK.md.

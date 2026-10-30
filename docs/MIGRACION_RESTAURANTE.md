@@ -54,3 +54,12 @@ disminuirlo, incluso usando una sesión de superadministrador. Se mantienen
 rango 0..999999999, enlaces e identidad de la secuencia. Bajar el contador no
 borra ni renumera documentos: no se reutilizan facturas/NC existentes (tampoco
 anuladas), y el control del historial migrado sigue vigente al emitir.
+
+## Limpiar comprobantes de Pruebas del destino
+
+Desde FacturADA Business → Mantenimiento → Eliminar documentos de Pruebas.
+Solo superadministración Desk, con cantidades, bloqueos y frase de confirmación.
+Incluye facturas, NC y guías del negocio seleccionado. No limpia órdenes, caja,
+stock, cobros, contabilidad, consumo ni secuencias; si hay vínculos operativos,
+se bloquea todo para no romperlos. No borra Producción ni otras empresas.
+Guía backend: facturada_lite/docs/LIMPIEZA_PRUEBAS_DESK.md.

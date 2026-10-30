@@ -9,6 +9,8 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-10-29: limpieza de facturas/NC/guías de Pruebas solo en Desk Business, con vista previa, frase y controles de referencias, sin acceso desde Angular. Documentado en docs/MIGRACION_RESTAURANTE.md y guía backend docs/LIMPIEZA_PRUEBAS_DESK.md. Core 79 OK + Lite 251 OK; 6 pruebas navegador Desk OK. Sin cambios de código Angular ni repetir build/Karma, sin borrado real o despliegue.
+
 - 2026-10-29 (Claude): al abrir «Cobrar pedido/venta» en el POS de Caja el foco va al campo «Efectivo recibido»
   (`abrirModalPago`, `cashReceivedInput`). Si la forma de pago inicial no es efectivo el campo no existe y no se enfoca
   nada. Compila con `ngc --noEmit`; sin probar en navegador.
