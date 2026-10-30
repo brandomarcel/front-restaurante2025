@@ -16,6 +16,7 @@ import { recipePortions, canSellProduct, getAvailableStock, getInventoryUnit, ha
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { ProductVariantPickerComponent } from 'src/app/shared/components/product-variant-picker/product-variant-picker.component';
 import { ProductSearchModalComponent } from 'src/app/shared/components/product-search-modal/product-search-modal.component';
+import { ProductThumbComponent } from 'src/app/shared/components/product-thumb/product-thumb.component';
 import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 
 type OrderType = 'Servirse' | 'Llevar' | 'Domicilio';
@@ -23,7 +24,7 @@ type OrderType = 'Servirse' | 'Llevar' | 'Domicilio';
 @Component({
   selector: 'app-pos-mesero',
   standalone: true,
-  imports: [CommonModule, FormsModule, ProductVariantPickerComponent, ProductSearchModalComponent, DecimalInputDirective, LineNoteEditorComponent],
+  imports: [CommonModule, FormsModule, ProductVariantPickerComponent, ProductSearchModalComponent, DecimalInputDirective, LineNoteEditorComponent, ProductThumbComponent],
   templateUrl: './pos-mesero.component.html',
   styles: [':host { display: block; height: 100%; min-height: 0; }']
 })

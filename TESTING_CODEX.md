@@ -208,14 +208,15 @@ Si agregas o cambias campos de un DocType, corre antes
 
 | App | Pruebas | Resultado |
 |-----|---------|-----------|
-| facturada_core | 75 | Referencia previa; no repetida el 29/10 |
-| facturada_lite | 234 | OK 29/10, incluye 69 de migración (37 paquete/exportador + 32 integración) |
+| facturada_core | 79 | OK 29/10; incluye 4 casos de corrección de secuencia solo Desk |
+| facturada_lite | 238 | OK 29/10; incluye históricos sin número de autorización (advertencia, no autorización inventada) |
 | facturada_restaurante | 59 | OK 29/10 en revisión anterior, no repetida para traslado al Desk |
 | facturada_api | 30 | Referencia previa; no repetida el 29/10 |
 
-Última ejecución del cambio Desk: **234 aprobadas** en Lite, HTTP/SMTP real bloqueado
-y rollback. Restaurante 59 conserva su resultado anterior del mismo día. Solo
-facturada_core_simple_test se usa para pruebas. Core/API son referencias.
+Última ejecución de corrección de secuencias: **314 aprobadas** (79 Core + 235 Lite),
+HTTP/SMTP real bloqueado y rollback. Restaurante 59 conserva su resultado anterior
+del mismo día; API 30 es referencia previa. Solo facturada_core_simple_test se usa
+para pruebas. Ver PRUEBAS_SECUENCIAS_DESK_2026-10-29.md.
 Exportador de restaurante_app: excepción expresamente solicitada por el usuario,
 pruebas puras desde Lite sin instalar Legacy en el sitio de pruebas.
 Reporte y comandos actuales: [PRUEBAS_MIGRACION_DESK_2026-10-29.md](PRUEBAS_MIGRACION_DESK_2026-10-29.md).
@@ -346,3 +347,11 @@ con CHROME_BIN/LD_LIBRARY_PATH de esta guía. No requieren servidor ni sitio rea
 interceptan toda navegación/HTTP. Son un arnés del asistente, no una prueba de Desk
 completo conectado a Frappe. El fixture Company ahora renderiza su plantilla con
 providers/mocks y comprueba que no ofrece importación; ya no es una falla heredada.
+
+## Históricos sin número de autorización (2026-10-29)
+
+Última suite Lite: 238 OK. Falta de número ya no bloquea; falta de clave sigue
+bloqueando. Casos factura/NC, vínculos, estado declarado/UNKNOWN técnico, número
+vacío, nota explícita, solo lectura, sin proveedor/correo/cuota. XML firmado sin
+envoltura se admite sin inventar número; DTD/ajeno permanece bloqueado.
+Reporte: PRUEBAS_HISTORICOS_SIN_AUTORIZACION_2026-10-29.md.

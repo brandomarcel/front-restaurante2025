@@ -9,6 +9,14 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-10-29 (Claude): POS sin imagen de producto. En lugar del cuadro «Sin imagen», el recuadro de la foto muestra el
+  nombre del producto (negrita, hasta 3 líneas, `title` con el nombre completo) y se quita el nombre repetido de debajo;
+  con foto no cambia. Tarjeta de Caja (general y retail, `pos-product-card.component.ts`) y de Mesero
+  (`pos-mesero.component.html`). Compila con `ngc --noEmit`; sin probar en navegador ni con nombres muy largos/modo oscuro.
+  El recuadro es un solo componente, `shared/components/product-thumb` (`app-product-thumb`), usado por las tres tarjetas.
+
+- 2026-10-29: contrato de migración actualizado: se admiten históricos sin número de autorización con advertencia, estado declarado de origen y constancia de autorización no acreditada; no cambian las protecciones Migrado/solo lectura. Lite 238 OK, sin cambios de código Angular ni nueva ejecución de sus pruebas. Guía docs/MIGRACION_RESTAURANTE.md actualizada. No se importó el ZIP real ni se desplegó.
+
 - 2026-10-29: migración administrativa movida exclusivamente al Desk: Business → Migración → Importar desde Restaurante, y lista FacturADA Legacy Import. Retiradas pantalla, ruta, enlace y pruebas de carga Angular. Conservadas marcas/bloqueos de históricos. API exige System Manager/Administrator y administrador del negocio. Diagnóstico descargable, identificación recuperada del nombre Legacy solo cuando falta y coincide exactamente, duplicados explícitos; autorización solo recuperada desde XML autorizado local coincidente. No se inventan datos ni se fusionan personas. Lite 234 OK, asistente Desk 3 pruebas de navegador OK, Angular 479 OK/25 fallas heredadas (504); fixture de Company corregido. Build sin optimización OK. Guía docs/MIGRACION_RESTAURANTE.md y reporte PRUEBAS_MIGRACION_DESK_2026-10-29.md. Pendiente publicación/cache destino y validación del ZIP real; no se importó empresa real ni se desplegó producción.
 
 - 2026-10-28 (Claude, 8): dos pendientes cerrados. (1) Sin cocina habilitada ya no sale «Enviar a cocina»: en

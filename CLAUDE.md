@@ -425,3 +425,8 @@ en las listas/detalles de históricos. Destino vacío salvo consumidor final y
 mismo RUC; revisión antes de confirmación atómica/idempotente. Stock actual por
 entradas únicas; historial de movimientos conservado en ZIP. No traslada usuarios,
 firmas, planes ni configuración fiscal. Ver docs/MIGRACION_RESTAURANTE.md.
+
+En la migración histórica se permite número de autorización ausente con
+advertencia: estado declarado del origen, número vacío, notas/mensaje de
+autorización no acreditada, estados técnicos UNKNOWN y recepción no confirmada.
+No cambia el carácter Migrado/solo lectura ni habilita reemisión o cobro.

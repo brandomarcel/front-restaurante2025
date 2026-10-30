@@ -156,8 +156,7 @@
           <div class="mb-1 flex cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-muted"
             [ngClass]="isRetailPos ? 'h-[108px] sm:h-[122px]' : 'h-[82px] sm:h-[92px]'"
             (click)="canAddProduct(product) && onProductCardClick(product)">
-            <img *ngIf="product.image_url" [src]="product.image_url" [alt]="product.nombre || product.name" class="pointer-events-none h-full w-full object-cover" />
-            <span *ngIf="!product.image_url" class="pointer-events-none text-[10px] text-muted-foreground/70">Sin imagen</span>
+            <app-product-thumb [imageUrl]="product.image_url" [name]="product.nombre || product.name"></app-product-thumb>
           </div>
           <div class="pointer-events-none absolute left-2 top-2 z-10 flex gap-1">
             <span
@@ -196,7 +195,7 @@
             class="flex flex-1 flex-col text-left disabled:cursor-not-allowed"
             [disabled]="!canAddProduct(product)"
             (click)="onProductCardClick(product)">
-            <p class="line-clamp-2 min-h-[28px] text-[12px] font-bold leading-4 text-foreground">
+            <p *ngIf="product.image_url" class="line-clamp-2 min-h-[28px] text-[12px] font-bold leading-4 text-foreground">
               {{ product.nombre || product.name }}
             </p>
 

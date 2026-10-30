@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { ProductThumbComponent } from 'src/app/shared/components/product-thumb/product-thumb.component';
 import { hasInventoryControl, recipePortions, isLowStockProduct, isOutOfStockProduct, resolveInventoryLabel } from 'src/app/shared/utils/inventory.utils';
 
 /**
@@ -11,7 +12,7 @@ import { hasInventoryControl, recipePortions, isLowStockProduct, isOutOfStockPro
 @Component({
   selector: 'app-pos-product-card',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ProductThumbComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- Retail: la foto es protagonista y el nombre/precio van superpuestos -->
@@ -21,12 +22,11 @@ import { hasInventoryControl, recipePortions, isLowStockProduct, isOutOfStockPro
       class="group relative flex h-full touch-manipulation flex-col overflow-hidden rounded-lg border bg-card shadow-sm transition active:scale-[.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       [ngClass]="canAdd ? 'cursor-pointer border-border hover:border-primary/50' : 'cursor-not-allowed border-red-200 opacity-70'">
       <div class="relative aspect-square w-full overflow-hidden bg-muted">
-        <img *ngIf="product.image_url" [src]="product.image_url" [alt]="product.nombre" class="pointer-events-none h-full w-full object-cover" loading="lazy" />
-        <div *ngIf="!product.image_url" class="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground/70">Sin imagen</div>
+        <app-product-thumb [imageUrl]="product.image_url" [name]="product.nombre"></app-product-thumb>
         <span *ngIf="outOfStock" class="pointer-events-none absolute left-1 top-1 rounded bg-red-600 px-1 py-0.5 text-[8px] font-bold text-white">AGOTADO</span>
         <ng-container *ngTemplateOutlet="favoriteButton; context: { $implicit: 'retail' }"></ng-container>
         <div class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-1.5 pb-1 pt-4">
-          <p class="line-clamp-1 text-[10px] font-bold leading-tight text-white">{{ product.nombre }}</p>
+          <p *ngIf="product.image_url" class="line-clamp-1 text-[10px] font-bold leading-tight text-white">{{ product.nombre }}</p>
           <p class="text-[11px] font-black leading-tight text-white">{{ hasVariants ? (restaurantWording ? 'Ver opciones' : 'Ver variantes') : ('$' + (product.precio | number:'1.2-2')) }}</p>
         </div>
       </div>
@@ -44,13 +44,12 @@ import { hasInventoryControl, recipePortions, isLowStockProduct, isOutOfStockPro
         class="relative flex h-full min-h-[150px] touch-manipulation flex-col rounded-xl border bg-card p-2.5 text-xs shadow-sm transition active:scale-[.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:p-3"
         [ngClass]="canAdd ? 'cursor-pointer border-border hover:border-primary/40 hover:shadow-md' : 'cursor-not-allowed border-red-200 bg-red-50/50 opacity-70'">
         <div class="mb-1.5 flex h-[92px] items-center justify-center overflow-hidden rounded-lg bg-muted sm:h-[104px]">
-          <img *ngIf="product.image_url" [src]="product.image_url" [alt]="product.nombre" class="pointer-events-none h-full w-full object-cover" loading="lazy" />
-          <span *ngIf="!product.image_url" class="pointer-events-none text-[10px] text-muted-foreground/70">Sin imagen</span>
+          <app-product-thumb [imageUrl]="product.image_url" [name]="product.nombre"></app-product-thumb>
         </div>
         <span *ngIf="outOfStock" class="pointer-events-none absolute left-2 top-2 z-10 rounded bg-red-600 px-1.5 py-0.5 text-[9px] font-semibold text-white shadow-sm">AGOTADO</span>
         <ng-container *ngTemplateOutlet="favoriteButton; context: { $implicit: 'general' }"></ng-container>
 
-        <p class="line-clamp-2 min-h-[32px] font-bold leading-4 text-foreground">{{ product.nombre }}</p>
+        <p *ngIf="product.image_url" class="line-clamp-2 min-h-[32px] font-bold leading-4 text-foreground">{{ product.nombre }}</p>
         <p class="mt-0.5 truncate text-[10px] text-muted-foreground">{{ product.descripcion || product.codigo || 'Sin descripción' }}</p>
 
         <div class="mt-auto pt-1">
