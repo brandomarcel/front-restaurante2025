@@ -413,3 +413,15 @@ día cuando cambien comandos, rutas o reglas. **Excepción:** si el usuario pide
 que Claude haga las pruebas (ocurrió en la sesión de recetas, 2026-10-27/28), las escribe y
 corre con los comandos de `TESTING_CODEX.md`, sin tocar las aserciones de Codex: solo ajusta
 fixtures cuando cambia una regla, y lo dice.
+
+## Migración desde Restaurante (2026-10-29)
+
+La carga administrativa se hace exclusivamente en el Desk: abrir FacturADA
+Business → Migración → Importar desde Restaurante, o buscar FacturADA Legacy
+Import → Importar desde Restaurante. Requiere System Manager/Administrator y
+permiso Administrador del negocio en backend. Angular no tiene pantalla, enlace
+ni ruta company-migration. Conserva las marcas Migrado y bloqueos de operación
+en las listas/detalles de históricos. Destino vacío salvo consumidor final y
+mismo RUC; revisión antes de confirmación atómica/idempotente. Stock actual por
+entradas únicas; historial de movimientos conservado en ZIP. No traslada usuarios,
+firmas, planes ni configuración fiscal. Ver docs/MIGRACION_RESTAURANTE.md.

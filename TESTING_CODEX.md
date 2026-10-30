@@ -93,10 +93,10 @@ npx ng test --watch=false --browsers=ChromeHeadless
 (Con `CHROME_BIN` y `LD_LIBRARY_PATH` exportados, ver sección 3.) No uses `npm test` a
 secas: abre Chrome en modo watch y no termina.
 
-### Línea base conocida (2026-10-28)
+### Línea base conocida (2026-10-29)
 
-Última ejecución completa: **503 pruebas, 477 aprobadas y 26 fallidas heredadas**, sin error
-global asíncrono. Desde la línea base del 27/10 se añadieron specs de Insumos
+Última ejecución completa: **504 pruebas, 479 aprobadas y 25 fallidas heredadas**, sin error
+global asíncrono. Se retiraron las 5 pruebas de carga Angular al moverla al Desk; se conserva la prueba de acciones fiscales de históricos. El fixture de Company se corrigió y prueba que no ofrece importación. Desde la línea base del 27/10 se añadieron specs de Insumos
 (`pages/kitchen-supplies/*.spec.ts`), carrito y editor de notas del POS
 (`pages/pos/services/cart.service.spec.ts`, `pages/pos/ui/line-note-editor.component.spec.ts`),
 lenguaje de variantes por tipo de negocio, stock inicial y «Ajustar en Inventario» en
@@ -118,11 +118,11 @@ fiscales, guard y capacidades. Resultado completo y comandos en
 Resultado anterior (26/10): **421 pruebas, 395 aprobadas y 26 fallidas**, todas estas
 ultimas pertenecen a la lista heredada siguiente. Las 53 pruebas nuevas pasan.
 
-Las 26 fallas heredadas corresponden a specs
+Las 25 fallas heredadas actuales corresponden a specs
 "should create" heredados de la plantilla, a los que les faltan providers, y no
 indican regresiones:
 
-`AperturaCajaComponent`, `AppComponent` (3), `CloseCajaComponent`, `CompanyComponent`,
+`AperturaCajaComponent`, `AppComponent` (3), `CloseCajaComponent`,
 `DashboardComponent`, `Error404Component`, `Error500Component`, `ForgotPasswordComponent`,
 `LayoutComponent`, `NavbarComponent`, `NavbarMobileComponent`, `NewPasswordComponent`,
 `OrderCardComponent`, `OrderKitchenCardComponent`, `OrderModalComponent`,
@@ -204,19 +204,21 @@ bench --site facturada_core_simple_test run-tests --app facturada_lite
 Si agregas o cambias campos de un DocType, corre antes
 `bench --site facturada_core_simple_test migrate`.
 
-### Línea base conocida (2026-10-27, Redis arriba y sitio migrado)
+### Línea base backend (2026-10-29)
 
 | App | Pruebas | Resultado |
 |-----|---------|-----------|
-| facturada_core | 75 | OK |
-| facturada_lite | 165 | OK; `test_facturada_lite_recipe` (21): validaciones, merma, «sin», listados, solo restaurante |
-| facturada_restaurante | 59 | OK; recetas por orden, «sin», cancelación, permisos al cancelar, factura sin doble salida y Por Bodega |
-| facturada_api | 30 | OK |
+| facturada_core | 75 | Referencia previa; no repetida el 29/10 |
+| facturada_lite | 234 | OK 29/10, incluye 69 de migración (37 paquete/exportador + 32 integración) |
+| facturada_restaurante | 59 | OK 29/10 en revisión anterior, no repetida para traslado al Desk |
+| facturada_api | 30 | Referencia previa; no repetida el 29/10 |
 
-Total actual (28/10): **329 aprobadas** (core 75, lite 165, restaurante 59, api 30). Recetas focalizadas: 12 aprobadas con base real y
-rollback. El bloqueo HTTP/SMTP real se mantuvo activo durante las suites. Redis
-respondió PONG y los metadatos ya coincidían, por lo que esta última ejecución no
-requirió migración. Referencia anterior: 292 aprobadas.
+Última ejecución del cambio Desk: **234 aprobadas** en Lite, HTTP/SMTP real bloqueado
+y rollback. Restaurante 59 conserva su resultado anterior del mismo día. Solo
+facturada_core_simple_test se usa para pruebas. Core/API son referencias.
+Exportador de restaurante_app: excepción expresamente solicitada por el usuario,
+pruebas puras desde Lite sin instalar Legacy en el sitio de pruebas.
+Reporte y comandos actuales: [PRUEBAS_MIGRACION_DESK_2026-10-29.md](PRUEBAS_MIGRACION_DESK_2026-10-29.md).
 
 **Primera tarea completada:** se ejecutó `bench --site facturada_core_simple_test migrate`
 y se repitieron las cuatro suites (282 pruebas aprobadas). Los errores de `credit_days`
@@ -335,3 +337,12 @@ backend con un script temporal ya borrado.
 `OrderCard`/`OrderTable` con `kitchenEnabled=false` (sin «Enviar a cocina», con «Ver y cobrar»); detalle sin «Iniciar
 preparación» sin `kitchen`; `isWaiterOnly` (Mesero sí; Cajero, Gerente, Administrador no); `get_all_orders(mine=1)` filtra
 por `waiter` del usuario y `total` coincide. Verifiqué `mine` con un script temporal ya borrado.
+
+## Asistente de migración en Desk (2026-10-29)
+
+La carga ya no existe en Angular. Pruebas del JS de Lite con navegador y Frappe/API
+simulados: `npx playwright test --config=playwright.desk-migration.config.ts`,
+con CHROME_BIN/LD_LIBRARY_PATH de esta guía. No requieren servidor ni sitio real;
+interceptan toda navegación/HTTP. Son un arnés del asistente, no una prueba de Desk
+completo conectado a Frappe. El fixture Company ahora renderiza su plantilla con
+providers/mocks y comprueba que no ofrece importación; ya no es una falla heredada.

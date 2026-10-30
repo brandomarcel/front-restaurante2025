@@ -1,6 +1,0 @@
-{
-  "business": { "name": "MIGRATION-DEST", "business_name": "Negocio de pruebas", "tax_id": "1790012345001" },
-  "active_business": { "name": "MIGRATION-DEST", "business_name": "Negocio de pruebas", "tax_id": "1790012345001" },
-  "features": { "billing": true, "direct_invoice": true, "products": true, "customers": true, "restaurant": true, "inventory": true },
-  "permissions": ["*"], "roles": ["Administrador"], "business_role": "Administrador", "ready": true
-}

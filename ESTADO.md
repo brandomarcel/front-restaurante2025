@@ -1,6 +1,6 @@
 # Estado del proyecto Facturada
 
-Última actualización: 2026-10-28.
+Última actualización: 2026-10-29.
 
 ## Objetivo Actual
 
@@ -8,6 +8,8 @@ Mantener una memoria breve del progreso y los pendientes sin ampliar `CLAUDE.md`
 El trabajo local observado se concentra en la configuración de desarrollo del frontend Angular y su conexión con Frappe.
 
 ## Últimos Cambios (Hecho)
+
+- 2026-10-29: migración administrativa movida exclusivamente al Desk: Business → Migración → Importar desde Restaurante, y lista FacturADA Legacy Import. Retiradas pantalla, ruta, enlace y pruebas de carga Angular. Conservadas marcas/bloqueos de históricos. API exige System Manager/Administrator y administrador del negocio. Diagnóstico descargable, identificación recuperada del nombre Legacy solo cuando falta y coincide exactamente, duplicados explícitos; autorización solo recuperada desde XML autorizado local coincidente. No se inventan datos ni se fusionan personas. Lite 234 OK, asistente Desk 3 pruebas de navegador OK, Angular 479 OK/25 fallas heredadas (504); fixture de Company corregido. Build sin optimización OK. Guía docs/MIGRACION_RESTAURANTE.md y reporte PRUEBAS_MIGRACION_DESK_2026-10-29.md. Pendiente publicación/cache destino y validación del ZIP real; no se importó empresa real ni se desplegó producción.
 
 - 2026-10-28 (Claude, 8): dos pendientes cerrados. (1) Sin cocina habilitada ya no sale «Enviar a cocina»: en
   Órdenes en vivo (tarjeta y tabla, `kitchenEnabled`) el pedido nuevo muestra «Imprimir comanda» y «Ver y cobrar»,

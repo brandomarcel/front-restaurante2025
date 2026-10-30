@@ -316,3 +316,15 @@ intermedio: un push a `main` es un despliegue real.
 Codex es el responsable de **crear y ejecutar** las pruebas del frontend y del backend.
 Antes de hacerlo, lee y sigue [TESTING_CODEX.md](TESTING_CODEX.md): sitio de pruebas,
 mocks obligatorios del SRI, comandos verificados, línea base y formato del reporte.
+
+## Migración desde Restaurante (2026-10-29)
+
+La carga administrativa se hace exclusivamente en el Desk: abrir FacturADA
+Business → Migración → Importar desde Restaurante, o buscar FacturADA Legacy
+Import → Importar desde Restaurante. Requiere System Manager/Administrator y
+permiso Administrador del negocio en backend. Angular no tiene pantalla, enlace
+ni ruta company-migration. Conserva las marcas Migrado y bloqueos de operación
+en las listas/detalles de históricos. Destino vacío salvo consumidor final y
+mismo RUC; revisión antes de confirmación atómica/idempotente. Stock actual por
+entradas únicas; historial de movimientos conservado en ZIP. No traslada usuarios,
+firmas, planes ni configuración fiscal. Ver docs/MIGRACION_RESTAURANTE.md.
