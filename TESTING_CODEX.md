@@ -366,3 +366,13 @@ Navegador: playwright.desk-migration.config.ts ahora incluye desk-cleanup.spec.t
 y desk-migration.spec.ts, 6 OK con Frappe/API simulados. No requieren servidor
 real; no equivalen a una sesión completa del Desk conectado a Frappe.
 Reporte: PRUEBAS_LIMPIEZA_DESK_2026-10-29.md.
+
+## Catálogo de planes en Desk (2026-10-30)
+
+playwright.desk-migration.config.ts incluye además desk-plans.spec.ts: consulta
+get_plan_catalog mediante GET y aplicación mediante POST con payload de negocio/plan.
+El mock HTTP rechaza el método incorrecto con 403, reproduciendo la falla reportada.
+Suite Desk actual: 7 OK. Ejecutar con CHROME_BIN/LD_LIBRARY_PATH de esta guía:
+`npx playwright test --config=playwright.desk-migration.config.ts`.
+No se repitieron suites Python/Karma/build Angular: solo cambió JS del Desk Core.
+Evidencia temporal: /tmp/facturada-desk-plans-tests.log. Sin plan real ni despliegue.

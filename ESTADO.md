@@ -1,6 +1,6 @@
 # Estado del proyecto Facturada
 
-Última actualización: 2026-10-29.
+Última actualización: 2026-10-30.
 
 ## Objetivo Actual
 
@@ -8,6 +8,8 @@ Mantener una memoria breve del progreso y los pendientes sin ampliar `CLAUDE.md`
 El trabajo local observado se concentra en la configuración de desarrollo del frontend Angular y su conexión con Frappe.
 
 ## Últimos Cambios (Hecho)
+
+- 2026-10-30: corregido consumo HTTP del catálogo de planes del Desk en Core (GET, antes POST implícito). Aplicación del plan sigue POST. Nueva prueba tests-e2e/desk-plans.spec.ts; suite de asistentes Desk 7 OK con APIs simuladas, sin código Angular modificado. No se aplicó ningún plan real ni hubo despliegue.
 
 - 2026-10-29: limpieza de facturas/NC/guías de Pruebas solo en Desk Business, con vista previa, frase y controles de referencias, sin acceso desde Angular. Documentado en docs/MIGRACION_RESTAURANTE.md y guía backend docs/LIMPIEZA_PRUEBAS_DESK.md. Core 79 OK + Lite 251 OK; 6 pruebas navegador Desk OK. Sin cambios de código Angular ni repetir build/Karma, sin borrado real o despliegue.
 
