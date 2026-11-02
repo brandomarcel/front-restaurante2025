@@ -127,9 +127,58 @@
   border-radius: 0 0.5rem 0.5rem 0;
 }
 
+/* Lista de productos: columnas alineadas (Producto · Cantidad · Precio unit. · Total · Quitar).
+   En celular, el producto ocupa la primera línea y los valores la segunda. */
+.items-row {
+  @apply grid items-center gap-x-3 gap-y-2 px-4 py-2.5;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'prod prod act'
+    'qty price total';
+}
+
+.items-row .cell-prod { grid-area: prod; }
+.items-row .cell-qty { grid-area: qty; }
+.items-row .cell-price { grid-area: price; }
+.items-row .cell-total { grid-area: total; @apply text-right; }
+.items-row .cell-act { grid-area: act; @apply justify-self-end; }
+
+.items-head {
+  @apply hidden border-b border-border py-2 text-xs font-semibold text-muted-foreground;
+}
+
+@media (min-width: 640px) {
+  .items-row {
+    grid-template-columns: minmax(0, 1fr) 7rem 6.5rem 6rem;
+    grid-template-areas: 'prod qty price total';
+  }
+
+  .items-row.has-actions {
+    grid-template-columns: minmax(0, 1fr) 7rem 6.5rem 6rem 2.25rem;
+    grid-template-areas: 'prod qty price total act';
+  }
+
+  .items-row .cell-qty { @apply text-center; justify-self: center; }
+  .items-row .cell-price { @apply text-right; }
+
+  .items-head { @apply grid; }
+}
+
+/* Cantidad compacta dentro de la lista */
+.stepper-sm { @apply h-9; }
+.stepper-sm button { @apply w-8 text-base; }
+.stepper-sm input { @apply w-10; }
+
 /* Totales */
 .totals {
   @apply space-y-1 border-t border-border px-4 py-3 text-sm;
+}
+
+/* Desde tablet, los totales se alinean bajo las columnas de valores en vez de cruzar toda la tarjeta */
+@media (min-width: 640px) {
+  .totals > div {
+    @apply ml-auto max-w-xs;
+  }
 }
 
 .totals > div {

@@ -9,6 +9,12 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-01 (Claude, 9): lista de productos del detalle de orden como tabla de columnas alineadas (`.items-row`,
+  CSS grid): Producto · Cantidad · Precio unit. · Total · Quitar, con encabezado desde tablet; en celular el producto va
+  en una línea y cantidad/precio/total en la siguiente. Miniatura 36 px, filas más bajas, stepper compacto
+  (`.stepper-sm`), precio unitario como columna (antes repetido en «c/u»), totales alineados a la derecha (máx. 20rem)
+  desde tablet, aviso de inventario más corto. Solo HTML/CSS. `ngc --noEmit` OK; sin probar en navegador.
+
 - 2026-11-01 (Claude, 8): Fase 1 del flujo de mesa. Antes Administrador/Gerente/Cajero solo tenían «Cobrar» en el POS de
   Caja, así que toda orden nacía con pago y no admitía «+ Agregar productos». Ahora, con mesa elegida,
   `pos-caja` muestra «Enviar a cocina» / «Abrir cuenta» (`openTableTab`, sin pagos) como acción principal y
@@ -411,6 +417,35 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 - No se ejecutaron build, pruebas unitarias ni E2E en esta sesión de documentación. No hay historial conversacional previo disponible para atribuir otros trabajos o confirmar su resultado.
 
 ## Siguientes Pasos (To-Do)
+
+### Retomar aquí: flujo de restaurante (sesión 2026-11-01, Claude)
+
+Hecho y sin probar en navegador: refinamiento del detalle de orden, barra de cambios, bloqueo por inventario
+(`stock_consumed`), motivo de «no se pueden agregar productos», «Enviar a cocina / Abrir cuenta» sin cobro en el POS
+de Caja con mesa (Fase 1), lista de productos en columnas. Falta que el usuario revise la lista nueva en el navegador
+(nombre largo, celular, modo oscuro, modo editable como Administrador).
+
+**Siguiente tarea acordada (propuesta, falta el «sí» del usuario para implementar):** corregir una orden **Ingresada**
+antes de que la cocina empiece.
+- Hoy no se puede: el inventario se descuenta al crear la orden y desde ahí el backend bloquea productos/cantidades/
+  precios; además el único guardado (`update_order_for_invoice`) exige forma de pago, y una orden con pago ya no admite
+  cambios (círculo).
+- Diseño: endpoint nuevo en Restaurante, solo productos (sin pagos). Permitido si la orden está Ingresada, todos los
+  renglones en `kitchen_status` «Pendiente», sin pagos, factura ni subcuentas. En una sola transacción:
+  `cancel_order_stock_movements` → reemplazar renglones → `create_order_stock_movements` (rechaza si no hay stock).
+  Publicar `order.updated` para que cocina se actualice y Caja reciba «Pedido modificado» con «Reimprimir comanda».
+- Front: en Ingresada vuelven cantidad, precio (Gerente/Administrador), quitar y agregar producto; «Guardar cambios»
+  sin exigir pago. En Preparación/Lista sigue el aviso actual.
+- Actualizar la regla en `CLAUDE.md` («Cliente en el detalle de la orden» / inventario consumido) y pedir pruebas a
+  Codex: receta, falta de stock, plato ya iniciado, orden con pago.
+
+**Fases siguientes del flujo de mesa (propuestas):**
+- Fase 2: «Imprimir precuenta» en el detalle y en Mesas; «Cobrar» claro desde la tarjeta de la mesa y para nota de
+  venta sin factura (hoy: chip de pago → «Guardar cambios» → «Cerrar orden», poco obvio).
+- Fase 3: anular un producto ya enviado con motivo y autorización de Gerente/Administrador (devuelve insumos si no se
+  preparó); separar en pantalla el estado de cocina del estado de la cuenta (la barra mezcla ambos).
+- Otros: permitir agregar a una orden ya cobrada cobrando la diferencia (decidido no hacerlo por ahora); precio
+  `5.5` en vez de `5.50` (`appDecimalInput` compartido); toasts sobre el menú lateral (componente global).
 
 - Confirmar qué configuración de backend se usará para la próxima validación: localhost o red local.
 - Corregir la ruta del proxy en el comando del README.
