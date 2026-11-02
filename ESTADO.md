@@ -9,6 +9,22 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-01 (Claude, 11): regla unificada «lo cobrado no cambia». Antes, una orden con pago bloqueaba la ronda nueva
+  (`add_order_items`) pero dejaba corregir productos y montos desde la tarjeta (`update_order_for_invoice`), lo que
+  alteraba un cobro que ya contaba en Caja. Backend Restaurante: `_ensure_items_unchanged_after_stock` pasa a
+  `_ensure_items_unchanged(order, items, reason)` y se aplica también cuando la orden ya tiene pagos guardados
+  (mensaje «La orden ya fue cobrada…»). Front: `itemsLockedByPayment` en `canEditItems`, aviso «Ya se cobró $X…» en la
+  lista (y sin el aviso duplicado de la cabecera). Cliente, notas y forma de pago siguen editables; cobrar al final una
+  cuenta abierta (sin pago previo) sigue permitiendo corregir productos en el mismo guardado. Python y `ngc --noEmit`
+  OK; sin navegador ni tests backend (Codex: orden con pago + cambio de cantidad → rechazo; solo cambio de forma de
+  pago → OK; cuenta sin pago → corrige y cobra en un guardado). Puede requerir reiniciar el backend.
+
+- 2026-11-01 (Claude, 10): detalle de orden. (1) El buscador «+ Agregar producto» salía vacío («No items found»):
+  `ProductsService.getAll` sin `limit` devuelve el arreglo directo y `loadProducts` leía `message.data`. Ahora acepta
+  ambos y filtra como Facturar (activos, sin insumos). (2) En órdenes aún corregibles para facturar (lista editable) ya
+  no sale «No se pueden agregar productos…», que contradecía al buscador; la regla de `canAddItems` no cambia
+  (`addItemsBlocker` privado, `addItemsBlockedReason` solo decide si se muestra). `ngc --noEmit` OK; sin navegador.
+
 - 2026-11-01 (Claude, 9): lista de productos del detalle de orden como tabla de columnas alineadas (`.items-row`,
   CSS grid): Producto · Cantidad · Precio unit. · Total · Quitar, con encabezado desde tablet; en celular el producto va
   en una línea y cantidad/precio/total en la siguiente. Miniatura 36 px, filas más bajas, stepper compacto
@@ -444,6 +460,9 @@ antes de que la cocina empiece.
   venta sin factura (hoy: chip de pago → «Guardar cambios» → «Cerrar orden», poco obvio).
 - Fase 3: anular un producto ya enviado con motivo y autorización de Gerente/Administrador (devuelve insumos si no se
   preparó); separar en pantalla el estado de cocina del estado de la cuenta (la barra mezcla ambos).
+- Riesgo a revisar: el buscador de la tarjeta corrige la orden para facturar (`update_order_for_invoice`) y no pasa por
+  cocina ni descuenta inventario. En una orden sin movimientos de stock, agregar ahí un producto con inventario o
+  receta no lo descontaría. Decidir si ese buscador debe limitarse a productos sin inventario o descontar stock.
 - Otros: permitir agregar a una orden ya cobrada cobrando la diferencia (decidido no hacerlo por ahora); precio
   `5.5` en vez de `5.50` (`appDecimalInput` compartido); toasts sobre el menú lateral (componente global).
 

@@ -129,7 +129,10 @@
               </div>
             </div>
 
-            <p *ngIf="canEditOrder && itemsLockedByStock" class="notice notice-info mx-4 mt-3">
+            <p *ngIf="canEditOrder && itemsLockedByPayment" class="notice notice-info mx-4 mt-3">
+              Ya se cobró ${{ savedPaymentsTotal | number:'1.2-2' }}: productos, cantidades y precios quedan fijos. Puedes cambiar cliente, notas y forma de pago. Lo adicional va en una orden nueva.
+            </p>
+            <p *ngIf="canEditOrder && !itemsLockedByPayment && itemsLockedByStock" class="notice notice-info mx-4 mt-3">
               Inventario ya descontado: productos, cantidades y precios quedan fijos. Para corregir un error, cancela la orden o ciérrala manualmente desde «⋯».
             </p>
 

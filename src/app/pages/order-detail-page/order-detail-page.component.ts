@@ -179,8 +179,11 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   loadProducts(): void {
     this.productsSvc.getAll(1).subscribe({
       next: (res: any) => {
-        const all = (res?.message?.data || []) as Product[];
-        this.products = all.filter((p: any) => Number((p as any).isactive) === 1);
+        // Sin `limit`, el servicio devuelve el arreglo directo (no `message.data`): antes la lista quedaba vacía.
+        const all = (Array.isArray(res) ? res : (res?.message?.data || [])) as Product[];
+        // Mismo criterio que Facturar: activos y sin insumos (un insumo no se vende).
+        this.products = all.filter((p: any) => !p.is_ingredient
+          && (p.isactive === undefined || p.isactive === true || Number(p.isactive) === 1));
       },
       error: () => toast.error('Error al cargar la lista de productos.')
     });
@@ -649,7 +652,17 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   /** Con subcuentas creadas, los productos no se editan: cambiarían lo ya dividido. */
   get canEditItems(): boolean {
-    return this.canEditOrder && !this.orderSplits.length && !this.itemsLockedByStock;
+    return this.canEditOrder && !this.orderSplits.length && !this.itemsLockedByStock && !this.itemsLockedByPayment;
+  }
+
+  /** Ya hay un cobro guardado: lo cobrado no cambia (cuenta en Caja). El backend aplica la misma regla. */
+  get itemsLockedByPayment(): boolean {
+    return !!this.order?.payments?.length;
+  }
+
+  /** Total ya cobrado según lo guardado en la orden (no lo que se esté editando en pantalla). */
+  get savedPaymentsTotal(): number {
+    return this.round2(this.normalizeOrderPayments(this.order?.payments || []).reduce((acc, p) => acc + p.amount, 0));
   }
 
   /** El inventario ya se descontó: productos, cantidades y precios quedan fijos (cliente, notas y pagos sí). */
@@ -1402,7 +1415,7 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   get canAddItems(): boolean {
     return !!this.order?.name && this.isActiveOrder && this.canCreateOrders
-      && !this.isLocked && !this.order?.sri?.invoice && !this.addItemsBlockedReason;
+      && !this.isLocked && !this.order?.sri?.invoice && !this.addItemsBlocker;
   }
 
   /**
@@ -1410,11 +1423,14 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
    * Vacío si se puede, o si no aplica mostrar nada (sin permiso, facturada o cancelada).
    */
   get addItemsBlockedReason(): string {
+    // Con la lista editable el aviso contradiría a «+ Agregar producto»; con la orden cobrada lo explica el aviso de la lista.
+    return this.canEditItems || (this.canEditOrder && this.itemsLockedByPayment) ? '' : this.addItemsBlocker;
+  }
+
+  /** La regla en sí; `addItemsBlockedReason` solo decide si se muestra. */
+  private get addItemsBlocker(): string {
     if (!this.order?.name || !this.canCreateOrders || this.isLocked || this.isCancelled || this.order?.sri?.invoice) return '';
-    if (this.order?.payments?.length) {
-      const charged = this.normalizeOrderPayments(this.order.payments).reduce((acc, p) => acc + p.amount, 0);
-      return `ya se cobró $${this.round2(charged).toFixed(2)}.`;
-    }
+    if (this.itemsLockedByPayment) return `ya se cobró $${this.savedPaymentsTotal.toFixed(2)}.`;
     if (this.orderSplits.length) return 'tiene subcuentas; elimínalas antes de agregar.';
     if (!this.isActiveOrder) return 'la orden ya está cerrada.';
     return '';

@@ -185,6 +185,8 @@ Funciones:
   cédula/RUC, teléfono o correo, Consumidor final y «Nuevo» para crear. Al elegir se guarda al instante
   (`update_order_customer`, solo cliente; no pierde ítems/pagos sin guardar). Avisa si Consumidor final supera $50.
 - «Cobrar»: chips de forma de pago = un toque para cobrar el total; «Facturar» guarda solo los cambios pendientes.
+- Una orden **ya cobrada** (con pago guardado) tampoco cambia productos, cantidades ni precios, ni admite ronda nueva:
+  lo cobrado ya cuenta en Caja. Se puede cambiar cliente, notas y forma de pago; lo adicional va en una orden nueva.
 - Con el inventario ya consumido (toda orden de restaurante con stock) el backend permite cambiar cliente,
   notas y pagos; productos, cantidades y precios quedan fijos (`update_order_for_invoice`). `get_order_with_details` devuelve `stock_consumed` y el detalle bloquea esos controles con un aviso (no espera al error al guardar).
 
