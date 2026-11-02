@@ -163,9 +163,18 @@
           <app-pos-totals [subtotal]="subtotal" [discount]="cartService.totalDiscount" [iva]="iva" [total]="total" />
         </div>
         <div class="flex-shrink-0">
+          <!-- Mesa elegida: se abre la cuenta y se cobra al final; «Cobrar ahora» queda para quien paga al instante -->
+          <button *ngIf="canOpenTableTab" type="button" (click)="openTableTab()" [disabled]="!canCheckout"
+            class="mb-2 flex min-h-[46px] w-full items-center justify-between rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
+            <span>{{ openTableTabLabel }}</span>
+            <span class="text-xs font-semibold opacity-90">sin cobrar</span>
+          </button>
           <button type="button" (click)="abrirModalPago()" [disabled]="!canCheckout"
-            class="flex min-h-[46px] w-full items-center justify-between rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
-            <span>{{ genericMode ? 'Cobrar y emitir' : 'Cobrar' }} <kbd class="ml-1 rounded bg-white/20 px-1 text-[10px] font-normal">F10</kbd></span>
+            [ngClass]="canOpenTableTab
+              ? 'border border-border bg-card text-foreground hover:bg-muted'
+              : 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90'"
+            class="flex min-h-[46px] w-full items-center justify-between rounded-lg px-4 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50">
+            <span>{{ genericMode ? 'Cobrar y emitir' : (canOpenTableTab ? 'Cobrar ahora' : 'Cobrar') }} <kbd class="ml-1 rounded px-1 text-[10px] font-normal" [ngClass]="canOpenTableTab ? 'bg-muted' : 'bg-white/20'">F10</kbd></span>
             <span>${{ total | number:'1.2-2' }}</span>
           </button>
           <p *ngIf="checkoutHint" class="mt-1 text-center text-[10px] text-muted-foreground">{{ checkoutHint }}</p>

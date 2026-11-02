@@ -9,6 +9,14 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-01 (Claude, 8): Fase 1 del flujo de mesa. Antes Administrador/Gerente/Cajero solo tenían «Cobrar» en el POS de
+  Caja, así que toda orden nacía con pago y no admitía «+ Agregar productos». Ahora, con mesa elegida,
+  `pos-caja` muestra «Enviar a cocina» / «Abrir cuenta» (`openTableTab`, sin pagos) como acción principal y
+  «Cobrar ahora» como secundaria; sin mesa no cambia nada. Refactor: `buildBaseOrderPayload` compartido con
+  `buildOrderPayload`. Sin cambios de backend (`create_order_v2` ya acepta Nota Venta sin pagos). `ngc --noEmit` OK;
+  sin probar en navegador. Próximas fases propuestas: precuenta y «Cobrar» desde la tarjeta de la mesa; anular
+  producto con motivo y autorización; separar en pantalla estado de cocina y estado de la cuenta.
+
 - 2026-11-01 (Claude, 7): «+ Agregar productos» en el detalle de orden. Si no se puede (pagos, subcuentas o orden
   cerrada) ahora se explica bajo la línea de datos (`addItemsBlockedReason`, mismas reglas que `add_order_items`), y si hay
   cambios sin guardar pide confirmar antes de ir al POS (se perderían). Refactor: `isActiveOrder` y `canCreateOrders`

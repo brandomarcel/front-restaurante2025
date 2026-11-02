@@ -690,6 +690,32 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     this.submitOrder(payload);
   }
 
+  /**
+   * Servicio a la mesa: la cuenta se abre sin cobro y se cobra al final desde el detalle de la orden.
+   * Así se pueden agregar rondas después; una orden cobrada ya no admite productos nuevos.
+   * Sin mesa (mostrador, para llevar) se sigue cobrando primero.
+   */
+  get canOpenTableTab(): boolean {
+    return !this.genericMode && !!this.selectedTableId && this.capabilities.isEnabled('restaurant');
+  }
+
+  get openTableTabLabel(): string {
+    return this.capabilities.isEnabled('kitchen') ? 'Enviar a cocina' : 'Abrir cuenta';
+  }
+
+  openTableTab(): void {
+    if (!this.canOpenTableTab || this.isSubmittingOrder) return;
+    if (!this.customer) {
+      toast.error('Selecciona un cliente.');
+      return;
+    }
+    if (this.cartService.cart.length === 0) {
+      toast.error('Agrega productos al carrito.');
+      return;
+    }
+    this.submitOrder(this.buildBaseOrderPayload('Nota Venta'), true);
+  }
+
   async saveOrderMesero(): Promise<void> {
     if (this.cartService.cart.length === 0) {
       toast.error('Agrega productos al carrito.');
@@ -921,6 +947,11 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       return null;
     }
 
+    return { ...this.buildBaseOrderPayload(typePago), payments: paymentResult.payments };
+  }
+
+  /** Datos de la orden sin pagos: los comparten «Cobrar» y «Enviar sin cobrar» (cuenta abierta de mesa). */
+  private buildBaseOrderPayload(typePago: 'Nota Venta' | 'Factura') {
     return {
       table: this.selectedTableId || null,
       customer: this.customer?.name,
@@ -932,8 +963,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
       delivery_phone: this.deliveryPhone,
       fecha: this.today,
       status: typePago === 'Factura' ? 'Cerrada' : 'Ingresada',
-      items: orderItemsFromCart(this.cartService.cart),
-      payments: paymentResult.payments
+      items: orderItemsFromCart(this.cartService.cart)
     };
   }
 
@@ -1388,7 +1418,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     }
   }
 
-  private submitOrder(payload: any): void {
+  private submitOrder(payload: any, openTab = false): void {
     if (payload?.estado === 'Factura' && this.emissionBlockMessage) {
       toast.error(this.emissionBlockMessage);
       return;
@@ -1405,7 +1435,8 @@ export class PosCajaComponent implements OnInit, OnDestroy {
           toast.error('No se recibio numero de orden.');
           return;
         }
-        this.notifyOrderResult(res, payload?.estado === 'Factura');
+        if (openTab) toast.success(`Cuenta abierta${this.selectedTableLabel ? ' en ' + this.selectedTableLabel : ''}. Se cobra al final.`);
+        else this.notifyOrderResult(res, payload?.estado === 'Factura');
         this.refreshProductsSilently();
         window.dispatchEvent(new CustomEvent('facturada:restaurant-data-changed'));
         if (this.selectedTableId) {

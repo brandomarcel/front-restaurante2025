@@ -155,6 +155,13 @@ Funciones:
   no edita lo ya pedido. Bloqueado con factura, pagos o subcuentas. Cocina lo ve «Agregado», el stock se descuenta
   solo por lo agregado y la comanda adicional imprime únicamente ese lote. Quitar lo ya enviado: cancelar o cierre manual.
 
+## Cuenta abierta de mesa (cobrar al final)
+
+- En el POS de Caja con una mesa elegida, el botón principal es «Enviar a cocina» (o «Abrir cuenta» sin la función
+  `kitchen`): crea la orden **sin pago**, como el mesero, y se cobra al final desde el detalle. «Cobrar ahora» queda
+  como secundario. Sin mesa (mostrador, para llevar, domicilio) se cobra primero como siempre. Una orden con pago
+  registrado no admite productos nuevos: lo adicional va en una orden nueva.
+
 ## Sin cocina y «Mis órdenes»
 
 - Sin la función `kitchen` no hay «Enviar a cocina» ni «Iniciar preparación»: Caja imprime la comanda y cobra; la orden
