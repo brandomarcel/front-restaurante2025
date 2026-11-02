@@ -20,6 +20,12 @@
   @apply inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-bold text-white transition active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50;
 }
 
+/* Deshabilitado: se lee como bloqueado, no como activo a medias */
+.btn-main:disabled,
+.btn-main:disabled:hover {
+  @apply border border-border bg-muted text-muted-foreground opacity-100;
+}
+
 .btn-outline {
   @apply inline-flex h-10 items-center justify-center rounded-xl border border-border bg-card px-4 text-sm font-bold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50;
 }
@@ -60,11 +66,11 @@
 }
 
 .progress-dot {
-  @apply grid h-7 w-7 shrink-0 place-items-center rounded-full border-2 border-border bg-card text-xs font-bold;
+  @apply grid h-7 w-7 shrink-0 place-items-center rounded-full border-2 border-muted-foreground/40 bg-card text-xs font-bold;
 }
 
 .progress-label {
-  @apply hidden text-xs font-bold sm:inline;
+  @apply hidden text-xs font-semibold sm:inline;
 }
 
 .progress-step.is-done .progress-dot {
@@ -73,6 +79,14 @@
 
 .progress-step.is-current {
   @apply text-foreground;
+}
+
+.progress-step.is-current .progress-label {
+  @apply font-black;
+}
+
+.progress-step.is-done {
+  @apply text-foreground/80;
 }
 
 .progress-step.is-current .progress-dot {
@@ -107,6 +121,12 @@
   @apply w-12 border-x border-border bg-card text-center text-sm font-bold text-foreground outline-none;
 }
 
+/* Modificadores del producto («Sin queso…») */
+.item-note {
+  @apply mt-1.5 border-l-2 border-amber-500 bg-amber-500/10 py-1 pl-2 pr-2 text-sm font-semibold leading-snug text-amber-900 dark:text-amber-200;
+  border-radius: 0 0.5rem 0.5rem 0;
+}
+
 /* Totales */
 .totals {
   @apply space-y-1 border-t border-border px-4 py-3 text-sm;
@@ -135,6 +155,21 @@
 
 .field {
   @apply h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60;
+}
+
+/* Formulario de pago plegable */
+.pay-details > summary {
+  @apply cursor-pointer select-none text-sm font-bold text-foreground;
+}
+
+.item-note {
+  @apply inline-block max-w-full;
+}
+
+/* Fila con cambios aún sin guardar */
+.is-changed {
+  @apply bg-primary/5;
+  box-shadow: inset 3px 0 0 var(--primary);
 }
 
 /* Barra de cambios pendientes */

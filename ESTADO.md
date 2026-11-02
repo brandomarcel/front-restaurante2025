@@ -9,6 +9,60 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-01 (Claude, 7): «+ Agregar productos» en el detalle de orden. Si no se puede (pagos, subcuentas o orden
+  cerrada) ahora se explica bajo la línea de datos (`addItemsBlockedReason`, mismas reglas que `add_order_items`), y si hay
+  cambios sin guardar pide confirmar antes de ir al POS (se perderían). Refactor: `isActiveOrder` y `canCreateOrders`
+  compartidos por `canAddItems` y `canForceClose`. `ngc --noEmit` OK; sin probar en navegador.
+  El motivo con pagos ahora dice cuánto se cobró («ya se cobró $13.81»). Verificado en el sitio piloto (FRO-00998): el pago
+  se registra en el mismo instante que la orden (cobro en el POS de Caja), por eso «Lista» no permite agregar.
+  Pendiente de decisión: permitir agregar a una orden ya cobrada cobrando la diferencia (requiere backend y Caja).
+
+- 2026-11-01 (Claude, 6): revisión del detalle de orden. Verificado por lectura: `stock_consumed` llega a la pantalla
+  (`normalizeRestaurantOrder` conserva el resto de campos); el guardado con inventario consumido es compatible con el
+  backend (reenvía fila, cantidad y precio sin cambios; solo cliente/notas/pagos cambian). Ajustes: campo tipado en
+  `OrderDTO` y relleno inferior de la página con `ngClass` (evita choque `pb-4`/`pb-28`). `ngc --noEmit` OK; sin
+  pruebas Angular existentes para esta pantalla y sin probar en navegador.
+
+- 2026-11-01 (Claude, 5): pulido del detalle de orden (solo HTML/CSS). La barra de cambios ya no tapa los totales
+  (la página reserva espacio mientras está visible); la tarjeta de productos se ajusta al contenido (sin hueco
+  interno); el bloqueo por inventario es un aviso `notice-info` sobre la lista; el modificador se ajusta al texto y
+  cantidad + «Precio $» van en una línea; «Ir a Mesas» y «Nueva orden» pasan a enlaces en la línea de datos; en
+  «Cobrar» el formulario de pago es un `<details>` que se pliega cuando no se puede facturar (el aviso queda arriba).
+  Compila con `ngc --noEmit`; sin probar en navegador. Pendiente: el precio se ve `5.5` (formato de
+  `appDecimalInput`, compartido) y los toasts de error se superponen al menú lateral (componente global).
+
+- 2026-11-01 (Claude, 4): en el detalle de orden, con el inventario ya descontado el front dejaba editar
+  cantidad/precio y el backend rechazaba al guardar («La orden ya consumio inventario…»). Backend Restaurante
+  (`api/frontend.py`, `get_order_with_details`) ahora devuelve `stock_consumed` (campo aditivo, solo en el detalle) y el
+  front (`itemsLockedByStock`, `canEditItems`) oculta stepper, precio, quitar y «Agregar producto», con un aviso que
+  indica cancelar o cierre manual. Cliente, notas y pagos siguen editables. Python y `ngc --noEmit` OK; sin probar en
+  navegador ni con tests backend (los hace Codex). Un backend sin el campo se comporta como antes.
+
+- 2026-11-01 (Claude, 3): detalle de orden más automático. (1) Con un único pago, su monto sigue al total al
+  cambiar cantidad, precio o productos (`onItemsEdited`), así que ya no sale «Faltan $X para cuadrar»; el aviso solo
+  aparece con 2+ pagos que no cuadran y se quitó el de «los pagos cuadran». (2) El select de forma de pago salía
+  vacío cuando la orden guardaba el método por descripción/código: `resolvePaymentMethodName` lo iguala con `name`
+  (al cargar la orden y al llegar el catálogo). (3) Se quitó el texto «Los cambios pendientes se guardan
+  automáticamente al facturar» (la barra inferior ya lo cubre). Compila con `ngc --noEmit`; sin probar en navegador.
+  Sigue pendiente: sin ningún pago elegido, guardar productos exige elegir forma de pago (regla del backend).
+
+- 2026-11-01 (Claude, 2): barra «cambios sin guardar» del detalle de orden. Antes decía solo «Cambios en productos o
+  pagos sin guardar» y «Guardar cambios» fallaba con un toast si no había forma de pago (el backend
+  `update_order_for_invoice` exige pagos que sumen el total incluso al guardar solo productos). Ahora la barra dice
+  qué cambió (`pendingChangesSummary`: productos editados/agregados/quitados, forma de pago), la fila modificada se
+  marca (`isItemChanged`, clase `.is-changed`) y muestra la razón cuando no se puede guardar (`saveBlockReason`:
+  falta elegir forma de pago o el pago no cuadra) con el botón deshabilitado. `hasUnsavedInvoiceChanges` se refactorizó
+  en `isItemChanged` / `pendingItemChanges` / `paymentsChanged` sin cambiar su resultado. Compila con `ngc --noEmit`;
+  sin probar en navegador. Pendiente de decidir con backend: permitir guardar productos sin exigir pagos.
+
+- 2026-11-01 (Claude): refinamiento visual del detalle de orden, sin cambiar el sistema de diseño ni la lógica
+  (solo `order-detail-page.component.html/.css`). Columna de productos estirada con los totales al fondo; cantidad y
+  precio agrupados bajo el nombre de cada producto; modificadores en `.item-note` (más legibles); stepper de progreso
+  con pasos pendientes más visibles y etapa actual en negrita; en «Cobrar» el aviso «No se puede facturar…» va justo
+  sobre «Facturar» y todo `.btn-main:disabled` se ve gris bloqueado; placeholder «Seleccionar forma de pago»; «Cambiar»
+  cliente a la altura estándar de botones. Compila con `ngc --noEmit`; sin probar en navegador (pendiente revisar
+  móvil, modo oscuro y orden con subcuentas). Sin pruebas nuevas: no cambia comportamiento.
+
 - 2026-10-30: corregido consumo HTTP del catálogo de planes del Desk en Core (GET, antes POST implícito). Aplicación del plan sigue POST. Nueva prueba tests-e2e/desk-plans.spec.ts; suite de asistentes Desk 7 OK con APIs simuladas, sin código Angular modificado. No se aplicó ningún plan real ni hubo despliegue.
 
 - 2026-10-29: limpieza de facturas/NC/guías de Pruebas solo en Desk Business, con vista previa, frase y controles de referencias, sin acceso desde Angular. Documentado en docs/MIGRACION_RESTAURANTE.md y guía backend docs/LIMPIEZA_PRUEBAS_DESK.md. Core 79 OK + Lite 251 OK; 6 pruebas navegador Desk OK. Sin cambios de código Angular ni repetir build/Karma, sin borrado real o despliegue.
@@ -358,3 +412,9 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 - Actualizar este archivo al cierre de la próxima sesión con resultados comprobados y pendientes vigentes.
 
 Recordatorio operativo: un push a `main` despliega directamente a producción, sin staging intermedio.
+
+## 2026-11-01 — Cliente en detalle de orden
+- Detalle de orden: «Cambiar» cliente reemplaza el ng-select por `app-pos-customer-picker` (búsqueda en servidor + crear cliente).
+- Backend restaurante: `update_order_for_invoice` ya no rechaza órdenes con inventario consumido si productos/cantidades/precios no cambian (antes: «No se puede actualizar una orden que ya consumio inventario»).
+- Pendiente (Codex): pruebas del front y del endpoint; `tsc` del front compila sin errores, sin probar en navegador.
+- 2026-11-01 (2): cliente se guarda al elegirlo (endpoint nuevo `update_order_customer`); tarjeta de cliente rediseñada; chips de pago rápido; «Facturar» autoguarda cambios pendientes. Compila (`ng build` dev); sin probar en navegador. Pruebas pendientes para Codex.

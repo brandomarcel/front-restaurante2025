@@ -19,7 +19,7 @@ import { ForceCloseDialogComponent } from 'src/app/shared/components/force-close
 import { SplitOrderDialogComponent } from './components/split-order-dialog/split-order-dialog.component';
 import { OrderSplitsTableComponent } from './components/order-splits-table/order-splits-table.component';
 import { PaymentsService } from 'src/app/services/payments.service';
-import { CustomersService } from 'src/app/services/customers.service';
+import { PosCustomerPickerComponent } from 'src/app/pages/pos/pos-caja/ui/pos-customer-picker.component';
 import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { InvoicePaymentPayload, isPaymentMethodAlreadySelected, isTransferPayment, PAYMENT_REFERENCE_MAX_LENGTH, roundMoney, validatePaymentsTotal } from 'src/app/shared/utils/payment.utils';
@@ -60,6 +60,7 @@ type OrderItem = {
     FontAwesomeModule,
     DecimalInputDirective,
     SplitOrderDialogComponent,
+    PosCustomerPickerComponent,
     OrderSplitsTableComponent,
     ForceCloseDialogComponent
   ],
@@ -73,7 +74,9 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   // UI/estado
   products: Product[] = [];
-  customers: any[] = [];
+  /** Cliente elegido en el buscador (aún sin guardar en la orden). */
+  pickedCustomer: any = null;
+  customerSaving = false;
   orderCustomerId = '';
   orderItems: OrderItem[] = [];
   showSplitDialog = false;
@@ -107,7 +110,6 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     private ordersSvc: OrdersService,
     private orderSplitSvc: OrderSplitService,
     private paymentsSvc: PaymentsService,
-    private customersSvc: CustomersService,
     private alertService: AlertService,
     private capabilities: CompanyCapabilitiesService,
     private restaurantRealtime: RestaurantRealtimeService,
@@ -120,7 +122,6 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     this.realtimeSub.add(this.restaurantRealtime.events$.subscribe((event) => this.applyRealtimeEvent(event, id)));
     this.fetch(id);
     this.loadProducts();
-    this.loadCustomers();
     this.loadPaymentMethods();
   }
 
@@ -163,6 +164,7 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
           return;
         }
         this.orderCustomerId = this.getOrderCustomerId(this.order);
+        this.pickedCustomer = null;
         this.orderPayments = this.normalizeOrderPayments(this.order?.payments || []);
         this.hydrateOrderItems(this.order);
         if (this.supportsSplits) this.loadOrderSplits();
@@ -270,8 +272,8 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     this.router.navigate(['/dashboard/invoices', invName]);
   }
 
-  async emitirFacturaOrden(): Promise<void> {
-    if (!this.order?.name || this.orderInvoiceEmitting) return;
+  async emitirFacturaOrden(changesSaved = false): Promise<void> {
+    if (!this.order?.name || this.orderInvoiceEmitting || this.savingOrderChanges) return;
     if (this.emissionBlockMessage) {
       toast.error(this.emissionBlockMessage);
       return;
@@ -290,8 +292,9 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
       toast.error('Esta orden se cobra por subcuentas: factura cada subcuenta.');
       return;
     }
-    if (this.hasUnsavedInvoiceChanges) {
-      toast.info('Guarda los cambios de cliente o ítems antes de facturar la orden.');
+    if (this.hasUnsavedInvoiceChanges && !changesSaved) {
+      // Los cambios pendientes se guardan solos y la factura continúa con lo guardado.
+      this.saveOrderChanges(() => { void this.emitirFacturaOrden(true); });
       return;
     }
     if (this.isCurrentOrderFinalConsumer() && this.orderTotal > 50) {
@@ -339,16 +342,35 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
       });
   }
 
-  private loadCustomers(): void {
-    this.customersSvc.getAll(1).subscribe({
-      next: (customers: any[]) => {
-        this.customers = (Array.isArray(customers) ? customers : []).map((customer: any) => ({
-          ...customer,
-          nombre: customer?.nombre || customer?.customer_name || customer?.fullName || customer?.name
-        }));
-      },
-      error: () => { this.customers = []; }
-    });
+  /** Al elegir (o crear) un cliente se guarda en la orden de inmediato, sin pasar por «Guardar». */
+  onCustomerPicked(customer: any): void {
+    const customerId = String(customer?.name || '');
+    if (!customerId || !this.order?.name || this.customerSaving) return;
+    if (customerId === this.getOrderCustomerId(this.order)) {
+      this.showCustomerPicker = false;
+      return;
+    }
+    this.pickedCustomer = customer;
+    this.customerSaving = true;
+    this.ordersSvc.updateOrderCustomer(this.order.name, customerId)
+      .pipe(finalize(() => { this.customerSaving = false; }))
+      .subscribe({
+        next: (res: any) => {
+          // Solo se actualizan los datos del cliente: los ítems o pagos sin guardar no se pierden.
+          const saved = res?.message?.data || res?.data || {};
+          const customerFields = Object.keys(saved).filter((key) => /customer|cliente/i.test(key));
+          this.order = { ...this.order, ...Object.fromEntries(customerFields.map((key) => [key, saved[key]])) };
+          this.orderCustomerId = this.getOrderCustomerId(this.order);
+          this.pickedCustomer = null;
+          this.showCustomerPicker = false;
+          toast.success(`Cliente cambiado a ${customer?.nombre || 'el cliente seleccionado'}.`);
+        },
+        error: (error) => {
+          this.pickedCustomer = null;
+          this.orderCustomerId = this.getOrderCustomerId(this.order);
+          toast.error(this.extractBackendError(error));
+        }
+      });
   }
 
   // =================== Edición de Ítems ===================
@@ -379,25 +401,34 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
         total: this.round2(price) // subtotal sin IVA
       });
     }
-    this.recalculateOrder();
+    this.onItemsEdited();
   }
 
   incrementOrderQty(i: number): void {
     const it = this.orderItems[i];
     it.quantity = this.safeNumber(it.quantity, 0) + 1;
-    this.recalculateOrder();
+    this.onItemsEdited();
   }
 
   decrementOrderQty(i: number): void {
     const it = this.orderItems[i];
     it.quantity = Math.max(1, this.safeNumber(it.quantity, 1) - 1);
-    this.recalculateOrder();
+    this.onItemsEdited();
   }
 
   removeProductFromOrder(i: number): void {
     if (i < 0 || i >= this.orderItems.length) return;
     this.orderItems.splice(i, 1);
+    this.onItemsEdited();
+  }
+
+  /** Cambio hecho por el usuario en los productos: recalcula y ajusta el pago único al nuevo total. */
+  onItemsEdited(): void {
     this.recalculateOrder();
+    // Con un solo pago, el monto sigue al total solo (evita «faltan $X» tras cambiar una cantidad).
+    if (this.orderPayments.length === 1) {
+      this.orderPayments[0].amount = this.round2(this.orderTotal);
+    }
   }
 
   /** Recalcula cada línea en centavos con el mismo redondeo que la factura Lite. */
@@ -493,7 +524,7 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   }
 
   // =================== Guardado ===================
-  saveOrderChanges(): void {
+  saveOrderChanges(afterSave?: () => void): void {
   if (this.savingOrderChanges) return;
   if (!this.canEditOrder) {
     toast.error(this.isClosed ? 'La orden ya está cerrada.' : 'La orden ya está facturada.');
@@ -555,9 +586,10 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     .pipe(finalize(() => this.savingOrderChanges = false))
     .subscribe({
     next: () => {
-      toast.success('Orden actualizada.');
+      if (afterSave) afterSave();
+      else toast.success('Orden actualizada.');
       this.loadProducts();
-      if (this.order?.name) {
+      if (this.order?.name && !afterSave) {
         this.fetch(this.order.name);
       }
     },
@@ -617,7 +649,12 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   /** Con subcuentas creadas, los productos no se editan: cambiarían lo ya dividido. */
   get canEditItems(): boolean {
-    return this.canEditOrder && !this.orderSplits.length;
+    return this.canEditOrder && !this.orderSplits.length && !this.itemsLockedByStock;
+  }
+
+  /** El inventario ya se descontó: productos, cantidades y precios quedan fijos (cliente, notas y pagos sí). */
+  get itemsLockedByStock(): boolean {
+    return !!this.order?.stock_consumed;
   }
 
   get hasSplits(): boolean {
@@ -655,20 +692,24 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   }
 
   get customerName(): string {
+    if (this.pickedCustomer) return this.pickedCustomer.nombre || this.pickedCustomer.customer_name || 'Cliente';
     return this.order?.customer?.customer_name || this.order?.customer?.nombre || this.order?.customer_name
       || this.order?.nombre_cliente || 'Consumidor final';
   }
 
   get customerIdentification(): string {
+    if (this.pickedCustomer) return this.pickedCustomer.num_identificacion || this.pickedCustomer.identification_number || '';
     return this.order?.customer?.identification_number || this.order?.customer?.num_identificacion
       || this.order?.customer_identification_number || this.order?.identificacion_cliente || '';
   }
 
   get customerEmail(): string {
+    if (this.pickedCustomer) return this.pickedCustomer.correo || this.pickedCustomer.email || '';
     return this.order?.customer?.email || this.order?.customer?.correo || this.order?.customer_email || this.order?.correo_cliente || '';
   }
 
   get customerPhone(): string {
+    if (this.pickedCustomer) return this.pickedCustomer.telefono || this.pickedCustomer.phone || '';
     return this.order?.customer?.phone || this.order?.customer?.telefono || this.order?.customer_phone || this.order?.telefono_cliente || '';
   }
 
@@ -700,10 +741,25 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     payment.amount = Math.max(0, this.round2(this.orderTotal - others));
   }
 
+  /** Un toque: un único pago por el total con el método elegido. */
+  quickPay(method: any): void {
+    this.orderPayments = [{
+      payment_method: method?.name || '',
+      payment_code: method?.codigo || '',
+      amount: this.round2(this.orderTotal),
+      reference: ''
+    }];
+  }
+
+  get isFinalConsumerOverLimit(): boolean {
+    return this.isCurrentOrderFinalConsumer() && this.orderTotal > 50;
+  }
+
   /** Vuelve a los datos guardados de la orden, descartando ediciones locales. */
   discardChanges(): void {
     if (!this.order) return;
     this.orderCustomerId = this.getOrderCustomerId(this.order);
+    this.pickedCustomer = null;
     this.orderPayments = this.normalizeOrderPayments(this.order?.payments || []);
     this.hydrateOrderItems(this.order);
     this.showCustomerPicker = false;
@@ -924,6 +980,8 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
           name: payment.name || payment.codigo,
           description: payment.description || payment.nombre || payment.name || payment.codigo
         }));
+        // La orden pudo cargar antes que el catálogo: alinea los métodos ya cargados.
+        this.orderPayments.forEach((p: any) => p.payment_method = this.resolvePaymentMethodName(p.payment_method));
       },
       error: (e) => {
         this.paymentMethods = [];
@@ -1050,8 +1108,7 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   /** Validación preventiva; el backend conserva la validación definitiva. */
   private isCurrentOrderFinalConsumer(): boolean {
-    const customerId = this.orderCustomerId || this.getOrderCustomerId(this.order);
-    const selected = this.customers.find((customer: any) => String(customer?.name || '') === customerId);
+    const selected = this.pickedCustomer?.name === this.orderCustomerId ? this.pickedCustomer : null;
     const source = selected || this.order?.customer_data || this.order?.customer || {};
     const identificationType = String(
       source?.identification_type ?? source?.tipo_identificacion ?? this.order?.tipo_identificacion_cliente ?? ''
@@ -1062,9 +1119,22 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     return identificationType.includes('consumidor final') || identificationNumber === '9999999999999';
   }
 
+  /**
+   * La orden puede guardar el método por nombre, descripción o código; el select usa `name`.
+   * Sin esta equivalencia el select se veía vacío aunque el pago existiera.
+   */
+  private resolvePaymentMethodName(raw: any): string {
+    const value = String(raw ?? '').trim();
+    if (!value) return '';
+    const key = value.toLowerCase();
+    const match = this.paymentMethods.find((m: any) =>
+      [m?.name, m?.codigo, m?.nombre, m?.description].some((v) => String(v ?? '').trim().toLowerCase() === key));
+    return match?.name || value;
+  }
+
   private normalizeOrderPayments(payments: any[]): any[] {
     return (Array.isArray(payments) ? payments : []).map((payment: any) => ({
-      payment_method: String(payment?.payment_method || payment?.formas_de_pago || payment?.method || '').trim(),
+      payment_method: this.resolvePaymentMethodName(payment?.payment_method || payment?.formas_de_pago || payment?.method),
       payment_code: String(payment?.payment_code || payment?.forma_pago || payment?.codigo || '').trim(),
       amount: this.round2(this.safeNumber(payment?.amount ?? payment?.monto, 0)),
       reference: String(payment?.reference || '').trim()
@@ -1135,22 +1205,41 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   get hasUnsavedInvoiceChanges(): boolean {
     if (!this.order) return false;
     if (this.orderCustomerId !== this.getOrderCustomerId(this.order)) return true;
+    return this.pendingItemChanges.added > 0
+      || this.pendingItemChanges.removed > 0
+      || this.pendingItemChanges.edited > 0
+      || this.paymentsChanged;
+  }
+
+  /** La fila `index` difiere de lo guardado en la orden (producto, cantidad, precio o IVA). */
+  isItemChanged(index: number): boolean {
     const originalItems = Array.isArray(this.order?.items) ? this.order.items : [];
-    if (originalItems.length !== this.orderItems.length) return true;
+    const item = this.orderItems[index];
+    const original = originalItems[index];
+    if (!item) return false;
+    if (!original) return true;
+    const originalProduct = String(original?.product || original?.item || original?.productId || '').trim();
+    const originalQty = this.safeNumber(original?.qty ?? original?.quantity, 0);
+    const originalRate = this.safeMoney(original?.rate ?? original?.price);
+    const originalTax = this.safeNumber(original?.tax_rate ?? original?.tax_value, 0);
+    return String(item.productId || '').trim() !== originalProduct
+      || this.safeNumber(item.quantity, 0) !== originalQty
+      || this.safeMoney(item.price) !== originalRate
+      || this.safeNumber(item.tax_value, 0) !== originalTax;
+  }
 
-    const itemsChanged = this.orderItems.some((item, index) => {
-      const original = originalItems[index] || {};
-      const originalProduct = String(original?.product || original?.item || original?.productId || '').trim();
-      const originalQty = this.safeNumber(original?.qty ?? original?.quantity, 0);
-      const originalRate = this.safeMoney(original?.rate ?? original?.price);
-      const originalTax = this.safeNumber(original?.tax_rate ?? original?.tax_value, 0);
-      return String(item.productId || '').trim() !== originalProduct
-        || this.safeNumber(item.quantity, 0) !== originalQty
-        || this.safeMoney(item.price) !== originalRate
-        || this.safeNumber(item.tax_value, 0) !== originalTax;
-    });
-    if (itemsChanged) return true;
+  /** Cuántos productos se agregaron, quitaron o editaron respecto a lo guardado. */
+  get pendingItemChanges(): { added: number; removed: number; edited: number } {
+    const originalCount = Array.isArray(this.order?.items) ? this.order.items.length : 0;
+    const current = this.orderItems.length;
+    let edited = 0;
+    for (let i = 0; i < Math.min(originalCount, current); i++) {
+      if (this.isItemChanged(i)) edited++;
+    }
+    return { added: Math.max(0, current - originalCount), removed: Math.max(0, originalCount - current), edited };
+  }
 
+  get paymentsChanged(): boolean {
     const originalPayments = this.normalizeOrderPayments(this.order?.payments || []);
     if (originalPayments.length !== this.orderPayments.length) return true;
     return this.orderPayments.some((payment: any, index: number) => {
@@ -1160,6 +1249,28 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
         || this.round2(this.safeNumber(payment.amount, 0)) !== this.round2(this.safeNumber(original.amount, 0))
         || String(payment.reference || '') !== String(original.reference || '');
     });
+  }
+
+  /** Resumen en lenguaje llano de lo pendiente de guardar, para la barra inferior. */
+  get pendingChangesSummary(): string {
+    const { added, removed, edited } = this.pendingItemChanges;
+    const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+    const parts: string[] = [];
+    if (edited) parts.push(plural(edited, 'producto editado', 'productos editados'));
+    if (added) parts.push(plural(added, 'producto agregado', 'productos agregados'));
+    if (removed) parts.push(plural(removed, 'producto quitado', 'productos quitados'));
+    if (this.paymentsChanged) parts.push('forma de pago');
+    return parts.join(', ');
+  }
+
+  /**
+   * Por qué todavía no se puede guardar. El backend exige formas de pago que sumen el
+   * total de la orden incluso al guardar solo productos (`update_order_for_invoice`).
+   */
+  get saveBlockReason(): string | null {
+    if (!this.orderPayments.length) return 'Para guardar, elige la forma de pago en «Cobrar».';
+    if (this.paymentsDifference !== 0) return `Para guardar, ajusta el pago: ${this.paymentsDifferenceLabel.toLowerCase()}`;
+    return null;
   }
 
   addOrderPayment(): void {
@@ -1279,24 +1390,53 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   }
 
   /** «El cliente pidió algo más»: orden abierta, sin factura, pagos ni subcuentas. */
-  get canAddItems(): boolean {
+  /** Ingresada, en Preparación o Lista: la orden sigue abierta en el servicio. */
+  private get isActiveOrder(): boolean {
     const status = this.normalizeStatus(this.order?.status);
-    const active = status.includes('ingres') || status.includes('prepar') || status.includes('lista');
-    return !!this.order?.name && active && !this.isLocked && !this.order?.sri?.invoice
-      && !(this.order?.payments?.length) && !this.orderSplits.length
-      && this.capabilities.isEnabled('orders') && this.capabilities.hasPermission('restaurant.orders.create');
+    return status.includes('ingres') || status.includes('prepar') || status.includes('lista');
   }
 
-  addProducts(): void {
+  private get canCreateOrders(): boolean {
+    return this.capabilities.isEnabled('orders') && this.capabilities.hasPermission('restaurant.orders.create');
+  }
+
+  get canAddItems(): boolean {
+    return !!this.order?.name && this.isActiveOrder && this.canCreateOrders
+      && !this.isLocked && !this.order?.sri?.invoice && !this.addItemsBlockedReason;
+  }
+
+  /**
+   * Por qué no se pueden agregar productos (mismas reglas que `add_order_items` en el backend).
+   * Vacío si se puede, o si no aplica mostrar nada (sin permiso, facturada o cancelada).
+   */
+  get addItemsBlockedReason(): string {
+    if (!this.order?.name || !this.canCreateOrders || this.isLocked || this.isCancelled || this.order?.sri?.invoice) return '';
+    if (this.order?.payments?.length) {
+      const charged = this.normalizeOrderPayments(this.order.payments).reduce((acc, p) => acc + p.amount, 0);
+      return `ya se cobró $${this.round2(charged).toFixed(2)}.`;
+    }
+    if (this.orderSplits.length) return 'tiene subcuentas; elimínalas antes de agregar.';
+    if (!this.isActiveOrder) return 'la orden ya está cerrada.';
+    return '';
+  }
+
+  async addProducts(): Promise<void> {
     if (!this.order?.name) return;
+    if (this.hasUnsavedInvoiceChanges) {
+      // El POS es otra pantalla: lo pendiente se perdería sin aviso.
+      const result = await this.alertService.confirm(
+        'Tienes cambios sin guardar en esta orden. Si continúas, se perderán. Guárdalos o descártalos antes si los necesitas.',
+        'Agregar productos'
+      );
+      if (!result.isConfirmed) return;
+    }
     void this.router.navigate(['/dashboard/pos'], { queryParams: { agregar: this.order.name } });
   }
 
   /** Cierre administrativo: solo Administrador/Gerente, sobre órdenes aún activas. */
   get canForceClose(): boolean {
-    const status = this.normalizeStatus(this.order?.status);
     return !!this.order?.name && this.capabilities.hasPermission('restaurant.orders.force_close')
-      && (status.includes('ingres') || status.includes('prepar') || status.includes('lista'));
+      && this.isActiveOrder;
   }
 
   get isForceClosed(): boolean {

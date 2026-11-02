@@ -24,6 +24,8 @@ export interface OrderItemDTO {
 
 export interface OrderDTO {
   name: string;                // "ORD-00884"
+  /** Solo en el detalle: el inventario ya salió, productos/cantidades/precios quedan fijos. */
+  stock_consumed?: boolean;
   type: string;                // "Nota Venta" | "Factura" | ...
   createdAt: string;           // "YYYY-MM-DD HH:mm:ss"
   subtotal: number;
@@ -412,6 +414,11 @@ emitInvoiceForOrder(orderName: string): Observable<any> {
     },
     { context: new HttpContext().set(REQUIRE_AUTH, true) }
   ).pipe(map((response: any) => this.normalizeDetailResponse(response)));
+}
+
+/** Cambia solo el cliente de la orden (guardado inmediato, sin items ni pagos). */
+updateOrderCustomer(orderName: string, customer: string): Observable<any> {
+  return this.postRestaurant('update_order_customer', { order_name: orderName, customer });
 }
 
 /** Actualiza datos facturables sin cambiar el estado operativo de la orden. */

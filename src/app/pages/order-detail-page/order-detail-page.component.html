@@ -11,7 +11,7 @@
 <ng-template #loadedState>
   <ng-container *ngIf="!error; else errorState">
     <p *ngIf="order?.name?.startsWith('MIG-')" class="rounded-xl border border-border bg-muted p-3 text-sm text-foreground" role="status">Migrado desde Restaurante. Esta orden es histórica y de solo lectura.</p>
-    <div class="space-y-3 pb-28 md:pb-4">
+    <div class="space-y-3" [ngClass]="canEditOrder && hasUnsavedInvoiceChanges ? 'pb-28' : 'pb-4'">
 
       <!-- ============ 1. Encabezado: qué orden es y cuál es el siguiente paso ============ -->
       <header class="card p-4">
@@ -24,13 +24,16 @@
                 <span class="status-chip" [ngClass]="orderStatusClass">{{ isLocked ? 'Facturada' : orderStatusLabel }}</span>
                 <span *ngIf="isForceClosed" class="status-chip border-destructive/30 bg-destructive/10 text-destructive" [attr.title]="order?.force_close_reason">Cierre manual</span>
               </div>
-              <p class="mt-0.5 text-sm text-muted-foreground">
-                #{{ order?.name }} · {{ order?.type || 'Servirse' }} · {{ order?.createdAt | ecuadorTime }}
-              </p>
-              <div *ngIf="showTablesLink || showNewOrderLink" class="mt-2 flex flex-wrap gap-2">
-                <button *ngIf="showTablesLink" type="button" class="btn-outline" (click)="goToTables()">Mesas</button>
-                <button *ngIf="showNewOrderLink" type="button" class="btn-outline" (click)="newOrder()">Nueva orden</button>
+              <div class="mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+                <p class="text-sm text-muted-foreground">
+                  #{{ order?.name }} · {{ order?.type || 'Servirse' }} · {{ order?.createdAt | ecuadorTime }}
+                </p>
+                <button *ngIf="showTablesLink" type="button" class="link-btn" (click)="goToTables()">Ir a Mesas</button>
+                <button *ngIf="showNewOrderLink" type="button" class="link-btn" (click)="newOrder()">Nueva orden</button>
               </div>
+              <p *ngIf="addItemsBlockedReason" class="mt-1 text-xs text-muted-foreground">
+                No se pueden agregar productos: {{ addItemsBlockedReason }} Para lo adicional, crea una orden nueva.
+              </p>
             </div>
           </div>
 
@@ -97,7 +100,7 @@
             <div class="card-head">
               <div>
                 <h2 class="card-title">Productos <span class="text-muted-foreground">({{ orderItems.length }})</span></h2>
-                <p *ngIf="canEditOrder && !canEditItems" class="text-xs text-muted-foreground">Para cambiar productos, elimina antes las subcuentas.</p>
+                <p *ngIf="canEditOrder && !itemsLockedByStock && !canEditItems" class="text-xs text-muted-foreground">Para cambiar productos, elimina antes las subcuentas.</p>
               </div>
               <div *ngIf="canEditItems" class="w-full sm:w-80">
                 <ng-select
@@ -126,8 +129,13 @@
               </div>
             </div>
 
+            <p *ngIf="canEditOrder && itemsLockedByStock" class="notice notice-info mx-4 mt-3">
+              El inventario ya se descontó, así que los productos y precios no se pueden cambiar. Aún puedes cambiar cliente, notas y pagos.
+              Si hubo un error en el pedido, cancela la orden o ciérrala manualmente desde «⋯».
+            </p>
+
             <ul *ngIf="orderItems.length; else emptyItems" class="divide-y divide-border">
-              <li *ngFor="let item of orderItems; let i = index; trackBy: trackByIndex" class="flex flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap">
+              <li *ngFor="let item of orderItems; let i = index; trackBy: trackByIndex" class="flex items-start gap-3 px-4 py-3" [class.is-changed]="isItemChanged(i)">
                 <div class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
                   <img *ngIf="productImage(item.productId)" [src]="productImage(item.productId)" [alt]="item.productName || item.description" class="h-full w-full object-cover" />
                   <span *ngIf="!productImage(item.productId)" class="text-xs font-bold text-muted-foreground">{{ (item.productName || '?').charAt(0) }}</span>
@@ -139,30 +147,33 @@
                     <ng-container *ngIf="!(canEditPrice && canEditItems)">${{ item.price | number:'1.2-2' }} c/u · </ng-container>IVA {{ item.tax_value ?? 0 }}%
                     <span *ngIf="item.discount" class="font-semibold text-emerald-600"> · desc. −${{ item.discount | number:'1.2-2' }}</span>
                   </p>
-                  <p *ngIf="item.notes" class="mt-1 inline-flex rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-bold text-amber-700 dark:text-amber-300">📝 {{ item.notes }}</p>
+                  <p *ngIf="item.notes" class="item-note">{{ item.notes }}</p>
+
+                  <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <!-- Cantidad -->
+                    <div *ngIf="canEditItems; else fixedQty" class="stepper" role="group" [attr.aria-label]="'Cantidad de ' + item.productName">
+                      <button type="button" (click)="decrementOrderQty(i)" [disabled]="item.quantity <= 1" aria-label="Restar uno">−</button>
+                      <input type="number" min="1" step="1" class="no-spinner" [(ngModel)]="item.quantity" [ngModelOptions]="{standalone: true}" (ngModelChange)="onItemsEdited()" aria-label="Cantidad" />
+                      <button type="button" (click)="incrementOrderQty(i)" aria-label="Sumar uno">+</button>
+                    </div>
+                    <ng-template #fixedQty><span class="text-sm font-bold text-foreground">{{ item.quantity }} ×</span></ng-template>
+
+                    <!-- Precio (solo Gerente/Administrador) -->
+                    <label *ngIf="canEditPrice && canEditItems" class="flex items-center gap-1.5">
+                      <span class="text-xs font-semibold text-muted-foreground">Precio $</span>
+                      <input type="text" inputmode="decimal" appDecimalInput min="0" step="0.01"
+                        class="field !w-24 text-right"
+                        [(ngModel)]="item.price" [ngModelOptions]="{standalone: true}" (ngModelChange)="onItemsEdited()" />
+                    </label>
+                  </div>
                 </div>
 
-                <!-- Cantidad -->
-                <div *ngIf="canEditItems; else fixedQty" class="stepper" role="group" [attr.aria-label]="'Cantidad de ' + item.productName">
-                  <button type="button" (click)="decrementOrderQty(i)" [disabled]="item.quantity <= 1" aria-label="Restar uno">−</button>
-                  <input type="number" min="1" step="1" class="no-spinner" [(ngModel)]="item.quantity" [ngModelOptions]="{standalone: true}" (ngModelChange)="recalculateOrder()" aria-label="Cantidad" />
-                  <button type="button" (click)="incrementOrderQty(i)" aria-label="Sumar uno">+</button>
+                <div class="flex shrink-0 items-center gap-2">
+                  <p class="min-w-[5rem] text-right text-base font-black tabular-nums text-foreground">${{ ((item.total ?? 0) + (item.iva ?? 0)) | number:'1.2-2' }}</p>
+                  <button *ngIf="canEditItems" type="button" class="icon-btn !h-9 !w-9 text-destructive hover:!bg-destructive/10" (click)="removeProductFromOrder(i)" [attr.aria-label]="'Quitar ' + item.productName" title="Quitar">
+                    <fa-icon [icon]="['fas', 'trash']" class="text-xs"></fa-icon>
+                  </button>
                 </div>
-                <ng-template #fixedQty><span class="text-sm font-bold text-foreground">{{ item.quantity }} ×</span></ng-template>
-
-                <!-- Precio (solo Gerente/Administrador) -->
-                <label *ngIf="canEditPrice && canEditItems" class="flex flex-col">
-                  <span class="text-[10px] font-bold uppercase text-muted-foreground">Precio</span>
-                  <input type="text" inputmode="decimal" appDecimalInput min="0" step="0.01"
-                    class="h-9 w-24 rounded-lg border border-border bg-card px-2 text-right text-sm text-foreground"
-                    [(ngModel)]="item.price" [ngModelOptions]="{standalone: true}" (ngModelChange)="recalculateOrder()" />
-                </label>
-
-                <p class="w-24 text-right text-base font-black tabular-nums text-foreground">${{ ((item.total ?? 0) + (item.iva ?? 0)) | number:'1.2-2' }}</p>
-
-                <button *ngIf="canEditItems" type="button" class="icon-btn !h-9 !w-9 text-destructive hover:!bg-destructive/10" (click)="removeProductFromOrder(i)" [attr.aria-label]="'Quitar ' + item.productName" title="Quitar">
-                  <fa-icon [icon]="['fas', 'trash']" class="text-xs"></fa-icon>
-                </button>
               </li>
             </ul>
 
@@ -201,38 +212,29 @@
         <aside class="space-y-3 xl:sticky xl:top-3 xl:self-start">
 
           <!-- ============ 3. Cliente ============ -->
-          <section class="card p-4">
-            <div class="flex items-start justify-between gap-2">
-              <div class="min-w-0">
-                <p class="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Cliente</p>
-                <p class="truncate text-base font-bold text-foreground">{{ customerName }}</p>
-                <p *ngIf="customerIdentification" class="text-sm text-muted-foreground">{{ customerIdentification }}</p>
-                <p *ngIf="customerEmail || customerPhone" class="truncate text-xs text-muted-foreground">
-                  {{ customerEmail }}<span *ngIf="customerEmail && customerPhone"> · </span>{{ customerPhone }}
-                </p>
+          <section class="card p-4" aria-labelledby="customer-title">
+            <div class="flex items-center gap-3">
+              <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary/10 text-base font-black text-primary" aria-hidden="true">{{ customerName.charAt(0) | uppercase }}</span>
+              <div class="min-w-0 flex-1">
+                <p id="customer-title" class="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Cliente</p>
+                <p class="truncate text-base font-bold leading-tight text-foreground">{{ customerName }}</p>
+                <p *ngIf="customerIdentification" class="text-sm tabular-nums text-muted-foreground">{{ customerIdentification }}</p>
               </div>
-              <button *ngIf="canEditOrder" type="button" class="link-btn" (click)="showCustomerPicker = !showCustomerPicker">
-                {{ showCustomerPicker ? 'Cerrar' : 'Cambiar' }}
+              <button *ngIf="canEditOrder" type="button" class="btn-outline" [disabled]="customerSaving"
+                (click)="showCustomerPicker = !showCustomerPicker" [attr.aria-expanded]="showCustomerPicker">
+                {{ customerSaving ? 'Guardando…' : (showCustomerPicker ? 'Cancelar' : 'Cambiar') }}
               </button>
             </div>
-            <ng-select
-              *ngIf="canEditOrder && showCustomerPicker"
-              class="ng-select-tailwind mt-3"
-              [items]="customers"
-              bindLabel="nombre"
-              bindValue="name"
-              placeholder="Buscar cliente por nombre o identificación"
-              [searchable]="true"
-              [(ngModel)]="orderCustomerId"
-              [ngModelOptions]="{standalone: true}">
-              <ng-template ng-option-tmp let-item="item">
-                <div class="flex min-w-0 flex-col">
-                  <span class="truncate font-semibold text-foreground">{{ item.nombre }}</span>
-                  <span class="text-[11px] text-muted-foreground">{{ item.num_identificacion || item.identification_number || 'Sin identificación' }}</span>
-                </div>
-              </ng-template>
-            </ng-select>
-            <p *ngIf="orderCustomerId !== '' && hasUnsavedInvoiceChanges && showCustomerPicker" class="mt-2 text-xs text-muted-foreground">El cambio se aplica al guardar.</p>
+            <p *ngIf="customerEmail || customerPhone" class="mt-2 truncate text-xs text-muted-foreground">
+              {{ customerEmail }}<span *ngIf="customerEmail && customerPhone"> · </span>{{ customerPhone }}
+            </p>
+            <p *ngIf="canEditOrder && isFinalConsumerOverLimit" class="notice notice-warn mt-3">
+              Consumidor final no puede facturar más de $50. Cambia a un cliente identificado.
+            </p>
+            <div *ngIf="canEditOrder && showCustomerPicker" class="mt-3" [class.pointer-events-none]="customerSaving" [class.opacity-60]="customerSaving">
+              <app-pos-customer-picker (customerChange)="onCustomerPicked($event)" />
+              <p class="mt-1.5 text-xs text-muted-foreground">Al elegir un cliente se guarda en la orden al instante. ¿No existe? Usa «Nuevo».</p>
+            </div>
           </section>
 
           <!-- ============ 5. Cobrar ============ -->
@@ -243,12 +245,18 @@
             <ng-container *ngIf="canInvoiceWholeOrder">
               <h2 class="mt-1 text-base font-bold text-foreground">Facturar toda la orden</h2>
 
+              <p *ngIf="emissionBlockMessage && (canShowCreateInvoice || canInvoiceSplit)" class="notice notice-warn mt-3">
+                No se puede facturar: {{ emissionBlockMessage }}
+              </p>
+
+              <details class="pay-details mt-3" [open]="!emissionBlockMessage">
+                <summary>Forma de pago{{ orderPayments.length ? ' · $' + (paymentsTotal | number:'1.2-2') : '' }}</summary>
               <div class="mt-3 space-y-2">
                 <div *ngFor="let payment of orderPayments; let i = index" class="flex flex-wrap items-end gap-2">
                   <label class="min-w-0 flex-1">
                     <span class="field-label">Forma de pago</span>
                     <select class="field" [(ngModel)]="payment.payment_method" [ngModelOptions]="{standalone: true}" (ngModelChange)="onOrderPaymentMethodChange(payment, i)" [disabled]="!canEditOrder">
-                      <option value="">Seleccionar</option>
+                      <option value="" disabled>Seleccionar forma de pago</option>
                       <option *ngFor="let method of paymentMethods" [value]="method.name" [disabled]="isOrderPaymentMethodUsed(method.name, i)">{{ method.description || method.nombre || method.name }}</option>
                     </select>
                   </label>
@@ -265,18 +273,24 @@
 
                 <button *ngIf="canEditOrder" type="button" class="link-btn" (click)="addOrderPayment()">+ Agregar forma de pago</button>
 
-                <p *ngIf="orderPayments.length" class="notice" [ngClass]="paymentsDifference === 0 ? 'notice-ok' : 'notice-warn'">
+                <p *ngIf="orderPayments.length > 1 && paymentsDifference !== 0" class="notice notice-warn">
                   {{ paymentsDifferenceLabel }}
                 </p>
-                <p *ngIf="!orderPayments.length" class="notice notice-warn">Agrega al menos una forma de pago.</p>
+                <div *ngIf="!orderPayments.length && canEditOrder">
+                  <p class="field-label">¿Cómo paga? Toca para cobrar el total</p>
+                  <div class="flex flex-wrap gap-2">
+                    <button *ngFor="let method of paymentMethods" type="button" class="btn-outline !h-9 !px-3" (click)="quickPay(method)">
+                      {{ method.description || method.nombre || method.name }}
+                    </button>
+                  </div>
+                </div>
               </div>
-
+              </details>
               <button type="button" class="btn-main mt-3 w-full bg-emerald-600 hover:bg-emerald-700"
-                (click)="emitirFacturaOrden()" [disabled]="!canCreateInvoice || orderInvoiceEmitting || hasUnsavedInvoiceChanges">
+                (click)="emitirFacturaOrden()" [disabled]="!canCreateInvoice || orderInvoiceEmitting || savingOrderChanges || !orderPayments.length">
                 <fa-icon [icon]="['fas','file-invoice']" class="mr-1.5"></fa-icon>
                 {{ orderInvoiceEmitting ? 'Facturando…' : 'Facturar $' + (orderTotal | number:'1.2-2') }}
               </button>
-              <p *ngIf="hasUnsavedInvoiceChanges" class="mt-2 text-xs text-amber-700 dark:text-amber-300">Guarda los cambios antes de facturar.</p>
             </ng-container>
 
             <!-- Camino B: dividir la cuenta -->
@@ -305,7 +319,7 @@
               Emite en {{ currentFiscalLocation.establishment?.establishment_code || '—' }}-{{ currentFiscalLocation.emissionPoint?.emission_point_code || '—' }}
               · {{ currentFiscalLocation.environment || '' }}
             </p>
-            <p *ngIf="emissionBlockMessage && (canShowCreateInvoice || canInvoiceSplit)" class="notice notice-warn mt-3">
+            <p *ngIf="!canInvoiceWholeOrder && emissionBlockMessage && (canShowCreateInvoice || canInvoiceSplit)" class="notice notice-warn mt-3">
               No se puede facturar: {{ emissionBlockMessage }}
             </p>
           </section>
@@ -315,10 +329,14 @@
 
     <!-- ============ Cambios sin guardar ============ -->
     <div *ngIf="canEditOrder && hasUnsavedInvoiceChanges" class="unsaved-bar" role="status">
-      <p class="text-sm font-semibold text-foreground">Tienes cambios sin guardar</p>
-      <div class="flex gap-2">
+      <div class="min-w-0">
+        <p class="text-sm font-bold text-foreground">Tienes cambios sin guardar</p>
+        <p *ngIf="pendingChangesSummary" class="text-xs text-muted-foreground">{{ pendingChangesSummary }}</p>
+        <p *ngIf="saveBlockReason" class="mt-1 text-xs font-semibold text-amber-800 dark:text-amber-300">{{ saveBlockReason }}</p>
+      </div>
+      <div class="flex shrink-0 gap-2">
         <button type="button" class="btn-outline" (click)="discardChanges()" [disabled]="savingOrderChanges">Descartar</button>
-        <button type="button" class="btn-main bg-primary hover:bg-primary/90" (click)="saveOrderChanges()" [disabled]="savingOrderChanges">
+        <button type="button" class="btn-main bg-primary hover:bg-primary/90" (click)="saveOrderChanges()" [disabled]="savingOrderChanges || !!saveBlockReason">
           {{ savingOrderChanges ? 'Guardando…' : 'Guardar cambios' }}
         </button>
       </div>

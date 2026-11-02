@@ -172,6 +172,15 @@ Funciones:
   detalle de la orden: motivo obligatorio, mesa libre, sin factura ni stock, auditado, y si no estaba
   cobrada no cuenta como venta. Permiso `restaurant.orders.force_close`.
 
+## Cliente en el detalle de la orden
+
+- «Cambiar» cliente usa el buscador del POS (`app-pos-customer-picker`): búsqueda en servidor por nombre,
+  cédula/RUC, teléfono o correo, Consumidor final y «Nuevo» para crear. Al elegir se guarda al instante
+  (`update_order_customer`, solo cliente; no pierde ítems/pagos sin guardar). Avisa si Consumidor final supera $50.
+- «Cobrar»: chips de forma de pago = un toque para cobrar el total; «Facturar» guarda solo los cambios pendientes.
+- Con el inventario ya consumido (toda orden de restaurante con stock) el backend permite cambiar cliente,
+  notas y pagos; productos, cantidades y precios quedan fijos (`update_order_for_invoice`). `get_order_with_details` devuelve `stock_consumed` y el detalle bloquea esos controles con un aviso (no espera al error al guardar).
+
 ## Aviso de pedidos a Caja
 
 - Quien cobra (`billing.create`) recibe en cualquier pantalla un aviso sonoro y un toast con «Imprimir
