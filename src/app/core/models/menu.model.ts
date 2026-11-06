@@ -52,6 +52,8 @@ export interface SubMenuItem {
   requiresApiConfiguration?: boolean;
   hideWhenFeature?: import('../services/company-capabilities.service').CompanyFeatureKey;
   hideUnlessWarehouseUi?: boolean;
+  /** Activa solo con la ruta exacta (su ruta es prefijo de otras opciones, p. ej. `/settings/lite`). */
+  exactMatch?: boolean;
   /** Ver `MenuItem.uiVisibilityKey`. */
   uiVisibilityKey?: 'pos' | 'reports' | 'users' | 'restaurantOrders' | 'restaurantTables' | 'restaurantKitchen';
 }

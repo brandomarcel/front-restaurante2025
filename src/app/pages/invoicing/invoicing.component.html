@@ -248,64 +248,66 @@
 
         <!-- Líneas -->
         <div *ngIf="cartItems.length > 0; else emptyCart" class="mt-3">
-          <div class="overflow-hidden rounded-lg border border-border" [class.with-discounts]="discountsVisible">
+          <div class="lines overflow-hidden rounded-lg border border-border">
             <div class="lines-head" aria-hidden="true">
               <span>Producto</span><span class="text-center">Cantidad</span><span>Precio unit.</span>
-              <ng-container *ngIf="discountsVisible"><span class="text-center">Desc. %</span><span class="text-center">Desc. $</span></ng-container>
-              <span class="text-right">Total</span><span></span>
+              <span class="text-center">Desc. %</span><span class="text-center">Desc. $</span>
+              <span class="text-right">IVA</span><span class="text-right">Total</span><span></span>
             </div>
             <ul class="divide-y divide-border" aria-label="Productos de la factura">
               <li *ngFor="let item of cartItems; let i = index; trackBy: trackByIndex" class="line">
                 <div class="min-w-0">
                   <p class="truncate text-sm font-medium text-foreground" [title]="item.nombre || item.description">{{ item.nombre || item.description }}</p>
-                  <p class="truncate text-xs text-muted-foreground">
-                    <span *ngIf="item.codigo" class="money">{{ item.codigo }} · </span>{{ lineTaxLabel(item) }}<ng-container *ngIf="hasCartInventory(item)"> · Stock {{ getCartStockLabel(item) }}</ng-container>
+                  <p *ngIf="item.codigo || hasCartInventory(item)" class="truncate text-xs text-muted-foreground">
+                    <span *ngIf="item.codigo" class="money">{{ item.codigo }}</span><ng-container *ngIf="hasCartInventory(item)">{{ item.codigo ? ' · ' : '' }}Stock {{ getCartStockLabel(item) }}</ng-container>
                   </p>
                 </div>
-                <button type="button" (click)="removeProductFromCart(i)" class="icon-btn md:order-last"
+                <button type="button" (click)="removeProductFromCart(i)" class="icon-btn line-remove"
                   [attr.aria-label]="'Quitar ' + (item.nombre || item.description)" title="Quitar">×</button>
 
                 <div class="line-controls">
-                  <div class="stepper" role="group" [attr.aria-label]="'Cantidad de ' + (item.nombre || item.description)">
-                    <button type="button" (click)="decrementQty(i)" [attr.aria-label]="'Reducir cantidad de ' + (item.nombre || item.description)">−</button>
-                    <input type="number" class="no-spinner money" min="1" step="1"
-                      [attr.aria-label]="'Cantidad de ' + (item.nombre || item.description)" [ngModelOptions]="{standalone: true}" [(ngModel)]="item.quantity" (ngModelChange)="onCartQuantityChange(i)" />
-                    <button type="button" [disabled]="!canIncreaseCartItem(i)"
-                      [attr.aria-label]="'Aumentar cantidad de ' + (item.nombre || item.description)" (click)="incrementQty(i)">+</button>
+                  <div>
+                    <span class="cell-label" aria-hidden="true">Cantidad</span>
+                    <div class="stepper" role="group" [attr.aria-label]="'Cantidad de ' + (item.nombre || item.description)">
+                      <button type="button" (click)="decrementQty(i)" [attr.aria-label]="'Reducir cantidad de ' + (item.nombre || item.description)">−</button>
+                      <input type="number" class="no-spinner money" min="1" step="1"
+                        [attr.aria-label]="'Cantidad de ' + (item.nombre || item.description)" [ngModelOptions]="{standalone: true}" [(ngModel)]="item.quantity" (ngModelChange)="onCartQuantityChange(i)" />
+                      <button type="button" [disabled]="!canIncreaseCartItem(i)"
+                        [attr.aria-label]="'Aumentar cantidad de ' + (item.nombre || item.description)" (click)="incrementQty(i)">+</button>
+                    </div>
                   </div>
-                  <label class="relative block">
+                  <label class="block">
+                    <span class="cell-label" aria-hidden="true">Precio unit.</span>
                     <span class="sr-only">Precio unitario de {{ item.nombre || item.description }}</span>
-                    <span class="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-xs text-muted-foreground">$</span>
-                    <input type="text" inputmode="decimal" appDecimalInput min="0" step="0.01" class="input no-spinner money !h-9 !w-full !pl-6 !text-sm"
-                      [ngModelOptions]="{standalone: true}" [(ngModel)]="item.price" (ngModelChange)="updateCartTotals()" />
+                    <span class="relative block">
+                      <span class="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-xs text-muted-foreground">$</span>
+                      <input type="text" inputmode="decimal" appDecimalInput min="0" step="0.01" class="input no-spinner money !h-9 !w-full !pl-6 !text-sm"
+                        [ngModelOptions]="{standalone: true}" [(ngModel)]="item.price" (ngModelChange)="updateCartTotals()" />
+                    </span>
                   </label>
-                  <ng-container *ngIf="discountsVisible">
-                    <label class="block">
-                      <span class="field-label md:hidden" aria-hidden="true">Descuento %</span>
-                      <span class="sr-only">Descuento en porcentaje de {{ item.nombre || item.description }}</span>
-                      <input type="text" inputmode="decimal" appDecimalInput min="0" max="100" step="1" placeholder="%" class="input no-spinner money !h-9 !w-full !px-2 text-center !text-sm"
-                        [ngModelOptions]="{standalone: true}" [(ngModel)]="item.discount_percentage" (ngModelChange)="updateCartTotals()" />
-                    </label>
-                    <label class="block">
-                      <span class="field-label md:hidden" aria-hidden="true">Descuento $</span>
-                      <span class="sr-only">Descuento en dólares de {{ item.nombre || item.description }}</span>
-                      <input type="text" inputmode="decimal" appDecimalInput min="0" step="0.01" placeholder="$" class="input no-spinner money !h-9 !w-full !px-2 text-center !text-sm"
-                        [ngModelOptions]="{standalone: true}" [(ngModel)]="item.discount_amount" (ngModelChange)="updateCartTotals()" />
-                    </label>
-                  </ng-container>
+                  <label class="block">
+                    <span class="cell-label" aria-hidden="true">Desc. %</span>
+                    <span class="sr-only">Descuento en porcentaje de {{ item.nombre || item.description }}</span>
+                    <input type="text" inputmode="decimal" appDecimalInput min="0" max="100" step="1" placeholder="%" class="input no-spinner money !h-9 !w-full !px-2 text-center !text-sm"
+                      [ngModelOptions]="{standalone: true}" [(ngModel)]="item.discount_percentage" (ngModelChange)="updateCartTotals()" />
+                  </label>
+                  <label class="block">
+                    <span class="cell-label" aria-hidden="true">Desc. $</span>
+                    <span class="sr-only">Descuento en dólares de {{ item.nombre || item.description }}</span>
+                    <input type="text" inputmode="decimal" appDecimalInput min="0" step="0.01" placeholder="$" class="input no-spinner money !h-9 !w-full !px-2 text-center !text-sm"
+                      [ngModelOptions]="{standalone: true}" [(ngModel)]="item.discount_amount" (ngModelChange)="updateCartTotals()" />
+                  </label>
                 </div>
+                <!-- IVA de la línea: columna propia en modo tabla; si no, va bajo el total. -->
+                <p class="line-iva money text-right text-sm text-foreground/80">{{ (item.iva || 0) | currency }}</p>
                 <div class="line-total">
                   <p class="money text-sm font-semibold text-foreground">{{ item.total | currency }}</p>
+                  <p class="line-iva-inline money text-xs text-muted-foreground">IVA {{ (item.iva || 0) | currency }}</p>
                   <p *ngIf="(item.discount_total || 0) > 0" class="money text-xs font-medium text-emerald-700 dark:text-emerald-400">−{{ item.discount_total | currency }}</p>
                 </div>
               </li>
             </ul>
           </div>
-          <button type="button" class="link-btn mt-2 disabled:cursor-default disabled:text-muted-foreground disabled:no-underline"
-            [disabled]="hasLineDiscounts" (click)="toggleDiscounts()" [attr.aria-pressed]="discountsVisible"
-            [title]="hasLineDiscounts ? 'Quita los descuentos para ocultar estas columnas.' : ''">
-            {{ discountsVisible ? (hasLineDiscounts ? 'Descuentos aplicados' : 'Ocultar descuentos') : '+ Aplicar descuentos' }}
-          </button>
         </div>
         <ng-template #emptyCart>
           <div class="mt-3 rounded-lg border border-dashed border-border px-4 py-10 text-center">

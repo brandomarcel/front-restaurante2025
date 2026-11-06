@@ -1,10 +1,10 @@
 <div
-  class="max-h-0 overflow-hidden pt-0.5 transition-all duration-500 ltr:pl-3 rtl:pr-3"
+  class="max-h-0 overflow-hidden pt-0.5 transition-all duration-300 motion-reduce:transition-none ltr:pl-[21px] rtl:pr-[21px]"
   [ngClass]="{ hidden: !mobile && !menuService.showSideBar, 'max-h-screen': submenu.expanded }">
   <ul
-    class="border-border text-muted-foreground flex flex-col gap-0.5 border-dashed ltr:border-l ltr:pl-2 rtl:border-r rtl:pr-2">
+    class="border-border flex flex-col gap-0.5 ltr:border-l ltr:pl-2 rtl:border-r rtl:pr-2">
     <li *ngFor="let sub of submenu.children">
-      <div class="text-muted-foreground hover:text-primary relative flex" (click)="toggleMenu(sub)">
+      <div class="relative flex" [ngClass]="sub.active ? 'text-primary' : 'text-foreground/70 hover:text-foreground'" (click)="toggleMenu(sub)">
         <!-- Condition -->
         <ng-container
           [ngTemplateOutlet]="sub.children ? childMenu : parentMenu"
@@ -16,12 +16,12 @@
           <a
             (click)="closeMobileMenu()"
             [routerLink]="sub.route"
-            routerLinkActive="text-primary"
-            [routerLinkActiveOptions]="{ exact: true }"
-            class="hover:bg-muted/40 inline-block w-full rounded-md px-3 py-1.5 text-[11px]">
+            [attr.aria-current]="sub.active ? 'page' : null"
+            class="inline-block w-full rounded-md px-3 py-1.5 text-[12.5px] hover:bg-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            [ngClass]="{ 'font-semibold': sub.active, 'font-medium': !sub.active }">
             {{ sub.label }}
           </a>
-          @if(menuService.isActive(sub.route)){
+          @if(sub.active){
           <span
             class="size-1.5 bg-primary absolute flex translate-y-3 items-center rounded-full ltr:-translate-x-[11.5px] rtl:translate-x-[11.5px]">
           </span>
@@ -30,7 +30,7 @@
 
         <!-- Child Menu -->
         <ng-template #childMenu let-sub="sub">
-          <a class="inline-block w-full cursor-pointer px-3 py-1.5 text-[11px]">
+          <a class="inline-block w-full cursor-pointer px-3 py-1.5 text-[12.5px] font-medium">
             {{ sub.label }}
           </a>
           <button

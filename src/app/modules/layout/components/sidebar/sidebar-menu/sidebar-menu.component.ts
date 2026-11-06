@@ -1,4 +1,4 @@
-import { NgClass, NgFor, NgIf, NgTemplateOutlet } from '@angular/common';
+import { NgClass, NgFor, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AngularSvgIconModule } from 'angular-svg-icon';
@@ -15,7 +15,6 @@ import { SidebarSubmenuComponent } from '../sidebar-submenu/sidebar-submenu.comp
     NgFor,
     NgClass,
     AngularSvgIconModule,
-    NgTemplateOutlet,
     NgIf,
     SidebarSubmenuComponent,
   ],

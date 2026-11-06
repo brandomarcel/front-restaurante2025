@@ -76,8 +76,6 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   isProductSearchOpen = false;
   productSuggestions: Product[] = [];
   cartItems: CartItem[] = [];
-  /** Las columnas de descuento se muestran a pedido: la mayoría de facturas no los usa. */
-  showDiscounts = false;
   /** El usuario ya aceptó perder la factura en curso (cambio de terminal). */
   private reloadConfirmed = false;
   showCustomerModal = false;
@@ -1147,7 +1145,6 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       this.lastInvoice = { name: this.emissionInvoiceName, state: this.emissionState, business: this.capabilities.activeBusinessId };
     }
     this.additionalFields.clear();
-    this.showDiscounts = false;
     this.invoiceForm.reset({
       paymentMethod: this.defaultPaymentMethodValue, selectedCustomer: null, selectedProduct: null,
       payment_condition: 'Contado', payment_due_date: '', initial_collection_method: '',
@@ -1275,10 +1272,6 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     }
   }
 
-  lineTaxLabel(item: CartItem): string {
-    return `IVA ${item.tax_value ?? (item.tax === 'IVA-15' ? 15 : 0)}%`;
-  }
-
   // ------------------ Utilidades ------------------
   trackByIndex = (i: number) => i;
   trackByCustomerId = (_: number, c: Customer) => c?.name || c?.num_identificacion || _;
@@ -1295,19 +1288,6 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     return `${count} ${count === 1 ? 'coincidencia' : 'coincidencias'}. Enter agrega la primera.`;
   }
 
-  /** Con algún descuento cargado las columnas no se pueden ocultar (se perdería de vista). */
-  get hasLineDiscounts(): boolean {
-    return this.cartItems.some((item) => this.safeNumber(item.discount_percentage, 0) > 0 || this.safeNumber(item.discount_amount, 0) > 0);
-  }
-
-  get discountsVisible(): boolean {
-    return this.showDiscounts || this.hasLineDiscounts;
-  }
-
-  toggleDiscounts(): void {
-    if (this.hasLineDiscounts) return;
-    this.showDiscounts = !this.showDiscounts;
-  }
 
   getProductPriceLabel(product: Product | null | undefined): string {
     return `$${this.safeMoney((product as any)?.precio).toFixed(2)}`;

@@ -9,6 +9,40 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-06 (Claude, 8): «Nueva factura», a pedido del usuario: los descuentos vuelven a estar siempre en la fila (se
+  quitó «+ Aplicar descuentos» y `showDiscounts`/`discountsVisible`/`toggleDiscounts`) y cada línea muestra el valor
+  de su IVA (`item.iva`, ya calculado por `computeLineTotals`; no se recalcula nada). Las líneas usan container
+  queries sobre el ancho de la hoja: ≥700 px tabla (Producto · Cantidad · Precio · Desc. % · Desc. $ · IVA · Total),
+  ≥480 px los cuatro campos en una fila con etiqueta, y en celular dos filas con el IVA bajo el total. Arreglado de
+  paso: las etiquetas de celular se veían en escritorio y a 1280 px desaparecía el nombre del producto. Verificado en
+  navegador a 1440, 1280 (oscuro) y 390 px. Reemplaza la nota de «columnas de descuento a pedido» de la entrada 4.
+  Después: el control de cantidad se veía con una cajita interna (estilos de `@tailwindcss/forms` sobre el input
+  numérico); ahora es un solo control `− n +` con foco en todo el stepper. A pedido del usuario se quitó «IVA 15 %»
+  bajo el nombre del producto (y `lineTaxLabel`, sin otro uso): el IVA queda solo en su columna.
+
+- 2026-11-06 (Claude, 7): menú lateral reorganizado por tarea (el usuario delegó la decisión). Grupos: Dashboard ·
+  Vender · Caja y cobros · Documentos · Catálogo · Administración; «Infraestructura fiscal» pasa a submenú de
+  Configuración; Insumos y Recetas salen del menú (siguen como pestañas de Inventario, mismas condiciones). Las
+  condiciones que vivían en el grupo (`billing`, `restaurant`, roles de Principal, permiso de Configuración,
+  `hideInApiOnly` de Reportes, `hideWhenFeature` de Documentos API) se bajaron a cada opción, así que la visibilidad no
+  cambia. Etiquetas sin «Lista …» y en minúscula inicial (Facturas, Órdenes, Notas de crédito, Categorías corregida);
+  el título de página sale de ellas. Nuevo `exactMatch` en `SubMenuItem` (Configuración → General no se marca en las
+  subpáginas). Aspecto: títulos de grupo 11 px sin mayúsculas, opciones 13 px, activa con fondo suave + barra izquierda
+  (sin borde ni sombra), sin líneas punteadas; contraído, una línea corta separa grupos; versión como texto discreto.
+  Logo: el menú muestra siempre FacturADA; se quitó el logo del negocio del menú (una foto a 36 px no se leía y
+  ocultaba la marca; sigue en el Dashboard). `proxy.conf.json` reenvía `/files` en desarrollo (las imágenes subidas
+  salían rotas). Verificado en navegador como Administrador (mismas opciones que antes salvo Insumos/Recetas), claro,
+  oscuro, contraído y celular. Para Codex: visibilidad del menú por rol (Cajero, Mesero, Cocina, Facturación, Usuario)
+  y por plan (FACTURADOR, RESTO_BASICO, solo API) contra la versión anterior; `exactMatch`.
+
+- 2026-11-06 (Claude, 6): logo del menú lateral. Antes: PNG antiguo (`only_logo_FA.png`) en un cuadrado violeta + texto
+  «FacturADA» de 12 px, y nada con el menú contraído. Ahora el logo oficial del paquete de marca (copias en
+  `src/assets/brand/`, `viewBox` recortado al contenido; originales intactos en `brand/`): completo con el menú abierto
+  y en el menú de celular, versión «sobre oscuro» en tema oscuro (`dark:`), y el símbolo con el menú contraído, que
+  además lo expande. Si el negocio subió su logo (`localStorage.logo`) se sigue mostrando ese, contenido y sin el
+  cuadrado (luego retirado del menú, ver entrada 7). Verificado en navegador (claro/oscuro, abierto/contraído,
+  celular). Pendiente: login, registro de empresa y navbar móvil siguen con `only_logo_FA.png`.
+
 - 2026-11-06 (Claude, 5): elegir la terminal POS desde «Facturar» (opción C acordada). Con `pos_terminal` (billing + pos)
   la factura sale de la terminal activa; antes el encabezado solo la mostraba y había que cambiarla en la barra
   superior. Ahora el chip es el selector global reutilizado (`app-pos-terminal-switcher`, nuevas entradas `variant="chip"`,

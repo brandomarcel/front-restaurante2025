@@ -142,7 +142,7 @@ Funciones:
   cantidad por porción, merma, «el cliente puede pedirlo sin») y no lleva stock propio.
 - Al crear la orden de restaurante se descuentan los insumos de la receta, no el plato.
   Cancelar la orden los devuelve. Una nota de crédito no los devuelve.
-- Pantallas: Inventario → **Insumos** y **Recetas** (`/dashboard/inventory/ingredients` y
+- Pantallas: pestañas **Insumos** y **Recetas** de Inventario (no van en el menú lateral; `/dashboard/inventory/ingredients` y
   `/recipes`, `pages/kitchen-supplies/`). El formulario de producto no crea insumos ni recetas.
 - Requieren las funciones `restaurant` e `inventory`; el backend lo exige.
 - El POS muestra las porciones que alcanzan (estimación) y el backend decide al crear la orden.
@@ -157,11 +157,11 @@ Funciones:
 ## Sin cocina y «Mis órdenes»
 
 - Sin `kitchen` no se ofrece «Enviar a cocina»/«Iniciar preparación». El mesero puro ve solo sus órdenes de hoy en
-  «Lista Órdenes» (`get_all_orders(mine=1)`, filtro de pantalla, no de seguridad).
+  «Órdenes» (`get_all_orders(mine=1)`, filtro de pantalla, no de seguridad).
 
 ## Pedidos sin mesa
 
-- Se listan en la sección «Pedidos sin mesa» de Mesas y en «Lista Órdenes» (visible al mesero por `restaurant.orders.create`).
+- Se listan en la sección «Pedidos sin mesa» de Mesas y en «Órdenes» (visible al mesero por `restaurant.orders.create`).
 
 ## Cierre administrativo de órdenes
 

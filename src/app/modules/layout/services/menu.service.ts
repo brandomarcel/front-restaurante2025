@@ -95,7 +95,7 @@ export class MenuService implements OnDestroy {
 
   private markItemState(item: SubMenuItem): boolean {
     const hasChildren = !!item.children?.length;
-    const routeActive = this.isActive(item.route, hasChildren);
+    const routeActive = this.isActive(item.route, hasChildren || !!item.exactMatch);
     const childrenActive = hasChildren
       ? item.children!.some((child) => this.markItemState(child))
       : false;

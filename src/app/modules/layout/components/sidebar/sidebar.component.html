@@ -5,38 +5,40 @@
   aria-label="Sidebar"
 >
   <div class="overflow-hidden min-h-0 h-full flex flex-col">
+    <!-- Marca: logo completo con el menú abierto; solo el símbolo (que expande) con el menú contraído. -->
     <div
-      [ngClass]="menuService.showSideBar ? 'justify-between' : 'justify-center'"
-      class="mx-3 mb-1.5 flex h-8 items-center shrink-0"
+      [ngClass]="menuService.showSideBar ? 'justify-between pl-2.5 pr-1' : 'justify-center'"
+      class="mx-3 mb-3 mt-1 flex h-10 shrink-0 items-center"
     >
-      <div class="flex items-center" *ngIf="menuService.showSideBar">
+      <ng-container *ngIf="menuService.showSideBar; else collapsedBrand">
+        <ng-container *ngTemplateOutlet="brandLogo"></ng-container>
         <button
           type="button"
           (click)="toggleSidebar()"
-          class="bg-primary flex h-8 w-8 items-center justify-center rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-primary/50"
-          [attr.aria-expanded]="menuService.showSideBar ? 'true' : 'false'"
-          [attr.aria-controls]="'sidebar-menu'"
+          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          aria-expanded="true"
+          aria-controls="sidebar-menu"
+          aria-label="Contraer menú"
+          title="Contraer menú"
         >
-          <img *ngIf="logoPreview; else defaultLogo" [src]="logoPreview" alt="FA" class="h-6 w-6" loading="lazy" />
-          <ng-template #defaultLogo>
-            <img src="./assets/images/only_logo_FA.png" alt="FA" class="h-6 w-6" loading="lazy" />
-          </ng-template>
+          <svg-icon src="assets/icons/heroicons/solid/chevron-double-left.svg" [svgClass]="'h-4 w-4'"></svg-icon>
         </button>
-        <b class="text-foreground ps-2 ml-1 grow truncate text-xs font-bold">
-          {{ appJson.displayName }}
-        </b>
-      </div>
+      </ng-container>
 
-      <button
-        type="button"
-        (click)="toggleSidebar()"
-        class="text-muted-foreground/50 hover:bg-muted hover:text-muted-foreground flex h-8 w-8 items-center justify-center rounded-md p-1.5 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
-        [ngClass]="{ 'rotate-180': !menuService.showSideBar }"
-        [attr.aria-expanded]="menuService.showSideBar ? 'true' : 'false'"
-        [attr.aria-controls]="'sidebar-menu'"
-      >
-        <svg-icon src="assets/icons/heroicons/solid/chevron-double-left.svg"></svg-icon>
-      </button>
+      <ng-template #collapsedBrand>
+        <button
+          type="button"
+          (click)="toggleSidebar()"
+          class="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          aria-expanded="false"
+          aria-controls="sidebar-menu"
+          aria-label="Expandir menú"
+          title="Expandir menú"
+        >
+          <img src="assets/brand/facturada-simbolo-color.svg" alt="" class="h-7 w-7 dark:hidden" />
+          <img src="assets/brand/facturada-simbolo-sobre-oscuro.svg" alt="" class="hidden h-7 w-7 dark:block" />
+        </button>
+      </ng-template>
     </div>
 
     <div
@@ -47,20 +49,11 @@
     </div>
   </div>
 
-  <div class="mx-3 my-3 space-y-1 shrink-0">
-    <div
-      class="rounded-md hover:bg-card group relative flex h-8 cursor-default items-center justify-start px-2"
-      [attr.title]="!menuService.showSideBar ? ('Version v' + appJson.version) : null"
-    >
-      <svg-icon src="assets/icons/heroicons/outline/information-circle.svg" [svgClass]="'h-4 w-4 text-muted-foreground/50'"></svg-icon>
-      <div
-        class="ml-3 truncate text-[10px] font-semibold tracking-wide focus:outline-none"
-        [ngClass]="{ 'hidden': !menuService.showSideBar }"
-      >
-        <span class="bg-primary/10 text-primary px-2 font-semibold">v{{ appJson.version }}</span>
-      </div>
-    </div>
-  </div>
+  <p
+    class="mx-3 my-3 shrink-0 px-2.5 text-[11px] text-muted-foreground/60"
+    [ngClass]="{ 'text-center !px-0': !menuService.showSideBar }"
+    [attr.title]="'FacturADA v' + appJson.version"
+  >v{{ appJson.version }}</p>
 </nav>
 
 <div *ngIf="menuService.showMobileMenu" class="fixed inset-0 z-[100] xl:hidden" aria-modal="true" role="dialog">
@@ -72,24 +65,14 @@
   ></button>
 
   <nav id="sidebar-mobile-menu" class="bg-card absolute inset-y-0 left-0 flex w-[260px] max-w-[85vw] flex-col pt-2 shadow-2xl">
-    <div class="mx-3 mb-1.5 flex h-8 items-center justify-between shrink-0">
-      <div class="flex items-center">
-        <div class="bg-primary flex h-8 w-8 items-center justify-center rounded-md p-1.5">
-          <img *ngIf="logoPreview; else mobileDefaultLogo" [src]="logoPreview" alt="FA" class="h-6 w-6" loading="lazy" />
-          <ng-template #mobileDefaultLogo>
-            <img src="./assets/images/only_logo_FA.png" alt="FA" class="h-6 w-6" loading="lazy" />
-          </ng-template>
-        </div>
-        <b class="text-foreground ps-2 ml-1 grow truncate text-xs font-bold">
-          {{ appJson.displayName }}
-        </b>
-      </div>
+    <div class="mx-3 mb-3 mt-1 flex h-10 shrink-0 items-center justify-between pl-2.5 pr-1">
+      <ng-container *ngTemplateOutlet="brandLogo"></ng-container>
 
       <button
         type="button"
         (click)="closeMobileMenu()"
         class="text-muted-foreground/60 hover:text-muted-foreground flex h-8 w-8 items-center justify-center rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-primary/50"
-        aria-label="Cerrar menu lateral"
+        aria-label="Cerrar menú"
       >
         <svg-icon src="assets/icons/heroicons/outline/x.svg"></svg-icon>
       </button>
@@ -99,13 +82,13 @@
       <app-sidebar-menu [mobile]="true"></app-sidebar-menu>
     </div>
 
-    <div class="mx-3 my-3 space-y-1 shrink-0">
-      <div class="rounded-md hover:bg-card group relative flex h-8 cursor-default items-center justify-start px-2">
-        <svg-icon src="assets/icons/heroicons/outline/information-circle.svg" [svgClass]="'h-4 w-4 text-muted-foreground/50'"></svg-icon>
-        <div class="ml-3 truncate text-[10px] font-semibold tracking-wide">
-          <span class="bg-primary/10 text-primary px-2 font-semibold">v{{ appJson.version }}</span>
-        </div>
-      </div>
-    </div>
+    <p class="mx-3 my-3 shrink-0 px-2.5 text-[11px] text-muted-foreground/60">FacturADA v{{ appJson.version }}</p>
   </nav>
 </div>
+
+<!-- Marca del producto en su versión para el tema. La identidad del negocio va en la barra
+     superior (perfil) y en el Dashboard: un logo subido como foto no se lee a este tamaño. -->
+<ng-template #brandLogo>
+  <img src="assets/brand/facturada-logo-principal.svg" alt="FacturADA" class="h-[22px] w-auto dark:hidden" />
+  <img src="assets/brand/facturada-logo-sobre-oscuro.svg" alt="FacturADA" class="hidden h-[22px] w-auto dark:block" />
+</ng-template>

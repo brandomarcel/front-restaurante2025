@@ -100,8 +100,8 @@ ambas activas a la vez.
 Funciones:
 - Facturación directa y notas de crédito (`invoicing`, `invoices`, `credit-notes`). «Facturar» sale en el
   menú aunque el POS genérico esté activo: ambos conviven (solo depende de `direct_invoice` + `billing.create`).
-  En «Nueva factura» las columnas de descuento por línea aparecen con «+ Aplicar descuentos» (siempre visibles si
-  alguna línea tiene descuento).
+  En «Nueva factura» cada línea muestra cantidad, precio, descuento %, descuento $, IVA y total; la fila se adapta al
+  ancho de la hoja (tabla, campos en una fila, o dos filas en celular).
 - Desde dónde se factura: sin POS, «Facturar» deja elegir establecimiento y punto de emisión. Con POS (`pos_terminal`)
   la factura sale de la terminal activa (fija serie, bodega y caja), que se elige o cambia desde el chip del encabezado
   de Facturar o desde la barra superior; varios establecimientos = una terminal por establecimiento. Cambiar recarga la
@@ -128,6 +128,11 @@ Funciones:
 - Autorización combinada de tres ejes evaluados por `RoleAccessGuard`: feature del
   plan, permiso del contexto de negocio y rol
 - Selección y cambio de empresa activa (multi-negocio por usuario)
+- Menú lateral (`core/constants/menu.ts`) agrupado por tarea: Dashboard · Vender (POS, Mesas, Órdenes, Pantalla de
+  cocina, Facturar, Punto de venta) · Caja y cobros · Documentos · Catálogo · Administración (Reportes, Usuarios,
+  Configuración ▸ con establecimientos, puntos, secuencias, terminales e integración API). Las condiciones de
+  plan/permiso/rol van en cada opción, no en el grupo; mover una opción de grupo no cambia quién la ve. El menú muestra
+  siempre el logo de FacturADA (`src/assets/brand/`); el logo del negocio va en el Dashboard.
 - Pantalla inicial tras el login (`getLandingRoute`): Administrador y Gerente → panel (`/dashboard/main`);
   Cajero/Facturación → POS o Facturar; Mesero → POS; Cocina → Órdenes en vivo.
 
@@ -151,7 +156,7 @@ Funciones:
   cantidad por porción, merma, «el cliente puede pedirlo sin») y no lleva stock propio.
 - Al crear la orden de restaurante se descuentan los insumos de la receta, no el plato.
   Cancelar la orden los devuelve. Una nota de crédito no los devuelve.
-- Pantallas: Inventario → **Insumos** y **Recetas** (`/dashboard/inventory/ingredients` y
+- Pantallas: pestañas **Insumos** y **Recetas** de Inventario (no van en el menú lateral; `/dashboard/inventory/ingredients` y
   `/recipes`, `pages/kitchen-supplies/`). El formulario de producto no crea insumos ni recetas.
 - Requieren las funciones `restaurant` e `inventory`; el backend lo exige.
 - El POS muestra las porciones que alcanzan (estimación) y el backend decide al crear la orden.
@@ -174,12 +179,12 @@ Funciones:
 ## Sin cocina y «Mis órdenes»
 
 - Sin la función `kitchen` no hay «Enviar a cocina» ni «Iniciar preparación»: Caja imprime la comanda y cobra; la orden
-  se cierra al cobrarse. El mesero puro ve en «Lista Órdenes» solo sus órdenes de hoy (filtro de pantalla `mine=1`).
+  se cierra al cobrarse. El mesero puro ve en «Órdenes» solo sus órdenes de hoy (filtro de pantalla `mine=1`).
 
 ## Pedidos sin mesa
 
 - Un pedido para llevar o a domicilio no pertenece a ninguna mesa: aparece en la sección «Pedidos sin mesa»
-  de Mesas y en «Lista Órdenes» (el mesero la ve con `restaurant.orders.create`).
+  de Mesas y en «Órdenes» (el mesero la ve con `restaurant.orders.create`).
 
 ## Cierre administrativo de órdenes
 
@@ -385,7 +390,7 @@ intermedio: un push a `main` es un despliegue real.
 - Estados SRI: consulta y reintento son distintos. `PROCESSING`/pendiente → solo
   consultar (nunca reemitir). Códigos 43/70 → solo consultar. Facturas
   `Reemplazada`/con `regenerated_invoice` no permiten reintento ni revisión manual.
-- Lista Facturas solo trae `Factura`; las NC van por `get_all_credit_notes`.
+- La lista de Facturas solo trae `Factura`; las NC van por `get_all_credit_notes`.
   `credit_note_summary` (FULL/PARTIAL/PENDING/NONE): solo FULL se muestra como anulación
   por compensación; el estado fiscal original no cambia.
 - Una orden de restaurante se factura una sola vez. Una nota POS con `lite_invoice` no se

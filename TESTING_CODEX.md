@@ -320,9 +320,9 @@ un script temporal ya borrado.
 
 ## Pendiente de pruebas: pedidos sin mesa del mesero (2026-10-28)
 
-Menú «Lista Órdenes» visible para Mesero (create sin update) y oculto para Usuario/Facturación/Cocina;
+Menú «Órdenes» visible para Mesero (create sin update) y oculto para Usuario/Facturación/Cocina;
 `TablesComponent.ordersWithoutTable` (solo activas sin mesa, se actualiza por eventos en vivo, sin importe en vista
-de mesero). Manual: mesero crea «Orden sin mesa» y la ve en Mesas y en Lista Órdenes.
+de mesero). Manual: mesero crea «Orden sin mesa» y la ve en Mesas y en Órdenes.
 
 ## Pendiente de pruebas: agregar productos a una orden abierta (2026-10-28)
 

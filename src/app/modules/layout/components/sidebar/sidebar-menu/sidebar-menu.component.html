@@ -1,74 +1,59 @@
-<div class="space-y-2">
-  <div *ngFor="let menu of menuService.pagesMenu" class="space-y-0.5">
-    <div *ngIf="menuService.showSideBar || mobile" class="px-2 pt-1">
-      <small class="text-muted-foreground/55 text-[9px] font-semibold uppercase tracking-[0.12em]">
-        {{ menu.group }}
-      </small>
-    </div>
+<div class="space-y-4 pb-2">
+  <div *ngFor="let menu of menuService.pagesMenu; let first = first" class="space-y-0.5">
+    <!-- Abierto: título del grupo. Contraído: una línea corta separa los grupos. -->
+    <ng-container *ngIf="menuService.showSideBar || mobile; else collapsedDivider">
+      <p *ngIf="menu.group" class="px-2.5 pb-1 text-[11px] font-medium text-muted-foreground/80">{{ menu.group }}</p>
+    </ng-container>
+    <ng-template #collapsedDivider>
+      <hr *ngIf="!first" class="mx-auto mb-2 w-6 border-border" />
+    </ng-template>
 
-    <ul class="flex flex-col gap-0.5 text-[11px]">
+    <ul class="flex flex-col gap-0.5">
       <li *ngFor="let item of menu.items">
         <div
           (click)="onItemClick(item)"
           (keydown)="onItemKeydown($event, item)"
           [attr.role]="item.children ? 'button' : 'link'"
+          [attr.aria-current]="item.active && !item.children ? 'page' : null"
+          [attr.aria-expanded]="item.children ? !!item.expanded : null"
           [attr.title]="!mobile && !menuService.showSideBar ? item.label : null"
           tabindex="0"
           [ngClass]="{
-            'bg-primary/10 text-primary shadow-sm ring-1 ring-primary/10': item.active || item.expanded,
-            'text-muted-foreground hover:bg-muted/40 hover:text-foreground': !(item.active || item.expanded),
+            'bg-primary/10 text-primary': item.active,
+            'text-foreground/75 hover:bg-muted/60 hover:text-foreground': !item.active,
             'justify-center px-0': !mobile && !menuService.showSideBar
           }"
-          class="group relative flex min-h-[34px] items-center gap-2 rounded-lg px-2.5 py-1.5 transition-all duration-200"
+          class="group relative flex min-h-[36px] cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
+          <!-- Marca de la opción actual -->
+          <span *ngIf="item.active && (menuService.showSideBar || mobile)" class="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-primary" aria-hidden="true"></span>
+
           <span
-            [ngClass]="(item.active || item.expanded) ? 'text-primary' : 'text-muted-foreground/60 group-hover:text-foreground'"
+            [ngClass]="item.active ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'"
             class="inline-flex shrink-0 items-center justify-center"
           >
-            <svg-icon [src]="item.icon || ''" [svgClass]="'h-4 w-4'"></svg-icon>
+            <svg-icon [src]="item.icon || ''" [svgClass]="'h-[18px] w-[18px]'"></svg-icon>
           </span>
 
-          <ng-container
-            [ngTemplateOutlet]="item.children ? childMenu : parentMenu"
-            [ngTemplateOutletContext]="{ item: item }"
-          ></ng-container>
-
-          <button
-            *ngIf="item.children && (menuService.showSideBar || mobile)"
-            class="ml-auto inline-flex items-center justify-center text-muted-foreground/70 transition-transform duration-200"
-            [ngClass]="{ 'rotate-90': item.expanded }"
-            aria-label="Expandir submenu"
-            type="button"
+          <span
+            [ngClass]="{ hidden: !mobile && !menuService.showSideBar, 'font-semibold': item.active, 'font-medium': !item.active }"
+            class="flex grow items-center truncate text-[13px]"
           >
-            <svg-icon src="assets/icons/heroicons/solid/chevron-right.svg" svgClass="h-3.5 w-3.5"></svg-icon>
-          </button>
+            {{ item.label }}
+          </span>
 
+          <svg-icon
+            *ngIf="item.children && (menuService.showSideBar || mobile)"
+            src="assets/icons/heroicons/solid/chevron-right.svg"
+            class="ml-auto inline-flex text-muted-foreground/70 transition-transform duration-200 motion-reduce:transition-none"
+            [ngClass]="{ 'rotate-90': item.expanded }"
+            svgClass="h-3.5 w-3.5"
+            aria-hidden="true"
+          ></svg-icon>
         </div>
 
-        <app-sidebar-submenu [submenu]="item" [mobile]="mobile"></app-sidebar-submenu>
+        <app-sidebar-submenu *ngIf="item.children" [submenu]="item" [mobile]="mobile"></app-sidebar-submenu>
       </li>
     </ul>
-
-    <div class="py-1.5" *ngIf="menu.separator">
-      <hr class="border-muted-foreground/20 border-dashed" />
-    </div>
   </div>
-
-  <ng-template #parentMenu let-item="item">
-    <span
-      [ngClass]="{ hidden: !mobile && !menuService.showSideBar }"
-      class="flex grow items-center truncate text-[11px] font-semibold"
-    >
-      {{ item.label }}
-    </span>
-  </ng-template>
-
-  <ng-template #childMenu let-item="item">
-    <span
-      [ngClass]="{ hidden: !mobile && !menuService.showSideBar }"
-      class="flex grow items-center truncate text-[11px] font-semibold"
-    >
-      {{ item.label }}
-    </span>
-  </ng-template>
 </div>
