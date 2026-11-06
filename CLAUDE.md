@@ -100,6 +100,12 @@ ambas activas a la vez.
 Funciones:
 - Facturación directa y notas de crédito (`invoicing`, `invoices`, `credit-notes`). «Facturar» sale en el
   menú aunque el POS genérico esté activo: ambos conviven (solo depende de `direct_invoice` + `billing.create`).
+  En «Nueva factura» las columnas de descuento por línea aparecen con «+ Aplicar descuentos» (siempre visibles si
+  alguna línea tiene descuento).
+- Desde dónde se factura: sin POS, «Facturar» deja elegir establecimiento y punto de emisión. Con POS (`pos_terminal`)
+  la factura sale de la terminal activa (fija serie, bodega y caja), que se elige o cambia desde el chip del encabezado
+  de Facturar o desde la barra superior; varios establecimientos = una terminal por establecimiento. Cambiar recarga la
+  página y, con productos en el carrito, pide confirmación.
 - Punto de venta genérico y notas de venta (`pos-generic`, `pos-sale-notes`)
 - Configuración tributaria: establecimientos, puntos de emisión, secuencias,
   certificado electrónico, terminales POS (`settings/lite/*`)

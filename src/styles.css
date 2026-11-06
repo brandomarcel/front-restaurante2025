@@ -235,6 +235,7 @@ select {
 /* NG-SELECT estilos (theme-aware: usa los tokens de color, no valores fijos, para que se vea bien en claro y oscuro) */
 .ng-select-tailwind .ng-select-container {
   @apply bg-card border border-border rounded-md px-2 py-1 h-auto min-h-[2.5rem] shadow-none text-foreground;
+  align-items: center; /* sin esto el valor queda pegado arriba del campo */
   font-size: 0.875rem; /* text-xs */
   line-height: 1.25rem;
 }

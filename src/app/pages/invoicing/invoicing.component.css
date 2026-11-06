@@ -1,0 +1,146 @@
+@reference '../../../styles.css';
+
+/* Superficie de trabajo: los pasos van en una sola hoja separados por líneas,
+   no en tarjetas sueltas. Solo el resumen de pago se eleva. */
+.sheet {
+  @apply rounded-xl border border-border bg-card;
+}
+
+.step {
+  @apply px-4 py-4 sm:px-5;
+}
+
+.step + .step {
+  @apply border-t border-border;
+}
+
+.step-title {
+  @apply flex items-center gap-2.5 text-[15px] font-semibold text-foreground;
+}
+
+.step-num {
+  @apply grid h-6 w-6 shrink-0 place-items-center rounded-full bg-muted text-xs font-bold text-foreground;
+}
+
+.step-num.is-current {
+  @apply bg-primary text-primary-foreground;
+}
+
+.step-num.is-done {
+  @apply bg-emerald-600 text-white;
+}
+
+.field-label {
+  @apply mb-1 block text-xs font-medium text-muted-foreground;
+}
+
+.money {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Etiquetas de estado */
+.chip {
+  @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+}
+
+/* Tonos: tinte translúcido + texto con variante oscura (legibles en ambos temas). */
+.tone-ok { @apply bg-emerald-500/10 text-emerald-800 dark:text-emerald-300; }
+.tone-info { @apply bg-sky-500/10 text-sky-800 dark:text-sky-300; }
+.tone-warn { @apply bg-amber-500/10 text-amber-900 dark:text-amber-200; }
+.tone-alert { @apply bg-orange-500/10 text-orange-900 dark:text-orange-200; }
+.tone-danger { @apply bg-red-500/10 text-red-800 dark:text-red-300; }
+
+.notice {
+  @apply rounded-lg px-3 py-2 text-sm;
+}
+
+/* Botón cuadrado de quitar / limpiar */
+.icon-btn {
+  @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-600 disabled:pointer-events-none disabled:opacity-0 dark:hover:text-red-400;
+}
+
+.icon-btn:focus-visible,
+.link-btn:focus-visible,
+.segmented label:has(:focus-visible) {
+  @apply outline-2 outline-offset-2 outline-primary;
+}
+
+.link-btn {
+  @apply rounded text-sm font-medium text-primary hover:underline;
+}
+
+/* Contado / A crédito */
+.segmented {
+  @apply grid grid-cols-2 gap-1 rounded-lg bg-muted/60 p-1;
+}
+
+.segmented label {
+  @apply cursor-pointer rounded-md py-1.5 text-center text-sm font-medium text-muted-foreground transition-colors;
+}
+
+.segmented label:has(:checked) {
+  @apply bg-card text-foreground shadow-sm;
+}
+
+/* Resumen de pago: el único panel elevado, con el acento del tema arriba. */
+.summary {
+  @apply rounded-xl border border-border border-t-4 border-t-primary bg-card shadow-sm;
+}
+
+/* Líneas de la factura */
+.lines-head {
+  @apply hidden items-center gap-2 border-b border-border px-3 py-2 text-xs font-medium text-muted-foreground;
+}
+
+.line {
+  @apply grid items-center gap-x-2 gap-y-2 px-3 py-2.5;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.line-controls {
+  @apply col-span-2 grid gap-2;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+}
+
+.line-total {
+  @apply col-span-2 text-right;
+}
+
+@media (min-width: 768px) {
+  .lines-head,
+  .line {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 112px 104px 96px 32px;
+  }
+
+  .with-discounts .lines-head,
+  .with-discounts .line {
+    grid-template-columns: minmax(0, 1fr) 112px 104px 72px 84px 96px 32px;
+  }
+
+  .line-controls {
+    display: contents;
+  }
+
+  .line-total {
+    grid-column: auto;
+  }
+}
+
+/* Mismo fondo que los campos de texto para que cantidad y precio hagan juego. */
+.stepper {
+  @apply inline-flex h-9 items-center self-end overflow-hidden rounded-md border border-border bg-background;
+}
+
+.stepper button {
+  @apply h-full w-8 shrink-0 text-base text-muted-foreground hover:bg-muted disabled:opacity-40;
+}
+
+.stepper input {
+  @apply h-full w-full min-w-0 border-x border-border bg-background text-center text-sm font-semibold text-foreground focus:outline-none;
+}
+
+/* En celular la barra fija va encima de la barra de navegación inferior (visible bajo xl). */
+.mobile-emit-bar {
+  bottom: calc(env(safe-area-inset-bottom) + 3.75rem);
+}

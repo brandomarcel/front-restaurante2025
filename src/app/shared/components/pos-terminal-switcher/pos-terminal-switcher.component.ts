@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { ClickOutsideDirective } from 'src/app/shared/directives/click-outside.directive';
 import { fiscalSeries } from 'src/app/core/utils/fiscal-setup';
@@ -18,9 +18,12 @@ import { fiscalSeries } from 'src/app/core/utils/fiscal-setup';
   imports: [CommonModule, ClickOutsideDirective],
   template: `
     <div *ngIf="visible" class="relative" clickOutside (clickOutside)="open = false">
-      <button type="button" (click)="toggle()" [attr.aria-expanded]="open" aria-haspopup="listbox"
-        class="inline-flex min-h-[34px] max-w-[220px] items-center gap-1.5 rounded-lg border px-2 text-[11px] font-semibold shadow-sm transition"
-        [ngClass]="state === 'ok' ? 'border-border bg-card text-foreground hover:bg-muted' : (state === 'blocked' ? 'border-red-300 bg-red-50 text-red-800' : 'border-amber-300 bg-amber-50 text-amber-900 animate-pulse')"
+      <button type="button" (click)="toggle()" [attr.aria-expanded]="open" aria-haspopup="listbox" [disabled]="disabled"
+        class="inline-flex items-center gap-1.5 border font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
+        [ngClass]="[
+          variant === 'chip' ? 'min-h-[28px] max-w-[280px] rounded-full px-2.5 text-xs' : 'min-h-[34px] max-w-[220px] rounded-lg px-2 text-[11px] shadow-sm',
+          state === 'ok' ? 'border-border bg-card text-foreground hover:bg-muted' : (state === 'blocked' ? 'border-red-500/40 bg-red-500/10 text-red-800 dark:text-red-300' : 'border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200 animate-pulse')
+        ]"
         [attr.title]="message || 'Terminal POS activa'">
         <span class="h-2 w-2 shrink-0 rounded-full" [ngClass]="state === 'ok' ? 'bg-emerald-500' : (state === 'blocked' ? 'bg-red-500' : 'bg-amber-500')" aria-hidden="true"></span>
         <ng-container *ngIf="active; else noTerminal">
@@ -33,7 +36,7 @@ import { fiscalSeries } from 'src/app/core/utils/fiscal-setup';
 
       <div *ngIf="open" class="absolute right-0 z-[130] mt-1.5 w-72 rounded-xl border border-border bg-card p-2 shadow-lg" role="listbox" aria-label="Terminales POS">
         <p class="px-1.5 pb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Terminal POS</p>
-        <p *ngIf="message" class="mb-1.5 rounded-lg bg-amber-50 px-2 py-1.5 text-[11px] font-semibold text-amber-900">{{ message }}</p>
+        <p *ngIf="message" class="mb-1.5 rounded-lg bg-amber-500/10 px-2 py-1.5 text-[11px] font-semibold text-amber-900 dark:text-amber-200">{{ message }}</p>
         <button *ngFor="let terminal of terminals" type="button" role="option" [attr.aria-selected]="isActive(terminal)"
           (click)="select(terminal)"
           class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition"
@@ -53,6 +56,15 @@ import { fiscalSeries } from 'src/app/core/utils/fiscal-setup';
 })
 export class PosTerminalSwitcherComponent {
   open = false;
+
+  /** `chip`: versión compacta dentro de una pantalla (p. ej. Facturar); `navbar` por defecto. */
+  @Input() variant: 'navbar' | 'chip' = 'navbar';
+  @Input() disabled = false;
+  /**
+   * Se llama antes de cambiar de terminal. Cambiar recarga la página, así que la
+   * pantalla que tenga trabajo sin guardar puede pedir confirmación y cancelar.
+   */
+  @Input() beforeChange?: (terminal: any) => Promise<boolean>;
 
   constructor(private readonly capabilities: CompanyCapabilitiesService) {}
 
@@ -103,6 +115,7 @@ export class PosTerminalSwitcherComponent {
   }
 
   toggle(): void {
+    if (this.disabled) return;
     this.open = !this.open;
   }
 
@@ -111,6 +124,16 @@ export class PosTerminalSwitcherComponent {
       this.open = false;
       return;
     }
+    if (this.beforeChange) {
+      void this.beforeChange(terminal).then((confirmed) => {
+        if (confirmed) this.activate(terminal);
+      });
+      return;
+    }
+    this.activate(terminal);
+  }
+
+  private activate(terminal: any): void {
     if (!this.capabilities.setActivePosTerminal(terminal)) return;
     this.open = false;
     // Cada terminal puede apuntar a otra bodega y a otra serie: recargar deja

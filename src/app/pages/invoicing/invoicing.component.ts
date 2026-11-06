@@ -27,6 +27,7 @@ import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabi
 import { buildMultiplePaymentPayload, findPaymentMethod, getDefaultPaymentValue, isPaymentMethodAlreadySelected, PaymentRow, roundMoney } from 'src/app/shared/utils/payment.utils';
 import { LiteEmissionState } from 'src/app/core/utils/lite-invoice-emission';
 import { ProductVariantPickerComponent } from 'src/app/shared/components/product-variant-picker/product-variant-picker.component';
+import { PosTerminalSwitcherComponent } from 'src/app/shared/components/pos-terminal-switcher/pos-terminal-switcher.component';
 import { fiscalSeries } from 'src/app/core/utils/fiscal-setup';
 import { clampDiscountAmount, clampDiscountPercentage, computeLineTotals } from 'src/app/shared/utils/line-discount.utils';
 
@@ -46,8 +47,9 @@ type CartItem = {
 @Component({
   selector: 'app-invoicing',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, RouterModule, ProductVariantPickerComponent, DecimalInputDirective],
-  templateUrl: './invoicing.component.html'
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, RouterModule, ProductVariantPickerComponent, PosTerminalSwitcherComponent, DecimalInputDirective],
+  templateUrl: './invoicing.component.html',
+  styleUrls: ['./invoicing.component.css']
 })
 export class InvoicingComponent implements OnInit, OnDestroy {
   @ViewChild('productVariantPicker') productVariantPicker!: ProductVariantPickerComponent;
@@ -74,6 +76,10 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   isProductSearchOpen = false;
   productSuggestions: Product[] = [];
   cartItems: CartItem[] = [];
+  /** Las columnas de descuento se muestran a pedido: la mayoría de facturas no los usa. */
+  showDiscounts = false;
+  /** El usuario ya aceptó perder la factura en curso (cambio de terminal). */
+  private reloadConfirmed = false;
   showCustomerModal = false;
   submittedCustomerForm = false;
   ambiente: string = '';
@@ -795,21 +801,12 @@ export class InvoicingComponent implements OnInit, OnDestroy {
     return this.capabilities.hasPermission('*') || this.capabilities.hasPermission('business.settings.manage');
   }
 
-  get terminalAssignmentLabel(): string {
-    return this.selectedPosTerminal && this.capabilities.terminalAccessRequired ? 'Asignado a tu usuario' : '';
-  }
-
   get currentFiscalLocation(): any | null {
     return this.capabilities.activeFiscalLocation;
   }
 
   get posTerminalBlockMessage(): string | null {
     return this.capabilities.getPosTerminalBlockMessage();
-  }
-
-  posTerminalLabel(terminal: any): string {
-    if (!terminal) return 'Sin terminal seleccionado';
-    return `${terminal?.establishment_code || '—'}-${terminal?.emission_point_code || '—'}`;
   }
 
   fiscalEstablishmentLabel(location: any): string {
@@ -1150,6 +1147,7 @@ export class InvoicingComponent implements OnInit, OnDestroy {
       this.lastInvoice = { name: this.emissionInvoiceName, state: this.emissionState, business: this.capabilities.activeBusinessId };
     }
     this.additionalFields.clear();
+    this.showDiscounts = false;
     this.invoiceForm.reset({
       paymentMethod: this.defaultPaymentMethodValue, selectedCustomer: null, selectedProduct: null,
       payment_condition: 'Contado', payment_due_date: '', initial_collection_method: '',
@@ -1191,6 +1189,30 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   @HostListener('document:keydown.escape')
   onEscape(): void {
     if (this.showCustomerModal) this.closeCustomerModal();
+  }
+
+  /** Hay una factura a medio armar que se perdería al recargar. */
+  get hasInvoiceInProgress(): boolean {
+    return this.cartItems.length > 0 && !this.emissionInvoiceName;
+  }
+
+  /** Cambiar de terminal recarga la página: confirmar si se perdería la factura en curso. */
+  readonly confirmTerminalChange = async (): Promise<boolean> => {
+    if (!this.hasInvoiceInProgress) return true;
+    const result = await this.alertService.confirm(
+      'La pantalla se recarga con la serie y la bodega de la otra terminal, y se pierde la factura que estás armando.',
+      'Cambiar de terminal'
+    );
+    if (result.isConfirmed) this.reloadConfirmed = true;
+    return result.isConfirmed;
+  };
+
+  /** Aviso del navegador al recargar o cerrar con una factura a medio armar (p. ej. terminal cambiada desde la barra superior). */
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (!this.hasInvoiceInProgress || this.reloadConfirmed) return;
+    event.preventDefault();
+    event.returnValue = '';
   }
 
   get isFinalConsumerSelected(): boolean {
@@ -1267,9 +1289,24 @@ export class InvoicingComponent implements OnInit, OnDestroy {
   }
 
   get productSearchHelpText(): string {
-    if (!this.products.length) return 'Cargando productos...';
-    if (!this.productSearchTerm.trim()) return 'Productos recientes/disponibles para agregar rápido.';
-    return `${this.filteredProductSuggestions.length} coincidencia(s).`;
+    if (!this.products.length) return 'Cargando productos…';
+    if (!this.productSearchTerm.trim()) return 'Disponibles para agregar. Enter agrega el primero.';
+    const count = this.filteredProductSuggestions.length;
+    return `${count} ${count === 1 ? 'coincidencia' : 'coincidencias'}. Enter agrega la primera.`;
+  }
+
+  /** Con algún descuento cargado las columnas no se pueden ocultar (se perdería de vista). */
+  get hasLineDiscounts(): boolean {
+    return this.cartItems.some((item) => this.safeNumber(item.discount_percentage, 0) > 0 || this.safeNumber(item.discount_amount, 0) > 0);
+  }
+
+  get discountsVisible(): boolean {
+    return this.showDiscounts || this.hasLineDiscounts;
+  }
+
+  toggleDiscounts(): void {
+    if (this.hasLineDiscounts) return;
+    this.showDiscounts = !this.showDiscounts;
   }
 
   getProductPriceLabel(product: Product | null | undefined): string {

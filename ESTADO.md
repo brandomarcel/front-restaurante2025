@@ -9,6 +9,36 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-06 (Claude, 5): elegir la terminal POS desde «Facturar» (opción C acordada). Con `pos_terminal` (billing + pos)
+  la factura sale de la terminal activa; antes el encabezado solo la mostraba y había que cambiarla en la barra
+  superior. Ahora el chip es el selector global reutilizado (`app-pos-terminal-switcher`, nuevas entradas `variant="chip"`,
+  `disabled` y `beforeChange`), visible también sin terminal elegida («Elegir terminal»). Cambiar recarga la página: con
+  productos en el carrito pide confirmación (`confirmTerminalChange`) y el navegador avisa antes de recargar o cerrar
+  con una factura a medio armar (`beforeunload`, cubre el cambio desde la barra superior). Sin terminal elegida ya no se
+  muestra «Serie …» engañosa. Selector con colores para modo oscuro. Se quitaron `terminalAssignmentLabel` y
+  `posTerminalLabel` de Facturar (sin uso). Sin cambios de backend: Cajero/Facturación siguen necesitando terminal;
+  Administrador/Gerente podrían facturar sin terminal según el backend, pero la pantalla sigue exigiéndola (decisión:
+  la terminal define bodega y caja). Verificado en navegador (cafetería, 2 terminales, claro y oscuro); `ngc` OK.
+  Para Codex: `beforeChange` cancela/confirma en el selector, chip con y sin terminal, confirmación solo con carrito.
+
+- 2026-11-06 (Claude, 4): rediseño de «Nueva factura» (`pages/invoicing`), sin cambiar reglas ni llamadas al backend.
+  Cliente, productos e información adicional van en una sola hoja con pasos separados por líneas (antes, tarjetas
+  sueltas); solo el panel de Pago se eleva, con el acento del tema arriba y los totales como pie del comprobante (total
+  grande, cifras tabulares). Modo oscuro corregido: todos los avisos/estados usaban fondos claros fijos (`*-50`); ahora
+  tonos translúcidos `.tone-*` en el nuevo `invoicing.component.css`. Texto mínimo 12 px (antes 10-11 px), etiquetas sin
+  mayúsculas sostenidas, controles de 36-40 px, foco visible en botones de icono. Las columnas de descuento se ocultan
+  por defecto (`showDiscounts`, `discountsVisible`, «+ Aplicar descuentos»); no se pueden ocultar con un descuento
+  cargado. Textos del buscador más claros (`productSearchHelpText`). Se conservaron todos los textos que verifican las
+  pruebas de Codex. `ngc --noEmit` y `ng serve` OK. Para Codex: alternar descuentos, columna oculta con descuento
+  cargado, reinicio al «+ Nueva factura».
+  Revisado en navegador (Playwright, usuario cafeteria, 1440 px y 390 px, claro y oscuro) y corregido: en celular la
+  barra fija de emitir quedaba tapada por la navegación inferior (visible bajo `xl`; ahora `.mobile-emit-bar` la sube);
+  con descuentos la cantidad desaparecía (los descuentos pasan a una segunda fila con etiqueta visible); cantidad y
+  precio con el mismo fondo. Global (`styles.css`): `.ng-select-tailwind .ng-select-container` ahora centra el valor
+  verticalmente (antes quedaba pegado arriba en todos los selectores de la app).
+  Pendiente propuesto: foco automático al buscador de productos tras elegir cliente y atajo para emitir; precio `5.5`
+  en vez de `5.50` (`appDecimalInput` compartido); estilos globales `.input` duplicado y `badge-*` solo tema claro.
+
 - 2026-11-06 (Claude, 3): avisos del panel (`shared/components/avisos`, «Caja», «Firma»…) ilegibles en modo oscuro:
   fondo fijo claro (`bg-yellow-50`) con texto `text-foreground` (casi blanco en oscuro). Ahora tinte translúcido
   (`bg-amber-500/10`, igual para error/info/success) con texto e icono de su color y variante `dark:`, mismo patrón
