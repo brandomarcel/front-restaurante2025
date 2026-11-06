@@ -218,10 +218,10 @@ export class CompanyComponent implements OnInit, DoCheck {
 
   get certificateStatusClasses(): string {
     const status = this.normalizeStatus(this.certificateStatusLabel);
-    if (status === 'VIGENTE') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-    if (status === 'POR VENCER') return 'bg-amber-100 text-amber-700 border-amber-200';
-    if (status === 'NO CONFIGURADO' || status === 'VENCIDO' || status === 'NO VIGENTE' || status === 'ERROR DE LECTURA') return 'bg-red-100 text-red-700 border-red-200';
-    return 'bg-slate-100 text-slate-600 border-slate-200';
+    if (status === 'VIGENTE') return 'tone-ok border-emerald-500/30';
+    if (status === 'POR VENCER') return 'tone-warn border-amber-500/30';
+    if (status === 'NO CONFIGURADO' || status === 'VENCIDO' || status === 'NO VIGENTE' || status === 'ERROR DE LECTURA') return 'tone-danger border-red-500/30';
+    return 'bg-muted text-muted-foreground border-border';
   }
 
   get certificateDaysRemaining(): number | null {
@@ -1532,12 +1532,12 @@ export class CompanyComponent implements OnInit, DoCheck {
       .toUpperCase()
       .trim();
 
-    if (normalized === 'ACTIVO') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-    if (normalized === 'PRUEBA') return 'bg-sky-100 text-sky-700 border-sky-200';
-    if (normalized === 'VENCIDO') return 'bg-red-100 text-red-700 border-red-200';
-    if (normalized === 'SUSPENDIDO') return 'bg-orange-100 text-orange-700 border-orange-200';
-    if (normalized === 'CANCELADO' || normalized === 'RENOVADO') return 'bg-slate-100 text-slate-600 border-slate-200';
-    return 'bg-slate-100 text-slate-700 border-slate-200';
+    if (normalized === 'ACTIVO') return 'tone-ok border-emerald-500/30';
+    if (normalized === 'PRUEBA') return 'tone-info border-sky-500/30';
+    if (normalized === 'VENCIDO') return 'tone-danger border-red-500/30';
+    if (normalized === 'SUSPENDIDO') return 'tone-alert border-orange-500/30';
+    if (normalized === 'CANCELADO' || normalized === 'RENOVADO') return 'bg-muted text-muted-foreground border-border';
+    return 'bg-muted text-muted-foreground border-border';
   }
 
   private normalizeCheck(value: unknown): boolean {

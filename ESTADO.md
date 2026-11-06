@@ -9,6 +9,17 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-06 (Claude, 10): Configuración de la empresa (`pages/company`, Resumen / Datos tributarios / Firma / Plan)
+  revisada en navegador y corregida, sin cambiar lógica ni textos de negocio. Modo oscuro: paso pendiente del Resumen,
+  aviso de firma sin cargar, avisos de ambiente y plan, y etiquetas de estado (`certificateStatusClasses`,
+  `getPlanStatusClasses` en el TS) pasan a tonos `.tone-*`. Campos de solo lectura (RUC, Tipo de operación,
+  Contribuyente especial, Tipo de emisión, RUC del proveedor) ahora se distinguen de los editables (el `.input` global
+  pisaba su `bg-muted`); el select de Tipo de operación ya no muestra flecha. En celular la zona del logo era un cuadrado
+  de ~350 px: ahora 144 px de alto (cuadrada desde `lg`). Menú interno: activo con fondo suave (como el lateral), sin
+  «→». Sin la etiqueta «CONFIGURACIÓN» repetida en la cabecera; texto mínimo 12 px, sin mayúsculas sostenidas ni
+  `font-mono`. Se conserva el texto «Datos tributarios» que verifica la prueba de Codex. Verificado en navegador
+  (claro, oscuro, 390 px).
+
 - 2026-11-06 (Claude, 9): Puntos de emisión (`pages/lite-emission-points`) revisada en navegador y corregida. En el
   formulario el campo Código (`.input` global fija `md:w-80`) se montaba sobre Nombre: campos con `!w-full`. Modo
   oscuro: «Secuencia configurada», «Activo», el aviso del formulario y los avisos ámbar eran cajas claras; ahora tonos
