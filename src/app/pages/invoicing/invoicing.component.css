@@ -43,12 +43,7 @@
   @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
 }
 
-/* Tonos: tinte translúcido + texto con variante oscura (legibles en ambos temas). */
-.tone-ok { @apply bg-emerald-500/10 text-emerald-800 dark:text-emerald-300; }
-.tone-info { @apply bg-sky-500/10 text-sky-800 dark:text-sky-300; }
-.tone-warn { @apply bg-amber-500/10 text-amber-900 dark:text-amber-200; }
-.tone-alert { @apply bg-orange-500/10 text-orange-900 dark:text-orange-200; }
-.tone-danger { @apply bg-red-500/10 text-red-800 dark:text-red-300; }
+/* Tonos de estado (.tone-*): definidos en styles.css. */
 
 .notice {
   @apply rounded-lg px-3 py-2 text-sm;

@@ -1,7 +1,7 @@
 <main class="app-container space-y-3">
   <app-fiscal-setup-header step="emission-points" title="Puntos de emisión"
     description="Cada caja o canal que emite comprobantes dentro de un establecimiento. Su código es la segunda parte del número de la factura.">
-    <button headerActions *ngIf="canManage" type="button" class="btn btn-primary !text-xs" (click)="openCreate()"
+    <button headerActions *ngIf="canManage" type="button" class="btn btn-primary" (click)="openCreate()"
       [disabled]="loading || !selectedEstablishmentId">+ Nuevo punto</button>
     <ng-container help>
       <p>Un <b class="text-foreground">punto de emisión</b> es una caja, un vendedor o un canal (por ejemplo, la tienda en línea). Un establecimiento puede tener varios.</p>
@@ -10,27 +10,27 @@
     </ng-container>
   </app-fiscal-setup-header>
 
-  <div *ngIf="!canManage" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+  <div *ngIf="!canManage" class="tone-warn rounded-lg px-3 py-2 text-sm">
     Modo lectura: solo Administrador o Gerente pueden crear o modificar puntos de emisión.
   </div>
 
   <!-- Establecimiento -->
   <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
-    <p class="mb-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Establecimiento</p>
+    <p class="mb-2 text-xs font-medium text-muted-foreground">Establecimiento</p>
     <div *ngIf="activeEstablishments.length; else noEstablishments" class="flex flex-wrap gap-2" role="radiogroup" aria-label="Establecimiento">
       <button *ngFor="let establishment of activeEstablishments" type="button" role="radio"
         [attr.aria-checked]="selectedEstablishmentId === establishment.name"
-        class="flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition"
-        [ngClass]="selectedEstablishmentId === establishment.name ? 'border-primary bg-primary/10 text-primary shadow-sm' : 'border-border text-foreground hover:border-primary/40'"
+        class="flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        [ngClass]="selectedEstablishmentId === establishment.name ? 'border-primary bg-primary/10 text-primary' : 'border-border text-foreground hover:border-primary/40 hover:bg-muted/40'"
         (click)="onEstablishmentChange(establishment.name)">
-        <span class="font-mono text-sm font-black">{{ establishment.establishment_code }}</span>
-        <span class="font-semibold">{{ establishment.establishment_name || establishment.name }}</span>
+        <span class="font-bold tabular-nums">{{ establishment.establishment_code }}</span>
+        <span class="font-medium">{{ establishment.establishment_name || establishment.name }}</span>
       </button>
     </div>
     <ng-template #noEstablishments>
-      <p class="text-xs text-muted-foreground">
+      <p class="text-sm text-muted-foreground">
         Primero necesitas un establecimiento activo.
-        <a routerLink="/settings/lite/establishments" class="font-semibold text-primary hover:underline">Crear establecimiento →</a>
+        <a routerLink="/settings/lite/establishments" class="font-semibold text-primary hover:underline">Crear establecimiento</a>
       </p>
     </ng-template>
   </section>
@@ -38,18 +38,18 @@
   <div *ngIf="selectedEstablishmentId && points.length" class="flex flex-wrap items-center justify-between gap-2">
     <div class="inline-flex rounded-lg border border-border bg-card p-0.5 shadow-sm" role="radiogroup" aria-label="Filtrar por estado">
       <button *ngFor="let filter of statusFilters" type="button" role="radio" [attr.aria-checked]="statusFilter === filter.value"
-        class="rounded-md px-3 py-1 text-[11px] font-semibold transition"
+        class="rounded-md px-3 py-1.5 text-xs font-semibold transition-colors"
         [ngClass]="statusFilter === filter.value ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
         (click)="statusFilter = filter.value">
         {{ filter.label }} <span class="opacity-70">{{ statusFilterCount(filter.value) }}</span>
       </button>
     </div>
-    <p *ngIf="pendingSequenceCount" class="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-semibold text-amber-800">
+    <p *ngIf="pendingSequenceCount" class="tone-warn rounded-full px-3 py-1 text-xs font-semibold">
       {{ pendingSequenceCount }} {{ pendingSequenceCount === 1 ? 'punto necesita' : 'puntos necesitan' }} secuencia para facturar
     </p>
   </div>
 
-  <section *ngIf="error && !loading && activeEstablishments.length" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800" role="alert">{{ error }}</section>
+  <section *ngIf="error && !loading && activeEstablishments.length" class="tone-warn rounded-xl p-4 text-sm" role="alert">{{ error }}</section>
 
   <section *ngIf="loading" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
     <div *ngFor="let _ of [1, 2, 3]" class="h-40 animate-pulse rounded-xl bg-muted"></div>
@@ -61,27 +61,27 @@
       <div class="flex items-start justify-between gap-3 p-4">
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-1.5">
-            <h2 class="truncate text-sm font-bold text-foreground">{{ point.emission_point_name || point.name || '—' }}</h2>
-            <span *ngIf="isDefault(point)" class="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">Predeterminado</span>
+            <h2 class="truncate text-[15px] font-semibold text-foreground">{{ point.emission_point_name || point.name || '—' }}</h2>
+            <span *ngIf="isDefault(point)" class="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">Predeterminado</span>
           </div>
-          <span class="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
-            [ngClass]="isActive(point) ? 'bg-emerald-100 text-emerald-800' : 'bg-muted text-muted-foreground'">
+          <span class="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium"
+            [ngClass]="isActive(point) ? 'tone-ok' : 'bg-muted text-muted-foreground'">
             <span class="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true"></span>{{ point.status || 'Activo' }}
           </span>
         </div>
-        <div class="shrink-0 rounded-lg bg-primary/10 px-2.5 py-1.5 text-center text-primary">
-          <span class="block text-[9px] font-bold uppercase leading-none opacity-70">Serie</span>
-          <span class="font-mono text-base font-black leading-tight">{{ series(point) }}</span>
+        <div class="shrink-0 text-right">
+          <span class="block text-xs text-muted-foreground">Serie</span>
+          <span class="text-lg font-bold leading-tight tabular-nums text-foreground">{{ series(point) }}</span>
         </div>
       </div>
 
       <div class="border-t border-border px-4 py-3">
-        <div *ngIf="requiresSequence(point); else sequenceReady" class="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
+        <div *ngIf="requiresSequence(point); else sequenceReady" class="tone-warn flex items-start gap-2 rounded-lg px-3 py-2 text-sm">
           <span aria-hidden="true">⚠</span>
           <span>Sin secuencia: este punto todavía <b>no puede facturar</b>.</span>
         </div>
         <ng-template #sequenceReady>
-          <div class="flex items-start gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-[11px] text-emerald-900">
+          <div class="tone-ok flex items-start gap-2 rounded-lg px-3 py-2 text-sm">
             <span aria-hidden="true">✓</span>
             <span>Secuencia configurada.</span>
           </div>
@@ -89,13 +89,14 @@
       </div>
 
       <div class="mt-auto flex items-center justify-between gap-2 border-t border-border px-4 py-2.5">
-        <button *ngIf="isActive(point)" type="button" class="text-left text-xs font-semibold text-primary hover:underline" (click)="goToSequences(point)">
-          {{ requiresSequence(point) ? 'Configurar secuencia' : 'Ver secuencias' }} →
+        <button *ngIf="isActive(point)" type="button" class="rounded text-left text-sm font-medium text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50" (click)="goToSequences(point)">
+          {{ requiresSequence(point) ? 'Configurar secuencia' : 'Ver secuencias' }}
         </button>
-        <span *ngIf="!isActive(point)" class="text-[11px] text-muted-foreground">Inactivo: no emite comprobantes</span>
+        <span *ngIf="!isActive(point)" class="text-xs text-muted-foreground">Inactivo: no emite comprobantes</span>
         <div *ngIf="canManage" class="flex shrink-0 gap-1">
-          <button type="button" class="btn btn-ghost !px-2 !py-1 !text-[11px]" [disabled]="saving" (click)="openEdit(point)">Editar</button>
-          <button *ngIf="isActive(point)" type="button" class="btn btn-ghost !px-2 !py-1 !text-[11px] !text-red-700"
+          <button type="button" class="btn btn-outline !px-3 !py-1.5 !text-xs" [disabled]="saving" (click)="openEdit(point)">Editar</button>
+          <button *ngIf="isActive(point)" type="button"
+            class="rounded-md px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-500/10 disabled:opacity-50 dark:text-red-400"
             [disabled]="saving" (click)="deactivate(point)">Desactivar</button>
         </div>
       </div>
@@ -104,63 +105,63 @@
 
   <section *ngIf="!loading && selectedEstablishmentId && !visiblePoints.length && !error" class="rounded-xl border border-dashed border-border bg-card px-4 py-10 text-center">
     <ng-container *ngIf="!points.length; else filteredEmpty">
-      <p class="font-mono text-3xl font-black text-primary/30">{{ selectedEstablishment?.establishment_code || '001' }}-001</p>
-      <h2 class="mt-2 text-sm font-bold text-foreground">{{ selectedEstablishmentLabel }} no tiene puntos de emisión</h2>
-      <p class="mx-auto mt-1 max-w-md text-xs text-muted-foreground">Crea al menos uno (por ejemplo, 001 · Caja principal) para poder facturar desde este establecimiento.</p>
-      <button *ngIf="canManage" type="button" class="btn btn-primary mt-4 !text-xs" (click)="openCreate()">Crear punto de emisión</button>
+      <p class="text-3xl font-bold tabular-nums text-primary/30">{{ selectedEstablishment?.establishment_code || '001' }}-001</p>
+      <h2 class="mt-2 text-base font-semibold text-foreground">{{ selectedEstablishmentLabel }} no tiene puntos de emisión</h2>
+      <p class="mx-auto mt-1 max-w-md text-sm text-muted-foreground">Crea al menos uno (por ejemplo, 001 · Caja principal) para poder facturar desde este establecimiento.</p>
+      <button *ngIf="canManage" type="button" class="btn btn-primary mt-4" (click)="openCreate()">Crear punto de emisión</button>
     </ng-container>
     <ng-template #filteredEmpty>
       <p class="text-sm font-semibold text-foreground">No hay puntos {{ statusFilter === 'Inactivo' ? 'inactivos' : 'activos' }} en este establecimiento.</p>
-      <button type="button" class="btn btn-outline mt-3 !text-xs" (click)="statusFilter = 'all'">Ver todos</button>
+      <button type="button" class="btn btn-outline mt-3" (click)="statusFilter = 'all'">Ver todos</button>
     </ng-template>
   </section>
 
-  <section *ngIf="!loading && !selectedEstablishmentId && activeEstablishments.length > 1" class="rounded-xl border border-dashed border-border bg-card px-4 py-8 text-center text-xs text-muted-foreground">
+  <section *ngIf="!loading && !selectedEstablishmentId && activeEstablishments.length > 1" class="rounded-xl border border-dashed border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
     Elige un establecimiento para ver sus puntos de emisión.
   </section>
 
   <div *ngIf="modalOpen" class="app-modal-backdrop">
-    <section class="app-modal !max-w-xl overflow-hidden !rounded-2xl !border-border !bg-card !shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="point-modal-title">
+    <section class="app-modal !max-w-xl overflow-hidden !rounded-xl !border-border !bg-card !p-0 !shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="point-modal-title">
       <header class="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
         <div>
-          <h2 id="point-modal-title" class="text-base font-bold text-foreground">{{ editing ? 'Editar punto de emisión' : 'Nuevo punto de emisión' }}</h2>
-          <p class="mt-0.5 text-xs text-muted-foreground">Establecimiento {{ selectedEstablishmentLabel }}</p>
+          <h2 id="point-modal-title" class="text-base font-semibold text-foreground">{{ editing ? 'Editar punto de emisión' : 'Nuevo punto de emisión' }}</h2>
+          <p class="mt-0.5 text-sm text-muted-foreground">Establecimiento {{ selectedEstablishmentLabel }}</p>
         </div>
-        <button type="button" class="btn btn-ghost !px-2" (click)="closeModal()" aria-label="Cerrar">×</button>
+        <button type="button" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50" (click)="closeModal()" aria-label="Cerrar">×</button>
       </header>
 
       <form [formGroup]="form" (ngSubmit)="save()" class="space-y-5 p-5">
         <fieldset class="space-y-3">
-          <legend class="text-[11px] font-bold uppercase tracking-wide text-primary">Identificación SRI</legend>
+          <legend class="text-sm font-semibold text-foreground">Identificación SRI</legend>
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-[140px_minmax(0,1fr)]">
             <div>
-              <label for="point-code" class="mb-1 block text-xs font-semibold text-foreground/80">Código</label>
-              <input id="point-code" class="input text-center font-mono text-base font-bold tracking-widest" formControlName="emission_point_code"
+              <label for="point-code" class="mb-1 block text-xs font-medium text-muted-foreground">Código</label>
+              <input id="point-code" class="input !h-10 !w-full text-center !text-base font-bold tabular-nums tracking-widest" formControlName="emission_point_code"
                 maxlength="3" inputmode="numeric" placeholder="001" />
               <p *ngIf="submitted && form.get('emission_point_code')?.hasError('required')" class="field-error">Ingresa el código.</p>
               <p *ngIf="submitted && form.get('emission_point_code')?.hasError('pattern')" class="field-error">Deben ser 3 dígitos.</p>
             </div>
             <div>
-              <label for="point-name" class="mb-1 block text-xs font-semibold text-foreground/80">Nombre</label>
-              <input id="point-name" class="input" formControlName="emission_point_name" placeholder="Caja principal, Tienda en línea…" />
+              <label for="point-name" class="mb-1 block text-xs font-medium text-muted-foreground">Nombre</label>
+              <input id="point-name" class="input !h-10 !w-full !text-sm" formControlName="emission_point_name" placeholder="Caja principal, Tienda en línea…" />
               <p *ngIf="submitted && form.get('emission_point_name')?.invalid" class="field-error">Ingresa el nombre.</p>
             </div>
           </div>
-          <p class="rounded-lg bg-muted/50 px-3 py-2 text-[11px] text-muted-foreground">
-            Así se verá en tus comprobantes: <span class="font-mono font-semibold text-foreground">{{ sampleNumber(form.get('emission_point_code')?.value) }}</span>
+          <p class="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+            Así se verá en tus comprobantes: <span class="font-semibold tabular-nums text-foreground">{{ sampleNumber(form.get('emission_point_code')?.value) }}</span>
           </p>
         </fieldset>
 
         <fieldset class="space-y-2">
-          <legend class="text-[11px] font-bold uppercase tracking-wide text-primary">Estado</legend>
+          <legend class="text-sm font-semibold text-foreground">Estado</legend>
           <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-border p-3 text-xs has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-              <input class="mt-0.5" type="checkbox" formControlName="is_default" />
-              <span><b class="block text-foreground">Predeterminado</b><span class="text-muted-foreground">Se propone primero al facturar en este establecimiento.</span></span>
+            <label class="flex cursor-pointer items-start gap-2.5 rounded-lg border border-border p-3 text-sm transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+              <input class="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary/40" type="checkbox" formControlName="is_default" />
+              <span><b class="block text-foreground">Predeterminado</b><span class="text-xs text-muted-foreground">Se propone primero al facturar en este establecimiento.</span></span>
             </label>
             <div>
-              <label for="point-status" class="mb-1 block text-xs font-semibold text-foreground/80">Disponibilidad</label>
-              <select id="point-status" class="select" formControlName="status">
+              <label for="point-status" class="mb-1 block text-xs font-medium text-muted-foreground">Disponibilidad</label>
+              <select id="point-status" class="select !h-10 !w-full !text-sm" formControlName="status">
                 <option value="Activo">Activo · puede emitir</option>
                 <option value="Inactivo">Inactivo · no emite</option>
               </select>
@@ -168,7 +169,7 @@
           </div>
         </fieldset>
 
-        <p *ngIf="!editing" class="rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
+        <p *ngIf="!editing" class="tone-info rounded-lg px-3 py-2 text-sm">
           Al guardar, el siguiente paso es crear la <b>secuencia de Factura</b> de este punto. Sin ella no podrá facturar.
         </p>
 

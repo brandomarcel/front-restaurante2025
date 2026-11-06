@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { toast } from 'ngx-sonner';
+import { AlertService } from 'src/app/core/services/alert.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import { CompanyService } from 'src/app/services/company.service';
@@ -41,7 +42,8 @@ export class LiteEmissionPointsComponent implements OnInit, DoCheck {
     private readonly capabilities: CompanyCapabilitiesService,
     private readonly frappeError: FrappeErrorService,
     private readonly router: Router,
-    private readonly route: ActivatedRoute
+    private readonly route: ActivatedRoute,
+    private readonly alertService: AlertService
   ) {}
 
   /** Establecimiento pedido al llegar desde la pantalla de establecimientos. */
@@ -201,9 +203,13 @@ export class LiteEmissionPointsComponent implements OnInit, DoCheck {
     });
   }
 
-  deactivate(point: any): void {
+  async deactivate(point: any): Promise<void> {
     if (!this.canManage || !point?.name || !this.activeBusinessId) return;
-    if (!window.confirm(`¿Desactivar ${this.displayName(point)}?`)) return;
+    const confirmation = await this.alertService.confirm(
+      'Deja de emitir comprobantes. Su historial y sus secuencias se conservan, y puedes volver a activarlo desde «Editar».',
+      `Desactivar ${this.displayName(point)}`
+    );
+    if (!confirmation.isConfirmed) return;
     this.saving = true;
     this.companyService.deactivateLiteEmissionPoint(point.name, this.activeBusinessId)
       .pipe(finalize(() => { this.saving = false; }))

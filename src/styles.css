@@ -435,6 +435,14 @@ select {
   .badge-gray   { @apply bg-gray-100 text-gray-800; }
   .badge-blue   { @apply bg-blue-100 text-blue-800; }
 
+  /* Tonos de estado: tinte translúcido + texto con variante oscura (legibles en ambos temas).
+     Preferirlos a bg-*-50 / bg-*-100 fijos, que en modo oscuro quedan como cajas claras. */
+  .tone-ok     { @apply bg-emerald-500/10 text-emerald-800 dark:text-emerald-300; }
+  .tone-info   { @apply bg-sky-500/10 text-sky-800 dark:text-sky-300; }
+  .tone-warn   { @apply bg-amber-500/10 text-amber-900 dark:text-amber-200; }
+  .tone-alert  { @apply bg-orange-500/10 text-orange-900 dark:text-orange-200; }
+  .tone-danger { @apply bg-red-500/10 text-red-800 dark:text-red-300; }
+
   /* Cards */
   .app-card { @apply bg-card rounded-xl shadow-sm border border-border text-foreground; }
   .app-card-body { @apply p-4 md:p-6; }

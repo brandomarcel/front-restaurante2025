@@ -9,6 +9,16 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-06 (Claude, 9): Puntos de emisión (`pages/lite-emission-points`) revisada en navegador y corregida. En el
+  formulario el campo Código (`.input` global fija `md:w-80`) se montaba sobre Nombre: campos con `!w-full`. Modo
+  oscuro: «Secuencia configurada», «Activo», el aviso del formulario y los avisos ámbar eran cajas claras; ahora tonos
+  `.tone-*`. «Desactivar» (rojo oscuro ilegible en oscuro) con su variante; confirmación con el diálogo de la app
+  (`AlertService.confirm`, explica que se conserva el historial y que se reactiva desde Editar) en vez de
+  `window.confirm`. Texto mínimo 12 px, sin etiquetas en mayúsculas ni «→». Lógica y textos de negocio sin cambios.
+  Global: `.tone-ok/info/warn/alert/danger` pasan a `styles.css` (componentes) para reutilizarlos; se quitaron del CSS
+  de Facturar. Verificado en navegador (claro, oscuro, 390 px, errores de validación). Pendiente: la cabecera
+  compartida `app-fiscal-setup-header` sigue con su etiqueta en mayúsculas y 10 px.
+
 - 2026-11-06 (Claude, 8): «Nueva factura», a pedido del usuario: los descuentos vuelven a estar siempre en la fila (se
   quitó «+ Aplicar descuentos» y `showDiscounts`/`discountsVisible`/`toggleDiscounts`) y cada línea muestra el valor
   de su IVA (`item.iva`, ya calculado por `computeLineTotals`; no se recalcula nada). Las líneas usan container
