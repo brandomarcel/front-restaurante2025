@@ -40,7 +40,6 @@ export class Menu {
           label: 'Facturar',
           route: '/dashboard/invoicing',
           featureKey: 'direct_invoice',
-          hideWhenFeature: 'generic_pos',
           permissionKey: 'billing.create',
         },
         {

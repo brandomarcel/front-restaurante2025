@@ -1,6 +1,6 @@
 # Estado del proyecto Facturada
 
-Última actualización: 2026-10-30.
+Última actualización: 2026-11-06.
 
 ## Objetivo Actual
 
@@ -8,6 +8,25 @@ Mantener una memoria breve del progreso y los pendientes sin ampliar `CLAUDE.md`
 El trabajo local observado se concentra en la configuración de desarrollo del frontend Angular y su conexión con Frappe.
 
 ## Últimos Cambios (Hecho)
+
+- 2026-11-06 (Claude, 3): avisos del panel (`shared/components/avisos`, «Caja», «Firma»…) ilegibles en modo oscuro:
+  fondo fijo claro (`bg-yellow-50`) con texto `text-foreground` (casi blanco en oscuro). Ahora tinte translúcido
+  (`bg-amber-500/10`, igual para error/info/success) con texto e icono de su color y variante `dark:`, mismo patrón
+  que `.notice-info` del detalle de orden. Botón cerrar con `aria-label`. Solo HTML; `ngc --noEmit` OK; sin revisar en
+  navegador.
+
+- 2026-11-06 (Claude, 2): al iniciar sesión, Administrador y Gerente (rol de negocio) entran al panel
+  (`/dashboard/main`) en lugar del POS. Primera regla de `CompanyCapabilitiesService.getLandingRoute`; el resto de
+  roles no cambia (Cajero/Facturación siguen al POS o a Facturar, Mesero al POS, Cocina a Órdenes en vivo). También
+  afecta el rebote del `RoleAccessGuard` (usa la misma ruta). `ngc --noEmit` OK; sin probar en navegador. Para Codex:
+  ruta inicial por rol (Administrador/Gerente → panel; Cajero con POS → POS).
+
+- 2026-11-06 (Claude): «Facturar» (`/dashboard/invoicing`) vuelve a aparecer en el menú cuando el POS genérico está
+  activo. Se ocultaba por `hideWhenFeature: 'generic_pos'` en `core/constants/menu.ts`; la ruta nunca lo bloqueaba
+  (exige `billing` + `direct_invoice` y `billing.create`, y el backend da `direct_invoice` = `billing`). Ahora conviven
+  «Facturar» y «Punto de venta». Los accesos rápidos de Gerente/Facturación ya priorizaban `/dashboard/invoicing`.
+  `ngc --noEmit` OK; sin probar en navegador. Para Codex: menú con `generic_pos` + `direct_invoice` muestra ambas
+  entradas; sin `billing.create` no sale ninguna. Se quitó de `CLAUDE.md` la nota obsoleta «recetas sin commit».
 
 - 2026-11-01 (Claude, 11): regla unificada «lo cobrado no cambia». Antes, una orden con pago bloqueaba la ronda nueva
   (`add_order_items`) pero dejaba corregir productos y montos desde la tarjeta (`update_order_for_invoice`), lo que

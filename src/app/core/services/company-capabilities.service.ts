@@ -1265,6 +1265,8 @@ export class CompanyCapabilitiesService {
       directInvoice: this.isEnabled('direct_invoice')
     };
     console.log('[FacturADA][Ruta inicial]', landingChecks);
+    // Administrador y Gerente supervisan: entran al panel, no al POS.
+    if (['ADMINISTRADOR', 'GERENTE'].includes(this.normalize(this.businessRole || ''))) return '/dashboard/main';
     if (this.isEnabled('restaurant')
       && this.isEnabled('orders')
       && this.hasPermission('restaurant.orders.create')

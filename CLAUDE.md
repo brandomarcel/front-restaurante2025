@@ -98,7 +98,8 @@ ambas activas a la vez.
 ## FacturADA Lite (facturador)
 
 Funciones:
-- Facturación directa y notas de crédito (`invoicing`, `invoices`, `credit-notes`)
+- Facturación directa y notas de crédito (`invoicing`, `invoices`, `credit-notes`). «Facturar» sale en el
+  menú aunque el POS genérico esté activo: ambos conviven (solo depende de `direct_invoice` + `billing.create`).
 - Punto de venta genérico y notas de venta (`pos-generic`, `pos-sale-notes`)
 - Configuración tributaria: establecimientos, puntos de emisión, secuencias,
   certificado electrónico, terminales POS (`settings/lite/*`)
@@ -121,6 +122,8 @@ Funciones:
 - Autorización combinada de tres ejes evaluados por `RoleAccessGuard`: feature del
   plan, permiso del contexto de negocio y rol
 - Selección y cambio de empresa activa (multi-negocio por usuario)
+- Pantalla inicial tras el login (`getLandingRoute`): Administrador y Gerente → panel (`/dashboard/main`);
+  Cajero/Facturación → POS o Facturar; Mesero → POS; Cocina → Órdenes en vivo.
 
 ## Clientes
 
@@ -410,7 +413,6 @@ intermedio: un push a `main` es un despliegue real.
   directas de un plato en Lite no descuentan insumos; carga masiva de insumos y recetas;
   al volver de Por Bodega a Simple el stock de las bodegas no se consolida; probar la factura
   SRI real de una orden con receta (sin doble salida).
-- Todo el trabajo de recetas, insumos, variantes por tipo de negocio y bodegas está **sin commit**.
 
 ## Lecturas al iniciar una sesión (si el usuario pide "retomar")
 
