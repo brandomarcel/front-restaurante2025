@@ -9,6 +9,20 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-06 (Claude, 11): Configuración de la empresa reorganizada como pantalla de ajustes de SaaS. Cada sección
+  tiene su título y descripción (`activeSettingsTitle`/`activeSettingsDescription`); la tarjeta de la empresa queda
+  solo en Resumen. Datos tributarios y Firma en filas «qué es · campos» (Logo, Identidad, Información tributaria, Datos
+  del RUC, Ambiente / Estado, Archivo, Contraseña). Los datos que define el backend (RUC, tipo de operación,
+  contribuyente especial, tipo de emisión, RUC del proveedor) son una ficha de solo lectura, no campos deshabilitados.
+  Plan con barra de consumo (`planUsagePercent`). La barra de guardado en Lite aparece solo con cambios sin guardar
+  (`hasUnsavedChanges`: campos editables, logo, firma o contraseña) y trae «Descartar» (`discardChanges`, vuelve a lo
+  cargado sin llamar al backend); en celular queda sobre la navegación inferior. En Lite «Quitar logo/archivo» solo
+  aparece con un archivo nuevo pendiente («Descartar logo/archivo nuevo»): antes se mostraba sin efecto. Arreglado:
+  tras subir el logo no se limpiaba `logoFile`, así que cada guardado lo volvía a subir. Mismo payload y mismos
+  endpoints. Verificado en navegador (claro, oscuro, 390 px): sin barra al cargar, aparece al editar, «Descartar»
+  restaura y la oculta. Para Codex: `hasUnsavedChanges`/`discardChanges`/`markSaved`, `planUsagePercent`, `logoFile`
+  limpio tras subir, texto «Datos tributarios» (prueba existente).
+
 - 2026-11-06 (Claude, 10): Configuración de la empresa (`pages/company`, Resumen / Datos tributarios / Firma / Plan)
   revisada en navegador y corregida, sin cambiar lógica ni textos de negocio. Modo oscuro: paso pendiente del Resumen,
   aviso de firma sin cargar, avisos de ambiente y plan, y etiquetas de estado (`certificateStatusClasses`,

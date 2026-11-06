@@ -187,18 +187,72 @@ export class CompanyComponent implements OnInit, DoCheck {
 
   get activeSettingsTitle(): string {
     const titles: Record<LiteSettingsTab, string> = {
-      general: 'Vista general',
-      'tax-profile': 'Perfil tributario',
+      general: 'Resumen',
+      'tax-profile': 'Datos tributarios',
       certificate: 'Firma electrónica',
-      plan: 'Plan actual',
+      plan: 'Plan',
       establishments: 'Establecimientos',
       'emission-points': 'Puntos de emisión',
       sequences: 'Secuencias oficiales',
       'pos-terminals': 'Terminales POS',
-      readiness: 'Preparación para emitir',
+      readiness: 'Resumen',
       api: 'Integración API'
     };
     return titles[this.activeSettingsTab];
+  }
+
+  /** Para qué sirve la sección, bajo su título. */
+  get activeSettingsDescription(): string {
+    const descriptions: Partial<Record<LiteSettingsTab, string>> = {
+      'tax-profile': 'Cómo aparece tu empresa en los comprobantes y ante el SRI.',
+      certificate: 'El archivo con el que FacturADA firma tus comprobantes ante el SRI.',
+      plan: 'Tu suscripción y el consumo de comprobantes.'
+    };
+    return descriptions[this.activeSettingsTab] || '';
+  }
+
+  // ------------------ Cambios sin guardar ------------------
+
+  /** Campos que el usuario edita en Datos tributarios; el resto lo define el backend. */
+  private static readonly EDITABLE_FIELDS = [
+    'businessname', 'trade_name', 'phone', 'address', 'email', 'tax_regime', 'obliged_accounting', 'withholding_agent'
+  ];
+  private savedValues: Record<string, unknown> = {};
+
+  private editableValues(): Record<string, unknown> {
+    const raw = this.form.getRawValue();
+    return Object.fromEntries(CompanyComponent.EDITABLE_FIELDS.map((key) => [key, raw[key] ?? '']));
+  }
+
+  /** Toma los valores actuales como guardados (al cargar y tras guardar). */
+  private markSaved(): void {
+    this.savedValues = this.editableValues();
+  }
+
+  get hasUnsavedChanges(): boolean {
+    if (this.logoFile || this.firmaFile || `${this.form.get('clave')?.value || ''}`.trim()) return true;
+    const current = this.editableValues();
+    return CompanyComponent.EDITABLE_FIELDS.some((key) => `${current[key]}` !== `${this.savedValues[key] ?? ''}`);
+  }
+
+  /** Vuelve a los valores guardados sin tocar el backend. */
+  discardChanges(): void {
+    if (this.isSaving) return;
+    this.form.patchValue(this.savedValues, { emitEvent: false });
+    if (this.firmaFile) this.removeFirma();
+    if (this.logoFile) this.removeLogo();
+    this.form.get('clave')?.reset('', { emitEvent: false });
+    this.submitted = false;
+    this.updateClaveValidation();
+  }
+
+  get businessModeLabel(): string {
+    const labels: Record<string, string> = {
+      RESTAURANTE: 'Restaurante / POS',
+      FACTURADOR: 'Facturador',
+      FACTURADA_LITE: 'FacturADA Lite'
+    };
+    return labels[`${this.form.get('business_mode')?.value || ''}`] || '—';
   }
 
   showSettingsSection(...sections: LiteSettingsTab[]): boolean {
@@ -430,6 +484,7 @@ export class CompanyComponent implements OnInit, DoCheck {
         this.utilsService.cambiarAmbiente(this.ambiente);
         this.logoPreview = company.logo || null;
         this.updateClaveValidation();
+        this.markSaved();
       },
       error: (error: any) => {
         if (error?.status === 403 && !this.isPermissionError(error)) {
@@ -517,9 +572,11 @@ export class CompanyComponent implements OnInit, DoCheck {
   }
 
   /** Secciones editables: solo en ellas se muestra la barra de guardar. */
+  /** En Lite la barra aparece solo con cambios sin guardar (o mientras se guarda). */
   get showSaveBar(): boolean {
     if (!this.isLiteMode) return true;
-    return this.canEditLiteSetup && this.showSettingsSection('tax-profile', 'certificate');
+    return this.canEditLiteSetup && this.showSettingsSection('tax-profile', 'certificate')
+      && (this.hasUnsavedChanges || this.isSaving);
   }
 
   get settingsNav(): { group: string; items: { label: string; route: string; active: boolean; status?: 'ok' | 'warn' }[] }[] {
@@ -664,6 +721,12 @@ export class CompanyComponent implements OnInit, DoCheck {
 
   get planPurchasedVouchers(): number {
     return Number(this.currentPlan?.purchased_authorized_vouchers) || 0;
+  }
+
+  /** Porcentaje consumido del cupo; null si el plan es ilimitado o no trae cupo. */
+  get planUsagePercent(): number | null {
+    if (this.planUnlimitedVouchers || this.planPurchasedVouchers <= 0) return null;
+    return Math.min(100, Math.round((this.planUsedVouchers / this.planPurchasedVouchers) * 100));
   }
 
   get planRemainingLabel(): string {
@@ -1027,6 +1090,9 @@ export class CompanyComponent implements OnInit, DoCheck {
         if (!logoUrl) throw new Error('__LOGO_UPLOAD_NO_URL__');
         this.form.patchValue({ logo: logoUrl }, { emitEvent: false });
         this.logoPreview = logoUrl;
+        // Ya subido: no se vuelve a enviar en el próximo guardado.
+        this.logoFile = null;
+        this.logoFileName = null;
       }),
       map(() => void 0),
       catchError((error) => {
@@ -1458,6 +1524,7 @@ export class CompanyComponent implements OnInit, DoCheck {
         this.firmaFileName = null;
         this.updateClaveValidation();
         this.submitted = false;
+        this.markSaved();
       },
       error: (error) => {
         this.restorePendingCertificate();

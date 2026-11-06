@@ -102,6 +102,8 @@ Funciones:
   menú aunque el POS genérico esté activo: ambos conviven (solo depende de `direct_invoice` + `billing.create`).
   En «Nueva factura» cada línea muestra cantidad, precio, descuento %, descuento $, IVA y total; la fila se adapta al
   ancho de la hoja (tabla, campos en una fila, o dos filas en celular).
+- Configuración de la empresa (`/settings/lite`, secciones Resumen, Datos tributarios, Firma, Plan): la barra «Guardar
+  cambios» aparece solo con cambios sin guardar y permite «Descartar». El ambiente (Pruebas/Producción) se guarda aparte.
 - Desde dónde se factura: sin POS, «Facturar» deja elegir establecimiento y punto de emisión. Con POS (`pos_terminal`)
   la factura sale de la terminal activa (fija serie, bodega y caja), que se elige o cambia desde el chip del encabezado
   de Facturar o desde la barra superior; varios establecimientos = una terminal por establecimiento. Cambiar recarga la
