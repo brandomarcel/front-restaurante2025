@@ -9,6 +9,19 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-06 (Claude, 13): Productos, revisión por tipo de negocio. «Stock inicial» al crear también en Lite (antes
+  obligaba a ir a Inventario → Entrada; el front ya registraba la Entrada en cualquier modo). Plato con receta y sin
+  stock propio: aviso «Inventario por receta» con «Ver recetas» en lugar del interruptor. Textos según negocio (sin POS
+  no se menciona el POS; «platos» solo en restaurante; ejemplo de nombre por negocio). Modo oscuro con `tone-*`.
+  «Carga masiva» del estado vacío exige permiso. Títulos de sección sin mayúsculas espaciadas. Visto en navegador
+  (cafetería, claro/oscuro). Pendiente: al editar un producto la categoría puede salir vacía aunque la lista la
+  muestre (valor guardado ≠ `name` de la categoría); revisar. Pruebas para Codex: stock inicial en Lite,
+  `stockFromRecipe`, «Carga masiva» sin permiso.
+- 2026-11-06 (Claude, 12): Productos: las variantes solo aparecen con POS o Inventario (`variantsEnabled` en
+  `products.component.ts`). Solo facturación → «Nuevo producto» abre el formulario directo, sin «Simple / Con
+  variantes», sin «← Cambiar tipo» ni botón «Variantes»; un producto que ya tenga variantes conserva el botón.
+  Backend sin cambios. Pruebas para Codex: negocio sin `pos` ni `inventory` (sin paso de tipo, sin botón; con
+  `variant_count > 0` sí) y con cualquiera de los dos (como hoy).
 - 2026-11-06 (Claude, 11): Configuración de la empresa reorganizada como pantalla de ajustes de SaaS. Cada sección
   tiene su título y descripción (`activeSettingsTitle`/`activeSettingsDescription`); la tarjeta de la empresa queda
   solo en Resumen. Datos tributarios y Firma en filas «qué es · campos» (Logo, Identidad, Información tributaria, Datos

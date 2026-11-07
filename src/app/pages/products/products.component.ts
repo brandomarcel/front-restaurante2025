@@ -222,6 +222,42 @@ export class ProductsComponent implements OnInit {
     return this.isRestaurantCatalog ? RESTAURANT_VARIANT_COPY : RETAIL_VARIANT_COPY;
   }
 
+  /** Sin POS los textos solo hablan de facturar. */
+  get hasPos(): boolean {
+    return this.capabilities.canUsePos;
+  }
+
+  /** Dónde se vende un producto activo, para los textos de la ficha. */
+  get salesChannelsText(): string {
+    return this.hasPos ? 'en el POS ni al facturar' : 'al facturar';
+  }
+
+  /** El ejemplo del nombre según el negocio: plato, producto de tienda o servicio. */
+  get productNamePlaceholder(): string {
+    if (this.productModalStep === 'grouped') return this.isRestaurantCatalog ? 'JUGO NATURAL' : 'JEAN CLÁSICO';
+    if (this.isRestaurantCatalog) return 'ENCEBOLLADO';
+    return this.hasPos || this.inventoryEnabled ? 'COCA-COLA 500 ML' : 'SERVICIO DE MANTENIMIENTO';
+  }
+
+  get inventoryToggleHint(): string {
+    return this.isRestaurantCatalog
+      ? 'Desactívalo para platos preparados o servicios.'
+      : 'Desactívalo para servicios: no tienen existencias.';
+  }
+
+  /**
+   * Plato con receta: no lleva stock propio, al venderse descuenta sus insumos. Si ya tenía el
+   * control activado (dato anterior a la receta) se deja el control visible para poder apagarlo.
+   */
+  get stockFromRecipe(): boolean {
+    return !!this.productoEditando?.has_recipe && !this.productoForm?.get('controlar_inventario')?.value;
+  }
+
+  irARecetas(): void {
+    this.cerrarModal();
+    this.router.navigate(['/dashboard/inventory/recipes']);
+  }
+
   /** «Unidad», «unidades»… (el valor por defecto de Lite) equivalen a «und», que es lo que ofrece el selector. */
   private normalizeUnit(value: unknown): string {
     const unit = String(value ?? '').trim();
@@ -440,9 +476,9 @@ export class ProductsComponent implements OnInit {
     this.mostrarModal = true;
     this.submitted = false;
     this.productoEditando = producto;
-    // Al crear, primero preguntamos qué tipo de producto es. Al editar, el
-    // tipo ya está definido por si el producto tiene variantes o no.
-    this.productModalStep = producto ? 'simple' : 'choose';
+    // Al crear, primero preguntamos qué tipo de producto es (solo si el negocio usa
+    // variantes). Al editar, el tipo ya está definido por si tiene variantes o no.
+    this.productModalStep = producto || !this.variantsEnabled ? 'simple' : 'choose';
     this.selectedImageFile = null;
     this.imagePreview = producto?.image_url || producto?.image || '';
     this.resetForm();
@@ -810,7 +846,7 @@ export class ProductsComponent implements OnInit {
       this.f['unidad_inventario'].setValidators([Validators.required, Validators.maxLength(12)]);
       this.f['stock_minimo'].setValidators([Validators.required, Validators.min(0)]);
 
-      if (!this.isLiteMode && !this.productoEditando) {
+      if (!this.productoEditando) {
         this.f['stock_inicial'].setValidators([Validators.required, Validators.min(0)]);
       }
     }
@@ -928,9 +964,19 @@ export class ProductsComponent implements OnInit {
   // Variantes de producto (Color/Talla, boutique)
   // ================================================================
 
-  /** Todo producto sin variante propia puede tener variantes; el botón queda visible siempre para no exigir un flag adicional del backend. */
+  /**
+   * Las variantes solo sirven si algo las aprovecha: el POS (elegir talla o sabor al vender) o
+   * Inventario (stock por variante). Un negocio que solo factura crea cada producto por separado.
+   * Es orientativo: el backend no lo restringe.
+   */
+  get variantsEnabled(): boolean {
+    return this.capabilities.canUsePos || this.inventoryEnabled;
+  }
+
+  /** Un producto que ya tiene variantes las conserva visibles aunque el negocio deje de usarlas (p. ej. cambio de plan). */
   canHaveVariants(product: Partial<Product> | null | undefined): boolean {
-    return product?.is_variant !== 1 && product?.is_variant !== true;
+    if (product?.is_variant === 1 || product?.is_variant === true) return false;
+    return this.variantsEnabled || (product?.variant_count || 0) > 0;
   }
 
   /** Atajo desde "Editar Producto": cierra el modal de edición (donde precio/stock no aplican) y abre directo las variantes. */

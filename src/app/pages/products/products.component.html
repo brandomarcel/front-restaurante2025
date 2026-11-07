@@ -4,7 +4,7 @@
       <div>
         <h1 class="text-xl font-bold">Productos</h1>
         <p class="text-xs opacity-80">
-          {{ inventoryEnabled ? 'Lo que vendes, su precio y cuánto te queda en stock.' : 'Lo que vendes y su precio, para facturar y cobrar en el POS.' }}
+          {{ inventoryEnabled ? 'Lo que vendes, su precio y cuánto te queda en stock.' : (hasPos ? 'Lo que vendes y su precio, para facturar y cobrar en el POS.' : 'Lo que vendes y su precio, listo para facturar.') }}
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
@@ -41,7 +41,7 @@
             (click)="setEstado('Inactivo')">Inactivos</button>
         </div>
         <button *ngIf="inventoryEnabled" type="button" class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition"
-          [ngClass]="soloBajoStock ? 'border-amber-500 bg-amber-50 text-amber-900' : 'border-border text-muted-foreground hover:bg-muted'"
+          [ngClass]="soloBajoStock ? 'border-amber-500/40 tone-warn' : 'border-border text-muted-foreground hover:bg-muted'"
           [attr.aria-pressed]="soloBajoStock" (click)="toggleBajoStock()">
           <span class="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true"></span>Poco stock
         </button>
@@ -55,18 +55,18 @@
     <div *ngIf="inventoryEnabled && productosFiltradosList.length && (outOfStockCount || lowStockCount)"
       class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-4 py-2 text-[11px] text-muted-foreground">
       <span class="font-semibold text-foreground/80">En esta página:</span>
-      <span *ngIf="outOfStockCount" class="inline-flex items-center gap-1 font-semibold text-red-700"><span class="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true"></span>{{ outOfStockCount }} agotado(s)</span>
-      <span *ngIf="lowStockCount" class="inline-flex items-center gap-1 font-semibold text-amber-700"><span class="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true"></span>{{ lowStockCount }} con poco stock</span>
+      <span *ngIf="outOfStockCount" class="inline-flex items-center gap-1 font-semibold text-red-700 dark:text-red-400"><span class="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true"></span>{{ outOfStockCount }} agotado(s)</span>
+      <span *ngIf="lowStockCount" class="inline-flex items-center gap-1 font-semibold text-amber-700 dark:text-amber-400"><span class="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true"></span>{{ lowStockCount }} con poco stock</span>
     </div>
 
     <app-list-state [loading]="loading" [empty]="!productosFiltradosList.length" [hasFilters]="hasActiveFilters"
       emptyMessage="Todavía no tienes productos." filteredMessage="Ningún producto coincide con los filtros."
       (clear)="limpiarFiltros()">
       <ng-container *ngIf="!hasActiveFilters && canManageProducts">
-        <p class="mt-1 text-xs text-muted-foreground">Créalos uno por uno o súbelos todos juntos desde un Excel.</p>
+        <p class="mt-1 text-xs text-muted-foreground">{{ canImportProducts ? 'Créalos uno por uno o súbelos todos juntos desde un Excel.' : 'Crea el primero para empezar a vender.' }}</p>
         <div class="mt-3 flex justify-center gap-2">
           <button type="button" class="btn btn-primary !text-xs" (click)="abrirModal()">Crear producto</button>
-          <button type="button" class="btn btn-outline !text-xs" (click)="abrirImportModal()">Carga masiva</button>
+          <button *ngIf="canImportProducts" type="button" class="btn btn-outline !text-xs" (click)="abrirImportModal()">Carga masiva</button>
         </div>
       </ng-container>
     </app-list-state>
@@ -84,9 +84,9 @@
             <div class="min-w-0">
               <p class="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-foreground">
                 <span class="truncate">{{ p.nombre | uppercase }}</span>
-                <span *ngIf="(p.variant_count || 0) > 0" class="rounded-full bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold text-sky-800"
+                <span *ngIf="(p.variant_count || 0) > 0" class="tone-info rounded-full px-1.5 py-0.5 text-[10px] font-bold"
                   [title]="copy.badgeTitle">{{ p.variant_count }} {{ p.variant_count === 1 ? copy.one : copy.many }}</span>
-                <span *ngIf="p.has_recipe" class="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800" title="Al venderse descuenta sus insumos.">Receta · {{ p.recipe_count }}</span>
+                <span *ngIf="p.has_recipe" class="tone-ok rounded-full px-1.5 py-0.5 text-[10px] font-bold" title="Al venderse descuenta sus insumos.">Receta · {{ p.recipe_count }}</span>
               </p>
               <p class="truncate text-[11px] text-muted-foreground">
                 <span *ngIf="p.codigo" class="font-mono">{{ p.codigo }}</span>
@@ -106,9 +106,9 @@
           </div>
           <div *ngIf="inventoryEnabled" class="w-28 shrink-0 text-left lg:text-right">
             <ng-container *ngIf="hasInventory(p); else noStockData">
-              <p class="text-sm font-semibold" [ngClass]="isOutOfStock(p) ? 'text-red-700' : (isLowStock(p) ? 'text-amber-700' : 'text-foreground')">{{ formatStock(p) }}</p>
-              <p *ngIf="isOutOfStock(p)" class="text-[10px] font-bold uppercase text-red-700">Agotado</p>
-              <p *ngIf="!isOutOfStock(p) && isLowStock(p)" class="text-[10px] font-bold uppercase text-amber-700">Poco stock</p>
+              <p class="text-sm font-semibold" [ngClass]="isOutOfStock(p) ? 'text-red-700 dark:text-red-400' : (isLowStock(p) ? 'text-amber-700 dark:text-amber-400' : 'text-foreground')">{{ formatStock(p) }}</p>
+              <p *ngIf="isOutOfStock(p)" class="text-[11px] font-semibold text-red-700 dark:text-red-400">Agotado</p>
+              <p *ngIf="!isOutOfStock(p) && isLowStock(p)" class="text-[11px] font-semibold text-amber-700 dark:text-amber-400">Poco stock</p>
             </ng-container>
             <ng-template #noStockData><p class="text-[11px] text-muted-foreground">{{ (p.variant_count || 0) > 0 ? copy.inVariants : 'Sin control' }}</p></ng-template>
           </div>
@@ -127,8 +127,8 @@
                   <b class="block text-foreground">{{ isActiveProduct(p) ? 'Desactivar' : 'Activar' }}</b>
                   <span class="text-[10px] text-muted-foreground">{{ isActiveProduct(p) ? 'Deja de venderse; se conserva el historial.' : 'Vuelve a estar disponible para la venta.' }}</span>
                 </button>
-                <button type="button" role="menuitem" class="w-full rounded-md px-3 py-2 text-left text-xs hover:bg-red-50" (click)="rowMenu = null; eliminar(p.name)">
-                  <b class="block text-red-700">Eliminar</b>
+                <button type="button" role="menuitem" class="w-full rounded-md px-3 py-2 text-left text-xs hover:bg-red-500/10" (click)="rowMenu = null; eliminar(p.name)">
+                  <b class="block text-red-700 dark:text-red-400">Eliminar</b>
                   <span class="text-[10px] text-muted-foreground">Solo si nunca se vendió.</span>
                 </button>
               </div>
@@ -183,7 +183,7 @@
 
       <form *ngIf="productModalStep !== 'choose'" [formGroup]="productoForm" (ngSubmit)="guardarProducto()" class="flex max-h-[78vh] flex-col">
         <div class="space-y-5 overflow-y-auto p-5 text-sm">
-          <div *ngIf="isEditingWithVariants" class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+          <div *ngIf="isEditingWithVariants" class="flex flex-wrap items-center justify-between gap-2 tone-info rounded-lg border border-sky-500/20 px-3 py-2 text-xs">
             <span>{{ copy.editNote }} ({{ productoEditando?.variant_count }})</span>
             <button type="button" class="btn btn-outline !bg-card !px-2.5 !py-1 !text-[11px]" (click)="irAVariantesDesdeEdicion()">{{ copy.goTo }}</button>
           </div>
@@ -209,7 +209,7 @@
               <div class="sm:col-span-2">
                 <label for="product-name" class="mb-1 block text-xs font-semibold text-foreground/80">Nombre *</label>
                 <input id="product-name" type="text" class="input" formControlName="nombre" autocomplete="off"
-                  [placeholder]="productModalStep === 'grouped' ? 'JEAN CLÁSICO' : 'COCA-COLA 500 ML'"
+                  [placeholder]="productNamePlaceholder"
                   (input)="productoForm.patchValue({ nombre: ($any($event.target)?.value || '').toUpperCase() }, { emitEvent: false })" />
                 <p *ngIf="submitted && f['nombre'].invalid" class="field-error">Ingresa el nombre.</p>
               </div>
@@ -234,7 +234,7 @@
 
           <!-- Precio -->
           <section *ngIf="productModalStep !== 'grouped'" class="rounded-xl border border-border p-4">
-            <h3 class="mb-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">Precio</h3>
+            <h3 class="mb-3 text-sm font-semibold text-foreground">Precio</h3>
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-[180px_minmax(0,1fr)]">
               <div>
                 <label for="product-price" class="mb-1 block text-xs font-semibold text-foreground/80">Precio *</label>
@@ -258,12 +258,20 @@
           </section>
 
           <!-- Inventario -->
-          <section *ngIf="inventoryEnabled && productModalStep !== 'grouped' && !isEditingWithVariants" class="rounded-xl border border-border p-4">
+          <section *ngIf="inventoryEnabled && productModalStep !== 'grouped' && !isEditingWithVariants && stockFromRecipe" class="tone-ok flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/20 p-4">
+            <span>
+              <span class="block text-sm font-semibold">Inventario por receta</span>
+              <span class="block text-xs">Este plato no lleva stock propio: al venderse descuenta sus {{ productoEditando?.recipe_count || '' }} insumos.</span>
+            </span>
+            <button type="button" class="btn btn-outline !bg-card !text-xs" (click)="irARecetas()">Ver recetas</button>
+          </section>
+
+          <section *ngIf="inventoryEnabled && productModalStep !== 'grouped' && !isEditingWithVariants && !stockFromRecipe" class="rounded-xl border border-border p-4">
             <label class="flex cursor-pointer items-start justify-between gap-3">
               <span>
-                <span class="block text-xs font-bold uppercase tracking-wide text-muted-foreground">Inventario</span>
+                <span class="block text-sm font-semibold text-foreground">Inventario</span>
                 <span class="mt-0.5 block text-xs text-foreground/80">Controlar stock de este producto</span>
-                <span class="block text-[11px] text-muted-foreground">Desactívalo para servicios o platos preparados.</span>
+                <span class="block text-[11px] text-muted-foreground">{{ inventoryToggleHint }}</span>
               </span>
               <input type="checkbox" class="peer sr-only" formControlName="controlar_inventario" (change)="onInventoryToggle()" />
               <span class="relative mt-1 h-5 w-9 shrink-0 rounded-full bg-muted-foreground/30 transition after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow after:transition peer-checked:bg-primary peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-primary/40" aria-hidden="true"></span>
@@ -273,12 +281,11 @@
               <!-- Stock actual al editar -->
               <div *ngIf="productoEditando" class="flex flex-wrap items-center gap-3 rounded-lg bg-muted/40 px-3 py-2">
                 <div>
-                  <p class="text-[10px] font-bold uppercase text-muted-foreground">Stock actual</p>
+                  <p class="text-xs font-medium text-muted-foreground">Stock actual</p>
                   <p class="text-lg font-black text-foreground">{{ f['stock_actual'].value }} <span class="text-xs font-semibold text-muted-foreground">{{ f['unidad_inventario'].value }}</span></p>
                 </div>
                 <span class="badge" [ngClass]="f['is_out_of_stock'].value ? 'badge-red' : 'badge-green'">{{ f['is_out_of_stock'].value ? 'Agotado' : 'Disponible' }}</span>
                 <p *ngIf="f['ultima_actualizacion_stock'].value" class="ml-auto text-[10px] text-muted-foreground">Actualizado: {{ f['ultima_actualizacion_stock'].value }}</p>
-                <p *ngIf="isLiteMode" class="basis-full text-[11px] text-muted-foreground">Para cambiarlo registra una entrada, salida o ajuste en Inventario.</p>
               </div>
 
               <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -294,7 +301,7 @@
                   <input id="product-min" class="input no-spinner" type="number" min="0" formControlName="stock_minimo" />
                   <p *ngIf="submitted && f['stock_minimo'].invalid" class="field-error">Valor inválido.</p>
                 </div>
-                <div *ngIf="!productoEditando && !isLiteMode">
+                <div *ngIf="!productoEditando">
                   <label for="product-initial" class="mb-1 block text-xs font-semibold text-foreground/80">Stock inicial</label>
                   <input id="product-initial" class="input no-spinner" type="number" min="0" formControlName="stock_inicial" />
                   <p *ngIf="submitted && f['stock_inicial'].invalid" class="field-error">Valor inválido.</p>
@@ -306,12 +313,8 @@
                 <span><b class="text-foreground">Permitir vender sin stock</b> <span class="text-muted-foreground">(el stock puede quedar en negativo)</span></span>
               </label>
 
-              <p *ngIf="isLiteMode && !productoEditando" class="rounded-lg bg-sky-50 px-3 py-2 text-[11px] text-sky-900">
-                Se crea con stock 0. Luego registra la existencia inicial en <b>Inventario → Entrada</b>.
-              </p>
-
               <!-- Cambiar la cantidad: se hace en Inventario, donde queda el historial con el motivo -->
-              <div *ngIf="productoEditando && !isLiteMode" class="rounded-lg border border-border p-3">
+              <div *ngIf="productoEditando" class="rounded-lg border border-border p-3">
                 <p class="text-xs font-semibold text-foreground/80">Cambiar la cantidad</p>
                 <ng-container *ngIf="hasInventory(productoEditando); else saveFirst">
                   <p class="mt-0.5 text-[11px] text-muted-foreground">Una compra, un conteo o una baja se registran en Inventario: queda el historial con el motivo.</p>
@@ -333,13 +336,13 @@
             </div>
             <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-border p-3 text-xs has-[:checked]:border-primary has-[:checked]:bg-primary/5">
               <input class="mt-0.5" type="checkbox" formControlName="isactive" />
-              <span><b class="block text-foreground">Disponible para la venta</b><span class="text-muted-foreground">Si lo desmarcas, no aparece en el POS ni al facturar.</span></span>
+              <span><b class="block text-foreground">Disponible para la venta</b><span class="text-muted-foreground">Si lo desmarcas, no aparece {{ salesChannelsText }}.</span></span>
             </label>
           </section>
         </div>
 
         <footer class="flex items-center justify-between gap-2 border-t border-border px-5 py-3">
-          <button *ngIf="!productoEditando" type="button" class="btn btn-ghost !text-xs" (click)="productModalStep = 'choose'">← Cambiar tipo</button>
+          <button *ngIf="!productoEditando && variantsEnabled" type="button" class="btn btn-ghost !text-xs" (click)="productModalStep = 'choose'">← Cambiar tipo</button>
           <div class="ml-auto flex gap-2">
             <button type="button" class="btn btn-outline" (click)="cerrarModal()">Cancelar</button>
             <button type="submit" class="btn btn-primary">
@@ -356,7 +359,7 @@
     <section class="app-modal !max-w-4xl overflow-hidden !rounded-2xl !border-border !bg-card !p-0 !shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="variants-title">
       <header class="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
         <div class="min-w-0">
-          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{{ copy.listTitle }}</p>
+          <p class="text-xs font-medium text-muted-foreground">{{ copy.listTitle }}</p>
           <h2 id="variants-title" class="truncate text-base font-bold text-foreground">{{ variantesParent?.nombre }}</h2>
           <p class="mt-0.5 text-xs text-muted-foreground">{{ copy.listHint }}</p>
         </div>
@@ -400,7 +403,7 @@
                 </p>
               </div>
               <p class="w-20 shrink-0 text-sm font-bold text-foreground sm:text-right">{{ v.precio | currency }}</p>
-              <p class="w-24 shrink-0 text-xs sm:text-right" [ngClass]="isOutOfStock(v) ? 'font-semibold text-red-700' : (isLowStock(v) ? 'font-semibold text-amber-700' : 'text-foreground')">
+              <p class="w-24 shrink-0 text-xs sm:text-right" [ngClass]="isOutOfStock(v) ? 'font-semibold text-red-700 dark:text-red-400' : (isLowStock(v) ? 'font-semibold text-amber-700 dark:text-amber-400' : 'text-foreground')">
                 {{ hasInventory(v) ? formatStock(v) : 'Sin control' }}
               </p>
               <span *ngIf="!isActiveProduct(v)" class="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">Inactiva</span>
@@ -440,7 +443,7 @@
         <div class="space-y-5 overflow-y-auto p-5 text-sm">
           <!-- Atributos primero: es lo que distingue a la variante -->
           <section formArrayName="attributes">
-            <h3 class="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">{{ copy.distinguish }}</h3>
+            <h3 class="mb-2 text-sm font-semibold text-foreground">{{ copy.distinguish }}</h3>
             <div *ngFor="let group of vfAttributes.controls; let i = index" [formGroupName]="i" class="mb-2 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_32px] items-start gap-2">
               <div>
                 <input type="text" class="input" formControlName="attribute" [placeholder]="copy.attrPlaceholder" [attr.aria-label]="'Atributo ' + (i + 1)" />
@@ -450,7 +453,7 @@
                 <input type="text" class="input" formControlName="value" [placeholder]="copy.valuePlaceholder" [attr.aria-label]="'Valor del atributo ' + (i + 1)" />
                 <p *ngIf="varianteSubmitted && group.get('value')?.invalid" class="field-error">Requerido.</p>
               </div>
-              <button type="button" class="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-red-50 hover:text-red-700 disabled:opacity-30"
+              <button type="button" class="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-400 disabled:opacity-30"
                 (click)="removeAtributoRow(i)" [disabled]="vfAttributes.length <= 1" [attr.aria-label]="'Quitar atributo ' + (i + 1)">×</button>
             </div>
             <button type="button" class="text-xs font-semibold text-primary hover:underline" (click)="addAtributoRow()">+ Agregar atributo</button>
@@ -492,7 +495,7 @@
           <section class="rounded-xl border border-border p-4">
             <label class="flex cursor-pointer items-start justify-between gap-3">
               <span>
-                <span class="block text-xs font-bold uppercase tracking-wide text-muted-foreground">Inventario</span>
+                <span class="block text-sm font-semibold text-foreground">Inventario</span>
                 <span class="mt-0.5 block text-xs text-foreground/80">{{ copy.stockLabel }}</span>
                 <span *ngIf="copy.stockHint" class="block text-[11px] text-muted-foreground">{{ copy.stockHint }}</span>
               </span>

@@ -134,7 +134,11 @@ Funciones:
 - Catálogo, precios y categorías
 - Control de stock (módulo Inventario)
 - El saldo de un producto solo cambia con movimientos (Entrada, Salida, Ajuste). La ficha del
-  producto no ajusta stock: «Stock inicial» al crear y «Ajustar en Inventario →» al editar.
+  producto no ajusta stock: «Stock inicial» al crear (en todo negocio con Inventario, también Lite) y «Ajustar en
+  Inventario →» al editar. Un plato con receta muestra «Inventario por receta» en vez del control de stock.
+- Variantes (u «opciones» en restaurante) solo con POS o Inventario: un negocio que solo factura crea el
+  producto directo, sin el paso «Simple / Con variantes» ni el botón «Variantes». Un producto que ya tiene
+  variantes conserva el botón. Es orientativo; el backend no lo restringe.
 
 ### Insumos y recetas (solo restaurante)
 
