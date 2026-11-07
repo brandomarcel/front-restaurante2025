@@ -14,8 +14,11 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
   stock propio: aviso «Inventario por receta» con «Ver recetas» en lugar del interruptor. Textos según negocio (sin POS
   no se menciona el POS; «platos» solo en restaurante; ejemplo de nombre por negocio). Modo oscuro con `tone-*`.
   «Carga masiva» del estado vacío exige permiso. Títulos de sección sin mayúsculas espaciadas. Visto en navegador
-  (cafetería, claro/oscuro). Pendiente: al editar un producto la categoría puede salir vacía aunque la lista la
-  muestre (valor guardado ≠ `name` de la categoría); revisar. Pruebas para Codex: stock inicial en Lite,
+  (cafetería, claro/oscuro). Categoría fantasma corregida: el alias heredado `categoria` de Lite
+  (`legacy_item_dict`) cae a `item_type` («Producto») si el ítem no tiene categoría; el front lo tomaba como categoría
+  (la lista mostraba «PRODUCTO», al editar el select salía vacío y guardar fallaba en el backend). `ProductsService`
+  ahora usa `category` primero. Backend sin tocar; conviene quitar ese fallback en Lite cuando se acuerde.
+  Queda: un producto con categoría desactivada muestra el select vacío y el backend rechaza guardar hasta elegir otra. Pruebas para Codex: stock inicial en Lite,
   `stockFromRecipe`, «Carga masiva» sin permiso.
 - 2026-11-06 (Claude, 12): Productos: las variantes solo aparecen con POS o Inventario (`variantsEnabled` en
   `products.component.ts`). Solo facturación → «Nuevo producto» abre el formulario directo, sin «Simple / Con

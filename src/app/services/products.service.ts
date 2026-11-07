@@ -386,8 +386,10 @@ export class ProductsService {
       ...product,
       nombre: product.nombre ?? product.item_name ?? product.name,
       descripcion: product.descripcion ?? product.description ?? '',
+      // `category` es la categoría real. El alias heredado `categoria` del backend cae al tipo de ítem
+      // («Producto») cuando no hay categoría: no sirve como identificador.
       category: product.category ?? product.categoria ?? '',
-      categoria: product.categoria ?? product.category ?? '',
+      categoria: product.category ?? product.categoria ?? '',
       precio: Number(product.precio ?? product.standard_rate ?? product.rate ?? product.price ?? 0) || 0,
       tax_value: taxValue,
       tax: product.tax ?? product.tax_id ?? (taxValue ? `IVA-${taxValue}` : null),
