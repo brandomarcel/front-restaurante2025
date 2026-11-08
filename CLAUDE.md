@@ -225,8 +225,12 @@ Funciones:
   Desk lo avisa en rojo y cada pantalla usa su propio dominio.
 - Un solo enlace por negocio, `/menu/<código secreto>`: cambiar fotos o PDF no cambia el QR; «Cambiar enlace» sí lo
   invalida (pide confirmación). Sin publicar, o con el negocio inactivo o sin `restaurant`, el cliente ve «no disponible».
-- La página del cliente (`/menu/:token`) es pública, sin sesión ni menú lateral: fotos una debajo de otra (zoom), o un
-  botón «Ver menú» que abre el PDF en el visor del teléfono. Lleva su propio scroll porque `html`/`body` no hacen scroll.
+- La página del cliente (`/menu/:token`) es pública, sin sesión ni menú lateral: portada con logo (o iniciales), nombre,
+  mensaje y «Compartir carta»; fotos una debajo de otra (tocar = tamaño completo; con varias, barra de páginas fija), o un
+  botón «Ver carta» que abre el PDF en el visor del teléfono. Paleta propia (no la del tema del panel) y modo oscuro del
+  teléfono. Lleva su propio scroll porque `html`/`body` no hacen scroll.
+- Al final, siempre (también en «no disponible»), un bloque de FacturADA para captar negocios: WhatsApp de BMARC-CORP con
+  mensaje prellenado y enlace a bmarc-corp.com (`core/constants/brand.constants.ts`). No se puede ocultar por negocio.
 - Backend: `facturada_restaurante.api.public_menu`; `get_public_menu` es el único endpoint sin sesión del sistema.
 
 ## Órdenes en vivo y pantalla de cocina (`orders-realtime`)

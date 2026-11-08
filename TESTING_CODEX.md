@@ -368,6 +368,14 @@ Desk: `desk_upload_menu_file` (solo System Manager, solo con doctype de la carta
 una fila quitada; `on_trash` borra todos), `_manage` deja a System Manager gestionar cualquier negocio y a los demás solo el
 suyo con `restaurant.manage`.
 
+## Pendiente de pruebas: carta digital pública rediseñada (2026-11-08)
+
+`PublicMenuComponent` (`/menu/:token`): con varias fotos aparece la barra de páginas y `goToPage(i)` lleva a esa página;
+con una sola no hay barra; `initials` con logo vacío («Cafeteria Demo» → «CD»); `share()` usa `navigator.share` si
+existe, si no copia al portapapeles y muestra «Enlace copiado», y no muestra error si el usuario cancela (`AbortError`);
+`whatsappUrl` lleva el número de `BRAND` y el nombre del negocio codificado; el bloque de FacturADA sale con carta y en
+«no disponible» (con otro título), y no mientras carga. E2E: 390 px claro/oscuro, varias fotos, PDF, enlace inválido.
+
 ## Pendiente de pruebas: detalle de orden sin edición de productos (2026-11-08)
 
 `OrderDetailPageComponent`: no hay buscador, stepper, precio editable ni papelera en ningún estado; `saveOrderChanges`

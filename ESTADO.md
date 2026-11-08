@@ -1,6 +1,6 @@
 # Estado del proyecto Facturada
 
-Última actualización: 2026-11-07.
+Última actualización: 2026-11-08.
 
 ## Objetivo Actual
 
@@ -8,6 +8,17 @@ Mantener una memoria breve del progreso y los pendientes sin ampliar `CLAUDE.md`
 El trabajo local observado se concentra en la configuración de desarrollo del frontend Angular y su conexión con Frappe.
 
 ## Últimos Cambios (Hecho)
+
+- 2026-11-08 (Claude): carta digital pública (`/menu/:token`) rediseñada a pedido del usuario: portada oscura con
+  logo/iniciales, «Carta digital», nombre, mensaje y «Compartir carta» (`navigator.share` o copia el enlace); fotos en
+  tarjetas con «Ampliar» y, con varias, barra de páginas fija que resalta la visible (`IntersectionObserver`); PDF en
+  tarjeta con «Ver carta» / «Descargar PDF»; «no disponible» con ícono. Paleta propia en `public-menu.component.css`
+  (no depende del tema del panel) y modo oscuro del teléfono; respeta `prefers-reduced-motion`. Promoción de FacturADA
+  al final de toda carta: WhatsApp 593998885652 con mensaje que nombra el negocio y enlace a bmarc-corp.com; datos en
+  `core/constants/brand.constants.ts`. Build dev OK; revisado con Playwright a 390 px (claro, oscuro, no disponible) con
+  la carta del piloto (una foto). **Sin ver**: barra de páginas con varias fotos y la tarjeta PDF. Además, el error
+  «El enlace de la carta no es valido» en producción era el backend sin reiniciar tras el pull (`bench restart`).
+  Pendiente: decidir si un plan pagado puede ocultar la promoción.
 
 - 2026-11-08 (Claude): Órdenes en vivo / Cocina revisada a pedido del usuario. Errores: en Caja «Enviar a cocina»
   cambiaba solo la orden (el pedido ya estaba en cocina y sus platos seguían «Pendiente») y «Cerrar orden» sobre una
