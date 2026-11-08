@@ -227,8 +227,8 @@ Funciones:
   Desk lo avisa en rojo y cada pantalla usa su propio dominio.
 - Un solo enlace por negocio, `/menu/<código secreto>`: cambiar fotos o PDF no cambia el QR; «Cambiar enlace» sí lo
   invalida (pide confirmación). Sin publicar, o con el negocio inactivo o sin `digital_menu`, el cliente ve «Este enlace no está disponible».
-- La página del cliente (`/menu/:token`) es pública, sin sesión ni menú lateral, de estilo sobrio: encabezado claro con
-  logo (o iniciales), nombre, mensaje y «Compartir carta/catálogo»; fotos una debajo de otra (tocar = tamaño completo; con
+- La página del cliente (`/menu/:token`) es pública, sin sesión ni menú lateral, de estilo sobrio: encabezado compacto de
+  una fila (logo o iniciales, nombre, mensaje en 2 líneas y botón de compartir) para que la carta empiece arriba; fotos una debajo de otra (tocar = tamaño completo; con
   varias, barra de páginas fija), o un botón «Ver carta/catálogo» que abre el PDF en el visor del teléfono. Paleta propia (no la del tema
   del panel) y modo oscuro del teléfono. Lleva su propio scroll porque `html`/`body` no hacen scroll.
 - Al final, siempre (también en «no disponible»), un recuadro discreto de FacturADA con mensaje genérico para cualquier

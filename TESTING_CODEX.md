@@ -379,7 +379,7 @@ con `digital_menu` administra y publica (`menu_type` «Catalogo»); sin `digital
 sin `digital_menu`. Front: `menuWords('Carta'|'Catalogo')`; `PublicMenuService.wordsFor` sin `menu_type` usa la función
 `restaurant`; menú lateral muestra «Catálogo digital» sin `restaurant` y «Carta digital» con ella, y se oculta sin
 `digital_menu` o sin `products.manage`; la ruta `/dashboard/digital-menu` exige lo mismo; página pública con
-`menu_type: 'Catalogo'` dice «Compartir catálogo», «Ver catálogo» y título «Catálogo · <negocio>».
+`menu_type: 'Catalogo'` tiene el botón de ícono con `aria-label` «Compartir catálogo», dice «Ver catálogo» y título «Catálogo · <negocio>».
 
 ## Pendiente de pruebas: carta digital pública rediseñada (2026-11-08)
 

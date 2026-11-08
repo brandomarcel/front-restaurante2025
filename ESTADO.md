@@ -9,6 +9,10 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-08 (Claude): carta / catálogo pública: el encabezado ocupaba ~280 px antes de la carta (logo grande, nombre,
+  mensaje y botón «Compartir» apilados). Ahora es una sola fila de ~70 px: logo 48 px, nombre (una línea), mensaje
+  (hasta 2 líneas) y compartir como botón de ícono con `aria-label`. Revisado con Playwright a 390 px claro y oscuro.
+
 - 2026-11-08 (Claude): carta digital abierta a todo tipo de negocio, a pedido del usuario. Nueva función de plan
   `digital_menu` (Core) en todos los planes; ya no depende de `restaurant`. Se administra con `products.manage`
   (Administrador y Gerente). Restaurante la ve como «Carta digital»; el resto como «Catálogo digital»: el backend manda
