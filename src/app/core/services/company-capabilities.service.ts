@@ -21,7 +21,9 @@ export type CompanyFeatureKey =
   | 'pos_terminal'
   | 'billing'
   | 'api'
-  | 'gym';
+  | 'gym'
+  /** Carta (restaurante) o catálogo (otros negocios) por QR. Va en todos los planes; no depende de `restaurant`. */
+  | 'digital_menu';
 
 export type CompanyFeatures = Record<CompanyFeatureKey, boolean>;
 
@@ -108,7 +110,8 @@ const RESTAURANT_FALLBACK: CompanyFeatures = {
   pos_terminal: false,
   billing: false,
   api: false,
-  gym: false
+  gym: false,
+  digital_menu: false
 };
 
 @Injectable({ providedIn: 'root' })
@@ -1329,7 +1332,7 @@ export class CompanyCapabilitiesService {
   }
 
   private get featureKeys(): CompanyFeatureKey[] {
-    return ['restaurant', 'restaurant_pos', 'generic_pos', 'pos_terminal', 'pos', 'billing', 'api', 'orders', 'tables', 'kitchen', 'cash_register', 'direct_invoice', 'credit_note', 'customers', 'products', 'additional_fields', 'inventory', 'gym'];
+    return ['restaurant', 'restaurant_pos', 'generic_pos', 'pos_terminal', 'pos', 'billing', 'api', 'orders', 'tables', 'kitchen', 'cash_register', 'direct_invoice', 'credit_note', 'customers', 'products', 'additional_fields', 'inventory', 'gym', 'digital_menu'];
   }
 
   /** Actualiza o limpia la configuración API sin tocar el resto del contexto. */
@@ -1639,7 +1642,8 @@ export class CompanyCapabilitiesService {
         pos_terminal: false,
         billing: false,
         api: false,
-        gym: false
+        gym: false,
+        digital_menu: false
       };
     }
 

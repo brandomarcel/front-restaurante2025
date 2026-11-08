@@ -6,6 +6,38 @@ import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 import { CompanyCapabilitiesService } from '../core/services/company-capabilities.service';
 
 export type PublicMenuKind = 'Imagen' | 'PDF';
+/** Cómo se llama en pantalla: «Carta» para un restaurante, «Catalogo» para los demás negocios (lo decide el backend). */
+export type PublicMenuType = 'Carta' | 'Catalogo';
+
+/** Palabras de la carta o del catálogo, con su género, para no repetir condiciones en cada texto. */
+export interface MenuWords {
+  /** «Carta digital» / «Catálogo digital» */
+  title: string;
+  /** «carta» / «catálogo» */
+  noun: string;
+  /** «la carta» / «el catálogo» */
+  the: string;
+  /** «de la carta» / «del catálogo» */
+  ofThe: string;
+  /** «publicada» / «publicado» */
+  published: string;
+  /** «Sin publicar» es igual para ambos; «Publicada» / «Publicado» */
+  Published: string;
+  /** «retirada» / «retirado» */
+  withdrawn: string;
+  /** «la» / «lo» (pronombre) */
+  pronoun: string;
+  /** Dónde va el QR: «en las mesas» / «en tu local» */
+  qrPlace: string;
+  /** Para el nombre del archivo del QR: «carta» / «catalogo» */
+  slug: string;
+}
+
+export function menuWords(type: PublicMenuType | null | undefined): MenuWords {
+  return type === 'Catalogo'
+    ? { title: 'Catálogo digital', noun: 'catálogo', the: 'el catálogo', ofThe: 'del catálogo', published: 'publicado', Published: 'Publicado', withdrawn: 'retirado', pronoun: 'lo', qrPlace: 'en tu local', slug: 'catalogo' }
+    : { title: 'Carta digital', noun: 'carta', the: 'la carta', ofThe: 'de la carta', published: 'publicada', Published: 'Publicada', withdrawn: 'retirada', pronoun: 'la', qrPlace: 'en las mesas', slug: 'carta' };
+}
 
 export interface PublicMenuFile {
   name: string;
@@ -29,6 +61,8 @@ export interface PublicMenuSettings {
   kind: PublicMenuKind | null;
   files: PublicMenuFile[];
   max_images: number;
+  /** Ausente en un backend anterior: se deduce de la función `restaurant` (`wordsFor`). */
+  menu_type?: PublicMenuType;
 }
 
 /** Lo que ve el cliente al escanear el QR (endpoint sin sesión). */
@@ -38,11 +72,14 @@ export interface PublicMenu {
   message: string;
   kind: PublicMenuKind | null;
   files: { url: string; kind: PublicMenuKind }[];
+  /** Ausente en un backend anterior: se asume «Carta» (antes solo existía para restaurantes). */
+  menu_type?: PublicMenuType;
 }
 
 /**
- * Carta digital por QR (solo restaurante): el negocio sube fotos o un PDF de su carta y lo
- * publica con un enlace secreto. La administración exige `restaurant.manage`; `getPublic`
+ * Carta (restaurante) o catálogo (otros negocios) digital por QR, función `digital_menu` en todos los
+ * planes: el negocio sube fotos o un PDF y lo publica con un enlace secreto. La administración exige
+ * `products.manage` (Administrador y Gerente); `getPublic`
  * es la única llamada sin sesión.
  */
 @Injectable({ providedIn: 'root' })
@@ -58,6 +95,11 @@ export class PublicMenuService {
    */
   publicUrl(settings: Pick<PublicMenuSettings, 'path' | 'public_url'>): string {
     return settings.public_url || new URL(settings.path.replace(/^\//, ''), document.baseURI).toString();
+  }
+
+  /** Palabras para la pantalla de administración; sin `menu_type` del backend, según la función `restaurant`. */
+  wordsFor(settings: Pick<PublicMenuSettings, 'menu_type'> | null): MenuWords {
+    return menuWords(settings?.menu_type ?? (this.capabilities.isEnabled('restaurant') ? 'Carta' : 'Catalogo'));
   }
 
   /** URL absoluta de un archivo público de Frappe (`/files/...`). */

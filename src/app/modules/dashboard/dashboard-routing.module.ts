@@ -57,7 +57,7 @@ const routes: Routes = [
       { path: 'orders/:id', component: OrderDetailPageComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { deniedPrimaryRoles: ['COCINA'], featureKey: 'orders', permissionKey: 'restaurant.orders.read', liteBlocked: true } },
       { path: 'tables', component: TablesComponent, canActivate: [RoleAccessGuard], data: { deniedPrimaryRoles: ['COCINA'], featureKey: 'tables', permissionKey: 'restaurant.orders.read' } },
 
-      { path: 'digital-menu', component: DigitalMenuComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'restaurant', permissionKey: 'restaurant.manage' } },
+      { path: 'digital-menu', component: DigitalMenuComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'digital_menu', permissionKey: 'products.manage' } },
       { path: 'categories', component: CategorysComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'products', permissionKey: 'products.manage' } },
       { path: 'users', component: UsersComponent, canActivate: [RoleAccessGuard], data: { permissionKey: 'business.users.manage', apiOnlyBlocked: true } },
       

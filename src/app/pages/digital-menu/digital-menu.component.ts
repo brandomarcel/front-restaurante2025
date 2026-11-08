@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { toast } from 'ngx-sonner';
 import { finalize } from 'rxjs/operators';
 import { AlertService } from 'src/app/core/services/alert.service';
-import { PublicMenuFile, PublicMenuService, PublicMenuSettings } from 'src/app/services/public-menu.service';
+import { MenuWords, PublicMenuFile, PublicMenuService, PublicMenuSettings } from 'src/app/services/public-menu.service';
 
 /**
- * Carta digital por QR (restaurante, Administrador/Gerente): el negocio sube fotos o un PDF de
- * su carta, la publica y descarga o imprime el QR. El enlace no cambia al cambiar los archivos,
+ * Carta (restaurante) o catálogo (otros negocios) digital por QR, Administrador/Gerente: el negocio
+ * sube fotos o un PDF, lo publica y descarga o imprime el QR. Los textos salen de `words`.
+ * Ruta `/dashboard/digital-menu`, función `digital_menu` y permiso `products.manage`. El enlace no cambia al cambiar los archivos,
  * así que los QR impresos siguen sirviendo; solo «Cambiar enlace» los invalida.
  */
 @Component({
@@ -34,8 +35,13 @@ export class DigitalMenuComponent implements OnInit {
   ngOnInit(): void {
     this.menus.getSettings().pipe(finalize(() => (this.loading = false))).subscribe({
       next: (settings) => this.apply(settings),
-      error: (error) => (this.loadError = this.errorText(error, 'No se pudo cargar la carta digital.')),
+      error: (error) => (this.loadError = this.errorText(error, `No se pudo cargar ${this.w.the} digital.`)),
     });
+  }
+
+  /** «carta» o «catálogo», con su género, según el negocio. */
+  get w(): MenuWords {
+    return this.menus.wordsFor(this.settings);
   }
 
   get publicUrl(): string {
@@ -81,7 +87,7 @@ export class DigitalMenuComponent implements OnInit {
     if (!files.length || this.uploading) return;
     let replace = false;
     if (this.pdf) {
-      const answer = await this.alerts.confirm('Tu carta ahora es un PDF. Al subir fotos, el PDF se quita.', 'Cambiar a fotos');
+      const answer = await this.alerts.confirm(`Tu ${this.w.noun} ahora es un PDF. Al subir fotos, el PDF se quita.`, 'Cambiar a fotos');
       if (!answer.isConfirmed) return;
       replace = true;
     }
@@ -98,7 +104,7 @@ export class DigitalMenuComponent implements OnInit {
     input.value = '';
     if (!file || this.uploading) return;
     if (this.hasFiles) {
-      const answer = await this.alerts.confirm('El PDF reemplaza la carta actual (fotos o PDF anterior).', 'Subir PDF');
+      const answer = await this.alerts.confirm(`El PDF reemplaza ${this.w.the} actual (fotos o PDF anterior).`, 'Subir PDF');
       if (!answer.isConfirmed) return;
     }
     await this.uploadOne(file, true, 'Subiendo PDF…');
@@ -132,8 +138,8 @@ export class DigitalMenuComponent implements OnInit {
     if (this.busy) return;
     const last = (this.settings?.files.length || 0) <= 1;
     const answer = await this.alerts.confirm(
-      last && this.isPublished ? 'Es el último archivo: la carta dejará de mostrarse a los clientes.' : `Se quitará ${file.kind === 'PDF' ? 'el PDF' : 'esta foto'} de la carta.`,
-      'Quitar de la carta'
+      last && this.isPublished ? `Es el último archivo: ${this.w.the} dejará de mostrarse a los clientes.` : `Se quitará ${file.kind === 'PDF' ? 'el PDF' : 'esta foto'} ${this.w.ofThe}.`,
+      `Quitar ${this.w.ofThe}`
     );
     if (!answer.isConfirmed) return;
     this.busy = true;
@@ -155,7 +161,7 @@ export class DigitalMenuComponent implements OnInit {
     this.menus.save({ enabled }).pipe(finalize(() => (this.busy = false))).subscribe({
       next: (settings) => {
         this.apply(settings);
-        toast.success(enabled ? 'Carta publicada: el QR ya funciona.' : 'Carta retirada: el QR muestra «no disponible».');
+        toast.success(enabled ? `${this.capitalize(this.w.noun)} ${this.w.published}: el QR ya funciona.` : `${this.capitalize(this.w.noun)} ${this.w.withdrawn}: el QR muestra «no disponible».`);
       },
       error: (error) => toast.error(this.errorText(error, 'No se pudo cambiar la publicación.')),
     });
@@ -194,11 +200,11 @@ export class DigitalMenuComponent implements OnInit {
   }
 
   get qrFileName(): string {
-    const name = (this.settings?.business_name || 'carta').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-    return `qr-carta-${name}.png`;
+    const name = (this.settings?.business_name || this.w.slug).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    return `qr-${this.w.slug}-${name}.png`;
   }
 
-  /** Tarjeta para la mesa: logo, nombre, QR y la instrucción. Se imprime desde una ventana aparte. */
+  /** Tarjeta para la mesa o el mostrador: logo, nombre, QR y la instrucción. Se imprime desde una ventana aparte. */
   printCard(): void {
     if (!this.qrPng || !this.settings) return;
     const win = window.open('', '_blank', 'width=480,height=640');
@@ -208,7 +214,7 @@ export class DigitalMenuComponent implements OnInit {
     }
     const name = this.escape(this.settings.business_name);
     const logo = this.settings.logo ? `<img class="logo" src="${this.escape(this.menus.fileUrl(this.settings.logo))}" alt="">` : '';
-    win.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>QR de la carta · ${name}</title>
+    win.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>QR ${this.w.ofThe} · ${name}</title>
 <style>
   @page { size: A6; margin: 8mm; }
   body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; margin: 0; color: #111; }
@@ -218,10 +224,14 @@ export class DigitalMenuComponent implements OnInit {
   p { font-size: 11pt; margin: 0 0 4mm; }
   .qr { width: 62mm; height: 62mm; image-rendering: pixelated; }
   small { display: block; margin-top: 3mm; font-size: 8pt; color: #555; word-break: break-all; }
-</style></head><body><div class="card">${logo}<h1>${name}</h1><p>Escanea para ver la carta</p>
-<img class="qr" src="${this.qrPng}" alt="QR de la carta"><small>${this.escape(this.publicUrl)}</small></div>
+</style></head><body><div class="card">${logo}<h1>${name}</h1><p>Escanea para ver ${this.w.the}</p>
+<img class="qr" src="${this.qrPng}" alt="QR ${this.w.ofThe}"><small>${this.escape(this.publicUrl)}</small></div>
 <script>window.onload = function () { window.focus(); window.print(); };</script></body></html>`);
     win.document.close();
+  }
+
+  private capitalize(text: string): string {
+    return text.charAt(0).toUpperCase() + text.slice(1);
   }
 
   private apply(settings: PublicMenuSettings): void {

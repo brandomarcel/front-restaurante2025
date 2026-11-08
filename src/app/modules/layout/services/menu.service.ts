@@ -141,7 +141,8 @@ export class MenuService implements OnDestroy {
         .filter((child): child is SubMenuItem => !!child);
 
       if (!allowed && (!children || children.length === 0)) return null;
-      return { ...item, featureKey, featureKeys: item.featureKeys, children };
+      const label = item.labelOutsideRestaurant && !this.capabilities.isEnabled('restaurant') ? item.labelOutsideRestaurant : item.label;
+      return { ...item, label, featureKey, featureKeys: item.featureKeys, children };
     };
 
     return groups

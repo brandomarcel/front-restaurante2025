@@ -212,9 +212,10 @@ export class Menu {
         {
           icon: 'assets/icons/tablericons/qrcode.svg',
           label: 'Carta digital',
+          labelOutsideRestaurant: 'Catálogo digital',
           route: '/dashboard/digital-menu',
-          featureKey: 'restaurant',
-          permissionKey: 'restaurant.manage',
+          featureKey: 'digital_menu',
+          permissionKey: 'products.manage',
           hideInApiOnly: true,
         },
         {

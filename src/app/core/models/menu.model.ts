@@ -54,6 +54,8 @@ export interface SubMenuItem {
   hideUnlessWarehouseUi?: boolean;
   /** Activa solo con la ruta exacta (su ruta es prefijo de otras opciones, p. ej. `/settings/lite`). */
   exactMatch?: boolean;
+  /** Etiqueta para negocios sin la función `restaurant` (p. ej. «Catálogo digital» en vez de «Carta digital»). */
+  labelOutsideRestaurant?: string;
   /** Ver `MenuItem.uiVisibilityKey`. */
   uiVisibilityKey?: 'pos' | 'reports' | 'users' | 'restaurantOrders' | 'restaurantTables' | 'restaurantKitchen';
 }

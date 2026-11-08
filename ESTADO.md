@@ -9,6 +9,17 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-08 (Claude): carta digital abierta a todo tipo de negocio, a pedido del usuario. Nueva función de plan
+  `digital_menu` (Core) en todos los planes; ya no depende de `restaurant`. Se administra con `products.manage`
+  (Administrador y Gerente). Restaurante la ve como «Carta digital»; el resto como «Catálogo digital»: el backend manda
+  `menu_type` («Carta»/«Catalogo») y los textos salen de `menuWords` (`public-menu.service.ts`), con género. Menú lateral:
+  `featureKey: 'digital_menu'`, `permissionKey: 'products.manage'` y `labelOutsideRestaurant` (nuevo en `SubMenuItem`,
+  resuelto en `menu.service.ts`); misma regla en la ruta. «No disponible» ahora dice «Este enlace no está disponible»
+  (sin saber si es carta o catálogo) con ícono de enlace roto. `CompanyFeatureKey` suma `digital_menu`. Build dev y
+  `tsc` de specs OK; página pública revisada con Playwright como carta y como catálogo (respuesta interceptada).
+  **Sin ver**: la pantalla de administración como catálogo (pide sesión de un negocio sin restaurante). Despliegue:
+  primero backend (`migrate` + `restart`), después el front; si el front sale antes, la opción desaparece del menú.
+
 - 2026-11-08 (Claude): carta digital pública (`/menu/:token`) rediseñada a pedido del usuario, en estilo sobrio (segunda
   vuelta: el usuario pidió algo más conservador y un mensaje genérico). Encabezado claro con logo/iniciales, nombre,
   mensaje y «Compartir carta» (`navigator.share` o copia el enlace); fotos en tarjetas y, con varias, barra de páginas fija

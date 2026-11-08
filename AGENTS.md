@@ -184,9 +184,13 @@ Funciones:
   El front separa los anulados (`voidedItems`) de lo editable (`orderItems`) y no los compara al guardar.
 - Cocina no anula (`update_kitchen_item_status` rechaza `Cancelado`); recibe el aviso `item_voided`. Caja también.
 
-## Carta digital por QR (en código: «menu»)
+## Carta / catálogo digital por QR (en código: «menu»)
 
-- `DigitalMenuComponent` (`/dashboard/digital-menu`, feature `restaurant`, permiso `restaurant.manage`) y
+- Feature `digital_menu` (todos los planes, no depende de `restaurant`), permiso `products.manage`. Restaurante dice
+  «carta», el resto «catálogo»: usar `menuWords(menu_type)` / `PublicMenuService.wordsFor()` (género incluido), no
+  escribir «carta» a mano. Sin `menu_type` (backend anterior) la página pública asume «Carta». El menú lateral cambia la
+  etiqueta con `labelOutsideRestaurant` (`SubMenuItem`, resuelto en `menu.service.ts`).
+- `DigitalMenuComponent` (`/dashboard/digital-menu`, feature `digital_menu`, permiso `products.manage`) y
   `PublicMenuComponent` (`/menu/:token`, ruta pública fuera del layout, sin sesión) con `PublicMenuService` →
   `facturada_restaurante.api.public_menu`. Fotos (hasta 20) o un PDF; pasar de uno a otro reemplaza con confirmación
   (`replace=1`). El QR (PNG) lo genera el backend con `pyqrcode` para el enlace público (ver abajo).
@@ -196,8 +200,8 @@ Funciones:
   oscuro del teléfono (`prefers-color-scheme`), no el tema del panel. Termina siempre con un recuadro discreto de
   FacturADA, con mensaje genérico (no solo restaurantes);
   contacto y sitio en `core/constants/brand.constants.ts` (`BRAND`, `brandWhatsappUrl`), no repetirlos a mano.
-- System Manager la gestiona también desde el Desk (formulario `FacturADA Restaurant Public Menu`, botón «Carta digital»
-  en FacturADA Business). Enlace y QR: `public_url` del backend (`facturada_app_url` en site_config, con prefijo:
+- System Manager la gestiona también desde el Desk (formulario `FacturADA Restaurant Public Menu`, botón «Carta / catálogo
+  digital» en FacturADA Business, sin grupo). Enlace y QR: `public_url` del backend (`facturada_app_url` en site_config, con prefijo:
   producción `https://facturada.bmarc-corp.com/portal`); sin configurar, `document.baseURI` de cada pantalla (respeta
   `baseHref`).
 

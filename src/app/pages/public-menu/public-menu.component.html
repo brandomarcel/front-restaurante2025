@@ -3,7 +3,7 @@
   <div class="flex min-h-full flex-col">
 
     <!-- Cargando -->
-    <div *ngIf="loading" class="mx-auto w-full max-w-3xl px-4 pt-10" aria-busy="true" aria-label="Cargando carta">
+    <div *ngIf="loading" class="mx-auto w-full max-w-3xl px-4 pt-10" aria-busy="true" aria-label="Cargando">
       <div class="flex flex-col items-center gap-3">
         <div class="pm-skeleton h-20 w-20 animate-pulse rounded-2xl"></div>
         <div class="pm-skeleton h-6 w-52 animate-pulse rounded-full"></div>
@@ -11,15 +11,15 @@
       <div class="pm-skeleton mt-8 aspect-[3/4] w-full animate-pulse rounded-2xl"></div>
     </div>
 
-    <!-- No disponible: mismo mensaje para un enlace viejo, inexistente o una carta apagada -->
+    <!-- No disponible: mismo mensaje para un enlace viejo, inexistente o apagado (sin saber si es carta o catálogo) -->
     <section *ngIf="!loading && unavailable" class="pm-rise mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center px-6 py-16 text-center">
       <div class="pm-chip flex h-14 w-14 items-center justify-center rounded-2xl" aria-hidden="true">
         <svg viewBox="0 0 24 24" class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 2v7a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2a5 5 0 0 0-5 5v6a2 2 0 0 0 2 2h3Zm0 0v7" />
+          <path d="M9 17H7A5 5 0 0 1 7 7" /><path d="M15 7h2a5 5 0 0 1 4 8" /><path d="M8 12h4" /><path d="m2 2 20 20" />
         </svg>
       </div>
-      <p class="mt-5 text-lg font-semibold">Esta carta no está disponible</p>
-      <p class="pm-muted mt-2 text-sm leading-relaxed">Puede que el enlace haya cambiado. Pide la carta al personal del local.</p>
+      <p class="mt-5 text-lg font-semibold">Este enlace no está disponible</p>
+      <p class="pm-muted mt-2 text-sm leading-relaxed">Puede que haya cambiado. Pide el enlace nuevo en el local.</p>
     </section>
 
     <ng-container *ngIf="!loading && !unavailable && menu">
@@ -41,16 +41,16 @@
             <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M12 3v12" /><path d="m7 8 5-5 5 5" /><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" />
             </svg>
-            Compartir carta
+            Compartir {{ w.noun }}
           </button>
           <p class="pm-muted mt-2 min-h-4 text-xs" aria-live="polite">{{ shareFeedback }}</p>
         </div>
       </header>
 
       <div class="mx-auto w-full max-w-3xl px-4">
-        <!-- Fotos de la carta -->
+        <!-- Fotos de la carta o del catálogo -->
         <ng-container *ngIf="images.length">
-          <nav *ngIf="images.length > 1" class="pm-pages-bar sticky top-0 z-10 -mx-4 px-4 py-3" aria-label="Páginas de la carta">
+          <nav *ngIf="images.length > 1" class="pm-pages-bar sticky top-0 z-10 -mx-4 px-4 py-3" [attr.aria-label]="'Páginas ' + w.ofThe">
             <div class="flex items-center gap-2 overflow-x-auto [scrollbar-width:none]">
               <span class="pm-muted mr-1 shrink-0 text-xs font-medium">Páginas</span>
               <button *ngFor="let src of images; let i = index" type="button" (click)="goToPage(i)"
@@ -61,11 +61,11 @@
             </div>
           </nav>
 
-          <section class="space-y-4" [class.mt-6]="images.length === 1" [class.mt-1]="images.length > 1" aria-label="Carta">
+          <section class="space-y-4" [class.mt-6]="images.length === 1" [class.mt-1]="images.length > 1" [attr.aria-label]="capitalize(w.noun)">
             <a #page *ngFor="let src of images; let i = index" [href]="src" target="_blank" rel="noopener"
               class="pm-page pm-surface relative block overflow-hidden rounded-2xl"
-              [attr.aria-label]="'Abrir página ' + (i + 1) + ' de la carta en tamaño completo'">
-              <img [src]="src" [alt]="'Carta, página ' + (i + 1)" class="block h-auto w-full" [attr.loading]="i === 0 ? 'eager' : 'lazy'" decoding="async" />
+              [attr.aria-label]="'Abrir página ' + (i + 1) + ' ' + w.ofThe + ' en tamaño completo'">
+              <img [src]="src" [alt]="capitalize(w.noun) + ', página ' + (i + 1)" class="block h-auto w-full" [attr.loading]="i === 0 ? 'eager' : 'lazy'" decoding="async" />
               <span *ngIf="images.length > 1" class="absolute left-3 top-3 rounded-full bg-black/50 px-2 py-0.5 text-[11px] font-medium text-white">
                 {{ i + 1 }} / {{ images.length }}
               </span>
@@ -74,17 +74,17 @@
           <p class="pm-muted mt-3 text-center text-xs">Toca una página para verla en tamaño completo.</p>
         </ng-container>
 
-        <!-- Carta en PDF: se abre en el visor del teléfono -->
+        <!-- PDF: se abre en el visor del teléfono -->
         <section *ngIf="pdfUrl" class="pm-rise pm-surface mt-6 flex flex-col items-center rounded-2xl px-6 py-8 text-center">
           <div class="pm-chip flex h-14 w-14 items-center justify-center rounded-2xl" aria-hidden="true">
             <svg viewBox="0 0 24 24" class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /><path d="M9 13h6M9 17h4" />
             </svg>
           </div>
-          <p class="pm-muted mt-4 max-w-xs text-sm">La carta se abre en el visor de tu teléfono; puedes ampliarla con los dedos.</p>
+          <p class="pm-muted mt-4 max-w-xs text-sm">{{ capitalize(w.the) }} se abre en el visor de tu teléfono; puedes ampliar{{ w.pronoun }} con los dedos.</p>
           <a [href]="pdfUrl" target="_blank" rel="noopener"
             class="pm-primary pm-press mt-5 inline-flex h-12 w-full max-w-sm items-center justify-center rounded-xl px-6 text-base font-semibold">
-            Ver carta
+            Ver {{ w.noun }}
           </a>
           <a [href]="pdfUrl" download class="pm-muted mt-4 text-sm font-medium underline underline-offset-4">Descargar PDF</a>
         </section>

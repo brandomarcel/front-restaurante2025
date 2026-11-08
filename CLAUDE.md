@@ -132,7 +132,7 @@ Funciones:
 - Selección y cambio de empresa activa (multi-negocio por usuario)
 - Menú lateral (`core/constants/menu.ts`) agrupado por tarea: Dashboard · Vender (POS, Mesas, Órdenes, Pantalla de
   cocina, Facturar, Punto de venta) · Caja y cobros · Documentos · Catálogo · Administración (Reportes, Usuarios,
-  Configuración ▸ con establecimientos, puntos, secuencias, terminales e integración API). Catálogo incluye «Carta digital» (restaurante). Las condiciones de
+  Configuración ▸ con establecimientos, puntos, secuencias, terminales e integración API). Catálogo incluye «Carta digital» («Catálogo digital» fuera de restaurante). Las condiciones de
   plan/permiso/rol van en cada opción, no en el grupo; mover una opción de grupo no cambia quién la ve. El menú muestra
   siempre el logo de FacturADA (`src/assets/brand/`); el logo del negocio va en el Dashboard.
 - Pantalla inicial tras el login (`getLandingRoute`): Administrador y Gerente → panel (`/dashboard/main`);
@@ -211,26 +211,28 @@ Funciones:
   cobrada / subcuentas / facturada); cada producto muestra su estado de cocina. La barra de progreso es solo de la
   orden (Ingresada → Cerrada).
 
-## Carta digital por QR (solo restaurante)
+## Carta / catálogo digital por QR (todos los negocios)
 
-- En pantalla se llama **«Carta digital»** (el código y la ruta usan `menu`). Catálogo ▸ «Carta digital»
-  (`/dashboard/digital-menu`, Administrador y Gerente con `restaurant.manage`): el negocio sube su propia carta, **fotos**
-  (hasta 20, JPG/PNG/WEBP, se optimizan) **o un PDF** (reemplaza todo), la publica y descarga el QR o imprime una tarjeta
-  para la mesa. No usa el catálogo de productos (eso sería otra fase).
-- También desde el **Desk** (System Manager, cualquier negocio): FacturADA Business → Restaurante → «Carta digital» abre
+- Función propia del plan, **`digital_menu`**, en todos los planes (desde 2026-11-08; antes dependía de `restaurant`).
+  Un restaurante la ve como **«Carta digital»**; cualquier otro negocio, como **«Catálogo digital»** (el backend manda
+  `menu_type` «Carta» / «Catalogo», según la función `restaurant`; textos en `menuWords` de `public-menu.service.ts`).
+  El código y la ruta usan `menu`. Catálogo ▸ «Carta digital» / «Catálogo digital» (`/dashboard/digital-menu`,
+  Administrador y Gerente con `products.manage`): el negocio sube **fotos** (hasta 20, JPG/PNG/WEBP, se optimizan) **o un
+  PDF** (reemplaza todo), lo publica y descarga el QR o imprime una tarjeta. No usa el catálogo de productos (otra fase).
+- También desde el **Desk** (System Manager, cualquier negocio): FacturADA Business → «Carta / catálogo digital» abre
   o crea la carta; en ella, Archivos ▸ Subir fotos / Subir PDF y Compartir ▸ Ver como cliente / QR / Cambiar enlace.
   Publicar, mensaje, orden (arrastrar filas) y quitar archivos con el formulario normal.
 - El enlace y el QR usan `facturada_app_url` del site_config (dónde vive la app Angular; el Desk está en el host de
   Frappe), con su prefijo. Producción: `https://facturada.bmarc-corp.com/portal` (la build usa `baseHref: /portal/`); piloto: `http://192.168.100.195:4200`. Sin configurar, el
   Desk lo avisa en rojo y cada pantalla usa su propio dominio.
 - Un solo enlace por negocio, `/menu/<código secreto>`: cambiar fotos o PDF no cambia el QR; «Cambiar enlace» sí lo
-  invalida (pide confirmación). Sin publicar, o con el negocio inactivo o sin `restaurant`, el cliente ve «no disponible».
+  invalida (pide confirmación). Sin publicar, o con el negocio inactivo o sin `digital_menu`, el cliente ve «Este enlace no está disponible».
 - La página del cliente (`/menu/:token`) es pública, sin sesión ni menú lateral, de estilo sobrio: encabezado claro con
-  logo (o iniciales), nombre, mensaje y «Compartir carta»; fotos una debajo de otra (tocar = tamaño completo; con varias,
-  barra de páginas fija), o un botón «Ver carta» que abre el PDF en el visor del teléfono. Paleta propia (no la del tema
+  logo (o iniciales), nombre, mensaje y «Compartir carta/catálogo»; fotos una debajo de otra (tocar = tamaño completo; con
+  varias, barra de páginas fija), o un botón «Ver carta/catálogo» que abre el PDF en el visor del teléfono. Paleta propia (no la del tema
   del panel) y modo oscuro del teléfono. Lleva su propio scroll porque `html`/`body` no hacen scroll.
 - Al final, siempre (también en «no disponible»), un recuadro discreto de FacturADA con mensaje genérico para cualquier
-  tipo de negocio («¿Tienes un negocio?»): «Escríbenos» (WhatsApp de BMARC-CORP, el mensaje dice desde qué carta llegó)
+  tipo de negocio («¿Tienes un negocio?»): «Escríbenos» (WhatsApp de BMARC-CORP, el mensaje dice desde qué carta o catálogo llegó)
   y «Conocer más» (bmarc-corp.com). Datos en `core/constants/brand.constants.ts`. No se puede ocultar por negocio.
 - Backend: `facturada_restaurante.api.public_menu`; `get_public_menu` es el único endpoint sin sesión del sistema.
 
@@ -276,6 +278,7 @@ Funciones:
   de módulos en el front). Los planes se aplican en el Desk (Suscripción → «Aplicar plan»), catálogo en
   `facturada_core/api/plans.py`: FACTURADOR, RESTO_BASICO (mostrador, sin mesas ni cocina), RESTO_MESAS,
   RESTO_COCINA, RESTO_COMPLETO (+ inventario/insumos/recetas). Mesas y cocina son independientes de `restaurant`.
+  La carta / catálogo digital (`digital_menu`) va en todos los planes y se puede apagar por negocio en la Suscripción.
 
 ## Ventas
 

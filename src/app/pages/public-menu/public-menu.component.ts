@@ -4,10 +4,10 @@ import { Title } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { BRAND, brandWhatsappUrl } from 'src/app/core/constants/brand.constants';
-import { PublicMenu, PublicMenuService } from 'src/app/services/public-menu.service';
+import { MenuWords, PublicMenu, PublicMenuService, menuWords } from 'src/app/services/public-menu.service';
 
 /**
- * Carta que ve el cliente al escanear el QR del negocio (`/menu/:token`). Sin sesión ni
+ * Carta (restaurante) o catálogo (otros negocios) que ve el cliente al escanear el QR (`/menu/:token`). Sin sesión ni
  * menú lateral: fotos una debajo de otra (se amplían con los dedos o tocándolas) o un
  * botón para abrir el PDF en el visor del teléfono, que es lo que mejor funciona en móvil.
  *
@@ -51,7 +51,7 @@ export class PublicMenuComponent implements OnInit, AfterViewInit, OnDestroy {
         this.menu = menu || null;
         this.unavailable = !menu?.files?.length;
         this.loading = false;
-        if (menu?.business_name) this.title.setTitle(`Carta · ${menu.business_name}`);
+        if (menu?.business_name) this.title.setTitle(`${this.capitalize(this.w.noun)} · ${menu.business_name}`);
       },
       error: () => {
         this.loading = false;
@@ -68,6 +68,15 @@ export class PublicMenuComponent implements OnInit, AfterViewInit, OnDestroy {
     this.observer?.disconnect();
     this.pagesSub?.unsubscribe();
     clearTimeout(this.feedbackTimer);
+  }
+
+  /** «carta» o «catálogo» según el negocio; un backend anterior no manda `menu_type` (solo había cartas). */
+  get w(): MenuWords {
+    return menuWords(this.menu?.menu_type ?? 'Carta');
+  }
+
+  capitalize(text: string): string {
+    return text.charAt(0).toUpperCase() + text.slice(1);
   }
 
   get pdfUrl(): string {
@@ -89,8 +98,8 @@ export class PublicMenuComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   get whatsappUrl(): string {
-    // Dice desde qué carta llegó el contacto; la oferta es para cualquier tipo de negocio.
-    const from = this.menu?.business_name ? ` en la carta de ${this.menu.business_name}` : '';
+    // Dice desde qué carta o catálogo llegó el contacto; la oferta es para cualquier tipo de negocio.
+    const from = this.menu?.business_name ? ` en ${this.w.the} de ${this.menu.business_name}` : '';
     return brandWhatsappUrl(`Hola, vi ${BRAND.product}${from} y quiero información para mi negocio.`);
   }
 
@@ -100,7 +109,7 @@ export class PublicMenuComponent implements OnInit, AfterViewInit, OnDestroy {
 
   async share(): Promise<void> {
     const url = window.location.href;
-    const title = this.menu?.business_name ? `Carta de ${this.menu.business_name}` : 'Carta digital';
+    const title = this.menu?.business_name ? `${this.capitalize(this.w.noun)} de ${this.menu.business_name}` : this.w.title;
     try {
       if (navigator.share) {
         await navigator.share({ title, url });

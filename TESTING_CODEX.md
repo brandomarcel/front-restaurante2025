@@ -368,6 +368,19 @@ Desk: `desk_upload_menu_file` (solo System Manager, solo con doctype de la carta
 una fila quitada; `on_trash` borra todos), `_manage` deja a System Manager gestionar cualquier negocio y a los demás solo el
 suyo con `restaurant.manage`.
 
+## Pendiente de pruebas: carta / catálogo digital para todo negocio (2026-11-08)
+
+Core: `FEATURE_FIELDS["digital_menu"]`; `effective_features` devuelve `digital_menu` (True sin clave); todos los planes
+de `PLAN_CATALOG` traen `enable_digital_menu = 1`; `apply_license_snapshot` sin `enable_digital_menu` lo deja en 1 y con
+0 lo apaga; `ui_capabilities.modules.digital_menu` visible/can_manage solo con la función y `products.manage`; patch
+`backfill_digital_menu_feature` enciende todas las suscripciones. Restaurante `public_menu`: un negocio sin `restaurant`
+con `digital_menu` administra y publica (`menu_type` «Catalogo»); sin `digital_menu`, `_manage` falla y
+`get_public_menu` responde el 404 de siempre; Cajero (sin `products.manage`) no administra; el controlador no publica
+sin `digital_menu`. Front: `menuWords('Carta'|'Catalogo')`; `PublicMenuService.wordsFor` sin `menu_type` usa la función
+`restaurant`; menú lateral muestra «Catálogo digital» sin `restaurant` y «Carta digital» con ella, y se oculta sin
+`digital_menu` o sin `products.manage`; la ruta `/dashboard/digital-menu` exige lo mismo; página pública con
+`menu_type: 'Catalogo'` dice «Compartir catálogo», «Ver catálogo» y título «Catálogo · <negocio>».
+
 ## Pendiente de pruebas: carta digital pública rediseñada (2026-11-08)
 
 `PublicMenuComponent` (`/menu/:token`): con varias fotos aparece la barra de páginas y `goToPage(i)` lleva a esa página;
