@@ -220,6 +220,9 @@ Funciones:
 - También desde el **Desk** (System Manager, cualquier negocio): FacturADA Business → Restaurante → «Carta digital» abre
   o crea la carta; en ella, Archivos ▸ Subir fotos / Subir PDF y Compartir ▸ Ver como cliente / QR / Cambiar enlace.
   Publicar, mensaje, orden (arrastrar filas) y quitar archivos con el formulario normal.
+- El enlace y el QR usan `facturada_app_url` del site_config (dónde vive la app Angular; el Desk está en el host de
+  Frappe), con su prefijo. Producción: `https://facturada.bmarc-corp.com/portal` (la build usa `baseHref: /portal/`); piloto: `http://192.168.100.195:4200`. Sin configurar, el
+  Desk lo avisa en rojo y cada pantalla usa su propio dominio.
 - Un solo enlace por negocio, `/menu/<código secreto>`: cambiar fotos o PDF no cambia el QR; «Cambiar enlace» sí lo
   invalida (pide confirmación). Sin publicar, o con el negocio inactivo o sin `restaurant`, el cliente ve «no disponible».
 - La página del cliente (`/menu/:token`) es pública, sin sesión ni menú lateral: fotos una debajo de otra (zoom), o un

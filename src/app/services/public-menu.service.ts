@@ -23,6 +23,8 @@ export interface PublicMenuSettings {
   enabled: number;
   token: string;
   path: string;
+  /** Enlace configurado en el backend (`facturada_app_url`); null si no está configurado. */
+  public_url: string | null;
   message: string;
   kind: PublicMenuKind | null;
   files: PublicMenuFile[];
@@ -50,9 +52,12 @@ export class PublicMenuService {
 
   constructor(private http: HttpClient, private capabilities: CompanyCapabilitiesService) {}
 
-  /** Enlace público completo: el front y el backend comparten dominio en producción. */
-  publicUrl(settings: Pick<PublicMenuSettings, 'path'>): string {
-    return `${window.location.origin}${settings.path}`;
+  /**
+   * Enlace del QR: el que fija el backend (`facturada_app_url`) o, sin configurar, la base de esta app.
+   * `document.baseURI` respeta el `baseHref` (en producción la app vive en `/portal/`).
+   */
+  publicUrl(settings: Pick<PublicMenuSettings, 'path' | 'public_url'>): string {
+    return settings.public_url || new URL(settings.path.replace(/^\//, ''), document.baseURI).toString();
   }
 
   /** URL absoluta de un archivo público de Frappe (`/files/...`). */

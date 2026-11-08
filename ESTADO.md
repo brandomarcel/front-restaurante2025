@@ -9,6 +9,17 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-08 (Claude): en producción la app Angular vive bajo `/portal` (`baseHref: /portal/`): la carta es
+  `https://facturada.bmarc-corp.com/portal/menu/<código>` y `facturada_app_url` debe incluir `/portal`. El enlace de
+  respaldo del front usa `document.baseURI` (respeta el prefijo) y `get_menu_qr` acepta cualquier ruta que termine en
+  `/menu/<código>`. Verificado con script (con y sin configuración).
+
+- 2026-11-07 (Claude): el enlace de la carta desde el Desk apuntaba al host de Frappe (`:8002/menu/...`, 404): el Desk
+  armaba el enlace con su propio dominio y la carta la sirve Angular. Nueva clave `facturada_app_url` en site_config
+  (`public_menu_url`, `public_url` en la respuesta, QR siempre con ella); sin configurar, el Desk avisa en rojo. Piloto
+  configurado con `http://192.168.100.195:4200` (`bench set-config`). Verificado con Playwright la carta real de CAFETERIA
+  DEMO en esa dirección. **Producción:** `bench --site <sitio> set-config facturada_app_url https://facturada.bmarc-corp.com/portal` (la app vive bajo `/portal`).
+
 - 2026-11-07 (Claude): la función pasa a llamarse **«Carta digital»** en pantalla (menú lateral, administración,
   página del cliente «Ver carta», tarjeta «Escanea para ver la carta»); código, ruta `/dashboard/digital-menu` y enlace
   `/menu/...` no cambian. Límite de fotos 10 → 20. Gestión desde el **Desk** para System Manager (cualquier negocio): botón

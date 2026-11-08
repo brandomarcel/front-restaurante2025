@@ -190,7 +190,8 @@ Funciones:
 - La página pública tiene su propio contenedor con scroll (`h-[100dvh] overflow-y-auto`): `html` y `body` tienen
   `overflow: hidden` en toda la app. Producción: nginx debe servir `index.html` para `/menu/*` (como el resto de rutas).
 - System Manager la gestiona también desde el Desk (formulario `FacturADA Restaurant Public Menu`, botón «Carta digital»
-  en FacturADA Business); el enlace del Desk usa `window.location.origin`, igual que el front.
+  en FacturADA Business). Enlace y QR: `public_url` del backend (`facturada_app_url` en site_config); sin configurar,
+  `window.location.origin` de cada pantalla.
 
 ## Aviso de pedidos a Caja
 
