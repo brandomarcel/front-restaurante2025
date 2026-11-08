@@ -181,11 +181,17 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
       }
     }));
 
-    // Agregaron productos a una orden en curso: Cocina lo oye y lo ve marcado «Agregado».
+    // Agregaron o anularon productos de una orden en curso: Cocina lo oye y lo ve en un aviso.
     this.sub.add(this.restaurantRealtime.events$.subscribe((event) => {
       if (this.viewMode === 'cocina' && event.event_type === 'order.updated' && event.action === 'items_added') {
         this.playNewOrderSound();
         toast.info(`Agregaron productos a la orden #${event.data?.name ?? ''}`);
+      }
+      // Gerente/Administrador anuló un producto: que cocina no lo prepare (desaparece de la tarjeta).
+      if (this.viewMode === 'cocina' && event.event_type === 'order.updated' && event.action === 'item_voided') {
+        const voided = event.data?.voided_item;
+        this.playNewOrderSound();
+        toast.warning(`Anulado en la orden #${event.data?.name ?? ''}: ${voided?.qty ?? ''} × ${voided?.item_name ?? 'producto'}. No lo prepares.`, { duration: 10000 });
       }
     }));
 
@@ -840,7 +846,7 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   updateKitchenItem(event: {
     order: OrderVM;
     item: any;
-    kitchenStatus: 'Pendiente' | 'En preparacion' | 'Listo' | 'Entregado' | 'Cancelado';
+    kitchenStatus: 'Pendiente' | 'En preparacion' | 'Listo' | 'Entregado';
   }): void {
     const orderName = String(event?.order?.name || '').trim();
     const itemName = String(event?.item?.name ?? event?.item?.order_item ?? event?.item?.row_id ?? event?.item?.id ?? '').trim();

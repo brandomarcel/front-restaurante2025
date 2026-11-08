@@ -21,7 +21,10 @@
             <div class="min-w-0">
               <div class="flex flex-wrap items-center gap-2">
                 <h1 class="truncate text-2xl font-black tracking-tight text-foreground">{{ orderHeadline }}</h1>
-                <span class="status-chip" [ngClass]="orderStatusClass">{{ isLocked ? 'Facturada' : orderStatusLabel }}</span>
+                <!-- Cocina y cuenta por separado: una orden puede estar cobrada y seguir en cocina -->
+                <span *ngIf="!kitchenSummary" class="status-chip" [ngClass]="orderStatusClass">{{ orderStatusLabel }}</span>
+                <span *ngIf="kitchenSummary as kitchen" class="status-chip border-transparent" [ngClass]="kitchen.cls">{{ kitchen.label }}</span>
+                <span *ngIf="accountSummary as account" class="status-chip border-transparent" [ngClass]="account.cls">{{ account.label }}</span>
                 <span *ngIf="isForceClosed" class="status-chip border-destructive/30 bg-destructive/10 text-destructive" [attr.title]="order?.force_close_reason">Cierre manual</span>
               </div>
               <div class="mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -138,7 +141,7 @@
 
             <ng-container *ngIf="orderItems.length; else emptyItems">
               <!-- Encabezado de columnas (desde tablet) -->
-              <div class="items-row items-head" [class.has-actions]="canEditItems" aria-hidden="true">
+              <div class="items-row items-head" [class.has-actions]="canEditItems || canVoidItems" aria-hidden="true">
                 <span class="cell-prod">Producto</span>
                 <span class="cell-qty">Cantidad</span>
                 <span class="cell-price">Precio unit.</span>
@@ -146,7 +149,7 @@
               </div>
 
               <ul class="divide-y divide-border">
-                <li *ngFor="let item of orderItems; let i = index; trackBy: trackByIndex" class="items-row" [class.has-actions]="canEditItems" [class.is-changed]="isItemChanged(i)">
+                <li *ngFor="let item of orderItems; let i = index; trackBy: trackByIndex" class="items-row" [class.has-actions]="canEditItems || canVoidItems" [class.is-changed]="isItemChanged(i)">
                   <div class="cell-prod flex min-w-0 items-start gap-3">
                     <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
                       <img *ngIf="productImage(item.productId)" [src]="productImage(item.productId)" [alt]="item.productName || item.description" class="h-full w-full object-cover" />
@@ -155,6 +158,7 @@
                     <div class="min-w-0">
                       <p class="text-sm font-bold leading-tight text-foreground" [attr.title]="item.productName || item.description">{{ item.productName || item.description }}</p>
                       <p class="mt-0.5 text-xs text-muted-foreground">
+                        <span *ngIf="kitchenEnabled && item.rowName" class="kitchen-chip" [ngClass]="kitchenStatusClass(item.kitchenStatus)">{{ kitchenStatusLabel(item.kitchenStatus) }}</span>
                         IVA {{ item.tax_value ?? 0 }}%<span *ngIf="item.discount" class="font-semibold text-emerald-600"> · desc. −${{ item.discount | number:'1.2-2' }}</span>
                       </p>
                       <p *ngIf="item.notes" class="item-note">{{ item.notes }}</p>
@@ -181,13 +185,37 @@
 
                   <p class="cell-total text-base font-black tabular-nums text-foreground">${{ ((item.total ?? 0) + (item.iva ?? 0)) | number:'1.2-2' }}</p>
 
-                  <div *ngIf="canEditItems" class="cell-act">
+                  <div *ngIf="canEditItems; else voidAction" class="cell-act">
                     <button type="button" class="icon-btn !h-9 !w-9 text-destructive hover:!bg-destructive/10" (click)="removeProductFromOrder(i)" [attr.aria-label]="'Quitar ' + item.productName" title="Quitar">
                       <fa-icon [icon]="['fas', 'trash']" class="text-xs"></fa-icon>
                     </button>
                   </div>
+                  <!-- Ya enviado: se anula con motivo (Administrador/Gerente) -->
+                  <ng-template #voidAction>
+                    <div *ngIf="canVoidItems" class="cell-act">
+                      <button *ngIf="canVoidItem(item)" type="button" class="icon-btn !h-9 !w-9 text-destructive hover:!bg-destructive/10" (click)="openVoidItem(item)" [attr.aria-label]="'Anular ' + item.productName" title="Anular…">
+                        <fa-icon [icon]="['fas', 'ban']" class="text-xs"></fa-icon>
+                      </button>
+                    </div>
+                  </ng-template>
                 </li>
               </ul>
+
+              <!-- Anulados: quedan como registro, no suman ni se facturan -->
+              <div *ngIf="voidedItems.length" class="border-t border-border px-4 py-3">
+                <p class="mb-2 text-xs font-semibold text-muted-foreground">Anulados ({{ voidedItems.length }}) · no se cobran</p>
+                <ul class="space-y-1.5">
+                  <li *ngFor="let row of voidedItems" class="voided-row">
+                    <div class="min-w-0">
+                      <p class="text-sm text-muted-foreground"><span class="line-through">{{ row.qty }} × {{ row.item_name }}</span></p>
+                      <p class="text-xs text-muted-foreground">
+                        {{ row.void_reason || 'Sin motivo' }}<span *ngIf="row.voided_by_name || row.voided_by"> · {{ row.voided_by_name || row.voided_by }}</span><span *ngIf="row.voided_at"> · {{ row.voided_at | ecuadorTime }}</span><span *ngIf="inventoryEnabled"> · {{ row.stock_returned ? 'inventario devuelto' : 'sin devolución de inventario' }}</span>
+                      </p>
+                    </div>
+                    <span class="shrink-0 text-sm tabular-nums text-muted-foreground line-through">${{ voidedLineTotal(row) | number:'1.2-2' }}</span>
+                  </li>
+                </ul>
+              </div>
             </ng-container>
 
             <ng-template #emptyItems>
@@ -380,6 +408,15 @@
   (close)="closeSplitDialog()"
   (submitSplit)="createSplit($event)">
 </app-split-order-dialog>
+
+<app-void-item-dialog
+  *ngIf="voidTarget && order?.name"
+  [orderName]="order.name"
+  [item]="voidTarget"
+  [inventoryEnabled]="inventoryEnabled"
+  (voided)="onItemVoided()"
+  (dismissed)="voidTarget = null">
+</app-void-item-dialog>
 
 <app-force-close-dialog
   *ngIf="showForceClose && order?.name"

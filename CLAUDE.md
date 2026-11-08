@@ -199,6 +199,18 @@ Funciones:
   detalle de la orden: motivo obligatorio, mesa libre, sin factura ni stock, auditado, y si no estaba
   cobrada no cuenta como venta. Permiso `restaurant.orders.force_close`.
 
+## Anular un producto ya enviado
+
+- Administrador y Gerente (`restaurant.orders.void_item`) anulan un producto desde el detalle de la orden
+  (icono ⊘ «Anular…»): cantidad (puede ser parcial: 1 de 3), motivo obligatorio y detalle. El renglón queda tachado en
+  «Anulados» con motivo, quién y cuándo: no se cobra, no sale en la factura ni en subcuentas, y cocina deja de verlo
+  (recibe un aviso). Si cocina no lo había empezado (Pendiente) los insumos vuelven al inventario; si ya se preparaba,
+  quedan como merma. Bloqueado con factura (se usa nota de crédito), pago guardado, subcuentas o si es el último
+  producto (se cancela la orden). Cocina ya no puede marcar «Cancelado» por su cuenta.
+- El encabezado del detalle separa **Cocina** (pendiente / X de N listos / lista) de **Cuenta** (por cobrar /
+  cobrada / subcuentas / facturada); cada producto muestra su estado de cocina. La barra de progreso es solo de la
+  orden (Ingresada → Cerrada).
+
 ## Cliente en el detalle de la orden
 
 - «Cambiar» cliente usa el buscador del POS (`app-pos-customer-picker`): búsqueda en servidor por nombre,
@@ -426,7 +438,8 @@ intermedio: un push a `main` es un despliegue real.
 - Lite: Cuentas por Cobrar e Historial de Abonos (acordar contrato con el front antes);
   reporte de ingresos por fecha real de abono.
 - Restaurante / recetas: conversión de unidades (comprar en kg, recetar en g); costeo y margen;
-  devoluciones (nota de crédito y plato cancelado desde cocina no devuelven insumos); las ventas
+  devoluciones (una nota de crédito no devuelve insumos; un plato anulado ya en preparación tampoco, es merma); cancelar
+  una orden falla si otra orden movió después el mismo producto (Lite solo cancela el último movimiento); las ventas
   directas de un plato en Lite no descuentan insumos; carga masiva de insumos y recetas;
   al volver de Por Bodega a Simple el stock de las bodegas no se consolida; probar la factura
   SRI real de una orden con receta (sin doble salida).

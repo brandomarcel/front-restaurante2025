@@ -39,6 +39,7 @@ export class NewOrderAlertService {
     this.realtime.events$.subscribe((event) => {
       if (event.event_type === 'order.created') this.onOrderCreated(event.data);
       else if (event.event_type === 'order.updated' && event.action === 'items_added') this.onItemsAdded(event.data);
+      else if (event.event_type === 'order.updated' && event.action === 'item_voided') this.onItemVoided(event.data);
     });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) this.clearTitleBadge(); });
     window.addEventListener('focus', () => this.clearTitleBadge());
@@ -108,6 +109,23 @@ export class NewOrderAlertService {
           if (!this.printService.openComanda(name)) toast.error('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes.');
         },
       },
+    });
+  }
+
+  /** Un Gerente/Administrador anuló un producto: el total que se cobrará bajó. Sin sonido ni impresión. */
+  private onItemVoided(order: any): void {
+    const voided = order?.voided_item;
+    const name = String(order?.name || '').trim();
+    const key = `${name}~${voided?.name || ''}`;
+    if (!name || !voided?.name || this.seen.has(key) || !this.shouldAlert()) return;
+    this.seen.add(key);
+    const me = this.currentUserEmail();
+    if (me && String(voided?.voided_by || '').toLowerCase() === me) return;
+
+    const where = order?.table_name || order?.table ? `Mesa ${order.table_name || order.table}` : (order?.alias || 'Sin mesa');
+    toast.warning(`Producto anulado · ${where}`, {
+      description: `${voided.qty} × ${voided.item_name}: ${voided.reason}. Nuevo total $${Number(order?.total || 0).toFixed(2)}.`,
+      duration: ALERT_DURATION_MS,
     });
   }
 

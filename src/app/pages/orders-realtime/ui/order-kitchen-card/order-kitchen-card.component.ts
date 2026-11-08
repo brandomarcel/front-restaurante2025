@@ -24,7 +24,7 @@ export class OrderKitchenCardComponent implements OnInit, OnDestroy {
   @Output() updateItem = new EventEmitter<{
     order: OrderVM;
     item: any;
-    kitchenStatus: 'Pendiente' | 'En preparacion' | 'Listo' | 'Entregado' | 'Cancelado';
+    kitchenStatus: 'Pendiente' | 'En preparacion' | 'Listo' | 'Entregado';
   }>();
 
   // minutos transcurridos (se refresca solo)
@@ -184,10 +184,6 @@ export class OrderKitchenCardComponent implements OnInit, OnDestroy {
     this.updateItem.emit({ order: this.order, item: it, kitchenStatus });
   }
 
-  emitItemCancel(it: any): void {
-    if (!this.itemIdentifier(it) || this.actionPending || this.isItemPending(it) || this.normalizedItemStatus(it).includes('cancel')) return;
-    this.updateItem.emit({ order: this.order, item: it, kitchenStatus: 'Cancelado' });
-  }
 
 
 }

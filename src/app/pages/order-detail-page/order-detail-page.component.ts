@@ -16,6 +16,7 @@ import { OrdersService } from 'src/app/services/orders.service';
 import { OrderSplitService } from 'src/app/services/order-split.service';
 import { OrderSplitRow, SplitOrderPayload } from 'src/app/services/order-split.types';
 import { ForceCloseDialogComponent } from 'src/app/shared/components/force-close-dialog/force-close-dialog.component';
+import { VoidItemDialogComponent, VoidItemTarget } from 'src/app/shared/components/void-item-dialog/void-item-dialog.component';
 import { SplitOrderDialogComponent } from './components/split-order-dialog/split-order-dialog.component';
 import { OrderSplitsTableComponent } from './components/order-splits-table/order-splits-table.component';
 import { PaymentsService } from 'src/app/services/payments.service';
@@ -45,6 +46,8 @@ type OrderItem = {
   discount?: number;
   /** Totales de la línea en centavos (fuente de verdad para sumar sin residuos). */
   cents?: LineCents;
+  /** Estado de cocina del renglón guardado (Pendiente, En preparacion, Listo, Entregado). */
+  kitchenStatus?: string;
   total?: number;      // subtotal SIN IVA (como haces en invoicing)
 };
 
@@ -62,7 +65,8 @@ type OrderItem = {
     SplitOrderDialogComponent,
     PosCustomerPickerComponent,
     OrderSplitsTableComponent,
-    ForceCloseDialogComponent
+    ForceCloseDialogComponent,
+    VoidItemDialogComponent
   ],
   templateUrl: './order-detail-page.component.html',
   styleUrl: './order-detail-page.component.css'
@@ -79,6 +83,8 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   customerSaving = false;
   orderCustomerId = '';
   orderItems: OrderItem[] = [];
+  /** Renglones anulados (`void_order_item`): se muestran aparte y no suman ni se reenvían. */
+  voidedItems: any[] = [];
   showSplitDialog = false;
   splitSubmitting = false;
   splitActionLoadingName = '';
@@ -96,7 +102,7 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   showMoreActions = false;
   showCustomerPicker = false;
   /** Etapas visibles en la barra de progreso de la orden. */
-  readonly progressSteps = ['Ingresada', 'Preparación', 'Lista', 'Cerrada', 'Facturada'];
+  readonly progressSteps = ['Ingresada', 'Preparación', 'Lista', 'Cerrada'];
 
   private baseUrl = environment.URL;
   private readonly realtimeSub = new Subscription();
@@ -192,7 +198,9 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   private hydrateOrderItems(order: any): void {
     // Tu JSON ya trae por ítem: quantity, price, tax_rate, subtotal (SIN IVA), iva, total (CON IVA)
     // Para edición homogénea con invoicing, trabajamos con total = subtotal SIN IVA y tax_value = tax_rate.
-    const items = order?.items || [];
+    const all = order?.items || [];
+    this.voidedItems = all.filter((it: any) => this.isVoidedRow(it));
+    const items = all.filter((it: any) => !this.isVoidedRow(it));
     this.orderItems = items.map((it: any): OrderItem => ({
       rowName: it.name,
       notes: it.notes || '',
@@ -204,8 +212,18 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
       tax: null,
       tax_value: it.tax_rate ?? 0,
       discount: this.safeMoney(it.discount_amount, 0),
+      kitchenStatus: it.kitchen_status || 'Pendiente',
     }));
     this.recalculateOrder();
+  }
+
+  private isVoidedRow(row: any): boolean {
+    return !!row?.voided || row?.kitchen_status === 'Cancelado';
+  }
+
+  /** Renglones guardados que siguen vigentes: contra ellos se comparan los cambios en pantalla. */
+  private get savedActiveItems(): any[] {
+    return (Array.isArray(this.order?.items) ? this.order.items : []).filter((it: any) => !this.isVoidedRow(it));
   }
 
   // =================== Acciones PDF ===================
@@ -523,7 +541,7 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     if (this.splitsLoaded) {
       return this.splitRemainingItems;
     }
-    return Array.isArray(this.order?.items) ? this.order.items : [];
+    return this.savedActiveItems;
   }
 
   // =================== Guardado ===================
@@ -691,7 +709,6 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   /** Índice de la etapa actual en `progressSteps` (-1 si está cancelada). */
   get progressIndex(): number {
     if (this.isCancelled) return -1;
-    if (this.isLocked) return 4;
     const label = this.orderStatusLabel;
     const index = this.progressSteps.indexOf(label);
     return index >= 0 ? index : 0;
@@ -1226,7 +1243,7 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   /** La fila `index` difiere de lo guardado en la orden (producto, cantidad, precio o IVA). */
   isItemChanged(index: number): boolean {
-    const originalItems = Array.isArray(this.order?.items) ? this.order.items : [];
+    const originalItems = this.savedActiveItems;
     const item = this.orderItems[index];
     const original = originalItems[index];
     if (!item) return false;
@@ -1243,7 +1260,7 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   /** Cuántos productos se agregaron, quitaron o editaron respecto a lo guardado. */
   get pendingItemChanges(): { added: number; removed: number; edited: number } {
-    const originalCount = Array.isArray(this.order?.items) ? this.order.items.length : 0;
+    const originalCount = this.savedActiveItems.length;
     const current = this.orderItems.length;
     let edited = 0;
     for (let i = 0; i < Math.min(originalCount, current); i++) {
@@ -1464,6 +1481,94 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   onForceClosed(): void {
     this.showForceClose = false;
     if (this.order?.name) this.fetch(this.order.name);
+  }
+
+  // =================== Anular producto ===================
+  /**
+   * Anular lo ya enviado (Administrador/Gerente): sin factura, pagos ni subcuentas, igual que
+   * `void_order_item` en el backend. El último producto no se anula: se cancela la orden.
+   */
+  get canVoidItems(): boolean {
+    return !!this.order?.name && this.capabilities.hasPermission('restaurant.orders.void_item')
+      && !this.isLocked && !this.isCancelled && !this.isForceClosed && !this.order?.sri?.invoice
+      && !this.itemsLockedByPayment && !this.orderSplits.length;
+  }
+
+  canVoidItem(item: OrderItem): boolean {
+    return this.canVoidItems && !!item.rowName && (this.orderItems.length > 1 || item.quantity > 1);
+  }
+
+  voidTarget: VoidItemTarget | null = null;
+
+  async openVoidItem(item: OrderItem): Promise<void> {
+    if (!this.canVoidItem(item) || !item.rowName) return;
+    if (this.hasUnsavedInvoiceChanges) {
+      const result = await this.alertService.confirm(
+        'Tienes cambios sin guardar en esta orden. Al anular se recarga la orden y se perderán.',
+        'Anular producto'
+      );
+      if (!result.isConfirmed) return;
+    }
+    this.voidTarget = {
+      rowName: item.rowName,
+      productName: item.productName || item.description || 'Producto',
+      // Si es el único renglón, al menos una unidad tiene que quedar.
+      quantity: this.orderItems.length > 1 ? item.quantity : item.quantity - 1,
+      kitchenStatus: this.kitchenStatusLabel(item.kitchenStatus),
+    };
+  }
+
+  /** Lo que valía el renglón anulado (con IVA), solo para mostrarlo tachado. */
+  voidedLineTotal(row: any): number {
+    return fromCents(lineTotalsCents(row?.qty, row?.rate, row?.discount_amount ?? 0, row?.tax_rate ?? 0).total);
+  }
+
+  onItemVoided(): void {
+    this.voidTarget = null;
+    if (this.order?.name) this.fetch(this.order.name);
+  }
+
+  // =================== Cocina y cuenta (por separado) ===================
+  get kitchenEnabled(): boolean {
+    return this.capabilities.isEnabled('kitchen');
+  }
+
+  get inventoryEnabled(): boolean {
+    return this.capabilities.isEnabled('inventory');
+  }
+
+  kitchenStatusLabel(status?: string): string {
+    return status === 'En preparacion' ? 'En preparación' : (status || 'Pendiente');
+  }
+
+  kitchenStatusClass(status?: string): string {
+    if (status === 'En preparacion') return 'tone-warn';
+    if (status === 'Listo' || status === 'Entregado') return 'tone-ok';
+    return 'tone-info';
+  }
+
+  /** Avance de cocina sobre lo vigente; vacío si el negocio no usa cocina o la orden ya terminó. */
+  get kitchenSummary(): { label: string; cls: string } | null {
+    if (!this.kitchenEnabled || !this.isActiveOrder || !this.orderItems.length) return null;
+    const statuses = this.orderItems.map(it => it.kitchenStatus || 'Pendiente');
+    const ready = statuses.filter(st => st === 'Listo' || st === 'Entregado').length;
+    if (ready === statuses.length) return { label: 'Cocina: lista', cls: 'tone-ok' };
+    if (ready || statuses.includes('En preparacion')) {
+      return { label: `Cocina: ${ready} de ${statuses.length} listos`, cls: 'tone-warn' };
+    }
+    return { label: 'Cocina: pendiente', cls: 'tone-info' };
+  }
+
+  /** Estado del cobro, independiente de lo que haga cocina. */
+  get accountSummary(): { label: string; cls: string } | null {
+    if (this.isCancelled) return null;
+    if (this.isLocked) return { label: 'Cuenta: facturada', cls: 'tone-ok' };
+    if (this.hasSplits) {
+      return { label: `Cuenta: ${this.invoicedSplitsCount} de ${this.orderSplits.length} subcuentas facturadas`, cls: 'tone-warn' };
+    }
+    if (this.itemsLockedByPayment) return { label: `Cuenta: cobrada $${this.savedPaymentsTotal.toFixed(2)}`, cls: 'tone-ok' };
+    if (this.isForceClosed) return null;
+    return { label: 'Cuenta: por cobrar', cls: 'tone-warn' };
   }
 
   get canCancelOrder(): boolean {

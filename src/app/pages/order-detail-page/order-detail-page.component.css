@@ -215,6 +215,16 @@
   @apply inline-block max-w-full;
 }
 
+/* Estado de cocina de cada producto */
+.kitchen-chip {
+  @apply mr-1.5 inline-block rounded-full px-2 py-px text-xs font-semibold;
+}
+
+/* Producto anulado: registro tachado, sin acciones */
+.voided-row {
+  @apply flex items-start justify-between gap-3;
+}
+
 /* Fila con cambios aún sin guardar */
 .is-changed {
   @apply bg-primary/5;

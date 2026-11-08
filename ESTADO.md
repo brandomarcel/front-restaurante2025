@@ -1,6 +1,6 @@
 # Estado del proyecto Facturada
 
-Última actualización: 2026-11-06.
+Última actualización: 2026-11-07.
 
 ## Objetivo Actual
 
@@ -8,6 +8,21 @@ Mantener una memoria breve del progreso y los pendientes sin ampliar `CLAUDE.md`
 El trabajo local observado se concentra en la configuración de desarrollo del frontend Angular y su conexión con Frappe.
 
 ## Últimos Cambios (Hecho)
+
+- 2026-11-07 (Claude): flujo de mesa, fase 3, anular un producto ya enviado. Detalle de la orden: icono «Anular…»
+  por producto para Administrador/Gerente (`restaurant.orders.void_item`), diálogo `VoidItemDialogComponent`
+  (cantidad parcial, motivo, detalle; dice si el inventario vuelve). Los anulados se listan aparte, tachados, con
+  motivo, quién y cuándo, y no suman (`voidedItems`; `orderItems` y las comparaciones de cambios usan solo lo vigente).
+  Encabezado: chips separados «Cocina: …» y «Cuenta: …»; cada producto muestra su estado de cocina; la barra de
+  progreso ya no incluye «Facturada». Cocina recibe un aviso al anularse algo y Caja otro con el nuevo total
+  (`NewOrderAlertService`). Se quitó `emitItemCancel` (sin uso) y `Cancelado` de los tipos de cambio de cocina.
+  Backend: `void_order_item` en Restaurante, permiso nuevo en Core, campos nuevos en el renglón (migrado en el piloto).
+  Arreglado de paso: un renglón en «Cancelado» seguía sumando en el total y salía en la factura.
+  Verificado: backend con script temporal sobre el piloto (rollback): total, devolución parcial de insumos, merma en
+  preparación, factura sin anulados, bloqueos y cancelación posterior de la orden; `ngc --noEmit` OK. **Sin probar en
+  navegador** (no había credenciales de prueba en la sesión). Pruebas para Codex: `canVoidItems`/`canVoidItem`,
+  `voidedItems` fuera de totales y del payload de guardado, `kitchenSummary`/`accountSummary`, diálogo (cantidad,
+  «Otro» exige detalle), avisos `item_voided` en Cocina y Caja.
 
 - 2026-11-06 (Claude, 13): Productos, revisión por tipo de negocio. «Stock inicial» al crear también en Lite (antes
   obligaba a ir a Inventario → Entrada; el front ya registraba la Entrada en cualquier modo). Plato con receta y sin
@@ -592,8 +607,8 @@ antes de que la cocina empiece.
 **Fases siguientes del flujo de mesa (propuestas):**
 - Fase 2: «Imprimir precuenta» en el detalle y en Mesas; «Cobrar» claro desde la tarjeta de la mesa y para nota de
   venta sin factura (hoy: chip de pago → «Guardar cambios» → «Cerrar orden», poco obvio).
-- Fase 3: anular un producto ya enviado con motivo y autorización de Gerente/Administrador (devuelve insumos si no se
-  preparó); separar en pantalla el estado de cocina del estado de la cuenta (la barra mezcla ambos).
+- Fase 3: hecha el 2026-11-07 (ver «Últimos cambios»). Queda: anular en una orden ya cobrada (devolver dinero en
+  Caja), PIN de supervisor para que el cajero pida la autorización sin cambiar de sesión, reporte de anulaciones.
 - Riesgo a revisar: el buscador de la tarjeta corrige la orden para facturar (`update_order_for_invoice`) y no pasa por
   cocina ni descuenta inventario. En una orden sin movimientos de stock, agregar ahí un producto con inventario o
   receta no lo descontaría. Decidir si ese buscador debe limitarse a productos sin inventario o descontar stock.

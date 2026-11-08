@@ -64,6 +64,7 @@ export interface OrdersListResponse {
 }
 
 export type ForceCloseReason = 'unpaid' | 'paid_outside' | 'duplicate' | 'other';
+export type VoidItemReason = 'customer_changed' | 'wrong_entry' | 'unavailable' | 'quality' | 'other';
 
 @Injectable({ providedIn: 'root' })
 export class OrdersService {
@@ -194,7 +195,7 @@ export class OrdersService {
     });
   }
 
-  updateKitchenItemStatus(orderName: string, itemName: string, kitchenStatus: 'Pendiente' | 'En preparacion' | 'Listo' | 'Entregado' | 'Cancelado'): Observable<any> {
+  updateKitchenItemStatus(orderName: string, itemName: string, kitchenStatus: 'Pendiente' | 'En preparacion' | 'Listo' | 'Entregado'): Observable<any> {
     return this.postRestaurant('update_kitchen_item_status', {
       order_name: orderName,
       item_name: itemName,
@@ -383,6 +384,20 @@ forceClose(name: string, reason: ForceCloseReason, comment?: string): Observable
   return this.http.post<any>(
     `${this.urlBase}.force_close_order`,
     { name, reason, comment: comment?.trim() || undefined, business },
+    { context: new HttpContext().set(REQUIRE_AUTH, true) }
+  ).pipe(map((response: any) => this.normalizeDetailResponse(response)));
+}
+
+/**
+ * Anula un producto ya enviado (Administrador/Gerente), con motivo. No se cobra ni se factura;
+ * si cocina no lo había empezado, el backend devuelve sus insumos. `qty` menor anula solo una parte.
+ */
+voidItem(orderName: string, itemName: string, qty: number, reason: VoidItemReason, comment?: string): Observable<any> {
+  const business = this.activeBusinessOrError();
+  if (business instanceof Error) return throwError(() => business);
+  return this.http.post<any>(
+    `${this.urlBase}.void_order_item`,
+    { order_name: orderName, item_name: itemName, qty, reason, comment: comment?.trim() || undefined, business },
     { context: new HttpContext().set(REQUIRE_AUTH, true) }
   ).pipe(map((response: any) => this.normalizeDetailResponse(response)));
 }

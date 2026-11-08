@@ -172,6 +172,15 @@ Funciones:
 - «Cerrar manualmente…» (detalle de la orden; permiso `restaurant.orders.force_close`, Administrador y
   Gerente): motivo obligatorio, mesa libre, sin factura ni stock; no cobrada = no cuenta como venta.
 
+## Anular un producto ya enviado
+
+- Detalle de la orden, «Anular…» por producto (permiso `restaurant.orders.void_item`, Administrador y Gerente;
+  `VoidItemDialogComponent`, `OrdersService.voidItem` → `void_order_item`). Cantidad parcial, motivo obligatorio. El
+  renglón queda `kitchen_status = Cancelado` con `void_reason`/`voided_by`/`voided_at`/`stock_returned`: no suma ni se
+  factura. Insumos vuelven solo si estaba Pendiente. Bloqueado con factura, pagos, subcuentas o último producto.
+  El front separa los anulados (`voidedItems`) de lo editable (`orderItems`) y no los compara al guardar.
+- Cocina no anula (`update_kitchen_item_status` rechaza `Cancelado`); recibe el aviso `item_voided`. Caja también.
+
 ## Aviso de pedidos a Caja
 
 - `NewOrderAlertService` avisa (sonido + toast con «Imprimir comanda») a quien cobra cuando otra persona
