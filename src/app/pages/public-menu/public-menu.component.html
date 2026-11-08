@@ -4,136 +4,118 @@
 
     <!-- Cargando -->
     <div *ngIf="loading" class="mx-auto w-full max-w-3xl px-4 pt-10" aria-busy="true" aria-label="Cargando carta">
-      <div class="flex flex-col items-center gap-4">
-        <div class="pm-skeleton h-24 w-24 animate-pulse rounded-3xl"></div>
+      <div class="flex flex-col items-center gap-3">
+        <div class="pm-skeleton h-20 w-20 animate-pulse rounded-2xl"></div>
         <div class="pm-skeleton h-6 w-52 animate-pulse rounded-full"></div>
-        <div class="pm-skeleton h-4 w-36 animate-pulse rounded-full"></div>
       </div>
-      <div class="pm-skeleton mt-8 aspect-[3/4] w-full animate-pulse rounded-3xl"></div>
+      <div class="pm-skeleton mt-8 aspect-[3/4] w-full animate-pulse rounded-2xl"></div>
     </div>
 
     <!-- No disponible: mismo mensaje para un enlace viejo, inexistente o una carta apagada -->
     <section *ngIf="!loading && unavailable" class="pm-rise mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center px-6 py-16 text-center">
-      <div class="pm-chip flex h-16 w-16 items-center justify-center rounded-2xl" aria-hidden="true">
-        <svg viewBox="0 0 24 24" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <div class="pm-chip flex h-14 w-14 items-center justify-center rounded-2xl" aria-hidden="true">
+        <svg viewBox="0 0 24 24" class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 2v7a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2a5 5 0 0 0-5 5v6a2 2 0 0 0 2 2h3Zm0 0v7" />
         </svg>
       </div>
-      <p class="mt-5 text-xl font-bold tracking-tight">Esta carta no está disponible</p>
+      <p class="mt-5 text-lg font-semibold">Esta carta no está disponible</p>
       <p class="pm-muted mt-2 text-sm leading-relaxed">Puede que el enlace haya cambiado. Pide la carta al personal del local.</p>
     </section>
 
     <ng-container *ngIf="!loading && !unavailable && menu">
-      <!-- Portada del negocio -->
-      <header class="pm-hero">
-        <div class="relative mx-auto flex max-w-3xl flex-col items-center px-6 pb-7 pt-8 text-center">
-          <div class="pm-rise pm-logo flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl">
-            <img *ngIf="logoUrl; else initialsTpl" [src]="logoUrl" [alt]="'Logo de ' + menu.business_name" class="h-full w-full object-contain p-2" />
+      <!-- Encabezado del negocio -->
+      <header class="pm-header">
+        <div class="pm-rise mx-auto flex max-w-3xl flex-col items-center px-6 pb-6 pt-8 text-center">
+          <div class="pm-logo flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl">
+            <img *ngIf="logoUrl; else initialsTpl" [src]="logoUrl" [alt]="'Logo de ' + menu.business_name" class="h-full w-full object-contain p-1.5" />
             <ng-template #initialsTpl>
-              <span class="text-3xl font-bold text-[#1b1f3a]" aria-hidden="true">{{ initials }}</span>
+              <span class="text-2xl font-semibold" aria-hidden="true">{{ initials }}</span>
             </ng-template>
           </div>
 
-          <span class="pm-rise pm-rise-2 pm-pill mt-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/85">
-            <span class="h-1.5 w-1.5 rounded-full bg-[#ffb020]" aria-hidden="true"></span>
-            Carta digital
-          </span>
-          <h1 class="pm-rise pm-rise-2 mt-3 text-balance text-3xl font-bold leading-tight tracking-tight sm:text-4xl">{{ menu.business_name }}</h1>
-          <p *ngIf="menu.message" class="pm-rise pm-rise-3 mt-3 max-w-md whitespace-pre-line text-pretty text-sm leading-relaxed text-white/75">{{ menu.message }}</p>
+          <h1 class="mt-4 text-balance text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{{ menu.business_name }}</h1>
+          <p *ngIf="menu.message" class="pm-muted mt-2 max-w-md whitespace-pre-line text-pretty text-sm leading-relaxed">{{ menu.message }}</p>
 
           <button type="button" (click)="share()"
-            class="pm-rise pm-rise-3 pm-pill pm-press mt-5 inline-flex h-10 items-center gap-2 rounded-full px-5 text-sm font-semibold text-white">
+            class="pm-outline pm-press mt-5 inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium">
             <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M12 3v12" /><path d="m7 8 5-5 5 5" /><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" />
             </svg>
             Compartir carta
           </button>
-          <p class="mt-2 min-h-4 text-xs font-medium text-white/80" aria-live="polite">{{ shareFeedback }}</p>
+          <p class="pm-muted mt-2 min-h-4 text-xs" aria-live="polite">{{ shareFeedback }}</p>
         </div>
       </header>
 
       <div class="mx-auto w-full max-w-3xl px-4">
         <!-- Fotos de la carta -->
         <ng-container *ngIf="images.length">
-          <nav *ngIf="images.length > 1" class="pm-pages-bar sticky top-0 z-10 -mx-4 mt-2 px-4 py-3" aria-label="Páginas de la carta">
+          <nav *ngIf="images.length > 1" class="pm-pages-bar sticky top-0 z-10 -mx-4 px-4 py-3" aria-label="Páginas de la carta">
             <div class="flex items-center gap-2 overflow-x-auto [scrollbar-width:none]">
-              <span class="pm-muted mr-1 shrink-0 text-xs font-semibold">Páginas</span>
+              <span class="pm-muted mr-1 shrink-0 text-xs font-medium">Páginas</span>
               <button *ngFor="let src of images; let i = index" type="button" (click)="goToPage(i)"
-                class="pm-page-dot h-9 min-w-9 shrink-0 rounded-full px-3 text-sm font-semibold"
+                class="pm-page-dot h-8 min-w-8 shrink-0 rounded-full px-2.5 text-sm font-medium"
                 [attr.aria-current]="activePage === i" [attr.aria-label]="'Ir a la página ' + (i + 1)">
                 {{ i + 1 }}
               </button>
             </div>
           </nav>
 
-          <section class="space-y-5" [class.mt-6]="images.length === 1" [class.mt-2]="images.length > 1" aria-label="Carta">
+          <section class="space-y-4" [class.mt-6]="images.length === 1" [class.mt-1]="images.length > 1" aria-label="Carta">
             <a #page *ngFor="let src of images; let i = index" [href]="src" target="_blank" rel="noopener"
-              class="pm-page pm-surface pm-press relative block overflow-hidden rounded-3xl"
+              class="pm-page pm-surface relative block overflow-hidden rounded-2xl"
               [attr.aria-label]="'Abrir página ' + (i + 1) + ' de la carta en tamaño completo'">
               <img [src]="src" [alt]="'Carta, página ' + (i + 1)" class="block h-auto w-full" [attr.loading]="i === 0 ? 'eager' : 'lazy'" decoding="async" />
-              <span *ngIf="images.length > 1" class="absolute left-3 top-3 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
+              <span *ngIf="images.length > 1" class="absolute left-3 top-3 rounded-full bg-black/50 px-2 py-0.5 text-[11px] font-medium text-white">
                 {{ i + 1 }} / {{ images.length }}
-              </span>
-              <span class="absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur" aria-hidden="true">
-                <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.2-4.2M11 8.5v5M8.5 11h5" /></svg>
-                Ampliar
               </span>
             </a>
           </section>
-          <p class="pm-muted mt-4 text-center text-xs">Toca una página para verla en tamaño completo.</p>
+          <p class="pm-muted mt-3 text-center text-xs">Toca una página para verla en tamaño completo.</p>
         </ng-container>
 
         <!-- Carta en PDF: se abre en el visor del teléfono -->
-        <section *ngIf="pdfUrl" class="pm-rise pm-rise-3 pm-surface mt-8 flex flex-col items-center rounded-3xl px-6 py-8 text-center">
-          <div class="pm-chip flex h-16 w-16 items-center justify-center rounded-2xl" aria-hidden="true">
-            <svg viewBox="0 0 24 24" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <section *ngIf="pdfUrl" class="pm-rise pm-surface mt-6 flex flex-col items-center rounded-2xl px-6 py-8 text-center">
+          <div class="pm-chip flex h-14 w-14 items-center justify-center rounded-2xl" aria-hidden="true">
+            <svg viewBox="0 0 24 24" class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /><path d="M9 13h6M9 17h4" />
             </svg>
           </div>
-          <p class="mt-4 text-lg font-bold tracking-tight">Nuestra carta</p>
-          <p class="pm-muted mt-1 max-w-xs text-sm">Se abre en el visor de tu teléfono; puedes ampliarla con los dedos.</p>
+          <p class="pm-muted mt-4 max-w-xs text-sm">La carta se abre en el visor de tu teléfono; puedes ampliarla con los dedos.</p>
           <a [href]="pdfUrl" target="_blank" rel="noopener"
-            class="pm-primary pm-press mt-6 inline-flex h-14 w-full max-w-sm items-center justify-center gap-2 rounded-2xl px-6 text-base font-bold">
+            class="pm-primary pm-press mt-5 inline-flex h-12 w-full max-w-sm items-center justify-center rounded-xl px-6 text-base font-semibold">
             Ver carta
-            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
           </a>
-          <a [href]="pdfUrl" download class="pm-muted mt-4 text-sm font-semibold underline underline-offset-4">Descargar PDF</a>
+          <a [href]="pdfUrl" download class="pm-muted mt-4 text-sm font-medium underline underline-offset-4">Descargar PDF</a>
         </section>
       </div>
     </ng-container>
 
-    <!-- FacturADA: para que otros negocios nos conozcan -->
+    <!-- FacturADA: discreto, al final, para que otros negocios nos conozcan -->
     <aside *ngIf="!loading" class="mx-auto mt-auto w-full max-w-3xl px-4 pb-6 pt-12" aria-label="Sobre FacturADA">
-      <div class="pm-promo rounded-3xl px-6 py-7 sm:px-8">
-        <img src="assets/brand/facturada-logo-sobre-oscuro.svg" alt="FacturADA" class="relative h-6 w-auto" />
-        <p class="relative mt-5 text-xs font-semibold uppercase tracking-[0.14em] text-[#ffb020]">¿Tienes un restaurante o un negocio?</p>
-        <p class="relative mt-1.5 text-balance text-xl font-bold leading-snug tracking-tight">
-          {{ unavailable ? 'Crea la carta digital de tu negocio con ' : 'Esta carta digital funciona con ' }}{{ brand.product }}
+      <div class="pm-promo rounded-2xl px-5 py-5">
+        <div class="flex items-center justify-between gap-3">
+          <img src="assets/brand/facturada-logo-principal.svg" alt="FacturADA" class="pm-brand-light h-5 w-auto" />
+          <img src="assets/brand/facturada-logo-sobre-oscuro.svg" alt="FacturADA" class="pm-brand-dark h-5 w-auto" />
+          <span class="pm-muted text-[11px]">por {{ brand.company }}</span>
+        </div>
+        <p class="mt-4 text-base font-semibold">¿Tienes un negocio?</p>
+        <p class="pm-muted mt-1 text-sm leading-relaxed">
+          Facturación electrónica, ventas, inventario y herramientas para tu día a día, adaptadas al tipo de negocio que tengas.
         </p>
-        <p class="relative mt-2 text-sm leading-relaxed text-white/75">
-          Facturación electrónica con el SRI, punto de venta, mesas, cocina, caja e inventario en un solo sistema.
-        </p>
-        <ul class="relative mt-4 flex flex-wrap gap-2 text-xs font-medium text-white/90">
-          <li class="pm-promo-chip rounded-full px-3 py-1">Carta con QR</li>
-          <li class="pm-promo-chip rounded-full px-3 py-1">Facturas SRI</li>
-          <li class="pm-promo-chip rounded-full px-3 py-1">Mesas y cocina</li>
-          <li class="pm-promo-chip rounded-full px-3 py-1">Caja e inventario</li>
-        </ul>
-        <div class="relative mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
           <a [href]="whatsappUrl" target="_blank" rel="noopener"
-            class="pm-whatsapp pm-press inline-flex h-12 items-center justify-center gap-2 rounded-2xl px-5 text-sm font-bold">
-            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true">
+            class="pm-outline pm-press inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium">
+            <svg viewBox="0 0 24 24" class="h-4 w-4 text-[#1f9d55]" fill="currentColor" aria-hidden="true">
               <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z" />
             </svg>
-            Quiero esto para mi negocio
+            Escríbenos
           </a>
-          <a [href]="brand.siteUrl" target="_blank" rel="noopener"
-            class="inline-flex h-12 items-center justify-center rounded-2xl px-4 text-sm font-semibold text-white/80 underline-offset-4 hover:underline">
-            Conocer {{ brand.company }}
+          <a [href]="brand.siteUrl" target="_blank" rel="noopener" class="pm-muted text-sm font-medium underline-offset-4 hover:underline">
+            Conocer más
           </a>
         </div>
       </div>
-      <p class="pm-muted mt-4 text-center text-[11px]">Carta digital con {{ brand.product }} · {{ brand.company }}</p>
     </aside>
   </div>
 </main>

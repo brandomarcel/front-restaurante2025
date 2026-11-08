@@ -89,8 +89,9 @@ export class PublicMenuComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   get whatsappUrl(): string {
-    const from = this.menu?.business_name ? ` de ${this.menu.business_name}` : '';
-    return brandWhatsappUrl(`Hola, vi la carta digital${from} y quiero conocer ${BRAND.product} para mi negocio.`);
+    // Dice desde qué carta llegó el contacto; la oferta es para cualquier tipo de negocio.
+    const from = this.menu?.business_name ? ` en la carta de ${this.menu.business_name}` : '';
+    return brandWhatsappUrl(`Hola, vi ${BRAND.product}${from} y quiero información para mi negocio.`);
   }
 
   goToPage(index: number): void {

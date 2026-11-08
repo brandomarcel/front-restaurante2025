@@ -9,16 +9,17 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
-- 2026-11-08 (Claude): carta digital pública (`/menu/:token`) rediseñada a pedido del usuario: portada oscura con
-  logo/iniciales, «Carta digital», nombre, mensaje y «Compartir carta» (`navigator.share` o copia el enlace); fotos en
-  tarjetas con «Ampliar» y, con varias, barra de páginas fija que resalta la visible (`IntersectionObserver`); PDF en
-  tarjeta con «Ver carta» / «Descargar PDF»; «no disponible» con ícono. Paleta propia en `public-menu.component.css`
-  (no depende del tema del panel) y modo oscuro del teléfono; respeta `prefers-reduced-motion`. Promoción de FacturADA
-  al final de toda carta: WhatsApp 593998885652 con mensaje que nombra el negocio y enlace a bmarc-corp.com; datos en
-  `core/constants/brand.constants.ts`. Build dev OK; revisado con Playwright a 390 px (claro, oscuro, no disponible) con
-  la carta del piloto (una foto). **Sin ver**: barra de páginas con varias fotos y la tarjeta PDF. Además, el error
-  «El enlace de la carta no es valido» en producción era el backend sin reiniciar tras el pull (`bench restart`).
-  Pendiente: decidir si un plan pagado puede ocultar la promoción.
+- 2026-11-08 (Claude): carta digital pública (`/menu/:token`) rediseñada a pedido del usuario, en estilo sobrio (segunda
+  vuelta: el usuario pidió algo más conservador y un mensaje genérico). Encabezado claro con logo/iniciales, nombre,
+  mensaje y «Compartir carta» (`navigator.share` o copia el enlace); fotos en tarjetas y, con varias, barra de páginas fija
+  que resalta la visible (`IntersectionObserver`); PDF en tarjeta con «Ver carta» / «Descargar PDF»; «no disponible» con
+  ícono. Paleta propia en `public-menu.component.css` (no depende del tema del panel), modo oscuro del teléfono,
+  `prefers-reduced-motion`. Al final de toda carta, recuadro discreto de FacturADA «¿Tienes un negocio?» con texto para
+  cualquier tipo de negocio: «Escríbenos» (WhatsApp 593998885652, el mensaje nombra la carta de origen) y «Conocer más»
+  (bmarc-corp.com); datos en `core/constants/brand.constants.ts`. Revisado con Playwright a 390 px (claro, oscuro, no
+  disponible) con la carta del piloto (una foto). **Sin ver**: barra de páginas con varias fotos y la tarjeta PDF. Además,
+  el error «El enlace de la carta no es valido» en producción era el backend sin reiniciar tras el pull (`bench restart`).
+  Pendiente: decidir si un plan pagado puede ocultar el recuadro.
 
 - 2026-11-08 (Claude): Órdenes en vivo / Cocina revisada a pedido del usuario. Errores: en Caja «Enviar a cocina»
   cambiaba solo la orden (el pedido ya estaba en cocina y sus platos seguían «Pendiente») y «Cerrar orden» sobre una

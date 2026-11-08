@@ -192,8 +192,9 @@ Funciones:
   (`replace=1`). El QR (PNG) lo genera el backend con `pyqrcode` para el enlace público (ver abajo).
 - La página pública tiene su propio contenedor con scroll (`h-[100dvh] overflow-y-auto`): `html` y `body` tienen
   `overflow: hidden` en toda la app. Producción: nginx debe servir `index.html` para `/menu/*` (como el resto de rutas).
-- La página pública usa su propia paleta (`public-menu.component.css`, variables `--pm-*` en `:host`) y el modo oscuro
-  del teléfono (`prefers-color-scheme`), no el tema del panel. Termina siempre con el bloque de promoción de FacturADA;
+- La página pública usa su propia paleta sobria (`public-menu.component.css`, variables `--pm-*` en `:host`) y el modo
+  oscuro del teléfono (`prefers-color-scheme`), no el tema del panel. Termina siempre con un recuadro discreto de
+  FacturADA, con mensaje genérico (no solo restaurantes);
   contacto y sitio en `core/constants/brand.constants.ts` (`BRAND`, `brandWhatsappUrl`), no repetirlos a mano.
 - System Manager la gestiona también desde el Desk (formulario `FacturADA Restaurant Public Menu`, botón «Carta digital»
   en FacturADA Business). Enlace y QR: `public_url` del backend (`facturada_app_url` en site_config, con prefijo:
