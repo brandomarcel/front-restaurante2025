@@ -229,6 +229,19 @@ Funciones:
   botón «Ver menú» que abre el PDF en el visor del teléfono. Lleva su propio scroll porque `html`/`body` no hacen scroll.
 - Backend: `facturada_restaurante.api.public_menu`; `get_public_menu` es el único endpoint sin sesión del sistema.
 
+## Órdenes en vivo y pantalla de cocina (`orders-realtime`)
+
+- Una sola palabra para cada paso de cocina en Caja, Cocina, el modal y el detalle: «Empezar a preparar», «Marcar
+  lista», «Entregado» (`KITCHEN_NEXT_ACTION`). Todos mueven los platos (`update_kitchen_order_status`) y la orden los
+  sigue; la etapa sale de los platos (`kitchenStage` en `ui/order-status.utils.ts`). Caja ya no tiene «Enviar a cocina»
+  (el pedido está en cocina desde que se crea) ni «Cerrar orden» sobre una orden en preparación (la sacaba de la
+  pantalla de cocina sin estar hecha).
+- Caja: cada orden muestra el siguiente paso de cocina, «Cobrar» (o «Ver orden» si está facturada o cancelada) e
+  imprimir comanda. Sin la función `kitchen`, solo imprimir y cobrar.
+- Cocina: «En curso» (tres columnas; en celular una a la vez con pestañas) o «Entregadas hoy»; «Solo demorados»
+  (20 min o más) y la espera promedio. Cada pedido marca «Para llevar» / «A domicilio» (`orderType`, del campo
+  `order_type`; `type` de la vista mezcla el estado fiscal y no se muestra).
+
 ## Cliente en el detalle de la orden
 
 - «Cambiar» cliente usa el buscador del POS (`app-pos-customer-picker`): búsqueda en servidor por nombre,
@@ -249,7 +262,7 @@ Funciones:
 
 - Quien cobra (`billing.create`) recibe en cualquier pantalla un aviso sonoro y un toast con «Imprimir
   comanda» cuando otra persona crea una orden (`NewOrderAlertService`). La comanda también se imprime
-  desde las tarjetas «Nuevas» de Órdenes en vivo. «Imprimir comandas solas» (menú del perfil, por equipo) la
+  desde cada orden abierta de Órdenes en vivo (botón de impresora). «Imprimir comandas solas» (menú del perfil, por equipo) la
   manda sin ventana; sin diálogo solo con Chrome `--kiosk-printing` y la térmica como predeterminada.
 
 ## Planes y módulos por negocio

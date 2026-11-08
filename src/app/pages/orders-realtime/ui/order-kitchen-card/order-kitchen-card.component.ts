@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { OrderVM } from 'src/app/services/realtime-orders.service';
+import { KITCHEN_NEXT_ACTION, orderTypeLabel } from '../order-status.utils';
 
 @Component({
   selector: 'app-order-kitchen-card',
@@ -19,7 +20,7 @@ export class OrderKitchenCardComponent implements OnInit, OnDestroy {
 
   @Output() open = new EventEmitter<OrderVM>();
   @Output() toPreparacion = new EventEmitter<OrderVM>();
-  @Output() toCerrada = new EventEmitter<OrderVM>();
+  @Output() toLista = new EventEmitter<OrderVM>();
   @Output() toEntregado = new EventEmitter<OrderVM>();
   @Output() updateItem = new EventEmitter<{
     order: OrderVM;
@@ -69,7 +70,7 @@ export class OrderKitchenCardComponent implements OnInit, OnDestroy {
   headline(): string {
     const table = this.tableLabel();
     const alias = String(this.order?.alias || '').trim();
-    if (table !== 'Sin mesa') return alias && alias !== table ? `${table} · ${alias}` : table;
+    if (table !== 'Sin mesa') return alias && alias !== table ? `${table} (${alias})` : table;
     return alias || this.order?.customer?.nombre || `#${this.order?.name}`;
   }
 
@@ -86,8 +87,19 @@ export class OrderKitchenCardComponent implements OnInit, OnDestroy {
     return String(row.tableName || row.table_label || row.mesa_name || row.table || row.mesa || '').trim() || 'Sin mesa';
   }
 
-  orderType(): string {
-    return String((this.order as any)?.type || (this.order as any)?.type_orden || 'Nota de venta').trim();
+  /** «Para llevar» / «A domicilio»; vacío si se sirve en el local. */
+  get typeLabel(): string {
+    return orderTypeLabel(this.order);
+  }
+
+  get nextActionLabel(): string {
+    return KITCHEN_NEXT_ACTION[this.kitchenStage];
+  }
+
+  emitNext(): void {
+    if (this.kitchenStage === 'NEW') this.toPreparacion.emit(this.order);
+    else if (this.kitchenStage === 'PREP') this.toLista.emit(this.order);
+    else this.toEntregado.emit(this.order);
   }
 
   orderNotes(): string {

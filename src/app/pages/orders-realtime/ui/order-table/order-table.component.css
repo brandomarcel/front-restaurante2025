@@ -3,3 +3,16 @@
 .action-btn {
   @apply inline-flex h-9 items-center justify-center rounded-lg px-3 text-xs font-bold whitespace-nowrap transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40;
 }
+
+.icon-action {
+  @apply grid h-9 w-9 place-items-center rounded-lg border border-border bg-card text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40;
+}
+
+.action-btn:disabled {
+  @apply cursor-wait opacity-60;
+}
+
+/* Para llevar / A domicilio */
+.type-chip {
+  @apply rounded bg-foreground px-1.5 py-px text-xs font-bold text-background;
+}

@@ -1,14 +1,13 @@
 <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
   <table class="w-full text-sm">
-    <thead class="border-b border-border bg-muted/50 text-left text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+    <thead class="border-b border-border bg-muted/50 text-left text-xs font-semibold text-muted-foreground">
       <tr>
-        <th class="px-3 py-2.5">Orden</th>
-        <th class="px-3 py-2.5">Mesa</th>
-        <th class="px-3 py-2.5">Estado</th>
-        <th class="px-3 py-2.5">Espera / hora</th>
-        <th class="px-3 py-2.5">Factura</th>
-        <th class="px-3 py-2.5 text-right">Total</th>
-        <th class="px-3 py-2.5 text-right">Acción</th>
+        <th scope="col" class="px-3 py-2.5">Pedido</th>
+        <th scope="col" class="px-3 py-2.5">Estado</th>
+        <th scope="col" class="px-3 py-2.5">Espera</th>
+        <th scope="col" class="px-3 py-2.5">Factura</th>
+        <th scope="col" class="px-3 py-2.5 text-right">Total</th>
+        <th scope="col" class="px-3 py-2.5 text-right"><span class="sr-only">Acciones</span></th>
       </tr>
     </thead>
 
@@ -18,14 +17,15 @@
         [ngClass]="{ 'bg-sky-500/5': o._flashType === 'insert' }"
         (click)="open.emit(o)">
         <td class="px-3 py-2.5">
-          <p class="font-bold text-foreground">{{ o.alias || o.customer.nombre || 'Consumidor final' }}</p>
-          <p class="text-[11px] text-muted-foreground">#{{ o.name }} · {{ o.type || 'Servirse' }}</p>
+          <p class="font-bold text-foreground">{{ headline(o) }}</p>
+          <p class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+            <span *ngIf="typeLabel(o)" class="type-chip">{{ typeLabel(o) }}</span>
+            <span>Orden {{ o.name }}</span>
+          </p>
         </td>
 
-        <td class="px-3 py-2.5 font-semibold text-foreground/80">{{ table(o) || '—' }}</td>
-
         <td class="px-3 py-2.5">
-          <span class="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold" [ngClass]="stageBadge[stage(o)]">
+          <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold" [ngClass]="stageBadge[stage(o)]">
             {{ stageLabel[stage(o)] }}
           </span>
         </td>
@@ -36,38 +36,34 @@
         </td>
 
         <td class="px-3 py-2.5">
-          <span class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold" [ngClass]="getSriBadge(o.sri.status)">
+          <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold" [ngClass]="getSriBadge(o.sri.status)">
             {{ o.sri.status || 'Sin factura' }}
           </span>
         </td>
 
         <td class="px-3 py-2.5 text-right font-black tabular-nums text-foreground">{{ o.total | currency:'USD':'symbol':'1.2-2' }}</td>
 
-        <td class="px-3 py-2.5 text-right" (click)="$event.stopPropagation()">
-          <ng-container *ngIf="allowActions; else detailOnly">
-            <ng-container *ngIf="stage(o) === 'new'">
-              <button type="button" class="action-btn mr-1.5 bg-primary text-primary-foreground hover:bg-primary/90" (click)="printComanda.emit(o)">
-                Imprimir comanda
+        <td class="px-3 py-2.5" (click)="$event.stopPropagation()">
+          <div class="flex items-center justify-end gap-1.5">
+            <ng-container *ngIf="allowActions; else detailOnly">
+              <button *ngIf="isActive(o)" type="button" class="icon-action" (click)="printComanda.emit(o)"
+                [attr.aria-label]="'Imprimir comanda de ' + headline(o)" title="Imprimir comanda">
+                <fa-icon [icon]="['fas', 'print']"></fa-icon>
               </button>
-              <button *ngIf="kitchenEnabled" type="button" class="action-btn bg-amber-500 text-white hover:bg-amber-600" (click)="toPreparacion.emit(o)">
-                Enviar a cocina
+              <button *ngIf="kitchenEnabled && isActive(o)" type="button" class="action-btn border border-border bg-card text-foreground hover:bg-muted"
+                [disabled]="isPending(o)" (click)="emitNext(o)">
+                {{ isPending(o) ? 'Actualizando…' : nextAction(o) }}
               </button>
-              <button *ngIf="!kitchenEnabled" type="button" class="action-btn border border-border bg-card text-foreground hover:bg-muted" (click)="goOrder.emit(o)">
-                Ver y cobrar
+              <button *ngIf="stage(o) !== 'cancelled'" type="button" class="action-btn"
+                [ngClass]="invoiced(o) ? 'border border-border bg-card text-foreground hover:bg-muted' : 'bg-primary text-primary-foreground hover:bg-primary/90'"
+                (click)="goOrder.emit(o)">
+                {{ invoiced(o) ? 'Ver orden' : 'Cobrar' }}
               </button>
             </ng-container>
-            <button *ngIf="stage(o) === 'prep'" type="button" class="action-btn bg-emerald-600 text-white hover:bg-emerald-700" (click)="toCerrada.emit(o)">
-              Cerrar orden
-            </button>
-            <button *ngIf="stage(o) === 'ready' || stage(o) === 'closed'" type="button"
-              class="action-btn" [ngClass]="invoiced(o) ? 'border border-border bg-card text-foreground hover:bg-muted' : 'bg-primary text-primary-foreground hover:bg-primary/90'"
-              (click)="goOrder.emit(o)">
-              {{ invoiced(o) ? 'Ver orden' : 'Cobrar' }}
-            </button>
-          </ng-container>
-          <ng-template #detailOnly>
-            <button type="button" class="action-btn border border-border bg-card text-foreground hover:bg-muted" (click)="open.emit(o)">Detalle</button>
-          </ng-template>
+            <ng-template #detailOnly>
+              <button type="button" class="action-btn border border-border bg-card text-foreground hover:bg-muted" (click)="open.emit(o)">Ver</button>
+            </ng-template>
+          </div>
         </td>
       </tr>
     </tbody>

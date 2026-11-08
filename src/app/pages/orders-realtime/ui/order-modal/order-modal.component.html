@@ -1,134 +1,86 @@
 <div class="app-modal-backdrop p-3" (click)="close.emit()">
-  <div class="app-modal max-w-4xl overflow-hidden !rounded-xl" (click)="$event.stopPropagation()">
-    <button class="app-modal-close text-muted-foreground/70 hover:text-muted-foreground" (click)="close.emit()">×</button>
+  <div class="app-modal max-w-3xl overflow-hidden !rounded-2xl" role="dialog" aria-modal="true" aria-labelledby="order-modal-title" (click)="$event.stopPropagation()">
+    <button type="button" class="app-modal-close text-muted-foreground/70 hover:text-muted-foreground" (click)="close.emit()" aria-label="Cerrar">×</button>
 
-    <div class="space-y-3 p-3 sm:p-4">
+    <div class="space-y-3 p-4">
       <header class="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-3 pr-8">
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-2">
-            <h2 class="truncate text-base font-black text-foreground">Orden {{ order.alias || order.name }}</h2>
-            <span class="badge" [ngClass]="badgeClass">{{ normalizedStatus }}</span>
-            <span class="badge badge-gray">{{ order.type || 'Nota Venta' }}</span>
+            <h2 id="order-modal-title" class="truncate text-lg font-black text-foreground">{{ headline }}</h2>
+            <span class="rounded-full px-2.5 py-0.5 text-xs font-bold" [ngClass]="stageBadge[stage]">{{ stageLabel[stage] }}</span>
+            <span *ngIf="typeLabel" class="rounded bg-foreground px-1.5 py-px text-xs font-bold text-background">{{ typeLabel }}</span>
           </div>
-          <p class="mt-0.5 text-[11px] text-muted-foreground">
-            {{ order.name }} · {{ (order.createdAtISO || order.createdAt) | date:'dd/MM/yyyy HH:mm' }}
-          </p>
-          <p *ngIf="kitchenMode" class="mt-0.5 text-[11px] font-medium text-primary">
-            Vista cocina: información enfocada en preparación.
+          <p class="mt-0.5 text-sm text-muted-foreground">
+            Orden {{ order.name }}, {{ (order.createdAtISO || order.createdAt) | date:'dd/MM/yyyy HH:mm' }}
           </p>
         </div>
 
-        <div *ngIf="!kitchenMode" class="rounded-xl bg-primary/5 px-3 py-2 text-right">
-          <p class="text-[10px] font-bold uppercase text-muted-foreground">Total</p>
-          <p class="text-xl font-black text-primary">{{ order.total | currency:'USD':'symbol':'1.2-2' }}</p>
+        <div *ngIf="!kitchenMode" class="text-right">
+          <p class="text-xs text-muted-foreground">Total</p>
+          <p class="text-xl font-black tabular-nums text-foreground">{{ order.total | currency:'USD':'symbol':'1.2-2' }}</p>
         </div>
       </header>
 
-      <section class="grid gap-2 rounded-xl border border-primary/10 bg-primary/5 p-2 text-xs md:grid-cols-4">
-        <div class="md:col-span-2">
-          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Cliente</p>
-          <p class="truncate font-bold text-foreground">{{ customerName }}</p>
+      <p *ngIf="order.notes" class="rounded-xl tone-warn px-3 py-2 text-sm font-semibold">{{ order.notes }}</p>
+
+      <dl class="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
+        <div class="sm:col-span-1">
+          <dt class="text-xs text-muted-foreground">Cliente</dt>
+          <dd class="truncate font-bold text-foreground">{{ customerName }}</dd>
         </div>
-        <div>
-          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Identificación</p>
-          <p class="font-semibold text-foreground">{{ order.customer.num_identificacion || '-' }}</p>
+        <div *ngIf="order.customer.num_identificacion">
+          <dt class="text-xs text-muted-foreground">Identificación</dt>
+          <dd class="font-semibold tabular-nums text-foreground">{{ order.customer.num_identificacion }}</dd>
         </div>
-        <div>
-          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Teléfono</p>
-          <p class="font-semibold text-foreground">{{ order.customer.telefono || '-' }}</p>
+        <div *ngIf="order.customer.telefono">
+          <dt class="text-xs text-muted-foreground">Teléfono</dt>
+          <dd class="font-semibold tabular-nums text-foreground">{{ order.customer.telefono }}</dd>
         </div>
-        <div *ngIf="!kitchenMode" class="md:col-span-2">
-          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Correo</p>
-          <p class="truncate font-semibold text-foreground">{{ order.customer.correo || '-' }}</p>
+      </dl>
+
+      <section aria-labelledby="order-modal-items">
+        <h3 id="order-modal-items" class="mb-1.5 text-sm font-bold text-foreground">Productos <span class="font-normal text-muted-foreground">({{ order.items.length }})</span></h3>
+        <ul class="max-h-[42vh] divide-y divide-border overflow-y-auto rounded-xl border border-border">
+          <li *ngFor="let it of order.items" class="flex items-start gap-3 px-3 py-2">
+            <span class="w-8 shrink-0 text-right text-sm font-black tabular-nums text-foreground">{{ getItemQty(it) }}</span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-sm font-semibold text-foreground">{{ getItemName(it) }}</span>
+              <span *ngIf="getItemNotes(it)" class="block text-xs font-semibold text-rose-700 dark:text-rose-300">{{ getItemNotes(it) }}</span>
+            </span>
+            <span *ngIf="kitchenEnabled && getItemKitchenStatus(it)" class="shrink-0 text-xs text-muted-foreground">{{ getItemKitchenStatus(it) }}</span>
+            <span *ngIf="!kitchenMode" class="w-20 shrink-0 text-right text-sm font-bold tabular-nums text-foreground">{{ getItemTotal(it) | currency:'USD':'symbol':'1.2-2' }}</span>
+          </li>
+          <li *ngIf="order.items.length === 0" class="px-3 py-4 text-center text-sm text-muted-foreground">Sin productos.</li>
+        </ul>
+      </section>
+
+      <section *ngIf="!kitchenMode" class="grid gap-3 text-sm sm:grid-cols-2">
+        <dl class="space-y-1 rounded-xl border border-border p-3">
+          <div class="flex justify-between text-muted-foreground"><dt>Subtotal</dt><dd class="font-semibold tabular-nums text-foreground">{{ order.subtotal | currency:'USD':'symbol':'1.2-2' }}</dd></div>
+          <div class="flex justify-between text-muted-foreground"><dt>IVA</dt><dd class="font-semibold tabular-nums text-foreground">{{ order.iva | currency:'USD':'symbol':'1.2-2' }}</dd></div>
+          <div class="flex justify-between border-t border-border pt-1 font-black text-foreground"><dt>Total</dt><dd class="tabular-nums">{{ order.total | currency:'USD':'symbol':'1.2-2' }}</dd></div>
+        </dl>
+
+        <div class="space-y-1 rounded-xl border border-border p-3">
+          <p class="flex items-center justify-between gap-2">
+            <span class="text-muted-foreground">Factura</span>
+            <span class="rounded-full px-2 py-0.5 text-xs font-semibold" [ngClass]="sriBadgeClass">{{ order.sri.status || 'Sin factura' }}</span>
+          </p>
+          <p *ngIf="order.sri.number" class="text-foreground/80">Número {{ order.sri.number }}</p>
+          <p *ngIf="order.sri.authorization_datetime" class="text-foreground/80">Autorizada {{ order.sri.authorization_datetime }}</p>
+          <p *ngIf="order.sri.access_key" class="line-clamp-2 break-all text-xs text-muted-foreground">Clave {{ order.sri.access_key }}</p>
         </div>
       </section>
 
-      <section>
-        <div class="mb-1.5 flex items-center justify-between">
-          <h3 class="text-xs font-bold uppercase tracking-wide text-primary">Items</h3>
-          <span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">{{ order.items.length }} ítem(s)</span>
-        </div>
-
-        <div class="app-table-wrap max-h-[42vh]">
-          <table class="app-table">
-            <thead class="app-thead">
-              <tr>
-                <th class="p-2 text-left font-bold">Producto</th>
-                <th class="p-2 text-right font-bold">Cant.</th>
-                <th *ngIf="!kitchenMode" class="p-2 text-right font-bold">P. Unit</th>
-                <th *ngIf="!kitchenMode" class="p-2 text-right font-bold">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let it of order.items" class="app-tr">
-                <td class="p-2 font-semibold text-foreground">{{ getItemName(it) }}</td>
-                <td class="p-2 text-right font-bold text-foreground/80">{{ getItemQty(it) }}</td>
-                <td *ngIf="!kitchenMode" class="p-2 text-right text-foreground/80">{{ (it?.price ?? 0) | currency:'USD':'symbol':'1.2-2' }}</td>
-                <td *ngIf="!kitchenMode" class="p-2 text-right font-bold text-foreground">{{ getItemTotal(it) | currency:'USD':'symbol':'1.2-2' }}</td>
-              </tr>
-              <tr *ngIf="order.items.length === 0">
-                <td class="p-3 text-center text-muted-foreground" [attr.colspan]="kitchenMode ? 2 : 4">Sin items</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section *ngIf="!kitchenMode" class="grid gap-2 md:grid-cols-2">
-        <div class="rounded-xl border border-border p-2 text-xs">
-          <p class="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Totales</p>
-          <div class="space-y-1">
-            <div class="flex justify-between"><span>Subtotal</span><span class="font-semibold">{{ order.subtotal | currency:'USD':'symbol':'1.2-2' }}</span></div>
-            <div class="flex justify-between"><span>IVA</span><span class="font-semibold">{{ order.iva | currency:'USD':'symbol':'1.2-2' }}</span></div>
-            <div class="flex justify-between border-t border-border pt-1 text-sm font-black"><span>Total</span><span>{{ order.total | currency:'USD':'symbol':'1.2-2' }}</span></div>
-          </div>
-        </div>
-
-        <div class="rounded-xl border border-border p-2 text-xs">
-          <p class="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Facturación electrónica</p>
-          <div class="space-y-1 text-foreground/80">
-            <p><span class="mr-2 font-semibold">Estado:</span><span class="badge" [ngClass]="sriBadgeClass">{{ order.sri.status || 'Sin factura' }}</span></p>
-            <p *ngIf="order.sri.number"><span class="font-semibold">Número:</span> {{ order.sri.number }}</p>
-            <p *ngIf="order.sri.invoice"><span class="font-semibold">Factura:</span> {{ order.sri.invoice }}</p>
-            <p *ngIf="order.sri.authorization_datetime"><span class="font-semibold">Autorización:</span> {{ order.sri.authorization_datetime }}</p>
-            <p *ngIf="order.sri.access_key" class="line-clamp-2 break-all"><span class="font-semibold">Clave:</span> {{ order.sri.access_key }}</p>
-          </div>
-        </div>
-      </section>
-
-      <footer class="flex flex-wrap justify-end gap-1.5 border-t border-border pt-3">
-        <button type="button" (click)="close.emit()" class="btn btn-outline !px-3 !py-1.5 !text-[11px]">Cerrar</button>
-
-        <button
-          *ngIf="!kitchenMode"
-          type="button"
-          (click)="print.emit(order)"
-          class="btn btn-outline !px-3 !py-1.5 !text-[11px]">
-          Imprimir
+      <footer class="flex flex-wrap justify-end gap-2 border-t border-border pt-3">
+        <button type="button" (click)="close.emit()" class="modal-btn border border-border bg-card text-foreground hover:bg-muted">Cerrar</button>
+        <button *ngIf="!kitchenMode" type="button" (click)="print.emit(order)" class="modal-btn border border-border bg-card text-foreground hover:bg-muted">Imprimir</button>
+        <button *ngIf="canAdvance" type="button" (click)="emitNext()" [disabled]="actionPending"
+          class="modal-btn border border-border bg-card text-foreground hover:bg-muted disabled:opacity-60">
+          {{ actionPending ? 'Actualizando…' : nextAction }}
         </button>
-
-        <button
-          *ngIf="showGoOrder && canGoToOrder"
-          type="button"
-          (click)="goOrder.emit(order)"
-          class="btn btn-primary !px-3 !py-1.5 !text-[11px]">
-          Ir a la orden
-        </button>
-
-        <button
-          *ngIf="allowActions && normalizedStatus === 'Ingresada'"
-          type="button"
-          (click)="toPreparacion.emit(order)"
-          class="btn bg-amber-500 text-white hover:bg-amber-600 !px-3 !py-1.5 !text-[11px]">
-          A preparación
-        </button>
-
-        <button
-          *ngIf="allowActions && normalizedStatus === 'Preparación'"
-          type="button"
-          (click)="toCerrada.emit(order)"
-          class="btn bg-emerald-600 text-white hover:bg-emerald-700 !px-3 !py-1.5 !text-[11px]">
-          Cerrar orden
+        <button *ngIf="showGoOrder && canGoToOrder" type="button" (click)="goOrder.emit(order)" class="modal-btn bg-primary text-primary-foreground hover:bg-primary/90">
+          {{ invoiced ? 'Ver orden' : 'Cobrar' }}
         </button>
       </footer>
     </div>

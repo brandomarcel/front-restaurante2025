@@ -62,3 +62,43 @@ export function isInvoiced(order: OrderVM | null | undefined): boolean {
   const status = String(order?.sri?.status ?? '').toLowerCase();
   return !!status && !status.includes('sin factura');
 }
+
+/** Etapa de cocina según sus platos (lo que muestra la pantalla de cocina): Nuevos, Preparando o Listos. */
+export type KitchenStage = 'NEW' | 'PREP' | 'READY';
+
+export function kitchenStage(order: OrderVM | null | undefined): KitchenStage {
+  const norm = (value: unknown) => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const statuses = ((order?.items || []) as any[])
+    .map((item) => norm(item?.kitchen_status ?? item?.kitchenStatus ?? item?.estado_cocina))
+    .filter((status) => !!status && !status.includes('cancel'));
+  if (statuses.some((status) => status.includes('prepar'))) return 'PREP';
+  if (statuses.length && statuses.every((status) => status.includes('list') || status.includes('entreg'))) return 'READY';
+  if (statuses.some((status) => status.includes('pend'))) return 'NEW';
+  const stage = orderStage(order?.status);
+  if (stage === 'prep') return 'PREP';
+  if (stage === 'ready' || stage === 'closed') return 'READY';
+  return 'NEW';
+}
+
+/** Lo que hace el siguiente toque de cocina sobre todo el pedido; el mismo texto en Caja, Cocina y el detalle. */
+export const KITCHEN_NEXT_ACTION: Record<KitchenStage, string> = {
+  NEW: 'Empezar a preparar',
+  PREP: 'Marcar lista',
+  READY: 'Entregado',
+};
+
+/** «Para llevar» y «A domicilio» cambian cómo se empaca; servirse en el local no necesita marca. */
+export function orderTypeLabel(order: OrderVM | null | undefined): string {
+  const value = String(order?.orderType ?? '').toLowerCase();
+  if (value.includes('llevar')) return 'Para llevar';
+  if (value.includes('domicilio')) return 'A domicilio';
+  return '';
+}
+
+/** Cómo se reconoce el pedido en Caja: mesa (con su alias), si no el alias o el cliente. */
+export function orderHeadline(order: OrderVM | null | undefined): string {
+  const table = tableLabel(order);
+  const alias = String(order?.alias || '').trim();
+  if (table) return alias && alias !== table ? `${table} (${alias})` : table;
+  return alias || String(order?.customer?.nombre || '').trim() || 'Consumidor final';
+}

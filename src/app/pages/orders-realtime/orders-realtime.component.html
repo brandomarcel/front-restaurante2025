@@ -1,19 +1,18 @@
 <div class="app-container space-y-3 pb-4" [class.kds-fullscreen]="isFullscreen" [class.kds-large]="largeMode && viewMode === 'cocina'">
 
-  <!-- Encabezado -->
+  <!-- Encabezado: qué pantalla es, si está al día y las herramientas de la tablet de cocina -->
   <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div class="min-w-0">
-      <p class="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide"
-        [ngClass]="realtimeConnected ? 'text-emerald-600' : 'text-amber-600'">
-        <span class="live-dot" [class.is-off]="!realtimeConnected" aria-hidden="true"></span>
-        {{ realtimeConnected ? 'En vivo' : 'Sin conexión · actualizando cada 10 s' }}
-      </p>
-      <h1 class="mt-0.5 text-2xl font-black tracking-tight text-foreground">
-        {{ viewMode === 'cocina' ? 'Cocina' : 'Órdenes en vivo' }}
-        <span *ngIf="newCount > 0" class="ml-1 align-middle rounded-full bg-sky-500 px-2 py-0.5 text-xs font-bold text-white">
-          {{ newCount }} nueva{{ newCount > 1 ? 's' : '' }}
+      <div class="flex flex-wrap items-center gap-2">
+        <h1 class="text-2xl font-black tracking-tight text-foreground">{{ viewMode === 'cocina' ? 'Cocina' : 'Órdenes de hoy' }}</h1>
+        <span *ngIf="newCount > 0" class="rounded-full bg-sky-600 px-2 py-0.5 text-xs font-bold text-white">
+          {{ newCount }} {{ newCount === 1 ? 'nueva' : 'nuevas' }}
         </span>
-      </h1>
+      </div>
+      <p class="connection" [class.is-off]="!realtimeConnected" role="status">
+        <span class="live-dot" [class.is-off]="!realtimeConnected" aria-hidden="true"></span>
+        {{ realtimeConnected ? 'Al día: los pedidos aparecen solos' : 'Sin conexión en vivo: se actualiza cada 10 segundos' }}
+      </p>
     </div>
 
     <div class="flex flex-wrap items-center gap-2">
@@ -24,29 +23,29 @@
 
       <ng-container *ngIf="viewMode === 'cocina'">
         <button type="button" class="tool-btn" (click)="toggleSound()" [attr.aria-pressed]="soundEnabled"
-          [title]="soundEnabled ? 'Silenciar aviso de pedidos nuevos' : 'Activar aviso de pedidos nuevos'">
-          <span aria-hidden="true">{{ soundEnabled ? '🔔' : '🔕' }}</span>
-          <span class="hidden sm:inline">{{ soundEnabled ? 'Sonido' : 'Silencio' }}</span>
+          [title]="soundEnabled ? 'Silenciar el aviso de pedidos nuevos' : 'Activar el aviso de pedidos nuevos'">
+          <fa-icon [icon]="['fas', soundEnabled ? 'bell' : 'bell-slash']"></fa-icon>
+          <span class="hidden sm:inline">{{ soundEnabled ? 'Con sonido' : 'Sin sonido' }}</span>
         </button>
- <button type="button" class="tool-btn" (click)="toggleLarge()" [attr.aria-pressed]="largeMode" title="Texto más grande para leer a distancia">
-          <span aria-hidden="true">Aa</span>
-          <span class="hidden sm:inline">{{ largeMode ? 'Normal' : 'Grande' }}</span>
+        <button type="button" class="tool-btn" (click)="toggleLarge()" [attr.aria-pressed]="largeMode" title="Letra más grande para leer de lejos">
+          <fa-icon [icon]="['fas', 'text-height']"></fa-icon>
+          <span class="hidden sm:inline">{{ largeMode ? 'Letra normal' : 'Letra grande' }}</span>
         </button>
         <button type="button" class="tool-btn" (click)="toggleFullscreen()" [title]="isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'">
-          <span aria-hidden="true">⛶</span>
+          <fa-icon [icon]="['fas', isFullscreen ? 'compress' : 'expand']"></fa-icon>
           <span class="hidden sm:inline">{{ isFullscreen ? 'Salir' : 'Pantalla completa' }}</span>
         </button>
       </ng-container>
 
-      <button type="button" class="tool-btn" (click)="refreshRealtime()" title="Actualizar" aria-label="Actualizar">
-        <span aria-hidden="true">↻</span>
+      <button type="button" class="tool-btn" (click)="refreshRealtime()" title="Actualizar ahora" aria-label="Actualizar ahora">
+        <fa-icon [icon]="['fas', 'rotate-right']"></fa-icon>
       </button>
     </div>
   </header>
 
-  <button *ngIf="showSoundHint" type="button" (click)="unlockAudio()"
-    class="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-900">
-    <span aria-hidden="true">🔕</span> Toca aquí para activar el aviso sonoro de pedidos nuevos
+  <button *ngIf="showSoundHint" type="button" (click)="unlockAudio()" class="sound-hint">
+    <fa-icon [icon]="['fas', 'bell-slash']"></fa-icon>
+    Toca aquí para que suene cuando llegue un pedido
   </button>
 
   <!-- ===================== VISTA CAJA ===================== -->
@@ -60,15 +59,14 @@
         </button>
       </div>
 
-      <div class="flex flex-1 items-center gap-2 lg:justify-end">
+      <div class="flex flex-1 items-center gap-3 lg:justify-end">
         <label class="search">
-          <span class="search-icon" aria-hidden="true">⌕</span>
-          <input type="search" [(ngModel)]="search" placeholder="Buscar orden, alias, cliente o factura" aria-label="Buscar órdenes" />
+          <fa-icon class="search-icon" [icon]="['fas', 'magnifying-glass']" aria-hidden="true"></fa-icon>
+          <input type="search" [(ngModel)]="search" placeholder="Buscar por orden, alias, cliente o factura" aria-label="Buscar órdenes" />
         </label>
-        <div *ngIf="!isCocinaOnly" class="hidden shrink-0 rounded-xl border border-border bg-card px-3 py-1.5 text-right sm:block">
-          <p class="text-[10px] font-bold uppercase text-muted-foreground">Ventas hoy</p>
-          <p class="text-sm font-black tabular-nums text-foreground">{{ totalSales | currency:'USD':'symbol':'1.2-2' }}</p>
-        </div>
+        <p *ngIf="!isCocinaOnly" class="hidden shrink-0 text-sm text-muted-foreground sm:block">
+          Vendido hoy <strong class="font-black tabular-nums text-foreground">{{ totalSales | currency:'USD':'symbol':'1.2-2' }}</strong>
+        </p>
       </div>
     </section>
 
@@ -80,11 +78,13 @@
           [now]="now"
           [allowActions]="allowStatusActions"
           [kitchenEnabled]="kitchenEnabled"
+          [actionPending]="isActionPending(o.name)"
           (open)="open($event)"
           (goOrder)="goToOrder($event)"
           (printComanda)="printComanda($event)"
           (toPreparacion)="toPreparacion($event)"
-          (toCerrada)="toCerrada($event)">
+          (toLista)="toLista($event)"
+          (toEntregado)="toEntregado($event)">
         </app-order-card>
       </div>
 
@@ -94,73 +94,69 @@
           [now]="now"
           [allowActions]="allowStatusActions"
           [kitchenEnabled]="kitchenEnabled"
+          [pendingOrderNames]="pendingOrderNames"
           (open)="open($event)"
           (goOrder)="goToOrder($event)"
           (printComanda)="printComanda($event)"
           (toPreparacion)="toPreparacion($event)"
-          (toCerrada)="toCerrada($event)">
+          (toLista)="toLista($event)"
+          (toEntregado)="toEntregado($event)">
         </app-order-table>
       </div>
     </ng-container>
   </ng-container>
 
-  <!-- ===================== VISTA COCINA (KDS) ===================== -->
+  <!-- ===================== VISTA COCINA ===================== -->
   <ng-template #kitchenView>
     <ng-container *ngIf="kitchenAccessChecked && kitchenAccessGranted; else kitchenAccessState">
       <section class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-        <div class="segmented overflow-x-auto" role="tablist" aria-label="Filtrar cocina">
-          <button type="button" role="tab" class="segment" [class.is-active]="kitchenFilter === 'ALL'" (click)="setKitchenFilter('ALL')">
-            Todos <span class="segment-count">{{ kitchenActivasCount + kitchenReadyCount }}</span>
+        <div class="segmented" role="tablist" aria-label="Pedidos de cocina">
+          <button type="button" role="tab" class="segment" [class.is-active]="kitchenTab === 'ACTIVE'" [attr.aria-selected]="kitchenTab === 'ACTIVE'" (click)="setKitchenTab('ACTIVE')">
+            En curso <span class="segment-count">{{ kitchenActivasCount + kitchenReadyCount }}</span>
           </button>
-          <button type="button" role="tab" class="segment" [class.is-active]="kitchenFilter === 'NEW'" (click)="setKitchenFilter('NEW')">
-            <i class="dot bg-sky-500"></i>Nuevos <span class="segment-count">{{ kitchenNewCount }}</span>
-          </button>
-          <button type="button" role="tab" class="segment" [class.is-active]="kitchenFilter === 'PREP'" (click)="setKitchenFilter('PREP')">
-            <i class="dot bg-amber-500"></i>Preparando <span class="segment-count">{{ kitchenPrepCount }}</span>
-          </button>
-          <button type="button" role="tab" class="segment" [class.is-active]="kitchenFilter === 'READY'" (click)="setKitchenFilter('READY')">
-            <i class="dot bg-emerald-500"></i>Listos <span class="segment-count">{{ kitchenReadyCount }}</span>
-          </button>
-          <button type="button" role="tab" class="segment" [class.is-active]="kitchenFilter === 'DONE'" (click)="setKitchenFilter('DONE')">
-            <i class="dot bg-slate-400"></i>Entregadas hoy
+          <button type="button" role="tab" class="segment" [class.is-active]="kitchenTab === 'DONE'" [attr.aria-selected]="kitchenTab === 'DONE'" (click)="setKitchenTab('DONE')">
+            Entregadas hoy
           </button>
         </div>
 
-        <div class="flex flex-1 items-center gap-2 lg:justify-end">
+        <div *ngIf="kitchenTab === 'ACTIVE'" class="flex flex-1 flex-wrap items-center gap-2 lg:justify-end">
           <label class="search">
-            <span class="search-icon" aria-hidden="true">⌕</span>
+            <fa-icon class="search-icon" [icon]="['fas', 'magnifying-glass']" aria-hidden="true"></fa-icon>
             <input type="search" [(ngModel)]="search" placeholder="Buscar mesa, orden o cliente" aria-label="Buscar pedidos" />
           </label>
-          <button type="button" class="tool-btn shrink-0" [class.is-urgent]="kitchenOnlyUrgent" (click)="toggleKitchenUrgent()" [attr.aria-pressed]="kitchenOnlyUrgent">
-            ⏱ {{ kitchenOnlyUrgent ? 'Ver todos' : 'Demorados' }}<span *ngIf="kitchenUrgentesCount" class="segment-count">{{ kitchenUrgentesCount }}</span>
+          <button type="button" class="tool-btn shrink-0" [class.is-urgent]="kitchenOnlyUrgent" (click)="toggleKitchenUrgent()" [attr.aria-pressed]="kitchenOnlyUrgent"
+            title="Pedidos con 20 minutos o más de espera">
+            <fa-icon [icon]="['fas', 'clock']"></fa-icon>
+            {{ kitchenOnlyUrgent ? 'Ver todos' : 'Solo demorados' }}
+            <span *ngIf="kitchenUrgentesCount" class="segment-count">{{ kitchenUrgentesCount }}</span>
           </button>
-          <div class="hidden shrink-0 rounded-xl border border-border bg-card px-3 py-1.5 text-right sm:block" title="Promedio de espera de los pedidos activos">
-            <p class="text-[10px] font-bold uppercase text-muted-foreground">Espera prom.</p>
-            <p class="text-sm font-black tabular-nums text-foreground">{{ kitchenAverageMinutes }} min</p>
-          </div>
+          <p *ngIf="kitchenActivasCount" class="shrink-0 text-sm text-muted-foreground" title="Promedio de los pedidos nuevos y en preparación">
+            Esperan en promedio <strong class="font-black tabular-nums text-foreground">{{ kitchenAverageMinutes }} min</strong>
+          </p>
         </div>
       </section>
 
-      <section *ngIf="kitchenError" class="flex items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+      <section *ngIf="kitchenError" class="flex items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive" role="alert">
         <span>{{ kitchenError }}</span>
         <button type="button" class="font-bold underline" (click)="refreshRealtime()">Reintentar</button>
       </section>
 
-      <section *ngIf="kitchenLoading && !orders.length" class="grid min-h-[280px] place-items-center rounded-2xl border border-border bg-card p-8">
+      <section *ngIf="kitchenLoading && !orders.length && kitchenTab === 'ACTIVE'" class="grid min-h-[280px] place-items-center rounded-2xl border border-border bg-card p-8" aria-busy="true">
         <div class="text-center">
-          <div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary"></div>
+          <div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary motion-reduce:animate-none"></div>
           <p class="mt-3 text-sm font-bold text-foreground/80">Cargando pedidos de cocina…</p>
         </div>
       </section>
 
-      <section *ngIf="kitchenFilter === 'DONE'" class="kds-column is-READY lg:col-span-3" aria-label="Pedidos entregados hoy">
+      <!-- Entregadas hoy: solo consulta, sin precios -->
+      <section *ngIf="kitchenTab === 'DONE'" class="kds-column is-READY" aria-label="Pedidos entregados hoy">
         <header class="kds-column-head">
           <div>
             <h2 class="text-base font-black">Entregadas hoy</h2>
-            <p class="text-[11px] font-semibold opacity-75">Solo consulta · sin precios</p>
+            <p class="text-xs font-semibold opacity-75">Para consultar qué salió</p>
           </div>
           <div class="flex items-center gap-2">
-            <button type="button" class="text-xs font-bold underline" (click)="loadDeliveredToday()" [disabled]="deliveredLoading">Actualizar</button>
+            <button type="button" class="text-sm font-bold underline" (click)="loadDeliveredToday()" [disabled]="deliveredLoading">Actualizar</button>
             <span class="kds-column-count">{{ deliveredOrders.length }}</span>
           </div>
         </header>
@@ -173,24 +169,32 @@
             [kitchenStage]="'READY'"
             (open)="open($event)">
           </app-order-kitchen-card>
-          <p *ngIf="!deliveredLoading && !deliveredOrders.length && !deliveredError" class="py-10 text-center text-sm text-muted-foreground">Aún no hay pedidos entregados hoy.</p>
-          <p *ngIf="deliveredLoading" class="py-10 text-center text-sm text-muted-foreground">Cargando entregas…</p>
+          <p *ngIf="!deliveredLoading && !deliveredOrders.length && !deliveredError" class="py-10 text-center text-sm text-muted-foreground lg:col-span-3">Todavía no se entregó ningún pedido hoy.</p>
+          <p *ngIf="deliveredLoading" class="py-10 text-center text-sm text-muted-foreground lg:col-span-3">Cargando entregas…</p>
         </div>
       </section>
 
-      <div *ngIf="kitchenFilter !== 'DONE' && (!kitchenLoading || orders.length)" class="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <ng-container *ngFor="let column of kitchenColumns; trackBy: trackByColumn">
-          <section *ngIf="kitchenFilter === 'ALL' || kitchenFilter === column.key" class="kds-column"
-            [ngClass]="['is-' + column.key, kitchenFilter !== 'ALL' ? 'lg:col-span-3' : '']">
+      <ng-container *ngIf="kitchenTab === 'ACTIVE' && (!kitchenLoading || orders.length)">
+        <!-- En celular se ve una columna a la vez; en escritorio, las tres lado a lado -->
+        <div class="segmented lg:hidden" role="tablist" aria-label="Columna de cocina">
+          <button *ngFor="let column of kitchenColumns; trackBy: trackByColumn" type="button" role="tab" class="segment flex-1 justify-center"
+            [class.is-active]="mobileColumn === column.key" [attr.aria-selected]="mobileColumn === column.key" (click)="mobileColumn = column.key">
+            <i class="dot" [ngClass]="'dot-' + column.key" aria-hidden="true"></i>{{ column.title }} <span class="segment-count">{{ column.orders.length }}</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          <section *ngFor="let column of kitchenColumns; trackBy: trackByColumn" class="kds-column"
+            [ngClass]="['is-' + column.key, mobileColumn !== column.key ? 'max-lg:hidden' : '']" [attr.aria-label]="column.title">
             <header class="kds-column-head">
               <div>
                 <h2 class="text-base font-black">{{ column.title }}</h2>
-                <p class="text-[11px] font-semibold opacity-75">{{ column.hint }}</p>
+                <p class="text-xs font-semibold opacity-75">{{ column.hint }}</p>
               </div>
               <span class="kds-column-count">{{ column.orders.length }}</span>
             </header>
 
-            <div class="kds-column-body" [ngClass]="kitchenFilter !== 'ALL' ? 'lg:grid lg:grid-cols-3 lg:gap-3 lg:space-y-0' : ''">
+            <div class="kds-column-body">
               <app-order-kitchen-card
                 *ngFor="let o of column.orders; trackBy: trackByName"
                 [order]="o"
@@ -201,38 +205,41 @@
                 (open)="open($event)"
                 (updateItem)="updateKitchenItem($event)"
                 (toPreparacion)="toPreparacion($event)"
-                (toCerrada)="toCerrada($event)"
+                (toLista)="toLista($event)"
                 (toEntregado)="toEntregado($event)">
               </app-order-kitchen-card>
 
-              <p *ngIf="column.orders.length === 0" class="py-10 text-center text-sm text-muted-foreground">{{ column.empty }}</p>
+              <p *ngIf="column.orders.length === 0" class="py-10 text-center text-sm text-muted-foreground">
+                {{ kitchenOnlyUrgent ? 'Ningún pedido demorado aquí.' : column.empty }}
+              </p>
             </div>
           </section>
-        </ng-container>
-      </div>
+        </div>
+      </ng-container>
     </ng-container>
   </ng-template>
 
   <ng-template #kitchenAccessState>
-    <section *ngIf="!kitchenAccessChecked" class="grid min-h-[280px] place-items-center rounded-2xl border border-border bg-card p-8">
+    <section *ngIf="!kitchenAccessChecked" class="grid min-h-[280px] place-items-center rounded-2xl border border-border bg-card p-8" aria-busy="true">
       <div class="text-center">
-        <div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary"></div>
-        <p class="mt-3 text-sm font-bold text-foreground/80">Validando acceso a Cocina…</p>
+        <div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary motion-reduce:animate-none"></div>
+        <p class="mt-3 text-sm font-bold text-foreground/80">Revisando el acceso a Cocina…</p>
       </div>
     </section>
-    <section *ngIf="kitchenAccessChecked && !kitchenAccessGranted" class="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 text-center">
-      <p class="text-sm font-bold text-amber-800 dark:text-amber-300">Cocina no disponible</p>
-      <p class="mt-1 text-xs text-amber-700 dark:text-amber-300/80">{{ kitchenAccessError }}</p>
+    <section *ngIf="kitchenAccessChecked && !kitchenAccessGranted" class="rounded-2xl tone-warn p-6 text-center">
+      <p class="text-sm font-bold">Cocina no está disponible</p>
+      <p class="mt-1 text-sm">{{ kitchenAccessError }}</p>
     </section>
   </ng-template>
 
   <ng-template #emptyState>
     <div class="flex flex-col items-center rounded-2xl border border-dashed border-border bg-card px-6 py-14 text-center">
-      <span class="text-3xl" aria-hidden="true">🧾</span>
+      <fa-icon class="text-2xl text-muted-foreground" [icon]="['fas', 'receipt']" aria-hidden="true"></fa-icon>
       <p class="mt-2 text-sm font-bold text-foreground">
-        {{ search || statusFilter !== 'ALL' ? 'No hay órdenes con estos filtros' : 'Todavía no hay órdenes hoy' }}
+        {{ search || statusFilter !== 'ALL' ? 'Ninguna orden coincide con el filtro' : 'Todavía no hay órdenes hoy' }}
       </p>
-      <button *ngIf="search || statusFilter !== 'ALL'" type="button" class="mt-2 text-xs font-bold text-primary hover:underline" (click)="clearFilters()">
+      <p *ngIf="!search && statusFilter === 'ALL'" class="mt-1 text-sm text-muted-foreground">Aparecen aquí solas en cuanto se crean en el POS.</p>
+      <button *ngIf="search || statusFilter !== 'ALL'" type="button" class="mt-2 text-sm font-bold text-primary hover:underline" (click)="clearFilters()">
         Quitar filtros
       </button>
     </div>
@@ -243,28 +250,31 @@
   *ngIf="selectedOrder"
   [order]="selectedOrder"
   [allowActions]="allowStatusActions"
+  [kitchenEnabled]="kitchenEnabled"
   [kitchenMode]="viewMode === 'cocina'"
+  [actionPending]="isActionPending(selectedOrder.name)"
   (close)="closeModal()"
   (goOrder)="goToOrder($event)"
   (print)="openPrintModal($event)"
   (toPreparacion)="toPreparacion($event)"
-  (toCerrada)="toCerrada($event)">
+  (toLista)="toLista($event)"
+  (toEntregado)="toEntregado($event)">
 </app-order-modal>
 
 <div *ngIf="showPrintModal" class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 backdrop-blur-sm sm:items-center sm:p-3"
-  role="dialog" aria-modal="true" aria-label="Imprimir orden" (click)="closePrintModal()">
+  role="dialog" aria-modal="true" aria-labelledby="print-title" (click)="closePrintModal()">
   <div class="w-full max-w-md rounded-t-3xl border border-border bg-card p-5 shadow-2xl sm:rounded-2xl" (click)="$event.stopPropagation()">
     <div class="mb-4 flex items-start justify-between gap-3">
       <div>
-        <h3 class="text-lg font-black text-foreground">Imprimir</h3>
-        <p class="text-xs text-muted-foreground">Orden <span class="font-semibold text-foreground/80">#{{ pendingPrintOrderId }}</span></p>
+        <h3 id="print-title" class="text-lg font-black text-foreground">Imprimir</h3>
+        <p class="text-sm text-muted-foreground">Orden {{ pendingPrintOrderId }}</p>
       </div>
       <button type="button" class="tool-btn !h-9 !w-9 !px-0" (click)="closePrintModal()" aria-label="Cerrar">✕</button>
     </div>
     <div class="grid grid-cols-3 gap-2">
       <button type="button" class="h-12 rounded-xl border border-border bg-card text-sm font-bold text-foreground hover:bg-muted" (click)="handlePrintSelection('comanda')">Comanda</button>
       <button type="button" class="h-12 rounded-xl border border-border bg-card text-sm font-bold text-foreground hover:bg-muted" (click)="handlePrintSelection('recibo')">Recibo</button>
-      <button type="button" class="h-12 rounded-xl bg-primary text-sm font-bold text-primary-foreground hover:bg-primary/90" (click)="handlePrintSelection('ambas')">Ambas</button>
+      <button type="button" class="h-12 rounded-xl bg-primary text-sm font-bold text-primary-foreground hover:bg-primary/90" (click)="handlePrintSelection('ambas')">Las dos</button>
     </div>
   </div>
 </div>

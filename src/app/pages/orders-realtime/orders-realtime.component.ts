@@ -16,6 +16,8 @@ import { OrderCardComponent } from './ui/order-card/order-card.component';
 import { OrderKitchenCardComponent } from './ui/order-kitchen-card/order-kitchen-card.component';
 import { OrderModalComponent } from './ui/order-modal/order-modal.component';
 import { OrderTableComponent } from './ui/order-table/order-table.component';
+import { KitchenStage, kitchenStage } from './ui/order-status.utils';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
 
@@ -40,7 +42,8 @@ type RoleName = 'Gerente' | 'Cajero' | 'Mesero' | 'Cocina' | 'Desconocido';
     OrderCardComponent,
     OrderKitchenCardComponent,
     OrderModalComponent,
-    OrderTableComponent
+    OrderTableComponent,
+    FontAwesomeModule
   ],
   templateUrl: './orders-realtime.component.html',
   styleUrl: './orders-realtime.component.css'
@@ -58,7 +61,10 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   showPrintModal = false;
   pendingPrintOrderId: string | null = null;
   kitchenOnlyUrgent = false;
-  kitchenFilter: 'ALL' | 'NEW' | 'PREP' | 'READY' | 'DONE' = 'ALL';
+  /** Cocina: pedidos en curso (tres columnas) o los entregados hoy. */
+  kitchenTab: 'ACTIVE' | 'DONE' = 'ACTIVE';
+  /** En celular se ve una columna a la vez; en escritorio, las tres. */
+  mobileColumn: KitchenStage = 'NEW';
   /** Pedidos de hoy ya entregados; solo lectura, sin precios. Se consulta al abrir la pestaña. */
   deliveredOrders: OrderVM[] = [];
   deliveredLoading = false;
@@ -316,12 +322,8 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   clearFilters(): void {
     this.search = '';
     this.statusFilter = this.viewMode === 'cocina' ? 'ACTIVAS' : 'ALL';
-    this.kitchenFilter = 'ALL';
+    this.kitchenTab = 'ACTIVE';
     this.kitchenOnlyUrgent = false;
-  }
-
-  toggleModoCocina() {
-    this.setViewMode(this.viewMode === 'normal' ? 'cocina' : 'normal');
   }
 
   setViewMode(mode: ViewMode) {
@@ -332,7 +334,7 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     this.viewMode = mode;
     this.statusFilter = mode === 'cocina' ? 'ACTIVAS' : 'ALL';
     this.kitchenOnlyUrgent = false;
-    this.kitchenFilter = 'ALL';
+    this.kitchenTab = 'ACTIVE';
     this.syncWakeLock();
     if (mode === 'cocina') {
       this.loadKitchenOrders();
@@ -401,56 +403,27 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     if (!this.printService.openComanda(o.name)) toast.error('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes.');
   }
 
-  toPreparacion(o: OrderVM) {
-    if (!this.allowStatusActions || this.pendingActions.has(o.name)) return;
-    if (this.viewMode === 'cocina') {
-      if (this.kitchenBucket(o) !== 'NEW') return;
-      this.updateKitchenItems(o, 'En preparacion');
-      return;
-    }
-    if (o.status !== 'Ingresada') return;
-
-
-    this.pendingActions.add(o.name);
-
-    this.ordersApi.updateStatus(o.name, 'Preparación').subscribe({
-      next: (response: any) => this.applyOrderResponse(response),
-      error: (error: any) => toast.error(this.readErrorMessage(error) || 'No se pudo actualizar la orden a Preparación.')
-    }).add(() => this.pendingActions.delete(o.name));
+  /**
+   * Avances de cocina, iguales en Caja y en Cocina: mueven los platos del pedido y el estado de la
+   * orden los sigue en el backend. Antes Caja cambiaba solo la orden («Enviar a cocina», «Cerrar
+   * orden»): cocina seguía viendo los platos pendientes, o perdía un pedido que aún no estaba hecho.
+   */
+  toPreparacion(o: OrderVM): void {
+    this.advanceKitchen(o, 'NEW', 'En preparacion');
   }
 
-  toCerrada(o: OrderVM) {
-    if (!this.allowStatusActions || this.pendingActions.has(o.name)) return;
-    if (this.viewMode === 'cocina') {
-      if (this.kitchenBucket(o) !== 'PREP') return;
-      this.updateKitchenItems(o, 'Listo');
-      return;
-    }
-    if (o.status !== 'Preparación') return;
-
-    this.pendingActions.add(o.name);
-
-    this.ordersApi.updateStatus(o.name, 'Cerrada').subscribe({
-      next: (response: any) => {
-        this.applyOrderResponse(response);
-        toast.success('Orden cerrada. Puedes abrirla para facturar cuando desees.');
-      },
-      error: (error: any) => toast.error(this.readErrorMessage(error) || 'No se pudo cerrar la orden.')
-    }).add(() => this.pendingActions.delete(o.name));
-  }
-
-  /** El estado en pantalla sale de la respuesta del servidor, no de un cambio local anticipado. */
-  private applyOrderResponse(response: any): void {
-    const body = response?.message ?? response ?? {};
-    const updated = body?.data ?? response?.data;
-    if (updated?.name) this.rt.replaceOrder(updated);
-    else this.refreshRealtime();
+  toLista(o: OrderVM): void {
+    this.advanceKitchen(o, 'PREP', 'Listo');
   }
 
   toEntregado(o: OrderVM): void {
-    if (!this.allowStatusActions || this.pendingActions.has(o.name)) return;
-    if (this.viewMode !== 'cocina' || this.kitchenBucket(o) !== 'READY') return;
-    this.updateKitchenItems(o, 'Entregado');
+    this.advanceKitchen(o, 'READY', 'Entregado');
+  }
+
+  private advanceKitchen(o: OrderVM, from: KitchenStage, to: 'En preparacion' | 'Listo' | 'Entregado'): void {
+    if (!this.allowStatusActions || !this.kitchenEnabled || this.pendingActions.has(o.name)) return;
+    if (this.kitchenBucket(o) !== from) return;
+    this.updateKitchenItems(o, to);
   }
 
   goToOrder(order?: OrderVM | null) {
@@ -470,9 +443,9 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   /** Columnas del KDS en orden de flujo: nuevos → preparando → listos. */
   get kitchenColumns(): { key: 'NEW' | 'PREP' | 'READY'; title: string; hint: string; orders: OrderVM[]; empty: string }[] {
     return [
-      { key: 'NEW', title: 'Nuevos', hint: 'Por empezar', orders: this.kitchenIngresadas, empty: 'No hay pedidos nuevos.' },
-      { key: 'PREP', title: 'Preparando', hint: 'En la cocina', orders: this.kitchenPreparacionSafe, empty: 'No hay pedidos en preparación.' },
-      { key: 'READY', title: 'Listos', hint: 'Para entregar', orders: this.kitchenCerradas, empty: 'No hay pedidos listos.' },
+      { key: 'NEW', title: 'Nuevos', hint: 'Por empezar', orders: this.kitchenIngresadas, empty: 'Sin pedidos por empezar.' },
+      { key: 'PREP', title: 'Preparando', hint: 'En la cocina', orders: this.kitchenPreparacionSafe, empty: 'Nada en preparación.' },
+      { key: 'READY', title: 'Listos', hint: 'Para entregar', orders: this.kitchenCerradas, empty: 'Nada esperando entrega.' },
     ];
   }
 
@@ -486,6 +459,11 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     return this.pendingActions.has(orderName);
   }
 
+  /** Pedidos con un avance de cocina en curso (para deshabilitar su botón en la tabla de Caja). */
+  get pendingOrderNames(): string[] {
+    return Array.from(this.pendingActions);
+  }
+
   get pendingItemNames(): string[] {
     return Array.from(this.pendingItemActions);
   }
@@ -497,19 +475,6 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   get canSwitchView(): boolean {
     // Sin acciones de estado (Mesero) la vista de Cocina no aporta nada.
     return !this.isCocinaOnly && this.kitchenAccessGranted && this.allowStatusActions;
-  }
-
-  get headerSubtitle(): string {
-    if (this.isCocinaOnly) {
-      return this.kitchenOnlyUrgent
-        ? 'KDS activo · mostrando solo pedidos con demora.'
-        : 'Pedidos organizados por prioridad para una operación rápida.';
-    }
-    return `Perfil actual: ${this.roleName} · Vista ${this.modeLabel}.`;
-  }
-
-  get modeLabel(): string {
-    return this.viewMode === 'cocina' ? 'Cocina' : 'Caja';
   }
 
   /** Pestañas de Caja con su contador; los nombres describen la etapa, no el valor técnico. */
@@ -598,22 +563,12 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
 
   get kitchenIngresadas(): OrderVM[] {
     const list = this.kitchenBaseOrders.filter(o => this.kitchenBucket(o) === 'NEW');
-    return this.sortKitchenOrders(this.applyKitchenFilter(this.applyKitchenUrgentFilter(list), 'NEW'));
-  }
-
-  get kitchenPreparacion(): OrderVM[] {
-    const list = this.kitchenBaseOrders.filter(o => this.kitchenBucket(o) === 'PREP');
-    return this.sortKitchenOrders(this.applyKitchenFilter(this.applyKitchenUrgentFilter(list), 'PREP'));
+    return this.sortKitchenOrders(this.applyKitchenUrgentFilter(list));
   }
 
   get kitchenCerradas(): OrderVM[] {
     const list = this.kitchenBaseOrders.filter(o => this.kitchenBucket(o) === 'READY');
-    return this.sortKitchenOrders(this.applyKitchenFilter(list, 'READY'));
-  }
-
-  get kitchenPreparacionVisible(): OrderVM[] {
-    const list = this.kitchenBaseOrders.filter(o => this.normalizeStatus(o.status) === 'Preparación');
-    return this.sortKitchenOrders(this.applyKitchenUrgentFilter(list));
+    return this.sortKitchenOrders(list);
   }
 
   get kitchenActivasCount(): number {
@@ -654,28 +609,14 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     return this.kitchenBaseOrders.filter((o) => this.kitchenBucket(o) === 'READY').length;
   }
 
-  /** Determina la columna KDS a partir del estado de los ítems de cocina. */
-  kitchenBucket(order: OrderVM): 'NEW' | 'PREP' | 'READY' {
-    const items: any[] = Array.isArray(order?.items) ? order.items : [];
-    const kitchenStatuses = items
-      .map((item: any) => this.normalize(item?.kitchen_status ?? item?.kitchenStatus ?? item?.estado_cocina))
-      .filter(Boolean);
-
-    if (kitchenStatuses.some(status => status.includes('prepar'))) return 'PREP';
-    if (kitchenStatuses.length > 0 && kitchenStatuses.every(status =>
-      status.includes('list') || status.includes('entreg') || status.includes('cancel')
-    )) return 'READY';
-    if (kitchenStatuses.some(status => status.includes('pend'))) return 'NEW';
-
-    const orderStatus = this.normalizeStatus(order?.status);
-    if (orderStatus === 'Preparación') return 'PREP';
-    if (orderStatus === 'Lista' || orderStatus === 'Cerrada') return 'READY';
-    return 'NEW';
+  /** Columna de cocina según el estado de sus platos (misma regla que la tabla de Caja y el modal). */
+  kitchenBucket(order: OrderVM): KitchenStage {
+    return kitchenStage(order);
   }
 
-  setKitchenFilter(filter: 'ALL' | 'NEW' | 'PREP' | 'READY' | 'DONE'): void {
-    this.kitchenFilter = filter;
-    if (filter === 'DONE') this.loadDeliveredToday();
+  setKitchenTab(tab: 'ACTIVE' | 'DONE'): void {
+    this.kitchenTab = tab;
+    if (tab === 'DONE') this.loadDeliveredToday();
   }
 
   loadDeliveredToday(): void {
@@ -705,17 +646,6 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
       .map((item) => this.normalize(item?.kitchen_status ?? item?.kitchenStatus ?? item?.estado_cocina))
       .filter((s) => !!s && !s.includes('cancel'));
     return kitchen.length > 0 && kitchen.every((s) => s.includes('entreg'));
-  }
-
-  get kitchenFilterLabel(): string {
-    if (this.kitchenFilter === 'NEW') return 'Nuevos';
-    if (this.kitchenFilter === 'PREP') return 'En preparación';
-    if (this.kitchenFilter === 'READY') return 'Listos';
-    return 'Todos';
-  }
-
-  get kitchenOnlyUrgentLabel(): string {
-    return this.kitchenOnlyUrgent ? 'Ver todas' : 'Solo urgentes';
   }
 
   toggleKitchenUrgent() {
@@ -822,11 +752,12 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
           }
           // Entregado no se ofrece deshacer: el backend puede cerrar la orden y liberar la mesa.
           const undoTo = kitchenStatus === 'Listo' ? 'En preparacion' : kitchenStatus === 'En preparacion' ? 'Pendiente' : null;
+          const who = this.orderLabel(order);
           const message = kitchenStatus === 'Listo'
-            ? 'Ítems marcados como listos.'
+            ? `${who}: lista para entregar.`
             : kitchenStatus === 'Entregado'
-              ? 'Pedido marcado como entregado.'
-              : 'Ítems enviados a preparación.';
+              ? `${who}: entregada.`
+              : `${who}: en preparación.`;
           if (!undoTo) {
             toast.success(message);
             return;
@@ -841,6 +772,14 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
           toast.error(message || 'No se pudo actualizar el estado de cocina.');
         }
       }).add(() => this.pendingActions.delete(order.name));
+  }
+
+  /** Cómo se nombra el pedido en los avisos: mesa o alias, si no el número. */
+  private orderLabel(order: OrderVM): string {
+    const table = String((order as any)?.tableName || '').trim();
+    const alias = String(order?.alias || '').trim();
+    // El nombre de la mesa ya viene completo («Mesa 4», «Terraza 2»).
+    return table || alias || `Orden ${order.name}`;
   }
 
   updateKitchenItem(event: {
@@ -889,10 +828,6 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   private applyKitchenUrgentFilter(list: OrderVM[]): OrderVM[] {
     if (!this.kitchenOnlyUrgent) return list;
     return list.filter((o) => this.isUrgentOrder(o));
-  }
-
-  private applyKitchenFilter(list: OrderVM[], bucket: 'NEW' | 'PREP' | 'READY'): OrderVM[] {
-    return this.kitchenFilter === 'ALL' || this.kitchenFilter === bucket ? list : [];
   }
 
   private isUrgentOrder(order: OrderVM): boolean {

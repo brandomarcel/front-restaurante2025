@@ -41,6 +41,8 @@ export interface OrderVM {
   name: string;
   status: 'Ingresada' | 'Preparación' | 'Cerrada' | string;
   type: string;
+  /** Servirse, Llevar o Domicilio (lo que cocina necesita para empacar); `type` mezcla esto con el estado fiscal. */
+  orderType?: string;
   table?: string;
   tableName?: string;
   notes?: string;
@@ -275,6 +277,7 @@ export class RealtimeOrdersService {
       notes: o.notes ?? o.observaciones ?? '',
       status,
       type,
+      orderType: String(o.order_type ?? o.type_orden ?? '').trim(),
       createdAt,
       createdAtISO: createdISO,
 

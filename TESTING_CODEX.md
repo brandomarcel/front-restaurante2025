@@ -375,6 +375,15 @@ reenvía los ítems sin cambios y sin `rate`; `hasUnsavedInvoiceChanges` solo po
 `updateKitchenOrderStatus` con `kitchen` y `updateStatus` sin ella; `quickPay` marca el método (`isQuickPaySelected`) y
 conserva la referencia; con dos pagos `isSplitPayment` y al quitar uno el restante vuelve al total.
 
+## Pendiente de pruebas: Órdenes en vivo y Cocina (2026-11-08)
+
+`order-status.utils.ts`: `kitchenStage` (por platos, ignora anulados, cae al estado de la orden), `orderHeadline`,
+`orderTypeLabel`, `KITCHEN_NEXT_ACTION`. `OrdersRealtimeComponent`: `toPreparacion`/`toLista`/`toEntregado` solo actúan en su
+etapa, con permiso y con `kitchen`, y llaman `updateKitchenOrderStatus` (nunca `updateStatus`); `setKitchenTab('DONE')`
+carga entregadas; `mobileColumn`. Tabla/tarjeta de Caja: acción siguiente según `kitchenStage`, «Cobrar»/«Ver orden»,
+sin acciones de cocina sin `kitchen`, botón deshabilitado con `pendingOrderNames`/`actionPending`. Modal: etapa con
+`orderStage` (Lista ya no sale «Cerrada»), «Ver orden» para cancelada. `RealtimeOrdersService.mapOne` llena `orderType`.
+
 ## Asistente de migración en Desk (2026-10-29)
 
 La carga ya no existe en Angular. Pruebas del JS de Lite con navegador y Frappe/API

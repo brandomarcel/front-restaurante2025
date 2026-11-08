@@ -9,6 +9,20 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-08 (Claude): Órdenes en vivo / Cocina revisada a pedido del usuario. Errores: en Caja «Enviar a cocina»
+  cambiaba solo la orden (el pedido ya estaba en cocina y sus platos seguían «Pendiente») y «Cerrar orden» sobre una
+  orden en preparación la sacaba de la pantalla de cocina sin estar hecha; el modal mostraba «Cerrada» para una orden
+  Lista y usaba fondos claros fijos; el tipo de pedido podía salir como «Nota Venta» (estado fiscal). Ahora: mismo
+  vocabulario y mismo endpoint en Caja, Cocina y modal («Empezar a preparar» / «Marcar lista» / «Entregado»,
+  `toPreparacion`/`toLista`/`toEntregado` → `update_kitchen_order_status`); etapa por platos compartida (`kitchenStage`,
+  `orderHeadline`, `orderTypeLabel`, `KITCHEN_NEXT_ACTION` en `order-status.utils.ts`); `OrderVM.orderType`. Caja: por
+  orden, siguiente paso + «Cobrar»/«Ver orden» + imprimir comanda; «Vendido hoy» en texto. Cocina: «En curso | Entregadas
+  hoy», columnas siempre visibles en escritorio y una a la vez en celular (`mobileColumn`), «Solo demorados», «Esperan en
+  promedio N min» (antes «ESPERA PROM.»), marca «Para llevar»/«A domicilio», íconos FontAwesome en lugar de emojis, sin
+  mayúsculas sostenidas, botón principal con contraste AA. Se quitaron código muerto (`kitchenFilter`,
+  `applyKitchenFilter`, `headerSubtitle`, `toggleModoCocina`, etc.). `ngc --noEmit` OK. **Sin revisar en navegador**
+  (pide sesión). Pruebas para Codex en `TESTING_CODEX.md`.
+
 - 2026-11-08 (Claude): detalle de la orden revisado a pedido del usuario. (1) Los productos ya no se editan ahí: se
   quitaron el buscador «+ Agregar producto», cantidades, precio y papelera (editaban por `update_order_for_invoice`, sin
   cocina, stock, comanda ni registro; un cajero podía bajar o borrar platos ya enviados en una orden sin inventario).
