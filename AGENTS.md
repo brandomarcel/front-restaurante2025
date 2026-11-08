@@ -181,6 +181,17 @@ Funciones:
   El front separa los anulados (`voidedItems`) de lo editable (`orderItems`) y no los compara al guardar.
 - Cocina no anula (`update_kitchen_item_status` rechaza `Cancelado`); recibe el aviso `item_voided`. Caja también.
 
+## Carta digital por QR (en código: «menu»)
+
+- `DigitalMenuComponent` (`/dashboard/digital-menu`, feature `restaurant`, permiso `restaurant.manage`) y
+  `PublicMenuComponent` (`/menu/:token`, ruta pública fuera del layout, sin sesión) con `PublicMenuService` →
+  `facturada_restaurante.api.public_menu`. Fotos (hasta 20) o un PDF; pasar de uno a otro reemplaza con confirmación
+  (`replace=1`). El QR (PNG) lo genera el backend con `pyqrcode` para la URL `window.location.origin + /menu/<token>`.
+- La página pública tiene su propio contenedor con scroll (`h-[100dvh] overflow-y-auto`): `html` y `body` tienen
+  `overflow: hidden` en toda la app. Producción: nginx debe servir `index.html` para `/menu/*` (como el resto de rutas).
+- System Manager la gestiona también desde el Desk (formulario `FacturADA Restaurant Public Menu`, botón «Carta digital»
+  en FacturADA Business); el enlace del Desk usa `window.location.origin`, igual que el front.
+
 ## Aviso de pedidos a Caja
 
 - `NewOrderAlertService` avisa (sonido + toast con «Imprimir comanda») a quien cobra cuando otra persona

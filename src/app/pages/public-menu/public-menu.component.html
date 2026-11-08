@@ -1,0 +1,45 @@
+<!-- html y body no hacen scroll en la app (el panel tiene su propio contenedor): esta página lleva el suyo -->
+<main class="h-[100dvh] overflow-y-auto overscroll-contain bg-background text-foreground">
+  <div class="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 pb-6 pt-6">
+
+    <!-- Cargando -->
+    <div *ngIf="loading" class="flex flex-1 flex-col items-center gap-4 pt-10" aria-busy="true" aria-label="Cargando carta">
+      <div class="h-16 w-16 animate-pulse rounded-2xl bg-muted"></div>
+      <div class="h-5 w-48 animate-pulse rounded bg-muted"></div>
+      <div class="mt-4 aspect-[3/4] w-full animate-pulse rounded-2xl bg-muted"></div>
+    </div>
+
+    <!-- No disponible: mismo mensaje para un enlace viejo, inexistente o una carta apagada -->
+    <section *ngIf="!loading && unavailable" class="flex flex-1 flex-col items-center justify-center text-center">
+      <p class="text-lg font-bold">Esta carta no está disponible</p>
+      <p class="mt-1 max-w-xs text-sm text-muted-foreground">Puede que el enlace haya cambiado. Pide la carta al personal del local.</p>
+    </section>
+
+    <ng-container *ngIf="!loading && !unavailable && menu">
+      <header class="flex flex-col items-center text-center">
+        <img *ngIf="logoUrl" [src]="logoUrl" [alt]="'Logo de ' + menu.business_name" class="h-20 w-20 rounded-2xl object-contain" />
+        <h1 class="mt-3 text-2xl font-black tracking-tight">{{ menu.business_name }}</h1>
+        <p *ngIf="menu.message" class="mt-1 max-w-md whitespace-pre-line text-sm text-muted-foreground">{{ menu.message }}</p>
+      </header>
+
+      <!-- Fotos de la carta -->
+      <section *ngIf="images.length" class="mt-5 space-y-3" aria-label="Carta">
+        <a *ngFor="let src of images; let i = index" [href]="src" target="_blank" rel="noopener" class="block overflow-hidden rounded-2xl border border-border bg-card"
+          [attr.aria-label]="'Abrir página ' + (i + 1) + ' de la carta en tamaño completo'">
+          <img [src]="src" [alt]="'Carta, página ' + (i + 1)" class="block h-auto w-full" [attr.loading]="i === 0 ? 'eager' : 'lazy'" decoding="async" />
+        </a>
+        <p class="text-center text-xs text-muted-foreground">Toca una página para verla en tamaño completo.</p>
+      </section>
+
+      <!-- Carta en PDF: se abre en el visor del teléfono -->
+      <section *ngIf="pdfUrl" class="mt-8 flex flex-col items-center gap-3">
+        <a [href]="pdfUrl" target="_blank" rel="noopener" class="inline-flex h-14 w-full max-w-sm items-center justify-center rounded-2xl bg-primary px-6 text-base font-bold text-primary-foreground shadow-lg">
+          Ver carta
+        </a>
+        <a [href]="pdfUrl" download class="text-sm font-semibold text-muted-foreground underline">Descargar PDF</a>
+      </section>
+    </ng-container>
+
+    <footer class="mt-auto pt-8 text-center text-xs text-muted-foreground">Carta digital con FacturADA</footer>
+  </div>
+</main>

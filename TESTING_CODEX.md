@@ -339,6 +339,35 @@ backend con un script temporal ya borrado.
 preparación» sin `kitchen`; `isWaiterOnly` (Mesero sí; Cajero, Gerente, Administrador no); `get_all_orders(mine=1)` filtra
 por `waiter` del usuario y `total` coincide. Verifiqué `mine` con un script temporal ya borrado.
 
+## Pendiente de pruebas: anular un producto ya enviado (2026-11-07)
+
+Restaurante `void_order_item`: anulación total y parcial (divide el renglón, descuento proporcional); el total excluye lo
+anulado (`apply_document_totals`), la factura (`build_lite_invoice_payload`) y las subcuentas (`_remaining_of`) también;
+Pendiente devuelve insumos con Entradas (receta, «sin», solo ítems con Salida de esa orden, también Por Bodega); En
+preparación/Listo no devuelve; cancelar después la orden deja el stock como al inicio; rechaza motivo inválido, «other» sin
+detalle, cantidad 0 o mayor, ya anulado, último renglón, facturada, con pagos, con subcuentas, cierre manual; solo
+Administrador/Gerente; `update_kitchen_item_status` rechaza `Cancelado`; `update_order_for_invoice` conserva los anulados
+con su auditoría (con y sin inventario). Front: `canVoidItems`/`canVoidItem`, `voidedItems` fuera de totales y del
+payload, `kitchenSummary`/`accountSummary`, `VoidItemDialogComponent`, avisos `item_voided` en Cocina y Caja. Verifiqué el
+backend con un script temporal ya borrado.
+
+## Pendiente de pruebas: carta digital por QR (2026-11-07)
+
+Restaurante `api/public_menu.py`: subir foto (optimizada a 1800 px, se agrega al final, máximo 20), PDF (reemplaza todo;
+exige `replace=1` si ya hay archivos), foto sobre PDF sin `replace` falla, extensión no permitida, imagen o PDF falsos o
+dañados, tamaño máximo; un solo archivo en disco por subida y se borra al quitarlo; mover arriba/abajo; quitar el último
+apaga la publicación; publicar sin archivos falla; `regenerate_menu_token` invalida el código anterior; `get_menu_qr`
+rechaza URLs que no terminan en `/menu/<token>` o no son http(s); `get_public_menu` como Guest: 404 igual para código
+inexistente, menú apagado, negocio inactivo o sin `restaurant`, y no devuelve más que nombre, logo, mensaje y archivos;
+administración solo con `restaurant.manage`. Front: ruta pública `/menu/:token` (sin sesión, con su propio scroll porque
+`html`/`body` no hacen scroll), `/dashboard/digital-menu` (`DigitalMenuComponent`: confirmaciones al reemplazar, límite de
+fotos, publicar, copiar enlace, QR, tarjeta imprimible). Verifiqué el backend con scripts temporales ya borrados y la página
+pública con Playwright (390 px claro/oscuro, 1280 px, PDF, enlace inválido).
+Desk: `desk_upload_menu_file` (solo System Manager, solo con doctype de la carta, reemplaza sin `replace`), el controlador
+(`validate`: fotos o PDF, un solo PDF, máximo, mensaje, publicar exige archivos y `restaurant`; `on_update` borra el File de
+una fila quitada; `on_trash` borra todos), `_manage` deja a System Manager gestionar cualquier negocio y a los demás solo el
+suyo con `restaurant.manage`.
+
 ## Asistente de migración en Desk (2026-10-29)
 
 La carga ya no existe en Angular. Pruebas del JS de Lite con navegador y Frappe/API

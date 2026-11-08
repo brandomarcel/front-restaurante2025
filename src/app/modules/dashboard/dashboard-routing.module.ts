@@ -32,6 +32,7 @@ import { RemissionGuidesComponent } from 'src/app/pages/remission-guides/remissi
 import { RemissionGuideDetailComponent } from 'src/app/pages/remission-guide-detail/remission-guide-detail.component';
 import { RemissionGuideFormComponent } from 'src/app/pages/remission-guide-form/remission-guide-form.component';
 import { ReceivablesComponent } from 'src/app/pages/receivables/receivables.component';
+import { DigitalMenuComponent } from 'src/app/pages/digital-menu/digital-menu.component';
 
 const routes: Routes = [
   {
@@ -56,6 +57,7 @@ const routes: Routes = [
       { path: 'orders/:id', component: OrderDetailPageComponent, canActivate: [RoleAccessGuard, CajaAbiertaGuard], data: { deniedPrimaryRoles: ['COCINA'], featureKey: 'orders', permissionKey: 'restaurant.orders.read', liteBlocked: true } },
       { path: 'tables', component: TablesComponent, canActivate: [RoleAccessGuard], data: { deniedPrimaryRoles: ['COCINA'], featureKey: 'tables', permissionKey: 'restaurant.orders.read' } },
 
+      { path: 'digital-menu', component: DigitalMenuComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'restaurant', permissionKey: 'restaurant.manage' } },
       { path: 'categories', component: CategorysComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'products', permissionKey: 'products.manage' } },
       { path: 'users', component: UsersComponent, canActivate: [RoleAccessGuard], data: { permissionKey: 'business.users.manage', apiOnlyBlocked: true } },
       

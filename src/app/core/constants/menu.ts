@@ -210,6 +210,14 @@ export class Menu {
           permissionKey: 'products.manage',
         },
         {
+          icon: 'assets/icons/tablericons/qrcode.svg',
+          label: 'Carta digital',
+          route: '/dashboard/digital-menu',
+          featureKey: 'restaurant',
+          permissionKey: 'restaurant.manage',
+          hideInApiOnly: true,
+        },
+        {
           icon: 'assets/icons/tablericons/repeat.svg',
           label: 'Inventario',
           route: '/dashboard/inventory',

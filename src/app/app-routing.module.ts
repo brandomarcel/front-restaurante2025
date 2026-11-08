@@ -6,6 +6,11 @@ import { RegisterCompanyComponent } from './pages/register-company/register-comp
 
 const routes: Routes = [
   { path: '', redirectTo: 'auth/sign-in', pathMatch: 'full' },
+  // Menú digital que ve el cliente al escanear el QR: público, sin sesión ni layout.
+  {
+    path: 'menu/:token',
+    loadComponent: () => import('./pages/public-menu/public-menu.component').then((m) => m.PublicMenuComponent),
+  },
   {
     path: '',
     loadChildren: () => import('./modules/layout/layout.module').then((m) => m.LayoutModule),

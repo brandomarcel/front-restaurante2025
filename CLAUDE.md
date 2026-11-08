@@ -132,7 +132,7 @@ Funciones:
 - Selección y cambio de empresa activa (multi-negocio por usuario)
 - Menú lateral (`core/constants/menu.ts`) agrupado por tarea: Dashboard · Vender (POS, Mesas, Órdenes, Pantalla de
   cocina, Facturar, Punto de venta) · Caja y cobros · Documentos · Catálogo · Administración (Reportes, Usuarios,
-  Configuración ▸ con establecimientos, puntos, secuencias, terminales e integración API). Las condiciones de
+  Configuración ▸ con establecimientos, puntos, secuencias, terminales e integración API). Catálogo incluye «Carta digital» (restaurante). Las condiciones de
   plan/permiso/rol van en cada opción, no en el grupo; mover una opción de grupo no cambia quién la ve. El menú muestra
   siempre el logo de FacturADA (`src/assets/brand/`); el logo del negocio va en el Dashboard.
 - Pantalla inicial tras el login (`getLandingRoute`): Administrador y Gerente → panel (`/dashboard/main`);
@@ -210,6 +210,21 @@ Funciones:
 - El encabezado del detalle separa **Cocina** (pendiente / X de N listos / lista) de **Cuenta** (por cobrar /
   cobrada / subcuentas / facturada); cada producto muestra su estado de cocina. La barra de progreso es solo de la
   orden (Ingresada → Cerrada).
+
+## Carta digital por QR (solo restaurante)
+
+- En pantalla se llama **«Carta digital»** (el código y la ruta usan `menu`). Catálogo ▸ «Carta digital»
+  (`/dashboard/digital-menu`, Administrador y Gerente con `restaurant.manage`): el negocio sube su propia carta, **fotos**
+  (hasta 20, JPG/PNG/WEBP, se optimizan) **o un PDF** (reemplaza todo), la publica y descarga el QR o imprime una tarjeta
+  para la mesa. No usa el catálogo de productos (eso sería otra fase).
+- También desde el **Desk** (System Manager, cualquier negocio): FacturADA Business → Restaurante → «Carta digital» abre
+  o crea la carta; en ella, Archivos ▸ Subir fotos / Subir PDF y Compartir ▸ Ver como cliente / QR / Cambiar enlace.
+  Publicar, mensaje, orden (arrastrar filas) y quitar archivos con el formulario normal.
+- Un solo enlace por negocio, `/menu/<código secreto>`: cambiar fotos o PDF no cambia el QR; «Cambiar enlace» sí lo
+  invalida (pide confirmación). Sin publicar, o con el negocio inactivo o sin `restaurant`, el cliente ve «no disponible».
+- La página del cliente (`/menu/:token`) es pública, sin sesión ni menú lateral: fotos una debajo de otra (zoom), o un
+  botón «Ver menú» que abre el PDF en el visor del teléfono. Lleva su propio scroll porque `html`/`body` no hacen scroll.
+- Backend: `facturada_restaurante.api.public_menu`; `get_public_menu` es el único endpoint sin sesión del sistema.
 
 ## Cliente en el detalle de la orden
 

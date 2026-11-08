@@ -9,6 +9,27 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-07 (Claude): la función pasa a llamarse **«Carta digital»** en pantalla (menú lateral, administración,
+  página del cliente «Ver carta», tarjeta «Escanea para ver la carta»); código, ruta `/dashboard/digital-menu` y enlace
+  `/menu/...` no cambian. Límite de fotos 10 → 20. Gestión desde el **Desk** para System Manager (cualquier negocio): botón
+  «Carta digital» en FacturADA Business y formulario de la carta con subir fotos/PDF, ver como cliente, QR y cambiar
+  enlace. Verificado el backend del Desk con script temporal (subidas, reemplazo, quitar fila borra el archivo, reglas,
+  sin restos en disco); `ngc --noEmit` OK. **Sin ver el formulario del Desk en el navegador** (no había credenciales).
+
+- 2026-11-07 (Claude): menú digital por QR, modo archivo (el usuario eligió solo este modo; el menú armado desde el
+  catálogo queda para después). Catálogo ▸ «Menú digital» (`DigitalMenuComponent`, Administrador/Gerente): subir fotos
+  (hasta 10) o un PDF, ordenar y quitar fotos, mensaje para el cliente, publicar, copiar enlace, QR descargable, tarjeta
+  A6 imprimible, «Cambiar enlace». Página pública `/menu/:token` (`PublicMenuComponent`, sin sesión). Backend nuevo en
+  Restaurante (`api/public_menu.py`, DocTypes `FacturADA Restaurant Public Menu` y `... Public Menu File`; migrado en el
+  piloto). Ícono nuevo `assets/icons/tablericons/qrcode.svg`. Arreglado antes de entregar: la página pública no hacía
+  scroll (los estilos globales ponen `overflow: hidden` en `html`/`body`). Verificado: backend con scripts temporales
+  (subidas, validaciones, reemplazo, publicación, QR, enlace nuevo, endpoint sin sesión, archivos en disco) y la página
+  pública con Playwright (390 px claro y oscuro, 1280 px, PDF, enlace inválido) sobre un menú de prueba de CAFETERIA DEMO
+  que luego se borró. `ngc --noEmit` OK. **Sin probar en navegador la pantalla de administración** (pide sesión y no había
+  credenciales). Producción: `bench migrate` y que nginx sirva `index.html` en `/menu/*`. Pruebas para Codex en
+  `TESTING_CODEX.md`. Hallazgo: `frappe.utils.file_manager.save_file` escribe el archivo dos veces y deja una copia
+  huérfana en disco; el menú usa `File` directo, pero las fotos de productos de Lite (`upload_item_image`) siguen así.
+
 - 2026-11-07 (Claude): flujo de mesa, fase 3, anular un producto ya enviado. Detalle de la orden: icono «Anular…»
   por producto para Administrador/Gerente (`restaurant.orders.void_item`), diálogo `VoidItemDialogComponent`
   (cantidad parcial, motivo, detalle; dice si el inventario vuelve). Los anulados se listan aparte, tachados, con
@@ -603,6 +624,9 @@ antes de que la cocina empiece.
   sin exigir pago. En Preparación/Lista sigue el aviso actual.
 - Actualizar la regla en `CLAUDE.md` («Cliente en el detalle de la orden» / inventario consumido) y pedir pruebas a
   Codex: receta, falta de stock, plato ya iniciado, orden con pago.
+
+**Menú digital (pendiente):** modo «desde el catálogo» (categorías, precios con IVA, «Agotado» automático), QR por
+mesa para pedir desde la mesa, limpiar las copias huérfanas de las fotos de productos de Lite.
 
 **Fases siguientes del flujo de mesa (propuestas):**
 - Fase 2: «Imprimir precuenta» en el detalle y en Mesas; «Cobrar» claro desde la tarjeta de la mesa y para nota de
