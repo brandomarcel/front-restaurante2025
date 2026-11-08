@@ -234,11 +234,16 @@ Funciones:
 - «Cambiar» cliente usa el buscador del POS (`app-pos-customer-picker`): búsqueda en servidor por nombre,
   cédula/RUC, teléfono o correo, Consumidor final y «Nuevo» para crear. Al elegir se guarda al instante
   (`update_order_customer`, solo cliente; no pierde ítems/pagos sin guardar). Avisa si Consumidor final supera $50.
-- «Cobrar»: chips de forma de pago = un toque para cobrar el total; «Facturar» guarda solo los cambios pendientes.
-- Una orden **ya cobrada** (con pago guardado) tampoco cambia productos, cantidades ni precios, ni admite ronda nueva:
-  lo cobrado ya cuenta en Caja. Se puede cambiar cliente, notas y forma de pago; lo adicional va en una orden nueva.
-- Con el inventario ya consumido (toda orden de restaurante con stock) el backend permite cambiar cliente,
-  notas y pagos; productos, cantidades y precios quedan fijos (`update_order_for_invoice`). `get_order_with_details` devuelve `stock_consumed` y el detalle bloquea esos controles con un aviso (no espera al error al guardar).
+- «Cobrar»: «¿Cómo paga?» con un botón por forma de pago (un toque = esa forma por el total); «Paga con dos formas»
+  abre filas con monto. «Facturar» guarda solo los cambios pendientes (cliente y pago).
+- **Los productos no se editan en el detalle de la orden** (ni cantidades, precios ni quitar): lo pedido ya está en
+  cocina, inventario y comanda. Para sumar, «+ Agregar productos» (POS en modo agregar, pasa por cocina); para quitar,
+  «Anular…» (Gerente/Administrador, con motivo). Antes el detalle editaba por `update_order_for_invoice`, que no pasa
+  por cocina ni mueve stock ni deja registro. El backend sigue exigiendo los ítems al guardar: se reenvían sin cambios.
+- Una orden **ya cobrada** (con pago guardado) no admite ronda nueva: lo cobrado ya cuenta en Caja; lo adicional va en
+  una orden nueva. Con inventario consumido el backend también fija productos (`update_order_for_invoice`).
+- «Iniciar preparación» y «Marcar lista» del detalle mueven los platos (`update_kitchen_order_status`), igual que la
+  pantalla de cocina; sin la función `kitchen` cambian solo la orden. El encabezado no tiene barra de progreso.
 
 ## Aviso de pedidos a Caja
 

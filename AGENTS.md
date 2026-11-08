@@ -157,6 +157,9 @@ Funciones:
 
 - «+ Agregar productos» (detalle de la orden → POS `?agregar=<orden>`) llama a `add_order_items`: solo suma renglones
   (lote `addition_batch`), cocina los ve «Agregado», comanda adicional solo del último lote.
+- El detalle de la orden no edita productos (sin buscador, cantidades, precio ni quitar): sumar es «+ Agregar
+  productos», quitar es «Anular…». `update_order_for_invoice` no pasa por cocina ni stock; el detalle solo lo usa para
+  cliente y pago y le reenvía los ítems sin cambios. «Iniciar preparación»/«Marcar lista» usan `update_kitchen_order_status`.
 
 ## Sin cocina y «Mis órdenes»
 

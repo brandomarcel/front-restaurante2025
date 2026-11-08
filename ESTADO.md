@@ -9,6 +9,18 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-08 (Claude): detalle de la orden revisado a pedido del usuario. (1) Los productos ya no se editan ahí: se
+  quitaron el buscador «+ Agregar producto», cantidades, precio y papelera (editaban por `update_order_for_invoice`, sin
+  cocina, stock, comanda ni registro; un cajero podía bajar o borrar platos ya enviados en una orden sin inventario).
+  Sumar: «+ Agregar productos»; quitar: «Anular…». Ya no se carga el catálogo completo al abrir la orden (la foto llega
+  con la orden). (2) «Iniciar preparación» / «Marcar lista» mueven los platos (`advanceKitchen` →
+  `update_kitchen_order_status`); antes solo cambiaban la orden y cocina seguía viendo los platos «Pendiente» (la
+  captura del usuario mostraba «Preparación» y «Cocina: pendiente» a la vez). (3) Fuera la barra de progreso (repetía y
+  contradecía los chips de Cocina y Cuenta). (4) Cobrar: «¿Cómo paga?» con botones que quedan marcados (un toque = total),
+  «Paga con dos formas» abre filas con monto; sin el desplegable «▼ Forma de pago». Etiquetas sin mayúsculas sostenidas;
+  meta sin «·». `ngc --noEmit` OK. **Sin revisar en navegador** (no hay usuario de prueba con contraseña en la sesión).
+  Pruebas para Codex en `TESTING_CODEX.md`.
+
 - 2026-11-08 (Claude): en producción la app Angular vive bajo `/portal` (`baseHref: /portal/`): la carta es
   `https://facturada.bmarc-corp.com/portal/menu/<código>` y `facturada_app_url` debe incluir `/portal`. El enlace de
   respaldo del front usa `document.baseURI` (respeta el prefijo) y `get_menu_qr` acepta cualquier ruta que termine en
@@ -644,9 +656,8 @@ mesa para pedir desde la mesa, limpiar las copias huérfanas de las fotos de pro
   venta sin factura (hoy: chip de pago → «Guardar cambios» → «Cerrar orden», poco obvio).
 - Fase 3: hecha el 2026-11-07 (ver «Últimos cambios»). Queda: anular en una orden ya cobrada (devolver dinero en
   Caja), PIN de supervisor para que el cajero pida la autorización sin cambiar de sesión, reporte de anulaciones.
-- Riesgo a revisar: el buscador de la tarjeta corrige la orden para facturar (`update_order_for_invoice`) y no pasa por
-  cocina ni descuenta inventario. En una orden sin movimientos de stock, agregar ahí un producto con inventario o
-  receta no lo descontaría. Decidir si ese buscador debe limitarse a productos sin inventario o descontar stock.
+- Riesgo del buscador de la tarjeta (editaba por `update_order_for_invoice` sin cocina ni stock): resuelto el
+  2026-11-08, el detalle ya no edita productos.
 - Otros: permitir agregar a una orden ya cobrada cobrando la diferencia (decidido no hacerlo por ahora); precio
   `5.5` en vez de `5.50` (`appDecimalInput` compartido); toasts sobre el menú lateral (componente global).
 

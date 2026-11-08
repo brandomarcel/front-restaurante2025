@@ -3,14 +3,12 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { NgSelectModule } from '@ng-select/ng-select';
 import { toast } from 'ngx-sonner';
 import { finalize } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 
 import { EcuadorTimePipe } from 'src/app/core/pipes/ecuador-time-pipe.pipe';
 import { PrintService } from 'src/app/services/print.service';
-import { ProductsService } from 'src/app/services/products.service';
 import { environment } from 'src/environments/environment';
 import { OrdersService } from 'src/app/services/orders.service';
 import { OrderSplitService } from 'src/app/services/order-split.service';
@@ -21,7 +19,6 @@ import { SplitOrderDialogComponent } from './components/split-order-dialog/split
 import { OrderSplitsTableComponent } from './components/order-splits-table/order-splits-table.component';
 import { PaymentsService } from 'src/app/services/payments.service';
 import { PosCustomerPickerComponent } from 'src/app/pages/pos/pos-caja/ui/pos-customer-picker.component';
-import { canSellProduct, getInventoryUnit, hasInventoryControl, isLowStockProduct, isOutOfStockProduct, toInventoryNumber } from 'src/app/shared/utils/inventory.utils';
 import { AlertService } from 'src/app/core/services/alert.service';
 import { InvoicePaymentPayload, isPaymentMethodAlreadySelected, isTransferPayment, PAYMENT_REFERENCE_MAX_LENGTH, roundMoney, validatePaymentsTotal } from 'src/app/shared/utils/payment.utils';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
@@ -29,7 +26,6 @@ import { RestaurantRealtimeEvent, RestaurantRealtimeService } from 'src/app/serv
 import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
 import { LineCents, fromCents, lineTotalsCents, toCents } from 'src/app/shared/utils/money-cents.utils';
 
-type Product = any; // usa tu modelo si lo tienes
 type OrderItem = {
   /** Nombre de la fila en la orden: permite al backend conservar precio y nota de cocina. */
   rowName?: string;
@@ -48,6 +44,8 @@ type OrderItem = {
   cents?: LineCents;
   /** Estado de cocina del renglón guardado (Pendiente, En preparacion, Listo, Entregado). */
   kitchenStatus?: string;
+  /** Foto del producto (llega con la orden). */
+  image?: string;
   total?: number;      // subtotal SIN IVA (como haces en invoicing)
 };
 
@@ -58,7 +56,6 @@ type OrderItem = {
     CommonModule,
     RouterModule,
     FormsModule,
-    NgSelectModule,
     EcuadorTimePipe,
     FontAwesomeModule,
     DecimalInputDirective,
@@ -77,7 +74,6 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   order: any | null = null;
 
   // UI/estado
-  products: Product[] = [];
   /** Cliente elegido en el buscador (aún sin guardar en la orden). */
   pickedCustomer: any = null;
   customerSaving = false;
@@ -101,8 +97,6 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   orderPayments: any[] = [];
   showMoreActions = false;
   showCustomerPicker = false;
-  /** Etapas visibles en la barra de progreso de la orden. */
-  readonly progressSteps = ['Ingresada', 'Preparación', 'Lista', 'Cerrada'];
 
   private baseUrl = environment.URL;
   private readonly realtimeSub = new Subscription();
@@ -110,7 +104,6 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   constructor(
     private route: ActivatedRoute,
-    private productsSvc: ProductsService,
     private printSvc: PrintService,
     private router: Router,
     private ordersSvc: OrdersService,
@@ -127,7 +120,6 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     this.restaurantRealtime.activate();
     this.realtimeSub.add(this.restaurantRealtime.events$.subscribe((event) => this.applyRealtimeEvent(event, id)));
     this.fetch(id);
-    this.loadProducts();
     this.loadPaymentMethods();
   }
 
@@ -182,19 +174,6 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     });
   }
 
-  loadProducts(): void {
-    this.productsSvc.getAll(1).subscribe({
-      next: (res: any) => {
-        // Sin `limit`, el servicio devuelve el arreglo directo (no `message.data`): antes la lista quedaba vacía.
-        const all = (Array.isArray(res) ? res : (res?.message?.data || [])) as Product[];
-        // Mismo criterio que Facturar: activos y sin insumos (un insumo no se vende).
-        this.products = all.filter((p: any) => !p.is_ingredient
-          && (p.isactive === undefined || p.isactive === true || Number(p.isactive) === 1));
-      },
-      error: () => toast.error('Error al cargar la lista de productos.')
-    });
-  }
-
   private hydrateOrderItems(order: any): void {
     // Tu JSON ya trae por ítem: quantity, price, tax_rate, subtotal (SIN IVA), iva, total (CON IVA)
     // Para edición homogénea con invoicing, trabajamos con total = subtotal SIN IVA y tax_value = tax_rate.
@@ -213,6 +192,7 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
       tax_value: it.tax_rate ?? 0,
       discount: this.safeMoney(it.discount_amount, 0),
       kitchenStatus: it.kitchen_status || 'Pendiente',
+      image: it.image_url || it.image || '',
     }));
     this.recalculateOrder();
   }
@@ -395,63 +375,6 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   }
 
   // =================== Edición de Ítems ===================
-  addProductToOrder(productSelection: Product | string | null): void {
-    const product = this.resolveProduct(productSelection);
-    if (!product) return;
-    if (this.isProductBlocked(product)) {
-      toast.warning('Este producto esta agotado y no se puede agregar.');
-      return;
-    }
-
-    const existing = this.orderItems.find(oi => oi.productId === product.name);
-    if (existing) {
-      existing.quantity = this.safeNumber(existing.quantity, 0) + 1;
-    } else {
-      const price = this.safeMoney(product.precio);
-      const inferredTaxValue = product.tax_value ?? (product.tax === 'IVA-15' ? 15 : 0);
-
-      this.orderItems.push({
-        productId: product.name,
-        productName: product.nombre,
-        description: product.nombre,
-        quantity: 1,
-        price,
-        tax: product.tax ?? product.tax_id ?? null,
-        tax_value: inferredTaxValue,
-        iva: this.round2(this.round2(price * (inferredTaxValue / 100))),
-        total: this.round2(price) // subtotal sin IVA
-      });
-    }
-    this.onItemsEdited();
-  }
-
-  incrementOrderQty(i: number): void {
-    const it = this.orderItems[i];
-    it.quantity = this.safeNumber(it.quantity, 0) + 1;
-    this.onItemsEdited();
-  }
-
-  decrementOrderQty(i: number): void {
-    const it = this.orderItems[i];
-    it.quantity = Math.max(1, this.safeNumber(it.quantity, 1) - 1);
-    this.onItemsEdited();
-  }
-
-  removeProductFromOrder(i: number): void {
-    if (i < 0 || i >= this.orderItems.length) return;
-    this.orderItems.splice(i, 1);
-    this.onItemsEdited();
-  }
-
-  /** Cambio hecho por el usuario en los productos: recalcula y ajusta el pago único al nuevo total. */
-  onItemsEdited(): void {
-    this.recalculateOrder();
-    // Con un solo pago, el monto sigue al total solo (evita «faltan $X» tras cambiar una cantidad).
-    if (this.orderPayments.length === 1) {
-      this.orderPayments[0].amount = this.round2(this.orderTotal);
-    }
-  }
-
   /** Recalcula cada línea en centavos con el mismo redondeo que la factura Lite. */
   recalculateOrder(): void {
     this.orderItems.forEach(it => {
@@ -562,13 +485,11 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
       : (it.tax === 'IVA-15' ? 15 : 0);
 
     return {
-      // La fila existente se identifica para conservar su precio y su nota de cocina.
+      // Los productos no se editan aquí: se reenvían tal cual (el backend los exige y conserva precio y nota).
       ...(it.rowName ? { order_item: it.rowName } : {}),
       product:   it.productId || 'ADHOC',
       qty,
-      // El backend solo respeta el precio enviado para Gerente/Administrador.
-      ...(this.canEditPrice ? { rate: this.round2(rate) } : {}),
-      // Se reenvía el descuento puesto en el POS para no perderlo al guardar.
+        // Se reenvía el descuento puesto en el POS para no perderlo al guardar.
       discount_amount: this.safeMoney(it.discount ?? 0),
       tax:       it.tax ?? null,
       total:     lineSubtotal,                    // subtotal SIN IVA
@@ -609,7 +530,6 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     next: () => {
       if (afterSave) afterSave();
       else toast.success('Orden actualizada.');
-      this.loadProducts();
       if (this.order?.name && !afterSave) {
         this.fetch(this.order.name);
       }
@@ -663,16 +583,6 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   // =================== Presentación ===================
   trackByIndex = (i: number) => i;
 
-  /** Solo Gerente/Administrador cambian precios (el backend aplica la misma regla). */
-  get canEditPrice(): boolean {
-    return this.canEditOrder && this.capabilities.hasPermission('restaurant.manage');
-  }
-
-  /** Con subcuentas creadas, los productos no se editan: cambiarían lo ya dividido. */
-  get canEditItems(): boolean {
-    return this.canEditOrder && !this.orderSplits.length && !this.itemsLockedByStock && !this.itemsLockedByPayment;
-  }
-
   /** Ya hay un cobro guardado: lo cobrado no cambia (cuenta en Caja). El backend aplica la misma regla. */
   get itemsLockedByPayment(): boolean {
     return !!this.order?.payments?.length;
@@ -704,14 +614,6 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   get invoicedSplitsCount(): number {
     return this.orderSplits.filter((row) => this.splitHasInvoice(row)).length;
-  }
-
-  /** Índice de la etapa actual en `progressSteps` (-1 si está cancelada). */
-  get progressIndex(): number {
-    if (this.isCancelled) return -1;
-    const label = this.orderStatusLabel;
-    const index = this.progressSteps.indexOf(label);
-    return index >= 0 ? index : 0;
   }
 
   /** Lo primero que identifica a la orden en el salón: alias o mesa. */
@@ -771,13 +673,14 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     payment.amount = Math.max(0, this.round2(this.orderTotal - others));
   }
 
-  /** Un toque: un único pago por el total con el método elegido. */
+  /** Un toque: un único pago por el total con el método elegido (conserva la referencia si sigue en transferencia). */
   quickPay(method: any): void {
+    const reference = this.orderPayments[0]?.payment_method === method?.name ? this.orderPayments[0]?.reference || '' : '';
     this.orderPayments = [{
       payment_method: method?.name || '',
       payment_code: method?.codigo || '',
       amount: this.round2(this.orderTotal),
-      reference: ''
+      reference
     }];
   }
 
@@ -803,30 +706,6 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   }
 
   // =================== Helpers ===================
-
-  hasInventory(product: Product | null | undefined): boolean {
-    return hasInventoryControl(product);
-  }
-
-  isLowStock(product: Product | null | undefined): boolean {
-    return isLowStockProduct(product);
-  }
-
-  isOutOfStock(product: Product | null | undefined): boolean {
-    return isOutOfStockProduct(product);
-  }
-
-  isProductBlocked(product: Product | null | undefined): boolean {
-    return !canSellProduct(product);
-  }
-
-  getInventoryLabel(product: Product | null | undefined): string {
-    if (!this.hasInventory(product)) {
-      return 'Sin control';
-    }
-
-    return `${toInventoryNumber(product?.stock_actual, 0)} ${getInventoryUnit(product)}`;
-  }
 
   private getTaxPct(it: OrderItem): number {
     if (Number.isFinite(it.tax_value as number)) {
@@ -1234,39 +1113,7 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   get hasUnsavedInvoiceChanges(): boolean {
     if (!this.order) return false;
-    if (this.orderCustomerId !== this.getOrderCustomerId(this.order)) return true;
-    return this.pendingItemChanges.added > 0
-      || this.pendingItemChanges.removed > 0
-      || this.pendingItemChanges.edited > 0
-      || this.paymentsChanged;
-  }
-
-  /** La fila `index` difiere de lo guardado en la orden (producto, cantidad, precio o IVA). */
-  isItemChanged(index: number): boolean {
-    const originalItems = this.savedActiveItems;
-    const item = this.orderItems[index];
-    const original = originalItems[index];
-    if (!item) return false;
-    if (!original) return true;
-    const originalProduct = String(original?.product || original?.item || original?.productId || '').trim();
-    const originalQty = this.safeNumber(original?.qty ?? original?.quantity, 0);
-    const originalRate = this.safeMoney(original?.rate ?? original?.price);
-    const originalTax = this.safeNumber(original?.tax_rate ?? original?.tax_value, 0);
-    return String(item.productId || '').trim() !== originalProduct
-      || this.safeNumber(item.quantity, 0) !== originalQty
-      || this.safeMoney(item.price) !== originalRate
-      || this.safeNumber(item.tax_value, 0) !== originalTax;
-  }
-
-  /** Cuántos productos se agregaron, quitaron o editaron respecto a lo guardado. */
-  get pendingItemChanges(): { added: number; removed: number; edited: number } {
-    const originalCount = this.savedActiveItems.length;
-    const current = this.orderItems.length;
-    let edited = 0;
-    for (let i = 0; i < Math.min(originalCount, current); i++) {
-      if (this.isItemChanged(i)) edited++;
-    }
-    return { added: Math.max(0, current - originalCount), removed: Math.max(0, originalCount - current), edited };
+    return this.orderCustomerId !== this.getOrderCustomerId(this.order) || this.paymentsChanged;
   }
 
   get paymentsChanged(): boolean {
@@ -1283,14 +1130,7 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   /** Resumen en lenguaje llano de lo pendiente de guardar, para la barra inferior. */
   get pendingChangesSummary(): string {
-    const { added, removed, edited } = this.pendingItemChanges;
-    const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-    const parts: string[] = [];
-    if (edited) parts.push(plural(edited, 'producto editado', 'productos editados'));
-    if (added) parts.push(plural(added, 'producto agregado', 'productos agregados'));
-    if (removed) parts.push(plural(removed, 'producto quitado', 'productos quitados'));
-    if (this.paymentsChanged) parts.push('forma de pago');
-    return parts.join(', ');
+    return this.paymentsChanged ? 'Forma de pago' : '';
   }
 
   /**
@@ -1323,6 +1163,17 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   removeOrderPayment(index: number): void {
     this.orderPayments.splice(index, 1);
+    // Vuelve a una sola forma de pago: cubre el total, como al elegirla con un toque.
+    if (this.orderPayments.length === 1) this.orderPayments[0].amount = this.round2(this.orderTotal);
+  }
+
+  /** Más de una forma de pago: se muestran filas con monto en lugar de los botones de un toque. */
+  get isSplitPayment(): boolean {
+    return this.orderPayments.length > 1;
+  }
+
+  isQuickPaySelected(method: any): boolean {
+    return this.orderPayments.length === 1 && this.orderPayments[0]?.payment_method === method?.name;
   }
 
   onOrderPaymentMethodChange(payment: any, index = -1): void {
@@ -1440,8 +1291,7 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
    * Vacío si se puede, o si no aplica mostrar nada (sin permiso, facturada o cancelada).
    */
   get addItemsBlockedReason(): string {
-    // Con la lista editable el aviso contradiría a «+ Agregar producto»; con la orden cobrada lo explica el aviso de la lista.
-    return this.canEditItems || (this.canEditOrder && this.itemsLockedByPayment) ? '' : this.addItemsBlocker;
+    return this.addItemsBlocker;
   }
 
   /** La regla en sí; `addItemsBlockedReason` solo decide si se muestra. */
@@ -1612,6 +1462,30 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
     return !!String(row?.lite_invoice || row?.invoice || row?.sri?.invoice || '').trim();
   }
 
+  /**
+   * «Iniciar preparación» / «Marcar lista». Con cocina se mueven los platos (como en la pantalla de
+   * cocina) y la orden sigue sola; cambiar solo la orden dejaba los platos «Pendiente» en cocina.
+   */
+  advanceKitchen(target: 'En preparacion' | 'Listo'): void {
+    if (!this.kitchenEnabled) {
+      this.setOrderStatus(target === 'Listo' ? 'Lista' : 'Preparacion');
+      return;
+    }
+    if (!this.order?.name || this.closingOrder) return;
+    const orderName = this.order.name;
+    this.closingOrder = true;
+    this.ordersSvc.updateKitchenOrderStatus(orderName, target)
+      .pipe(finalize(() => this.closingOrder = false))
+      .subscribe({
+        next: () => {
+          toast.success(target === 'Listo' ? 'Orden lista: todos los platos quedaron listos.' : 'Cocina empezó la orden.');
+          window.dispatchEvent(new CustomEvent('facturada:restaurant-data-changed'));
+          this.fetch(orderName);
+        },
+        error: (error) => toast.error(this.extractBackendError(error))
+      });
+  }
+
   setOrderStatus(status: 'Preparacion' | 'Lista' | 'Cancelada'): void {
     if (!this.order?.name || this.closingOrder || !this.capabilities.hasPermission('restaurant.orders.update')) {
       if (!this.capabilities.hasPermission('restaurant.orders.update')) toast.error('No tienes permisos para actualizar órdenes.');
@@ -1681,14 +1555,5 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
       .trim();
   }
 
-  private resolveProduct(productSelection: Product | string | null): Product | null {
-    if (!productSelection) return null;
-    if (typeof productSelection !== 'string') return productSelection;
-    return this.products.find((item) => item.name === productSelection) || null;
-  }
 
-  productImage(productId: unknown): string {
-    const product = this.products.find((item) => item.name === String(productId || '').trim());
-    return String(product?.image_url || product?.image || '').trim();
-  }
 }

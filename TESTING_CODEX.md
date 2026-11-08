@@ -368,6 +368,13 @@ Desk: `desk_upload_menu_file` (solo System Manager, solo con doctype de la carta
 una fila quitada; `on_trash` borra todos), `_manage` deja a System Manager gestionar cualquier negocio y a los demás solo el
 suyo con `restaurant.manage`.
 
+## Pendiente de pruebas: detalle de orden sin edición de productos (2026-11-08)
+
+`OrderDetailPageComponent`: no hay buscador, stepper, precio editable ni papelera en ningún estado; `saveOrderChanges`
+reenvía los ítems sin cambios y sin `rate`; `hasUnsavedInvoiceChanges` solo por cliente o pago; `advanceKitchen` llama
+`updateKitchenOrderStatus` con `kitchen` y `updateStatus` sin ella; `quickPay` marca el método (`isQuickPaySelected`) y
+conserva la referencia; con dos pagos `isSplitPayment` y al quitar uno el restante vuelve al total.
+
 ## Asistente de migración en Desk (2026-10-29)
 
 La carga ya no existe en Angular. Pruebas del JS de Lite con navegador y Frappe/API
