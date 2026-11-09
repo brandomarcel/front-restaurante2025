@@ -13,7 +13,7 @@
             class="flex items-center justify-between gap-2 whitespace-nowrap rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             [ngClass]="item.active ? 'bg-primary/10 font-semibold text-primary' : 'text-foreground/80 hover:bg-muted/60 hover:text-foreground'">
             {{ item.label }}
-            <span *ngIf="item.status" class="h-2 w-2 shrink-0 rounded-full" [ngClass]="item.status === 'ok' ? 'bg-emerald-500' : 'bg-amber-400'"
+            <span *ngIf="item.status" class="h-2 w-2 shrink-0 rounded-full" [ngClass]="item.status === 'ok' ? 'bg-success-500' : 'bg-warning-400'"
               [attr.aria-label]="item.status === 'ok' ? 'Completo' : 'Requiere atención'"></span>
           </a>
         </div>
@@ -60,15 +60,15 @@
             <p class="text-xs text-muted-foreground">{{ completedSetupSteps }} de {{ setupSteps.length }} pasos completos</p>
           </div>
           <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" [attr.aria-valuenow]="completedSetupSteps" aria-valuemin="0" [attr.aria-valuemax]="setupSteps.length">
-            <div class="h-full rounded-full transition-all" [ngClass]="completedSetupSteps === setupSteps.length ? 'bg-emerald-500' : 'bg-primary'"
+            <div class="h-full rounded-full transition-all" [ngClass]="completedSetupSteps === setupSteps.length ? 'bg-success-500' : 'bg-primary'"
               [style.width.%]="(completedSetupSteps / setupSteps.length) * 100"></div>
           </div>
           <ol class="mt-4 divide-y divide-border overflow-hidden rounded-lg border border-border">
             <li *ngFor="let step of setupSteps; let i = index">
               <a [routerLink]="step.route" class="flex items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/40 focus:outline-none focus-visible:bg-muted/40"
-                [ngClass]="{ 'bg-amber-500/5': !step.done }">
+                [ngClass]="{ 'bg-warning-500/5': !step.done }">
                 <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-                  [ngClass]="step.done ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-amber-950'">{{ step.done ? '✓' : i + 1 }}</span>
+                  [ngClass]="step.done ? 'bg-success-500 text-white' : 'bg-warning-400 text-warning-950'">{{ step.done ? '✓' : i + 1 }}</span>
                 <span class="min-w-0 flex-1">
                   <span class="block font-medium text-foreground">{{ step.label }}</span>
                   <span class="block text-xs text-muted-foreground">{{ step.hint }}</span>
@@ -99,7 +99,7 @@
             <p class="mt-2 truncate text-sm font-semibold text-foreground">{{ hasCurrentPlan ? planName : 'Sin plan activo' }}</p>
             <ng-container *ngIf="hasCurrentPlan; else noPlanHint">
               <div *ngIf="planUsagePercent !== null" class="mt-2 h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-                <div class="h-full rounded-full" [ngClass]="planUsagePercent >= 90 ? 'bg-amber-500' : 'bg-primary'" [style.width.%]="planUsagePercent"></div>
+                <div class="h-full rounded-full" [ngClass]="planUsagePercent >= 90 ? 'bg-warning-500' : 'bg-primary'" [style.width.%]="planUsagePercent"></div>
               </div>
               <p class="mt-1.5 text-xs text-muted-foreground">Comprobantes: {{ planVoucherUsageLabel }} · Restantes: {{ planRemainingLabel }}</p>
             </ng-container>
@@ -130,7 +130,7 @@
                 <button type="button" class="btn btn-outline !text-xs" (click)="logoInput.click()" [disabled]="!canEditLiteSetup">{{ logoPreview ? 'Cambiar logo' : 'Subir logo' }}</button>
                 <p *ngIf="logoFileName" class="truncate text-xs text-muted-foreground">{{ logoFileName }} · se sube al guardar</p>
                 <!-- En Lite no se borra el logo vigente: solo se descarta el nuevo antes de guardar. -->
-                <button *ngIf="isLiteMode ? logoFileName : (logoPreview || logoFileName)" type="button" class="block text-xs font-semibold text-red-600 hover:underline dark:text-red-400" (click)="removeLogo()">{{ isLiteMode ? 'Descartar logo nuevo' : 'Quitar logo' }}</button>
+                <button *ngIf="isLiteMode ? logoFileName : (logoPreview || logoFileName)" type="button" class="block text-xs font-semibold text-danger-600 hover:underline " (click)="removeLogo()">{{ isLiteMode ? 'Descartar logo nuevo' : 'Quitar logo' }}</button>
               </div>
             </div>
           </div>
@@ -144,8 +144,8 @@
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label for="company-name" class="mb-1 block text-xs font-medium text-muted-foreground">Razón social</label>
-                <input id="company-name" type="text" class="input !h-10 !w-full" formControlName="businessname" [class.border-red-500]="f['businessname'].invalid && submitted" />
-                <small *ngIf="f['businessname'].invalid && submitted" class="text-xs text-red-600 dark:text-red-400">Campo requerido</small>
+                <input id="company-name" type="text" class="input !h-10 !w-full" formControlName="businessname" [class.border-danger-500]="f['businessname'].invalid && submitted" />
+                <small *ngIf="f['businessname'].invalid && submitted" class="text-xs text-danger-600 ">Campo requerido</small>
               </div>
               <div>
                 <label for="company-trade-name" class="mb-1 block text-xs font-medium text-muted-foreground">Nombre comercial</label>
@@ -154,19 +154,19 @@
               </div>
               <div>
                 <label for="company-phone" class="mb-1 block text-xs font-medium text-muted-foreground">Teléfono</label>
-                <input id="company-phone" type="text" class="input !h-10 !w-full" formControlName="phone" [class.border-red-500]="f['phone'].invalid && submitted" />
-                <small *ngIf="f['phone'].invalid && submitted" class="text-xs text-red-600 dark:text-red-400">Campo requerido</small>
+                <input id="company-phone" type="text" class="input !h-10 !w-full" formControlName="phone" [class.border-danger-500]="f['phone'].invalid && submitted" />
+                <small *ngIf="f['phone'].invalid && submitted" class="text-xs text-danger-600 ">Campo requerido</small>
               </div>
               <div>
                 <label for="company-email" class="mb-1 block text-xs font-medium text-muted-foreground">Correo</label>
-                <input id="company-email" type="email" class="input !h-10 !w-full" formControlName="email" [class.border-red-500]="f['email'].invalid && submitted" />
-                <small *ngIf="f['email'].errors?.['required'] && submitted" class="text-xs text-red-600 dark:text-red-400">Campo requerido</small>
-                <small *ngIf="f['email'].errors?.['email'] && submitted" class="text-xs text-red-600 dark:text-red-400">Correo inválido</small>
+                <input id="company-email" type="email" class="input !h-10 !w-full" formControlName="email" [class.border-danger-500]="f['email'].invalid && submitted" />
+                <small *ngIf="f['email'].errors?.['required'] && submitted" class="text-xs text-danger-600 ">Campo requerido</small>
+                <small *ngIf="f['email'].errors?.['email'] && submitted" class="text-xs text-danger-600 ">Correo inválido</small>
               </div>
               <div class="sm:col-span-2">
                 <label for="company-address" class="mb-1 block text-xs font-medium text-muted-foreground">Dirección matriz</label>
-                <input id="company-address" type="text" class="input !h-10 !w-full" formControlName="address" [class.border-red-500]="f['address'].invalid && submitted" />
-                <small *ngIf="f['address'].invalid && submitted" class="text-xs text-red-600 dark:text-red-400">Campo requerido</small>
+                <input id="company-address" type="text" class="input !h-10 !w-full" formControlName="address" [class.border-danger-500]="f['address'].invalid && submitted" />
+                <small *ngIf="f['address'].invalid && submitted" class="text-xs text-danger-600 ">Campo requerido</small>
               </div>
             </div>
           </div>
@@ -179,13 +179,13 @@
             </div>
             <div class="space-y-3">
               <div class="sm:max-w-sm">
-                <label for="company-regime" class="mb-1 block text-xs font-medium text-muted-foreground">Régimen tributario <span class="text-red-500">*</span></label>
-                <select id="company-regime" class="input !h-10 !w-full" formControlName="tax_regime" [class.border-red-500]="f['tax_regime'].invalid && (submitted || f['tax_regime'].touched)">
+                <label for="company-regime" class="mb-1 block text-xs font-medium text-muted-foreground">Régimen tributario <span class="text-danger-500">*</span></label>
+                <select id="company-regime" class="input !h-10 !w-full" formControlName="tax_regime" [class.border-danger-500]="f['tax_regime'].invalid && (submitted || f['tax_regime'].touched)">
                   <option value="Régimen General">Régimen General</option>
                   <option value="RIMPE Emprendedor">RIMPE Emprendedor</option>
                   <option value="RIMPE Negocio Popular">RIMPE Negocio Popular</option>
                 </select>
-                <small *ngIf="f['tax_regime'].invalid && (submitted || f['tax_regime'].touched)" class="text-xs text-red-600 dark:text-red-400">Selecciona un régimen tributario.</small>
+                <small *ngIf="f['tax_regime'].invalid && (submitted || f['tax_regime'].touched)" class="text-xs text-danger-600 ">Selecciona un régimen tributario.</small>
               </div>
               <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <label class="flex cursor-pointer items-start gap-2.5 rounded-lg border border-border p-3 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5">
@@ -210,7 +210,7 @@
               <div>
                 <dt class="text-xs text-muted-foreground">RUC</dt>
                 <dd class="mt-0.5 font-medium tabular-nums text-foreground">{{ f['ruc'].value || '—' }}</dd>
-                <small *ngIf="f['ruc'].errors?.['pattern'] && submitted" class="text-xs text-red-600 dark:text-red-400">Debe tener 13 dígitos</small>
+                <small *ngIf="f['ruc'].errors?.['pattern'] && submitted" class="text-xs text-danger-600 ">Debe tener 13 dígitos</small>
               </div>
               <div>
                 <dt class="text-xs text-muted-foreground">Tipo de operación</dt>
@@ -275,31 +275,31 @@
           <div class="space-y-4 p-4">
             <label class="relative inline-flex cursor-pointer items-center">
               <input type="checkbox" class="peer sr-only" formControlName="ambiente" (change)="cambiarAmbiente()" />
-              <div class="h-6 w-11 rounded-full bg-muted transition-colors peer-checked:bg-green-600"></div>
+              <div class="h-6 w-11 rounded-full bg-muted transition-colors peer-checked:bg-success-600"></div>
               <div class="absolute left-0.5 top-0.5 h-5 w-5 translate-x-1 transform rounded-full bg-card transition-transform peer-checked:translate-x-5"></div>
-              <span class="ml-3 text-sm font-semibold" [ngClass]="ambiente === 'PRODUCCION' ? 'text-green-700 dark:text-green-400' : 'text-yellow-700 dark:text-yellow-300'">Ambiente: {{ ambiente }}</span>
+              <span class="ml-3 text-sm font-semibold" [ngClass]="ambiente === 'PRODUCCION' ? 'text-success-700 ' : 'text-warning-700 '">Ambiente: {{ ambiente }}</span>
             </label>
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label class="mb-1 block text-xs font-medium text-muted-foreground">Código establecimiento</label>
-                <input appOnlyNumbers type="text" maxlength="3" class="input !h-10 !w-full" formControlName="establishmentcode" [class.border-red-500]="f['establishmentcode'].invalid && submitted" />
-                <small *ngIf="f['establishmentcode'].errors?.['required'] && submitted" class="text-xs text-red-600 dark:text-red-400">Campo requerido</small>
-                <small *ngIf="f['establishmentcode'].errors?.['pattern'] && submitted" class="text-xs text-red-600 dark:text-red-400">3 dígitos</small>
+                <input appOnlyNumbers type="text" maxlength="3" class="input !h-10 !w-full" formControlName="establishmentcode" [class.border-danger-500]="f['establishmentcode'].invalid && submitted" />
+                <small *ngIf="f['establishmentcode'].errors?.['required'] && submitted" class="text-xs text-danger-600 ">Campo requerido</small>
+                <small *ngIf="f['establishmentcode'].errors?.['pattern'] && submitted" class="text-xs text-danger-600 ">3 dígitos</small>
               </div>
               <div>
                 <label class="mb-1 block text-xs font-medium text-muted-foreground">Punto de emisión</label>
-                <input appOnlyNumbers type="text" maxlength="3" class="input !h-10 !w-full" formControlName="emissionpoint" [class.border-red-500]="f['emissionpoint'].invalid && submitted" />
-                <small *ngIf="f['emissionpoint'].errors?.['required'] && submitted" class="text-xs text-red-600 dark:text-red-400">Campo requerido</small>
-                <small *ngIf="f['emissionpoint'].errors?.['pattern'] && submitted" class="text-xs text-red-600 dark:text-red-400">3 dígitos</small>
+                <input appOnlyNumbers type="text" maxlength="3" class="input !h-10 !w-full" formControlName="emissionpoint" [class.border-danger-500]="f['emissionpoint'].invalid && submitted" />
+                <small *ngIf="f['emissionpoint'].errors?.['required'] && submitted" class="text-xs text-danger-600 ">Campo requerido</small>
+                <small *ngIf="f['emissionpoint'].errors?.['pattern'] && submitted" class="text-xs text-danger-600 ">3 dígitos</small>
               </div>
               <div class="sm:col-span-2">
                 <label class="mb-1 block text-xs font-medium text-muted-foreground">URL del servicio FacturADA</label>
                 <input type="text" class="input !h-10 !w-full" formControlName="service_base_url" placeholder="URL del servicio de emisión" />
               </div>
-              <div><label class="mb-1 block text-xs font-medium text-muted-foreground">Secuencial Factura (Producción)</label><input type="number" class="input !h-10 !w-full no-spinner" formControlName="invoiceseq_prod" [class.border-red-500]="f['invoiceseq_prod'].invalid && submitted" /></div>
-              <div><label class="mb-1 block text-xs font-medium text-muted-foreground">Secuencial Factura (Pruebas)</label><input type="number" class="input !h-10 !w-full no-spinner" formControlName="invoiceseq_pruebas" [class.border-red-500]="f['invoiceseq_pruebas'].invalid && submitted" /></div>
-              <div><label class="mb-1 block text-xs font-medium text-muted-foreground">Secuencial Nota de crédito (Producción)</label><input type="number" class="input !h-10 !w-full no-spinner" formControlName="ncseq_prod" [class.border-red-500]="f['ncseq_prod'].invalid && submitted" /></div>
-              <div><label class="mb-1 block text-xs font-medium text-muted-foreground">Secuencial Nota de crédito (Pruebas)</label><input type="number" class="input !h-10 !w-full no-spinner" formControlName="ncseq_pruebas" [class.border-red-500]="f['ncseq_pruebas'].invalid && submitted" /></div>
+              <div><label class="mb-1 block text-xs font-medium text-muted-foreground">Secuencial Factura (Producción)</label><input type="number" class="input !h-10 !w-full no-spinner" formControlName="invoiceseq_prod" [class.border-danger-500]="f['invoiceseq_prod'].invalid && submitted" /></div>
+              <div><label class="mb-1 block text-xs font-medium text-muted-foreground">Secuencial Factura (Pruebas)</label><input type="number" class="input !h-10 !w-full no-spinner" formControlName="invoiceseq_pruebas" [class.border-danger-500]="f['invoiceseq_pruebas'].invalid && submitted" /></div>
+              <div><label class="mb-1 block text-xs font-medium text-muted-foreground">Secuencial Nota de crédito (Producción)</label><input type="number" class="input !h-10 !w-full no-spinner" formControlName="ncseq_prod" [class.border-danger-500]="f['ncseq_prod'].invalid && submitted" /></div>
+              <div><label class="mb-1 block text-xs font-medium text-muted-foreground">Secuencial Nota de crédito (Pruebas)</label><input type="number" class="input !h-10 !w-full no-spinner" formControlName="ncseq_pruebas" [class.border-danger-500]="f['ncseq_pruebas'].invalid && submitted" /></div>
               <div>
                 <label class="mb-1 block text-xs font-medium text-muted-foreground">Obligado a llevar contabilidad</label>
                 <select class="input !h-10 !w-full" formControlName="obligado_a_llevar_contabilidad"><option value="NO">No</option><option value="SI">Sí</option></select>
@@ -324,7 +324,7 @@
           <dl *ngIf="certificateConfigured && !certificateIsBlocking && certificateDaysRemaining !== null" class="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
             <div>
               <dt class="text-xs text-muted-foreground">Días restantes</dt>
-              <dd class="mt-0.5 text-2xl font-bold tabular-nums" [ngClass]="certificateDaysRemaining < 30 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'">{{ certificateDaysRemaining }}</dd>
+              <dd class="mt-0.5 text-2xl font-bold tabular-nums" [ngClass]="certificateDaysRemaining < 30 ? 'text-warning-600 ' : 'text-foreground'">{{ certificateDaysRemaining }}</dd>
             </div>
             <div>
               <dt class="text-xs text-muted-foreground">Vence</dt>
@@ -369,7 +369,7 @@
                 Actual: {{ form.value.urlfirma | slice: form.value.urlfirma.lastIndexOf('/') + 1 }}
               </p>
               <!-- En Lite la firma vigente se conserva: solo se descarta el archivo nuevo. -->
-              <button *ngIf="isLiteMode ? firmaFileName : (firmaFileName || form.value.urlfirma)" type="button" class="text-xs font-semibold text-red-600 hover:underline dark:text-red-400" (click)="removeFirma()">{{ isLiteMode ? 'Descartar archivo nuevo' : 'Quitar archivo' }}</button>
+              <button *ngIf="isLiteMode ? firmaFileName : (firmaFileName || form.value.urlfirma)" type="button" class="text-xs font-semibold text-danger-600 hover:underline " (click)="removeFirma()">{{ isLiteMode ? 'Descartar archivo nuevo' : 'Quitar archivo' }}</button>
             </div>
           </div>
         </div>
@@ -378,19 +378,19 @@
         <div class="grid gap-x-8 gap-y-3 p-4 sm:p-5 lg:grid-cols-[220px_minmax(0,1fr)]">
           <div>
             <label for="clave" class="text-sm font-semibold text-foreground">
-              Contraseña de la firma <span *ngIf="requiresCertificatePassword" class="text-red-600">*</span>
+              Contraseña de la firma <span *ngIf="requiresCertificatePassword" class="text-danger-600">*</span>
             </label>
             <p class="mt-1 text-xs text-muted-foreground">Se guarda cifrada en el servidor para validar la firma y firmar tus comprobantes.</p>
           </div>
           <div class="sm:max-w-sm">
             <div class="relative">
               <input [type]="showClave ? 'text' : 'password'" id="clave" class="input !h-10 !w-full pr-20" formControlName="clave"
-                [class.border-red-500]="f['clave'].invalid && submitted" placeholder="••••••••" autocomplete="new-password" />
+                [class.border-danger-500]="f['clave'].invalid && submitted" placeholder="••••••••" autocomplete="new-password" />
               <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 rounded px-1 text-xs font-semibold text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50" (click)="showClave = !showClave">
                 {{ showClave ? 'Ocultar' : 'Mostrar' }}
               </button>
             </div>
-            <small *ngIf="f['clave'].invalid && submitted" class="text-xs text-red-600 dark:text-red-400">Necesaria al cargar un archivo nuevo.</small>
+            <small *ngIf="f['clave'].invalid && submitted" class="text-xs text-danger-600 ">Necesaria al cargar un archivo nuevo.</small>
           </div>
         </div>
 
@@ -426,7 +426,7 @@
             </div>
             <div *ngIf="planUsagePercent !== null" class="mt-2 h-2 overflow-hidden rounded-full bg-muted" role="progressbar"
               [attr.aria-valuenow]="planUsagePercent" aria-valuemin="0" aria-valuemax="100" aria-label="Consumo de comprobantes">
-              <div class="h-full rounded-full" [ngClass]="planUsagePercent >= 90 ? 'bg-amber-500' : 'bg-primary'" [style.width.%]="planUsagePercent"></div>
+              <div class="h-full rounded-full" [ngClass]="planUsagePercent >= 90 ? 'bg-warning-500' : 'bg-primary'" [style.width.%]="planUsagePercent"></div>
             </div>
           </div>
 

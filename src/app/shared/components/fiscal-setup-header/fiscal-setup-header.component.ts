@@ -44,7 +44,7 @@ interface StepView {
               class="flex items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-muted"
               [ngClass]="{ 'bg-primary/10': item.id === step }">
               <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
-                [ngClass]="item.done ? 'bg-emerald-500 text-white' : (item.id === step ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')">
+                [ngClass]="item.done ? 'bg-success-500 text-white' : (item.id === step ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')">
                 {{ item.done ? '✓' : item.number }}
               </span>
               <span class="min-w-0">

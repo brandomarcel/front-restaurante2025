@@ -1,21 +1,21 @@
 <div class="app-container space-y-4">
   <app-caja-nav active="cierre" [state]="navState" [opening]="cierre.apertura" />
 
-  <div *ngIf="!canOperateCash" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800" role="alert">
+  <div *ngIf="!canOperateCash" class="rounded-xl border border-warning-200 bg-warning-50 px-4 py-3 text-sm font-semibold text-warning-800" role="alert">
     No tienes permiso para administrar la caja en este negocio.
   </div>
 
   <!-- Cierre recién registrado -->
-  <section *ngIf="lastClose" class="mx-auto max-w-2xl rounded-2xl border border-emerald-200 bg-emerald-50 p-5" role="status">
+  <section *ngIf="lastClose" class="mx-auto max-w-2xl rounded-2xl border border-success-200 bg-success-50 p-5" role="status">
     <div class="flex items-start gap-3">
-      <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-lg text-white" aria-hidden="true">✓</span>
+      <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success-500 text-lg text-white" aria-hidden="true">✓</span>
       <div class="min-w-0 flex-1">
-        <h1 class="text-base font-bold text-emerald-900">Caja cerrada</h1>
-        <dl class="mt-2 grid grid-cols-2 gap-2 text-xs text-emerald-900 sm:grid-cols-4">
-          <div><dt class="text-emerald-800/70">Estado</dt><dd class="font-bold">{{ lastClose.status || lastClose.estado || 'Cerrada' }}</dd></div>
-          <div><dt class="text-emerald-800/70">Efectivo contado</dt><dd class="font-bold">{{ (lastClose.efectivo_real ?? lastClose.cash_counted ?? 0) | currency }}</dd></div>
-          <div><dt class="text-emerald-800/70">Diferencia</dt><dd class="font-bold">{{ (lastClose.diferencia ?? lastClose.difference ?? 0) | currency }}</dd></div>
-          <div><dt class="text-emerald-800/70">Fecha</dt><dd class="font-bold">{{ lastClose.closed_at || lastClose.fecha_cierre || '—' }}</dd></div>
+        <h1 class="text-base font-bold text-success-900">Caja cerrada</h1>
+        <dl class="mt-2 grid grid-cols-2 gap-2 text-xs text-success-900 sm:grid-cols-4">
+          <div><dt class="text-success-800/70">Estado</dt><dd class="font-bold">{{ lastClose.status || lastClose.estado || 'Cerrada' }}</dd></div>
+          <div><dt class="text-success-800/70">Efectivo contado</dt><dd class="font-bold">{{ (lastClose.efectivo_real ?? lastClose.cash_counted ?? 0) | currency }}</dd></div>
+          <div><dt class="text-success-800/70">Diferencia</dt><dd class="font-bold">{{ (lastClose.diferencia ?? lastClose.difference ?? 0) | currency }}</dd></div>
+          <div><dt class="text-success-800/70">Fecha</dt><dd class="font-bold">{{ lastClose.closed_at || lastClose.fecha_cierre || '—' }}</dd></div>
         </dl>
         <a routerLink="/caja/apertura" class="btn btn-outline mt-3 !bg-card !text-xs">Abrir un nuevo turno</a>
       </div>
@@ -28,9 +28,9 @@
   </div>
 
   <!-- Sin turno abierto -->
-  <section *ngIf="canOperateCash && !loadingData && sinApertura && !lastClose" class="mx-auto max-w-xl rounded-2xl border border-amber-200 bg-amber-50 p-5 text-center">
-    <p class="text-sm font-bold text-amber-900">No tienes una caja abierta</p>
-    <p class="mt-1 text-xs text-amber-800">Solo se puede cerrar el turno que abriste.</p>
+  <section *ngIf="canOperateCash && !loadingData && sinApertura && !lastClose" class="mx-auto max-w-xl rounded-2xl border border-warning-200 bg-warning-50 p-5 text-center">
+    <p class="text-sm font-bold text-warning-900">No tienes una caja abierta</p>
+    <p class="mt-1 text-xs text-warning-800">Solo se puede cerrar el turno que abriste.</p>
     <a routerLink="/caja/apertura" class="btn btn-primary mt-3 !text-xs">Ir a abrir caja</a>
   </section>
 
@@ -61,7 +61,7 @@
         <div *ngIf="showDenominations" class="mt-4 rounded-xl border border-border bg-muted/30 p-3">
           <div class="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
             <div *ngFor="let d of denominations; let i = index; trackBy: denominationTrack" class="flex items-center gap-2">
-              <span class="w-16 shrink-0 text-xs font-bold" [ngClass]="d.kind === 'bill' ? 'text-emerald-800' : 'text-amber-800'">
+              <span class="w-16 shrink-0 text-xs font-bold" [ngClass]="d.kind === 'bill' ? 'text-success-800' : 'text-warning-800'">
                 {{ d.label }} <span class="text-[9px] font-normal text-muted-foreground">{{ d.kind === 'bill' ? 'billete' : 'moneda' }}</span>
               </span>
               <div class="inline-flex items-center overflow-hidden rounded-md border border-border bg-card" role="group" [attr.aria-label]="'Cantidad de ' + d.label + ' ' + (d.kind === 'bill' ? 'billete' : 'moneda')">
@@ -110,13 +110,13 @@
       <dl class="space-y-1.5 text-xs">
         <div class="flex justify-between"><dt class="text-muted-foreground">Fondo inicial</dt><dd class="font-semibold text-foreground">{{ cierre.monto_apertura | currency }}</dd></div>
         <div class="flex justify-between"><dt class="text-muted-foreground">+ Ventas en efectivo</dt><dd class="font-semibold text-foreground">{{ paymentAmount('01') | currency }}</dd></div>
-        <div class="flex justify-between"><dt class="text-muted-foreground">− Retiros</dt><dd class="font-semibold text-rose-700">{{ cierre.total_retiros | currency }}</dd></div>
+        <div class="flex justify-between"><dt class="text-muted-foreground">− Retiros</dt><dd class="font-semibold text-danger-700">{{ cierre.total_retiros | currency }}</dd></div>
         <div class="flex justify-between border-t border-border pt-1.5"><dt class="font-semibold text-foreground">Debería haber</dt><dd class="font-bold text-foreground">{{ totalEsperado | currency }}</dd></div>
         <div class="flex justify-between"><dt class="font-semibold text-foreground">Contaste</dt><dd class="font-bold text-foreground">{{ cierre.efectivo_real | currency }}</dd></div>
       </dl>
 
       <div class="rounded-xl p-3 text-center"
-        [ngClass]="differenceKind === 'even' ? 'bg-emerald-50 text-emerald-800' : (differenceKind === 'short' ? 'bg-red-50 text-red-800' : 'bg-amber-50 text-amber-900')" aria-live="polite">
+        [ngClass]="differenceKind === 'even' ? 'bg-success-50 text-success-800' : (differenceKind === 'short' ? 'bg-danger-50 text-danger-800' : 'bg-warning-50 text-warning-900')" aria-live="polite">
         <p class="text-[10px] font-bold uppercase tracking-wide">{{ differenceKind === 'even' ? 'La caja cuadra' : (differenceKind === 'short' ? 'Faltante' : 'Sobrante') }}</p>
         <p class="text-2xl font-black">{{ differenceKind === 'even' ? '✓' : (cierre.diferencia | currency) }}</p>
         <p *ngIf="differenceKind !== 'even'" class="text-[10px] opacity-80">Revisa el conteo o explica la diferencia en la nota.</p>

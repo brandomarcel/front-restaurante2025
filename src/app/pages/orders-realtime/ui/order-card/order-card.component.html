@@ -1,5 +1,5 @@
 <article class="rounded-xl border border-border bg-card p-3 shadow-sm"
-  [ngClass]="{ 'ring-2 ring-sky-400/50': order._flashType === 'insert' }">
+  [ngClass]="{ 'ring-2 ring-info-400/50': order._flashType === 'insert' }">
   <button type="button" class="block w-full text-left" (click)="open.emit(order)" [attr.aria-label]="'Ver detalle de ' + headline">
     <div class="flex items-start justify-between gap-2">
       <div class="min-w-0">

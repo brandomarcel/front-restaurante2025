@@ -110,7 +110,7 @@
         <button
           type="button"
           class="h-7 whitespace-nowrap rounded-full border px-2.5 text-[11px] font-bold"
-          [ngClass]="productView === 'favorites' ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-primary/20 bg-card text-foreground/80'"
+          [ngClass]="productView === 'favorites' ? 'border-warning-300 bg-warning-50 text-warning-700' : 'border-primary/20 bg-card text-foreground/80'"
           (click)="setProductView('favorites')">
           ★ Favoritos
         </button>
@@ -149,7 +149,7 @@
           class="relative flex touch-manipulation flex-col rounded-xl border bg-card p-2 shadow-sm transition active:scale-[.98] sm:p-2.5"
           [ngClass]="{
             'border-border': canAddProduct(product),
-            'border-red-200 bg-red-50 opacity-80': !canAddProduct(product),
+            'border-danger-200 bg-danger-50 opacity-80': !canAddProduct(product),
             'min-h-[132px] sm:min-h-[142px]': !isRetailPos,
             'min-h-[160px] sm:min-h-[172px]': isRetailPos
           }">
@@ -161,12 +161,12 @@
           <div class="pointer-events-none absolute left-2 top-2 z-10 flex gap-1">
             <span
               *ngIf="isOutOfStock(product)"
-              class="rounded-full bg-red-100 px-2 py-0.5 text-[9px] font-bold text-red-600 shadow-sm">
+              class="rounded-full bg-danger-100 px-2 py-0.5 text-[9px] font-bold text-danger-600 shadow-sm">
               AGOTADO
             </span>
             <span
               *ngIf="!isOutOfStock(product) && isLowStock(product)"
-              class="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-bold text-amber-700 shadow-sm">
+              class="rounded-full bg-warning-100 px-2 py-0.5 text-[9px] font-bold text-warning-700 shadow-sm">
               BAJO
             </span>
             <span
@@ -178,13 +178,13 @@
           <div class="pointer-events-none absolute right-2 top-2 z-10">
             <button
               type="button"
-              class="pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full border border-white/80 bg-card/90 text-[11px] text-muted-foreground/70 shadow-sm backdrop-blur transition hover:scale-105 hover:text-amber-500"
+              class="pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full border border-white/80 bg-card/90 text-[11px] text-muted-foreground/70 shadow-sm backdrop-blur transition hover:scale-105 hover:text-warning-500"
               [attr.aria-label]="isFavorite(product) ? 'Quitar de favoritos' : 'Agregar a favoritos'"
               [attr.title]="isFavorite(product) ? 'Quitar de favoritos' : 'Agregar a favoritos'"
               [style.color]="isFavorite(product) ? '#d97706' : '#94a3b8'"
               [style.backgroundColor]="isFavorite(product) ? '#fffbeb' : 'rgba(255,255,255,.9)'"
               [style.borderColor]="isFavorite(product) ? '#fcd34d' : 'rgba(255,255,255,.8)'"
-              [ngClass]="isFavorite(product) ? 'border-amber-300 bg-amber-50 text-amber-600' : 'border-border bg-card text-muted-foreground/70'"
+              [ngClass]="isFavorite(product) ? 'border-warning-300 bg-warning-50 text-warning-600' : 'border-border bg-card text-muted-foreground/70'"
               (click)="toggleFavorite(product); $event.stopPropagation()">
               ★
             </button>
@@ -210,7 +210,7 @@
 
             <div *ngIf="isRetailPos" class="mt-auto flex items-center justify-between gap-1 pt-1">
               <span *ngIf="hasInventory(product)" class="text-[10px] font-semibold"
-                [ngClass]="isOutOfStock(product) ? 'text-destructive' : (isLowStock(product) ? 'text-amber-600' : 'text-emerald-600')">
+                [ngClass]="isOutOfStock(product) ? 'text-destructive' : (isLowStock(product) ? 'text-warning-600' : 'text-success-600')">
                 {{ isOutOfStock(product) ? 'Sin stock' : (isLowStock(product) ? 'Quedan ' + getInventoryLabel(product) : 'Stock ' + getInventoryLabel(product)) }}
               </span>
               <span *ngIf="getCartQuantityForProduct(product)" class="text-[10px] font-semibold text-primary">
@@ -279,7 +279,7 @@
           <div class="flex items-center gap-1.5">
             <button
               type="button"
-              class="h-8 rounded-lg border border-red-200 px-2.5 text-[11px] font-bold text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+              class="h-8 rounded-lg border border-danger-200 px-2.5 text-[11px] font-bold text-danger-600 disabled:cursor-not-allowed disabled:opacity-40"
               [disabled]="cartService.cart.length === 0"
               (click)="clearCart()">
               Vaciar
@@ -305,7 +305,7 @@
                   <span *ngIf="hasInventory(item)">· stock {{ getInventoryLabel(item) }}</span>
                 </p>
                 <p *ngIf="item.notes && editingNoteLine !== item.line_id"
-                  class="mt-1 inline-flex max-w-full items-start gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                  class="mt-1 inline-flex max-w-full items-start gap-1 rounded-md bg-warning-500/15 px-1.5 py-0.5 text-[11px] font-bold text-warning-700 ">
                   <span aria-hidden="true">📝</span><span class="break-words">{{ item.notes }}</span>
                 </p>
               </div>
@@ -336,14 +336,14 @@
                 <button
                   type="button"
                   class="h-8 rounded-lg border px-2.5 text-[11px] font-bold transition"
-                  [ngClass]="item.notes ? 'border-amber-400 bg-amber-500/10 text-amber-700 dark:text-amber-300' : 'border-border bg-card text-foreground/80 hover:bg-muted'"
+                  [ngClass]="item.notes ? 'border-warning-400 bg-warning-500/10 text-warning-700 ' : 'border-border bg-card text-foreground/80 hover:bg-muted'"
                   (click)="editingNoteLine === item.line_id ? cancelNote() : openNote(item)"
                   [attr.aria-expanded]="editingNoteLine === item.line_id">
                   {{ item.notes ? 'Editar nota' : '+ Nota' }}
                 </button>
                 <button
                   type="button"
-                  class="h-8 rounded-lg border border-red-200 bg-card px-2.5 text-[11px] font-bold text-red-600"
+                  class="h-8 rounded-lg border border-danger-200 bg-card px-2.5 text-[11px] font-bold text-danger-600"
                   (click)="remove(item)">
                   Quitar
                 </button>
@@ -369,7 +369,7 @@
                   (ngModelChange)="cartService.setDiscountAmount(item, $event)"
                   class="w-16 rounded border border-border bg-card px-1.5 py-0.5 text-[11px] text-foreground" />
               </label>
-              <span *ngIf="item.discount_total > 0" class="ml-auto text-[10px] font-semibold text-emerald-600">
+              <span *ngIf="item.discount_total > 0" class="ml-auto text-[10px] font-semibold text-success-600">
                 -${{ item.discount_total | number:'1.2-2' }}
               </span>
             </div>
@@ -381,7 +381,7 @@
         </div>
 
         <div class="mt-3 border-t border-border pt-3">
-          <div *ngIf="cartService.totalDiscount > 0" class="mb-1.5 flex justify-between text-[11px] font-semibold text-emerald-600">
+          <div *ngIf="cartService.totalDiscount > 0" class="mb-1.5 flex justify-between text-[11px] font-semibold text-success-600">
             <span>Descuento aplicado</span>
             <span>-${{ cartService.totalDiscount | number:'1.2-2' }}</span>
           </div>

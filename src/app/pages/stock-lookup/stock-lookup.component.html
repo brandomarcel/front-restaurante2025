@@ -46,7 +46,7 @@
               </td>
               <td *ngFor="let warehouse of warehouses" class="app-td text-right">
                 <span class="inline-block min-w-8 rounded-md px-1.5 py-0.5 font-bold"
-                  [ngClass]="isBestWarehouse(row, warehouse) ? 'bg-emerald-100 text-emerald-800' : (stockFor(row, warehouse) > 0 ? 'text-foreground' : 'text-muted-foreground')">
+                  [ngClass]="isBestWarehouse(row, warehouse) ? 'bg-success-100 text-success-800' : (stockFor(row, warehouse) > 0 ? 'text-foreground' : 'text-muted-foreground')">
                   {{ stockFor(row, warehouse) }}
                 </span>
               </td>
@@ -59,7 +59,7 @@
         </table>
       </div>
       <p *ngIf="rows.length" class="border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
-        <span class="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-emerald-100 align-middle"></span>Bodega con más stock de cada producto.
+        <span class="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-success-100 align-middle"></span>Bodega con más stock de cada producto.
       </p>
     </section>
   </ng-container>

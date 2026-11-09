@@ -130,6 +130,9 @@ indican regresiones:
 `TableComponent`, `TableFooterComponent`, `TableRowComponent`, `TwoStepsComponent`,
 `UsersComponent`.
 
+- 2026-11-08: se borraron las pantallas de plantilla del login (`ForgotPasswordComponent`, `NewPasswordComponent`,
+  `TwoStepsComponent`, `SignUpComponent`) con sus specs; esas 3 fallas heredadas desaparecen (la próxima corrida debería
+  dar 22 heredadas).
 - Una falla **fuera** de esta lista es una regresión: investígala.
 - Si modificas uno de estos componentes, arregla también su spec (agrega providers y mocks).
 - Cuando la línea base cambie, actualiza esta sección.
@@ -404,6 +407,33 @@ etapa, con permiso y con `kitchen`, y llaman `updateKitchenOrderStatus` (nunca `
 carga entregadas; `mobileColumn`. Tabla/tarjeta de Caja: acción siguiente según `kitchenStage`, «Cobrar»/«Ver orden»,
 sin acciones de cocina sin `kitchen`, botón deshabilitado con `pendingOrderNames`/`actionPending`. Modal: etapa con
 `orderStage` (Lista ya no sale «Cerrada»), «Ver orden» para cancelada. `RealtimeOrdersService.mapOne` llena `orderType`.
+
+## Pendiente de pruebas: login rediseñado (2026-11-08)
+
+`SignInComponent`: campos vacíos → «Escribe tu usuario o correo.» / «Escribe tu contraseña.» y no llama a `login`;
+`login` con 401 desde `/api/method/login` → `formError` «El usuario o la contraseña no son correctos.»; status 0 → «No hay
+conexión…»; 429 → «Hubo demasiados intentos…»; otro error → `FrappeErrorService.handle`; `formError` se limpia al editar;
+`checkCapsLock` con `getModifierState('CapsLock')`; «¿Olvidaste tu contraseña?» muestra la ayuda (`aria-expanded`);
+`__LITE_BUSINESS_SELECTION_REQUIRED__` con 2+ negocios → paso «Elige el negocio» y `chooseBusiness` llama
+`selectLiteBusiness`; con 403 limpia `active_business`/`businessId` y muestra «No tienes acceso a ese negocio. Elige otro.»;
+navegación cancelada → `formError`. `AuthComponent` ya no lee `localStorage.logo`. Rutas `/auth/sign-up`,
+`/auth/forgot-password`… redirigen a `/auth/sign-in`. E2E: 1440 px con panel de marca, 1024 px, 390 px claro y oscuro (tema
+`dark` en `localStorage.theme`).
+
+## Pendiente de pruebas: paleta de colores y tema (2026-11-08)
+
+- `ThemeService`:
+  - sin `theme` guardado usa `facturada`;
+  - con `{color:'violet'}` y sin `theme_palette`, pasa a `facturada`, guarda `theme_palette`, respeta `mode` y
+    `direction`;
+  - con `theme_palette` ya guardado respeta `violet`;
+  - con JSON inválido en `theme` no falla.
+- `dashboard-charts.ts`: los builders usan `--muted-foreground`/`--border` del documento y `tooltip.theme` es `dark`
+  con `.dark` en `<html>`.
+- `ButtonComponent` (app-button): ningún tono usa clases `slate`/`violet`/`green` fijas.
+- `AuthComponent`: `subtotal`, `vat` (15 %) y `total` cuadran para cada ejemplo, y `money(8.3)` da `8,30`.
+- E2E con sesión, en claro y oscuro: POS, Facturar, Órdenes en vivo, Caja, Dashboard, Inventario y Configuración.
+  Buscar cajas claras en modo oscuro y textos sin contraste.
 
 ## Asistente de migración en Desk (2026-10-29)
 

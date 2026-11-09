@@ -47,25 +47,25 @@
         <p class="mt-1 text-2xl font-black text-foreground">{{ stockFilterCount('all') }}</p>
         <p class="text-[11px] text-muted-foreground">con control de stock</p>
       </button>
-      <button type="button" class="rounded-xl border bg-card p-3 text-left shadow-sm transition hover:border-emerald-400"
-        [ngClass]="stockFilter === 'available' ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-border'" [attr.aria-pressed]="stockFilter === 'available'"
+      <button type="button" class="rounded-xl border bg-card p-3 text-left shadow-sm transition hover:border-success-400"
+        [ngClass]="stockFilter === 'available' ? 'border-success-500 ring-1 ring-success-500' : 'border-border'" [attr.aria-pressed]="stockFilter === 'available'"
         (click)="setStockFilter('available')">
         <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Disponibles</p>
-        <p class="mt-1 text-2xl font-black text-emerald-600">{{ stockFilterCount('available') }}</p>
+        <p class="mt-1 text-2xl font-black text-success-600">{{ stockFilterCount('available') }}</p>
         <p class="text-[11px] text-muted-foreground">sobre el mínimo</p>
       </button>
-      <button type="button" class="rounded-xl border bg-card p-3 text-left shadow-sm transition hover:border-amber-400"
-        [ngClass]="stockFilter === 'low' ? 'border-amber-500 ring-1 ring-amber-500' : 'border-border'" [attr.aria-pressed]="stockFilter === 'low'"
+      <button type="button" class="rounded-xl border bg-card p-3 text-left shadow-sm transition hover:border-warning-400"
+        [ngClass]="stockFilter === 'low' ? 'border-warning-500 ring-1 ring-warning-500' : 'border-border'" [attr.aria-pressed]="stockFilter === 'low'"
         (click)="setStockFilter('low')">
         <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Bajo mínimo</p>
-        <p class="mt-1 text-2xl font-black text-amber-600">{{ stockFilterCount('low') }}</p>
+        <p class="mt-1 text-2xl font-black text-warning-600">{{ stockFilterCount('low') }}</p>
         <p class="text-[11px] text-muted-foreground">conviene reponer</p>
       </button>
-      <button type="button" class="rounded-xl border bg-card p-3 text-left shadow-sm transition hover:border-red-400"
-        [ngClass]="stockFilter === 'out' ? 'border-red-500 ring-1 ring-red-500' : 'border-border'" [attr.aria-pressed]="stockFilter === 'out'"
+      <button type="button" class="rounded-xl border bg-card p-3 text-left shadow-sm transition hover:border-danger-400"
+        [ngClass]="stockFilter === 'out' ? 'border-danger-500 ring-1 ring-danger-500' : 'border-border'" [attr.aria-pressed]="stockFilter === 'out'"
         (click)="setStockFilter('out')">
         <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Agotados</p>
-        <p class="mt-1 text-2xl font-black text-red-600">{{ stockFilterCount('out') }}</p>
+        <p class="mt-1 text-2xl font-black text-danger-600">{{ stockFilterCount('out') }}</p>
         <p class="text-[11px] text-muted-foreground">no se pueden vender</p>
       </button>
     </section>
@@ -112,7 +112,7 @@
                 </div>
               </td>
               <td class="app-td py-2 text-right">
-                <span class="text-sm font-black" [ngClass]="isOutOfStock(product) ? 'text-red-600' : (isLowStock(product) ? 'text-amber-600' : 'text-foreground')">{{ stockNumber(product) }}</span>
+                <span class="text-sm font-black" [ngClass]="isOutOfStock(product) ? 'text-danger-600' : (isLowStock(product) ? 'text-warning-600' : 'text-foreground')">{{ stockNumber(product) }}</span>
                 <span class="ml-1 text-[10px] text-muted-foreground">{{ getInventoryUnit(product) }}</span>
               </td>
               <td class="app-td py-2 text-right text-muted-foreground">{{ product.stock_minimo || 0 }}</td>
@@ -143,7 +143,7 @@
             <span class="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold" [ngClass]="stockStatus(product).tone">{{ stockStatus(product).label }}</span>
           </div>
           <div class="shrink-0 text-right">
-            <p class="text-lg font-black" [ngClass]="isOutOfStock(product) ? 'text-red-600' : (isLowStock(product) ? 'text-amber-600' : 'text-foreground')">{{ stockNumber(product) }}</p>
+            <p class="text-lg font-black" [ngClass]="isOutOfStock(product) ? 'text-danger-600' : (isLowStock(product) ? 'text-warning-600' : 'text-foreground')">{{ stockNumber(product) }}</p>
             <p class="text-[10px] text-muted-foreground">mín. {{ product.stock_minimo || 0 }} {{ getInventoryUnit(product) }}</p>
             <button *ngIf="canManageInventory" type="button" class="mt-1 text-[11px] font-semibold text-primary hover:underline" (click)="abrirMovimientoParaProducto(product)">Mover stock</button>
           </div>
@@ -208,7 +208,7 @@
       </ul>
     </section>
 
-    <div *ngIf="historyAccessDenied && !soloTraslados" class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800" role="alert">
+    <div *ngIf="historyAccessDenied && !soloTraslados" class="rounded-xl border border-danger-200 bg-danger-50 p-4 text-sm font-semibold text-danger-800" role="alert">
       No tienes permiso para consultar el historial de movimientos de este negocio.
     </div>
 
@@ -216,7 +216,7 @@
       <ul class="divide-y divide-border">
         <li *ngFor="let movement of movements; trackBy: trackByMovement" class="flex items-start gap-3 px-4 py-3 text-xs">
           <span class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-black"
-            [ngClass]="movementVariation(movement) > 0 ? 'bg-emerald-100 text-emerald-700' : (movementVariation(movement) < 0 ? 'bg-red-100 text-red-700' : 'bg-muted text-muted-foreground')"
+            [ngClass]="movementVariation(movement) > 0 ? 'bg-success-100 text-success-700' : (movementVariation(movement) < 0 ? 'bg-danger-100 text-danger-700' : 'bg-muted text-muted-foreground')"
             aria-hidden="true">
             {{ movementVariation(movement) > 0 ? '↑' : (movementVariation(movement) < 0 ? '↓' : '=') }}
           </span>
@@ -268,7 +268,7 @@
               class="rounded-lg border p-2.5 text-left transition"
               [ngClass]="currentMovementType === type ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/40'"
               (click)="selectMovementType(type)">
-              <span class="text-base font-black" [ngClass]="movementDirection(type) === 'in' ? 'text-emerald-600' : (movementDirection(type) === 'out' ? 'text-red-600' : 'text-amber-600')" aria-hidden="true">
+              <span class="text-base font-black" [ngClass]="movementDirection(type) === 'in' ? 'text-success-600' : (movementDirection(type) === 'out' ? 'text-danger-600' : 'text-warning-600')" aria-hidden="true">
                 {{ movementDirection(type) === 'in' ? '↑' : (movementDirection(type) === 'out' ? '↓' : '⟳') }}
               </span>
               <span class="block text-xs font-bold text-foreground">{{ getMovementOptionLabel(type) }}</span>
@@ -308,12 +308,12 @@
               <div class="mt-2 flex items-center justify-between gap-2">
                 <p *ngIf="movementPreview(i) as preview; else noPreview" class="text-[11px] text-muted-foreground">
                   Stock: <b class="text-foreground">{{ preview.current }}</b> → quedará en
-                  <b [ngClass]="preview.result < 0 ? 'text-red-600' : 'text-foreground'">{{ preview.result }}</b> {{ preview.unit }}
-                  <span *ngIf="preview.result < 0" class="font-semibold text-red-600"> · no alcanza el stock</span>
+                  <b [ngClass]="preview.result < 0 ? 'text-danger-600' : 'text-foreground'">{{ preview.result }}</b> {{ preview.unit }}
+                  <span *ngIf="preview.result < 0" class="font-semibold text-danger-600"> · no alcanza el stock</span>
                 </p>
                 <ng-template #noPreview><p class="text-[11px] text-muted-foreground">Elige un producto para ver cómo queda su stock.</p></ng-template>
                 <button *ngIf="movementItems.length > 1 || itemGroup.get('product')?.value" type="button"
-                  class="shrink-0 text-[11px] font-semibold text-red-700 hover:underline" (click)="quitarFilaMovimiento(i)">
+                  class="shrink-0 text-[11px] font-semibold text-danger-700 hover:underline" (click)="quitarFilaMovimiento(i)">
                   {{ movementItems.length > 1 ? 'Quitar' : 'Limpiar' }}
                 </button>
               </div>

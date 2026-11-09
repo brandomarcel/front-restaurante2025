@@ -5,7 +5,7 @@
     <div class="min-w-0">
       <div class="flex flex-wrap items-center gap-2">
         <h1 class="text-2xl font-black tracking-tight text-foreground">{{ viewMode === 'cocina' ? 'Cocina' : 'Órdenes de hoy' }}</h1>
-        <span *ngIf="newCount > 0" class="rounded-full bg-sky-600 px-2 py-0.5 text-xs font-bold text-white">
+        <span *ngIf="newCount > 0" class="rounded-full bg-info-600 px-2 py-0.5 text-xs font-bold text-white">
           {{ newCount }} {{ newCount === 1 ? 'nueva' : 'nuevas' }}
         </span>
       </div>

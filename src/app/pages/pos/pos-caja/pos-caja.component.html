@@ -2,7 +2,7 @@
 
   <!-- Sin terminal configurado: el POS genérico no puede operar -->
   <div *ngIf="genericMode && needsPosTerminalConfiguration" class="absolute inset-0 z-40 flex items-center justify-center bg-muted p-6">
-    <div class="max-w-md rounded-xl border border-amber-200 bg-card p-6 text-center shadow-lg" role="alert">
+    <div class="max-w-md rounded-xl border border-warning-200 bg-card p-6 text-center shadow-lg" role="alert">
       <h2 class="text-base font-bold text-foreground">Falta configurar una terminal POS</h2>
       <p class="mt-2 text-sm text-muted-foreground">Para vender necesitas al menos una terminal asociada a un establecimiento y un punto de emisión.</p>
       <button type="button" (click)="goToPosTerminalSettings()" class="btn btn-primary mt-4">Configurar terminal POS</button>
@@ -13,7 +13,7 @@
 
     <!-- ================= BARRA SUPERIOR ================= -->
     <header class="flex flex-shrink-0 flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2 text-[11px] shadow-sm"
-      [ngClass]="posTerminalBlockMessage ? 'border-amber-300' : 'border-border'">
+      [ngClass]="posTerminalBlockMessage ? 'border-warning-300' : 'border-border'">
       <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
         <span class="text-xs font-bold text-foreground">{{ genericMode ? 'Punto de venta' : 'Caja' }}</span>
         <ng-container *ngIf="currentFiscalLocation">
@@ -21,11 +21,11 @@
           <span *ngIf="currentFiscalLocation?.terminal" class="truncate text-muted-foreground">{{ currentFiscalLocation.terminal?.terminal_name || currentFiscalLocation.terminal?.name || currentFiscalLocation.terminal }}</span>
         </ng-container>
         <span *ngIf="currentFiscalLocation?.environment || ambiente" class="rounded-full px-1.5 py-0.5 font-semibold"
-          [ngClass]="isProductionEnvironment ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'">
+          [ngClass]="isProductionEnvironment ? 'bg-success-100 text-success-800' : 'bg-warning-100 text-warning-900'">
           {{ currentFiscalLocation?.environment || ambiente }}
         </span>
         <em *ngIf="terminalAssignmentLabel" class="not-italic text-primary">{{ terminalAssignmentLabel }}</em>
-        <span *ngIf="posTerminalBlockMessage" class="font-semibold text-amber-800" role="alert">
+        <span *ngIf="posTerminalBlockMessage" class="font-semibold text-warning-800" role="alert">
           ⚠ {{ posTerminalBlockMessage }}<span *ngIf="needsPosTerminalSelection"> Usa el selector de terminal de la barra superior ↑</span>
         </span>
       </div>
@@ -39,11 +39,11 @@
     </header>
 
     <!-- Nota de venta activa (POS genérico) -->
-    <section *ngIf="genericMode && activePosSaleNote" class="flex-shrink-0 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[11px] text-indigo-950" role="status">
+    <section *ngIf="genericMode && activePosSaleNote" class="flex-shrink-0 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-[11px] text-primary" role="status">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p class="font-bold">Nota de venta {{ activePosSaleNote.name }} · <span class="font-semibold">{{ activePosSaleNote.status || 'Borrador' }}</span></p>
-          <p class="text-[10px] text-indigo-800">
+          <p class="text-[10px] text-primary">
             Documento no tributario.
             <ng-container *ngIf="activePosSaleNote.change_amount !== undefined">
               Cobrado ${{ (activePosSaleNote.paid_amount || activePosSaleNote.collected_amount || 0) | number:'1.2-2' }} · Cambio ${{ (activePosSaleNote.change_amount || 0) | number:'1.2-2' }}
@@ -53,13 +53,13 @@
         </div>
         <div class="flex flex-wrap gap-1.5">
           <button *ngIf="activePosSaleNote.status === 'Borrador'" type="button" (click)="collectPosSaleNote()" [disabled]="isSubmittingPosSale"
-            class="rounded-md bg-emerald-600 px-2.5 py-1.5 font-bold text-white disabled:opacity-50">Cobrar nota</button>
+            class="rounded-md bg-success-600 px-2.5 py-1.5 font-bold text-white disabled:opacity-50">Cobrar nota</button>
           <button *ngIf="activePosSaleNote.status === 'Cobrada' && !activePosSaleNote.lite_invoice" type="button" (click)="invoicePosSaleNote()" [disabled]="isSubmittingPosSale"
             class="rounded-md bg-primary px-2.5 py-1.5 font-bold text-primary-foreground disabled:opacity-50">Facturar</button>
           <button *ngIf="activePosSaleNote.status === 'Cobrada'" type="button" (click)="printPosSaleNote(activePosSaleNote.name)" [disabled]="isSubmittingPosSale"
-            class="rounded-md border border-indigo-300 bg-card px-2.5 py-1.5 font-bold text-indigo-800 disabled:opacity-50">Imprimir</button>
+            class="rounded-md border border-primary/30 bg-card px-2.5 py-1.5 font-bold text-primary disabled:opacity-50">Imprimir</button>
           <button *ngIf="(activePosSaleNote.status === 'Borrador' || activePosSaleNote.status === 'Cobrada') && !activePosSaleNote.lite_invoice" type="button" (click)="cancelPosSaleNote()" [disabled]="isSubmittingPosSale"
-            class="rounded-md border border-red-200 bg-card px-2.5 py-1.5 font-bold text-red-700 disabled:opacity-50">Anular</button>
+            class="rounded-md border border-danger-200 bg-card px-2.5 py-1.5 font-bold text-danger-700 disabled:opacity-50">Anular</button>
         </div>
       </div>
     </section>
@@ -93,7 +93,7 @@
               [ngClass]="productView === 'all' ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-primary'">Todos</button>
             <button type="button" role="radio" [attr.aria-checked]="productView === 'favorites'" (click)="setProductView('favorites')"
               class="min-h-[28px] whitespace-nowrap rounded-md px-2.5 text-[11px] font-semibold transition"
-              [ngClass]="productView === 'favorites' ? 'bg-amber-100 text-amber-900 shadow-sm' : 'text-muted-foreground hover:text-amber-700'">★ Favoritos</button>
+              [ngClass]="productView === 'favorites' ? 'bg-warning-100 text-warning-900 shadow-sm' : 'text-muted-foreground hover:text-warning-700'">★ Favoritos</button>
           </div>
           <span class="mx-0.5 h-5 w-px flex-shrink-0 bg-border" aria-hidden="true"></span>
           <button type="button" (click)="onCategorySelected('')" [attr.aria-pressed]="selectedCategory === ''"
@@ -253,9 +253,9 @@
                 class="h-9 w-full rounded-lg border border-border bg-card px-2.5 text-xs text-foreground" />
               <input type="text" [(ngModel)]="initialCollectionNotes" maxlength="240" placeholder="Observación (opcional)" aria-label="Observación del abono"
                 class="h-9 w-full rounded-lg border border-border bg-card px-2.5 text-xs text-foreground" />
-              <div class="flex items-center justify-between gap-3 rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-xs sm:min-w-[160px]">
-                <span class="font-semibold text-amber-800 dark:text-amber-300">Saldo pendiente</span>
-                <strong class="text-base tabular-nums text-amber-800 dark:text-amber-300">${{ creditOutstandingAmount | number:'1.2-2' }}</strong>
+              <div class="flex items-center justify-between gap-3 rounded-lg bg-warning-500/10 px-2.5 py-1.5 text-xs sm:min-w-[160px]">
+                <span class="font-semibold text-warning-800 ">Saldo pendiente</span>
+                <strong class="text-base tabular-nums text-warning-800 ">${{ creditOutstandingAmount | number:'1.2-2' }}</strong>
               </div>
             </div>
           </div>
@@ -310,7 +310,7 @@
           </div>
 
           <p class="mt-2 rounded-lg px-3 py-2 text-xs font-bold" role="status"
-            [ngClass]="paymentRemaining === 0 ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'bg-destructive/10 text-destructive'">
+            [ngClass]="paymentRemaining === 0 ? 'bg-success-500/10 text-success-700 ' : 'bg-destructive/10 text-destructive'">
             <ng-container *ngIf="paymentRemaining === 0">✓ Pago completo: ${{ paymentRowsTotal | number:'1.2-2' }}</ng-container>
             <ng-container *ngIf="paymentRemaining > 0">Falta cobrar ${{ paymentRemaining | number:'1.2-2' }}</ng-container>
             <ng-container *ngIf="paymentRemaining < 0">El pago excede el total por ${{ -paymentRemaining | number:'1.2-2' }}</ng-container>
@@ -324,9 +324,9 @@
               aria-label="Efectivo recibido"
               class="h-14 w-full rounded-xl border border-border bg-card px-3 text-center text-2xl font-bold tabular-nums text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20" />
             <div class="flex flex-col items-center justify-center rounded-xl px-3 py-1.5"
-              [ngClass]="change < 0 ? 'bg-destructive/10' : 'bg-emerald-500/10'">
-              <p class="text-[11px] font-bold uppercase tracking-wide" [ngClass]="change < 0 ? 'text-destructive' : 'text-emerald-700 dark:text-emerald-300'">{{ change < 0 ? 'Falta' : 'Cambio a entregar' }}</p>
-              <p class="text-3xl font-black leading-none tabular-nums" [ngClass]="change < 0 ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400'">${{ (change < 0 ? -change : change) | number:'1.2-2' }}</p>
+              [ngClass]="change < 0 ? 'bg-destructive/10' : 'bg-success-500/10'">
+              <p class="text-[11px] font-bold uppercase tracking-wide" [ngClass]="change < 0 ? 'text-destructive' : 'text-success-700 '">{{ change < 0 ? 'Falta' : 'Cambio a entregar' }}</p>
+              <p class="text-3xl font-black leading-none tabular-nums" [ngClass]="change < 0 ? 'text-destructive' : 'text-success-600 '">${{ (change < 0 ? -change : change) | number:'1.2-2' }}</p>
             </div>
           </div>
         </section>
@@ -341,7 +341,7 @@
 
     <!-- Acciones: siempre visibles -->
     <footer class="shrink-0 border-t border-border bg-card p-3">
-      <p *ngIf="invoicePlanBlockMessage" class="mb-2 rounded-lg bg-amber-500/10 px-3 py-2 text-[11px] font-semibold text-amber-800 dark:text-amber-300" role="alert">
+      <p *ngIf="invoicePlanBlockMessage" class="mb-2 rounded-lg bg-warning-500/10 px-3 py-2 text-[11px] font-semibold text-warning-800 " role="alert">
         No se puede facturar:
         {{ invoicePlanBlockMessage }}
       </p>
@@ -389,8 +389,8 @@
               <td class="px-3 py-2.5">{{ row.posting_date || row.creation || '—' }}</td>
               <td class="px-3 py-2.5 text-right">${{ (row.totals?.grand_total ?? row.grand_total ?? row.total ?? 0) | number:'1.2-2' }}</td>
               <td class="px-3 py-2.5 text-right">${{ (row.totals?.total_collected ?? row.total_collected ?? 0) | number:'1.2-2' }}</td>
-              <td class="px-3 py-2.5 text-right font-bold text-amber-800">${{ (row.totals?.outstanding_amount ?? row.outstanding_amount ?? 0) | number:'1.2-2' }}</td>
-              <td class="px-3 py-2.5"><span class="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-900">{{ row.collection_status || row.totals?.collection_status || 'Pendiente' }}</span></td>
+              <td class="px-3 py-2.5 text-right font-bold text-warning-800">${{ (row.totals?.outstanding_amount ?? row.outstanding_amount ?? 0) | number:'1.2-2' }}</td>
+              <td class="px-3 py-2.5"><span class="rounded-full bg-warning-100 px-2 py-1 text-[10px] font-bold text-warning-900">{{ row.collection_status || row.totals?.collection_status || 'Pendiente' }}</span></td>
               <td class="px-3 py-2.5 text-right"><button *ngIf="canManageReceivables" type="button" (click)="openCollectionModal(row)" class="btn btn-primary !px-2.5 !py-1 !text-xs">Abonar</button></td>
             </tr>
           </tbody>
@@ -410,7 +410,7 @@
       </div>
       <button type="button" (click)="showCollectionModal = false" class="text-2xl text-muted-foreground" aria-label="Cerrar">×</button>
     </div>
-    <div class="mt-4 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+    <div class="mt-4 flex items-center justify-between rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-sm text-warning-900">
       <span>Saldo pendiente</span><strong>${{ selectedReceivableOutstanding | number:'1.2-2' }}</strong>
     </div>
     <div class="mt-4 space-y-3">

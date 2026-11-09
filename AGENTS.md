@@ -75,6 +75,24 @@ Responsabilidades:
 - Consumo de APIs
 - Manejo de estados
 
+Colores y tema (`src/styles.css`, `ThemeService`):
+- Solo tokens del tema, nunca colores fijos de Tailwind (emerald, amber, red, sky, violet, slate…) para la interfaz.
+  Neutros: `background`, `card`, `muted`, `border`, `foreground`, `muted-foreground`. Acción: `primary`,
+  `destructive`. Estados: `success`, `warning`, `danger` e `info`, con escala 50…950 (`bg-success-50 text-success-800`,
+  `border-warning-300`, `bg-danger-500/10`) y `-foreground` para sólidos. Atajos: `.tone-ok/info/warn/alert/danger`,
+  `.badge-*`, `.btn-*`.
+- Las escalas de estado se invierten solas en modo oscuro: no se escribe `dark:` para ellas. Un `dark:` solo hace falta
+  para algo que no sea token.
+- Tema por defecto «facturada»: azul de la marca `#2E3A8C` (en oscuro `#8B98F7`) y neutros con tinte marino. Los otros
+  colores (`violet`, `blue`…) solo cambian el principal; no hay selector en pantalla. `ThemeService` pasa una vez a
+  «facturada» a quien tenía `violet` guardado (marca `theme_palette` en `localStorage`).
+- Gráficos ApexCharts: colores con `themeColor()` de `dashboard-charts.ts`, que lee las variables del tema.
+- Azul marino `#1B1F3A` y ámbar `#FFB020` fijos solo en piezas de marca: login, panel del registro, logos y la carta
+  pública (que tiene su propia paleta `--pm-*`).
+- Los colores fijos que quedan son a propósito: capas oscuras detrás de ventanas, encabezados oscuros, degradados de los
+  iconos de reportes y texto claro sobre fondos de color.
+
+
 
 ## Backend
 
@@ -116,7 +134,10 @@ Funciones:
 ## Usuarios y permisos
 
 Funciones:
-- Login contra Frappe por cookie de sesión (sin JWT)
+- Login contra Frappe por cookie de sesión (sin JWT). Pantalla `/auth/sign-in` con la marca FacturADA (no el color del
+  tema ni el logo del último negocio); el ticket de ejemplo muestra cada vez un negocio distinto (tienda, ferretería,
+  servicio técnico, cafetería…) porque el sistema es para cualquier negocio; errores junto al formulario. Sin recuperación por correo: «¿Olvidaste tu
+  contraseña?» indica pedir una nueva al administrador (pantalla Usuarios). Con varios negocios, «Elige el negocio».
 - Roles Frappe (ADMINISTRADOR, GERENTE, CAJERO, FACTURACION, USUARIO, MESERO)
 - Autorización combinada de tres ejes evaluados por `RoleAccessGuard`: feature del
   plan, permiso del contexto de negocio y rol

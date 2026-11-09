@@ -22,10 +22,10 @@ import { fiscalSeries } from 'src/app/core/utils/fiscal-setup';
         class="inline-flex items-center gap-1.5 border font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
         [ngClass]="[
           variant === 'chip' ? 'min-h-[28px] max-w-[280px] rounded-full px-2.5 text-xs' : 'min-h-[34px] max-w-[220px] rounded-lg px-2 text-[11px] shadow-sm',
-          state === 'ok' ? 'border-border bg-card text-foreground hover:bg-muted' : (state === 'blocked' ? 'border-red-500/40 bg-red-500/10 text-red-800 dark:text-red-300' : 'border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200 animate-pulse')
+          state === 'ok' ? 'border-border bg-card text-foreground hover:bg-muted' : (state === 'blocked' ? 'border-danger-500/40 bg-danger-500/10 text-danger-800 ' : 'border-warning-500/40 bg-warning-500/10 text-warning-900 animate-pulse')
         ]"
         [attr.title]="message || 'Terminal POS activa'">
-        <span class="h-2 w-2 shrink-0 rounded-full" [ngClass]="state === 'ok' ? 'bg-emerald-500' : (state === 'blocked' ? 'bg-red-500' : 'bg-amber-500')" aria-hidden="true"></span>
+        <span class="h-2 w-2 shrink-0 rounded-full" [ngClass]="state === 'ok' ? 'bg-success-500' : (state === 'blocked' ? 'bg-danger-500' : 'bg-warning-500')" aria-hidden="true"></span>
         <ng-container *ngIf="active; else noTerminal">
           <span class="truncate">{{ active.terminal_name || active.name }}</span>
           <span class="hidden font-mono text-[10px] text-muted-foreground sm:inline">{{ series(active) }}</span>
@@ -36,7 +36,7 @@ import { fiscalSeries } from 'src/app/core/utils/fiscal-setup';
 
       <div *ngIf="open" class="absolute right-0 z-[130] mt-1.5 w-72 rounded-xl border border-border bg-card p-2 shadow-lg" role="listbox" aria-label="Terminales POS">
         <p class="px-1.5 pb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Terminal POS</p>
-        <p *ngIf="message" class="mb-1.5 rounded-lg bg-amber-500/10 px-2 py-1.5 text-[11px] font-semibold text-amber-900 dark:text-amber-200">{{ message }}</p>
+        <p *ngIf="message" class="mb-1.5 rounded-lg bg-warning-500/10 px-2 py-1.5 text-[11px] font-semibold text-warning-900 ">{{ message }}</p>
         <button *ngFor="let terminal of terminals" type="button" role="option" [attr.aria-selected]="isActive(terminal)"
           (click)="select(terminal)"
           class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition"

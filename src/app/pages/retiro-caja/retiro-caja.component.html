@@ -1,12 +1,12 @@
 <div class="app-container space-y-4">
   <app-caja-nav active="retiro" [state]="navState" [opening]="retiro.relacionado_a" />
 
-  <div *ngIf="error" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800" role="alert">{{ error }}</div>
+  <div *ngIf="error" class="rounded-xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm font-semibold text-danger-800" role="alert">{{ error }}</div>
 
   <!-- Sin turno abierto -->
-  <section *ngIf="!loading && !cajaActiva && !error" class="mx-auto max-w-xl rounded-2xl border border-amber-200 bg-amber-50 p-5 text-center">
-    <p class="text-sm font-bold text-amber-900">No tienes una caja abierta</p>
-    <p class="mt-1 text-xs text-amber-800">Los retiros se registran sobre el turno abierto. Abre la caja primero.</p>
+  <section *ngIf="!loading && !cajaActiva && !error" class="mx-auto max-w-xl rounded-2xl border border-warning-200 bg-warning-50 p-5 text-center">
+    <p class="text-sm font-bold text-warning-900">No tienes una caja abierta</p>
+    <p class="mt-1 text-xs text-warning-800">Los retiros se registran sobre el turno abierto. Abre la caja primero.</p>
     <a routerLink="/caja/apertura" class="btn btn-primary mt-3 !text-xs">Abrir caja</a>
   </section>
 
@@ -35,7 +35,7 @@
           <input type="text" inputmode="decimal" appDecimalInput id="monto" name="monto" min="0.01" step="0.01" [(ngModel)]="retiro.monto"
             class="input !h-14 !pl-9 text-2xl font-black" placeholder="0.00" autocomplete="off" [disabled]="saving" />
         </div>
-        <p *ngIf="exceedsExpectedCash" class="mt-1 text-[11px] font-semibold text-amber-700">Es más de lo que el sistema espera que haya en caja. Verifica el monto.</p>
+        <p *ngIf="exceedsExpectedCash" class="mt-1 text-[11px] font-semibold text-warning-700">Es más de lo que el sistema espera que haya en caja. Verifica el monto.</p>
       </div>
 
       <div>
@@ -67,7 +67,7 @@
         </div>
         <div class="text-right">
           <p class="text-[10px] font-bold uppercase text-muted-foreground">Total retirado</p>
-          <p class="text-lg font-black text-rose-700">−{{ totalRetiros | currency }}</p>
+          <p class="text-lg font-black text-danger-700">−{{ totalRetiros | currency }}</p>
         </div>
       </header>
 
@@ -86,13 +86,13 @@
             </p>
           </div>
           <span *ngIf="r.status || r.estado" class="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{{ r.status || r.estado }}</span>
-          <p class="shrink-0 text-sm font-bold text-rose-700">−{{ (r.amount ?? r.monto ?? 0) | currency }}</p>
+          <p class="shrink-0 text-sm font-bold text-danger-700">−{{ (r.amount ?? r.monto ?? 0) | currency }}</p>
         </li>
       </ul>
 
       <footer class="grid grid-cols-3 gap-2 border-t border-border bg-muted/30 px-5 py-3 text-center text-[11px]">
         <div><p class="text-muted-foreground">Fondo inicial</p><b class="text-foreground">{{ montoApertura | currency }}</b></div>
-        <div><p class="text-muted-foreground">Retiros</p><b class="text-rose-700">−{{ totalRetiros | currency }}</b></div>
+        <div><p class="text-muted-foreground">Retiros</p><b class="text-danger-700">−{{ totalRetiros | currency }}</b></div>
         <div><p class="text-muted-foreground">Esperado en caja</p><b class="text-foreground">{{ efectivoSistema | currency }}</b></div>
       </footer>
     </section>

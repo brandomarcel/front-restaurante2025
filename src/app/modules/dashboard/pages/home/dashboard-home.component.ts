@@ -259,21 +259,21 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
           modeLabel: 'FacturADA API',
           title: 'Panel API',
           subtitle: 'Consumo de API, comprobantes y configuración tributaria',
-          gradient: 'from-slate-950 via-slate-700 to-cyan-700'
+          gradient: 'from-slate-950 via-slate-700 to-info-700'
         };
       case 'billing':
         return {
           modeLabel: 'FacturADA Lite',
           title: 'Panel de facturación',
           subtitle: 'Facturación electrónica, clientes y documentos',
-          gradient: 'from-slate-950 via-violet-700 to-primary'
+          gradient: 'from-slate-950 via-primary to-primary'
         };
       case 'service':
         return {
           modeLabel: 'Mesero',
           title: 'Panel de salón',
           subtitle: 'Mesas y pedidos del turno',
-          gradient: 'from-slate-950 via-primary to-sky-700'
+          gradient: 'from-slate-950 via-primary to-info-700'
         };
       default:
         return this.operationsHero();
@@ -295,7 +295,7 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
 
   private operationsHero(): HeroCopy {
     const restaurant = this.operationsKind === 'restaurant';
-    const gradient = restaurant ? 'from-slate-950 via-primary to-sky-700' : 'from-slate-950 via-violet-700 to-primary';
+    const gradient = restaurant ? 'from-slate-950 via-primary to-info-700' : 'from-slate-950 via-primary to-primary';
     const experience = this.cashierExperience;
     if (experience) {
       const subtitles: Record<CashierExperience, string> = {

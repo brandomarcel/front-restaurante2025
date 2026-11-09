@@ -20,10 +20,10 @@ import { hasInventoryControl, recipePortions, isLowStockProduct, isOutOfStockPro
       [attr.aria-label]="product.nombre + (canAdd ? '' : ' (no disponible)')"
       (click)="pick.emit(product)" (keydown.enter)="pick.emit(product)"
       class="group relative flex h-full touch-manipulation flex-col overflow-hidden rounded-lg border bg-card shadow-sm transition active:scale-[.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-      [ngClass]="canAdd ? 'cursor-pointer border-border hover:border-primary/50' : 'cursor-not-allowed border-red-200 opacity-70'">
+      [ngClass]="canAdd ? 'cursor-pointer border-border hover:border-primary/50' : 'cursor-not-allowed border-danger-200 opacity-70'">
       <div class="relative aspect-square w-full overflow-hidden bg-muted">
         <app-product-thumb [imageUrl]="product.image_url" [name]="product.nombre"></app-product-thumb>
-        <span *ngIf="outOfStock" class="pointer-events-none absolute left-1 top-1 rounded bg-red-600 px-1 py-0.5 text-[8px] font-bold text-white">AGOTADO</span>
+        <span *ngIf="outOfStock" class="pointer-events-none absolute left-1 top-1 rounded bg-danger-600 px-1 py-0.5 text-[8px] font-bold text-white">AGOTADO</span>
         <ng-container *ngTemplateOutlet="favoriteButton; context: { $implicit: 'retail' }"></ng-container>
         <div class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-1.5 pb-1 pt-4">
           <p *ngIf="product.image_url" class="line-clamp-1 text-[10px] font-bold leading-tight text-white">{{ product.nombre }}</p>
@@ -42,11 +42,11 @@ import { hasInventoryControl, recipePortions, isLowStockProduct, isOutOfStockPro
       <div role="button" tabindex="0" [attr.aria-disabled]="!canAdd" [attr.aria-label]="product.nombre + (canAdd ? '' : ' (no disponible)')"
         (click)="pick.emit(product)" (keydown.enter)="pick.emit(product)"
         class="relative flex h-full min-h-[150px] touch-manipulation flex-col rounded-xl border bg-card p-2.5 text-xs shadow-sm transition active:scale-[.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:p-3"
-        [ngClass]="canAdd ? 'cursor-pointer border-border hover:border-primary/40 hover:shadow-md' : 'cursor-not-allowed border-red-200 bg-red-50/50 opacity-70'">
+        [ngClass]="canAdd ? 'cursor-pointer border-border hover:border-primary/40 hover:shadow-md' : 'cursor-not-allowed border-danger-200 bg-danger-50/50 opacity-70'">
         <div class="mb-1.5 flex h-[92px] items-center justify-center overflow-hidden rounded-lg bg-muted sm:h-[104px]">
           <app-product-thumb [imageUrl]="product.image_url" [name]="product.nombre"></app-product-thumb>
         </div>
-        <span *ngIf="outOfStock" class="pointer-events-none absolute left-2 top-2 z-10 rounded bg-red-600 px-1.5 py-0.5 text-[9px] font-semibold text-white shadow-sm">AGOTADO</span>
+        <span *ngIf="outOfStock" class="pointer-events-none absolute left-2 top-2 z-10 rounded bg-danger-600 px-1.5 py-0.5 text-[9px] font-semibold text-white shadow-sm">AGOTADO</span>
         <ng-container *ngTemplateOutlet="favoriteButton; context: { $implicit: 'general' }"></ng-container>
 
         <p *ngIf="product.image_url" class="line-clamp-2 min-h-[32px] font-bold leading-4 text-foreground">{{ product.nombre }}</p>
@@ -78,7 +78,7 @@ import { hasInventoryControl, recipePortions, isLowStockProduct, isOutOfStockPro
         class="absolute right-1.5 top-1.5 z-10 inline-flex items-center justify-center rounded-full transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
         [ngClass]="[
           variant === 'retail' ? 'h-6 w-6 bg-black/45 text-[11px] backdrop-blur' : 'h-8 w-8 border bg-card/90 text-[13px] shadow-sm backdrop-blur',
-          favorite ? (variant === 'retail' ? 'text-amber-400' : 'border-amber-300 text-amber-500') : (variant === 'retail' ? 'text-white/85' : 'border-border text-muted-foreground/60 hover:text-amber-500')
+          favorite ? (variant === 'retail' ? 'text-amber-400' : 'border-warning-300 text-warning-500') : (variant === 'retail' ? 'text-white/85' : 'border-border text-muted-foreground/60 hover:text-warning-500')
         ]"
         [attr.aria-label]="favorite ? 'Quitar de favoritos' : 'Agregar a favoritos'" [attr.aria-pressed]="favorite"
         [attr.title]="favorite ? 'Quitar de favoritos' : 'Agregar a favoritos'"
@@ -114,7 +114,7 @@ export class PosProductCardComponent {
   }
 
   get stockTone(): string {
-    if (this.outOfStock) return 'text-red-600';
-    return this.lowStock ? 'text-amber-600' : 'text-emerald-600';
+    if (this.outOfStock) return 'text-danger-600';
+    return this.lowStock ? 'text-warning-600' : 'text-success-600';
   }
 }

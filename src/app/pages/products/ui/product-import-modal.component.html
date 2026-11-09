@@ -10,14 +10,14 @@
 
     <div class="max-h-[75vh] space-y-4 overflow-y-auto p-5">
       <!-- Resultado final -->
-      <div *ngIf="importResult" class="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4" role="status">
-        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-white" aria-hidden="true">✓</span>
-        <div class="text-xs text-emerald-900">
+      <div *ngIf="importResult" class="flex items-start gap-3 rounded-xl border border-success-200 bg-success-50 p-4" role="status">
+        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success-500 text-sm font-bold text-white" aria-hidden="true">✓</span>
+        <div class="text-xs text-success-900">
           <p class="text-sm font-bold">Importación completa</p>
           <p class="mt-0.5">
             <b>{{ importResult.created }}</b> creado(s) · <b>{{ importResult.updated }}</b> actualizado(s)<ng-container *ngIf="importResult.stock_movements"> · <b>{{ importResult.stock_movements }}</b> movimiento(s) de stock</ng-container>.
           </p>
-          <p class="mt-1 text-emerald-800/80">Puedes cerrar esta ventana o cargar otro archivo.</p>
+          <p class="mt-1 text-success-800/80">Puedes cerrar esta ventana o cargar otro archivo.</p>
         </div>
       </div>
 
@@ -28,7 +28,7 @@
             <span class="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">1</span>Descarga la plantilla y llénala
           </p>
           <p class="mt-1.5 text-[11px] text-muted-foreground">Usa siempre la plantilla oficial: tiene las columnas que el sistema espera.</p>
-          <p *ngIf="!inventoryEnabled" class="mt-1 text-[11px] text-amber-700">La columna "stock_inicial" solo aplica si el negocio tiene Inventario habilitado.</p>
+          <p *ngIf="!inventoryEnabled" class="mt-1 text-[11px] text-warning-700">La columna "stock_inicial" solo aplica si el negocio tiene Inventario habilitado.</p>
           <button type="button" class="btn btn-outline mt-3 !text-xs" [disabled]="importDownloading" (click)="descargarPlantillaImportacion()">
             {{ importDownloading ? 'Descargando…' : '⬇ Descargar plantilla .xlsx' }}
           </button>
@@ -79,15 +79,15 @@
           </p>
           <div class="flex flex-wrap gap-1.5 text-[11px] font-semibold">
             <span class="rounded-full bg-muted px-2.5 py-1 text-foreground">{{ importPreview.summary.total }} filas</span>
-            <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-800">{{ importPreview.summary.valid }} correctas</span>
-            <span class="rounded-full px-2.5 py-1" [ngClass]="importPreview.summary.invalid ? 'bg-red-100 text-red-800' : 'bg-muted text-muted-foreground'">{{ importPreview.summary.invalid }} con error</span>
+            <span class="rounded-full bg-success-100 px-2.5 py-1 text-success-800">{{ importPreview.summary.valid }} correctas</span>
+            <span class="rounded-full px-2.5 py-1" [ngClass]="importPreview.summary.invalid ? 'bg-danger-100 text-danger-800' : 'bg-muted text-muted-foreground'">{{ importPreview.summary.invalid }} con error</span>
           </div>
         </div>
 
-        <div *ngIf="importPreview.summary.invalid" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-800">
+        <div *ngIf="importPreview.summary.invalid" class="rounded-lg border border-danger-200 bg-danger-50 px-3 py-2 text-[11px] text-danger-800">
           Corrige las filas con error en tu Excel y vuelve a subirlo. No se importa nada mientras haya errores.
         </div>
-        <div *ngIf="importHasVariants" class="rounded-lg border border-sky-500/20 bg-sky-500/5 px-3 py-2 text-[11px] text-sky-800">
+        <div *ngIf="importHasVariants" class="rounded-lg border border-info-500/20 bg-info-500/5 px-3 py-2 text-[11px] text-info-800">
           Este archivo incluye productos con variantes: el <b>stock se controla en cada variante</b> (fila con atributos como "Color: Negro"), nunca en el producto principal que las agrupa.
         </div>
 
@@ -118,7 +118,7 @@
                   <p class="font-mono text-[10px] text-muted-foreground">
                     {{ row.code || '—' }}<ng-container *ngIf="row.barcode || row.codigo_barras"> · {{ row.barcode || row.codigo_barras }}</ng-container><ng-container *ngIf="row.type"> · {{ row.type }}</ng-container>
                   </p>
-                  <span *ngIf="row.is_variant" class="mt-1 inline-block max-w-full rounded-md bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-semibold leading-snug text-violet-700">
+                  <span *ngIf="row.is_variant" class="mt-1 inline-block max-w-full rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold leading-snug text-primary">
                     ↳ Variante de {{ row.parent_code || '—' }}<ng-container *ngIf="importRowAttributes(row)"> · {{ importRowAttributes(row) }}</ng-container>
                   </span>
                   <span *ngIf="isImportGrouperRow(row)" class="mt-1 inline-block max-w-full rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-snug text-muted-foreground">

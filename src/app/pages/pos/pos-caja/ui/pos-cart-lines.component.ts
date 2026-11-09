@@ -44,10 +44,10 @@ import { LineNoteEditorComponent } from '../../ui/line-note-editor.component';
             <div class="flex min-w-0 items-center gap-1 text-[10px] leading-4 text-muted-foreground">
               <span class="flex-shrink-0 tabular-nums">{{ item.quantity }}×\${{ item.price | number:'1.2-2' }}</span>
               <span *ngIf="attributes(item) as attrs" class="truncate text-primary">· {{ attrs }}</span>
-              <span *ngIf="item.discount_total > 0" class="flex-shrink-0 font-semibold text-emerald-600">· −\${{ item.discount_total | number:'1.2-2' }}</span>
+              <span *ngIf="item.discount_total > 0" class="flex-shrink-0 font-semibold text-success-600">· −\${{ item.discount_total | number:'1.2-2' }}</span>
               <ng-container *ngIf="allowNotes">
                 <button *ngIf="item.notes" type="button" (click)="toggleNote(item)"
-                  class="min-w-0 truncate rounded bg-amber-500/15 px-1 font-bold text-amber-800 dark:text-amber-300"
+                  class="min-w-0 truncate rounded bg-warning-500/15 px-1 font-bold text-warning-800 "
                   [title]="'Editar nota: ' + item.notes">📝 {{ item.notes }}</button>
                 <button *ngIf="!item.notes" type="button" (click)="toggleNote(item)"
                   class="flex-shrink-0 rounded px-1 font-semibold text-primary hover:bg-primary/10"
@@ -88,14 +88,14 @@ import { LineNoteEditorComponent } from '../../ui/line-note-editor.component';
             <p class="text-[11px] text-muted-foreground">{{ item.quantity }} × \${{ item.price | number:'1.2-2' }}</p>
             <ng-container *ngIf="allowNotes; else readOnlyNote">
               <button *ngIf="item.notes && editingLine !== item.line_id" type="button" (click)="toggleNote(item)"
-                class="max-w-full truncate rounded bg-amber-500/15 px-1 text-left text-[10px] font-bold text-amber-800 dark:text-amber-300"
+                class="max-w-full truncate rounded bg-warning-500/15 px-1 text-left text-[10px] font-bold text-warning-800 "
                 [title]="'Editar nota: ' + item.notes">📝 {{ item.notes }}</button>
               <button *ngIf="!item.notes && editingLine !== item.line_id" type="button" (click)="toggleNote(item)"
                 class="rounded px-1 text-[10px] font-semibold text-primary hover:bg-primary/10"
                 [attr.aria-label]="'Agregar nota para cocina a ' + (item.nombre || item.name)">+ Nota</button>
             </ng-container>
             <ng-template #readOnlyNote>
-              <p *ngIf="item.notes" class="truncate text-[10px] font-bold text-amber-700 dark:text-amber-300" [title]="item.notes">📝 {{ item.notes }}</p>
+              <p *ngIf="item.notes" class="truncate text-[10px] font-bold text-warning-700 " [title]="item.notes">📝 {{ item.notes }}</p>
             </ng-template>
           </div>
           <input type="text" inputmode="decimal" appDecimalInput min="0" max="100" step="1" placeholder="0"
@@ -108,7 +108,7 @@ import { LineNoteEditorComponent } from '../../ui/line-note-editor.component';
             class="h-8 w-full rounded-md border border-border bg-card px-2 text-center text-sm font-semibold text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/20" />
           <div class="text-right">
             <p class="text-[13px] font-bold text-foreground">\${{ item.total | number:'1.2-2' }}</p>
-            <p *ngIf="item.discount_total > 0" class="text-[10px] font-semibold text-emerald-700">ahorra \${{ item.discount_total | number:'1.2-2' }}</p>
+            <p *ngIf="item.discount_total > 0" class="text-[10px] font-semibold text-success-700">ahorra \${{ item.discount_total | number:'1.2-2' }}</p>
           </div>
           <!-- Última revisión antes de enviar a cocina: la nota también se edita en el cobro -->
           <app-line-note-editor *ngIf="allowNotes && editingLine === item.line_id" class="col-span-4 block" [item]="item" (done)="editingLine = null; changed.emit()"></app-line-note-editor>

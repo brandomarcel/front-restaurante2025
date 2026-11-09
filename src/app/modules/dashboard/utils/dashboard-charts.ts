@@ -5,10 +5,33 @@ import { cashDifference } from './operations-metrics';
 export type ChartOptions = Record<string, any>;
 
 const formatDecimal = (value: number): string => (Number(value) || 0).toFixed(2);
+
+/**
+ * Color del tema activo (variables de `styles.css`), para que ejes, rejilla y colores de estado sigan el modo
+ * claro/oscuro. Se lee al construir el gráfico; fuera del navegador usa el respaldo.
+ */
+function themeColor(token: string, fallback: string): string {
+  if (typeof document === 'undefined') return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(`--${token}`).trim();
+  return value || fallback;
+}
+
+const isDarkMode = (): boolean => typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+
+/** Ejes, rejilla y tooltip comunes, con los colores del tema. */
+function axisTheme() {
+  return {
+    label: themeColor('muted-foreground', '#5D6275'),
+    strong: themeColor('foreground', '#151A2D'),
+    grid: themeColor('border', '#E1E4EB'),
+    tooltip: isDarkMode() ? 'dark' : 'light',
+  };
+}
 const formatCurrency = (value: number): string => `$${formatDecimal(value)}`;
 
 export function buildTopProductsChart(products: TopProduct[]): ChartOptions {
   const top = products.slice(0, 8);
+  const axis = axisTheme();
   return {
     series: [{ name: 'Unidades', data: top.length ? top.map((item) => item.count) : [0] }],
     chart: {
@@ -21,12 +44,12 @@ export function buildTopProductsChart(products: TopProduct[]): ChartOptions {
     dataLabels: { enabled: false },
     xaxis: {
       categories: top.length ? top.map((item) => item.name) : ['Sin ventas'],
-      labels: { style: { colors: '#64748b' } }
+      labels: { style: { colors: axis.label } }
     },
-    yaxis: { labels: { style: { colors: '#334155', fontWeight: 600 } } },
+    yaxis: { labels: { style: { colors: axis.strong, fontWeight: 600 } } },
     colors: ['#2563eb', '#0ea5e9', '#14b8a6', '#22c55e', '#84cc16', '#f59e0b', '#f97316', '#ef4444'],
-    grid: { borderColor: '#e2e8f0', strokeDashArray: 4 },
-    tooltip: { y: { formatter: (value: number) => `${formatDecimal(value)} vendidos` } }
+    grid: { borderColor: axis.grid, strokeDashArray: 4 },
+    tooltip: { theme: axis.tooltip, y: { formatter: (value: number) => `${formatDecimal(value)} vendidos` } }
   };
 }
 
@@ -38,7 +61,7 @@ export function buildCashFlowChart(cash: CashSnapshot, salesTotal: number): Char
     series,
     chart: { type: 'donut', height: 330, toolbar: { show: false } },
     labels: ['Apertura', 'Ventas', 'Retiros'],
-    colors: ['#f59e0b', '#10b981', '#f43f5e'],
+    colors: [themeColor('warning', '#F59E0B'), themeColor('success', '#16A34A'), themeColor('danger', '#DC2626')],
     legend: { show: false },
     dataLabels: { enabled: true, formatter: (value: number) => `${formatDecimal(value)}%` },
     stroke: { width: 0 },
@@ -55,7 +78,7 @@ export function buildCashFlowChart(cash: CashSnapshot, salesTotal: number): Char
         }
       }
     },
-    tooltip: { y: { formatter: (value: number) => formatCurrency(value) } },
+    tooltip: { theme: axisTheme().tooltip, y: { formatter: (value: number) => formatCurrency(value) } },
     responsive: [{ breakpoint: 1280, options: { chart: { height: 300 } } }]
   };
 }
@@ -64,6 +87,7 @@ export function buildCashFlowChart(cash: CashSnapshot, salesTotal: number): Char
 export function buildMoneySummaryChart(cash: CashSnapshot, salesTotal: number): ChartOptions {
   const difference = cashDifference(cash);
   const values = [salesTotal, cash.withdrawals, cash.systemCash, cash.expectedCash, difference].map((value) => Number(value) || 0);
+  const axis = axisTheme();
   return {
     series: [{ name: 'USD', data: values }],
     chart: {
@@ -76,11 +100,17 @@ export function buildMoneySummaryChart(cash: CashSnapshot, salesTotal: number): 
     dataLabels: { enabled: false },
     xaxis: {
       categories: ['Ventas', 'Retiros', 'Efectivo', 'Esperado', 'Diferencia'],
-      labels: { style: { colors: '#64748b' } }
+      labels: { style: { colors: axis.label } }
     },
-    yaxis: { labels: { formatter: (value: number) => formatDecimal(value), style: { colors: '#64748b' } } },
-    colors: ['#10b981', '#f43f5e', '#2563eb', '#0ea5e9', difference >= 0 ? '#16a34a' : '#dc2626'],
-    grid: { borderColor: '#e2e8f0', strokeDashArray: 4 },
-    tooltip: { y: { formatter: (value: number) => formatCurrency(value) } }
+    yaxis: { labels: { formatter: (value: number) => formatDecimal(value), style: { colors: axis.label } } },
+    colors: [
+      themeColor('success', '#16A34A'),
+      themeColor('danger', '#DC2626'),
+      themeColor('primary', '#2E3A8C'),
+      themeColor('info', '#0284C7'),
+      difference >= 0 ? themeColor('success', '#16A34A') : themeColor('danger', '#DC2626'),
+    ],
+    grid: { borderColor: axis.grid, strokeDashArray: 4 },
+    tooltip: { theme: axis.tooltip, y: { formatter: (value: number) => formatCurrency(value) } }
   };
 }

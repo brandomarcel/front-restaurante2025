@@ -1,82 +1,62 @@
-<!-- Auth Layout: FacturADA -->
-<div class="flex min-h-[100dvh] bg-background">
+<!-- Login de FacturADA: panel de marca (solo en pantallas anchas) + formulario -->
+<div class="auth flex min-h-[100dvh]">
 
-  <!-- Lado izquierdo (hero) -->
-  <aside class="relative hidden lg:flex flex-1 items-center justify-center overflow-hidden bg-cover bg-center"
-    style="background-image: url('./assets/bg/auth.png');" aria-hidden="true">
-    <div class="absolute inset-0 bg-gradient-to-br from-slate-950/85 via-primary/85 to-primary/70"></div>
-    <div class="absolute -left-24 top-10 h-72 w-72 rounded-full bg-yellow-300/15 blur-3xl"></div>
-    <div class="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-cyan-300/10 blur-3xl"></div>
+  <!-- Panel de marca: lo que el sistema hace de verdad, una factura autorizada (de un negocio distinto en cada visita) -->
+  <aside class="auth-brand relative hidden w-[46%] max-w-[680px] flex-col justify-between px-12 py-10 lg:flex xl:px-16">
+    <img src="assets/brand/facturada-logo-sobre-oscuro.svg" alt="FacturADA" class="h-7 w-auto self-start" />
 
-    <div class="relative z-10 w-full max-w-3xl p-10 text-white">
-      <img src="./assets/images/only_logo_FA.png" alt="Logo de FacturADA" class="mb-5 h-24 w-auto"
-        loading="lazy" />
-      <h1 class="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
-        Factur<span class="font-extrabold text-yellow-400">ADA</span>
-      </h1>
-      <p class="mt-4 max-w-xl text-sm leading-relaxed text-white/85">
-        Facturación electrónica, punto de venta e inventario en un solo sistema. Se adapta a tu negocio
-        —restaurante, boutique o punto de venta general— con caja, bodegas y comprobantes SRI en tiempo real.
-      </p>
+    <div class="flex flex-1 items-center justify-center py-10" aria-hidden="true">
+      <!-- El sello va fuera del ticket: la máscara del borde dentado recortaría lo que sobresale -->
+      <div class="relative w-full max-w-[320px]">
+      <div class="auth-ticket px-7 pb-9 pt-7">
+        <p class="truncate text-sm font-semibold">{{ sample.business }}</p>
+        <p class="auth-ticket-muted text-xs tabular-nums">Factura 001-001-000000123</p>
 
-      <div class="mt-8 grid max-w-xl grid-cols-1 gap-3 text-xs sm:grid-cols-3">
-        <div class="rounded-xl border border-white/20 bg-card/10 px-3 py-3 backdrop-blur-sm">
-          <p class="font-semibold text-white">Facturación SRI</p>
-          <p class="mt-1 text-white/80">Comprobantes autorizados</p>
-        </div>
-        <div class="rounded-xl border border-white/20 bg-card/10 px-3 py-3 backdrop-blur-sm">
-          <p class="font-semibold text-white">POS adaptable</p>
-          <p class="mt-1 text-white/80">Restaurante, retail o general</p>
-        </div>
-        <div class="rounded-xl border border-white/20 bg-card/10 px-3 py-3 backdrop-blur-sm">
-          <p class="font-semibold text-white">Multi-bodega</p>
-          <p class="mt-1 text-white/80">Stock por local en tiempo real</p>
-        </div>
+        <dl class="auth-ticket-lines mt-5 space-y-2.5 text-sm tabular-nums">
+          <div *ngFor="let line of sample.lines" class="flex justify-between gap-4">
+            <dt class="min-w-0 truncate">{{ line.qty }} × {{ line.item }}</dt><dd>{{ money(line.qty * line.price) }}</dd>
+          </div>
+        </dl>
+
+        <dl class="auth-ticket-totals mt-4 space-y-1 pt-3 text-xs tabular-nums">
+          <div class="auth-ticket-muted flex justify-between"><dt>Subtotal</dt><dd>{{ money(subtotal) }}</dd></div>
+          <div class="auth-ticket-muted flex justify-between"><dt>IVA 15 %</dt><dd>{{ money(vat) }}</dd></div>
+          <div class="flex justify-between pt-1.5 text-base font-semibold"><dt>Total</dt><dd>$ {{ money(total) }}</dd></div>
+        </dl>
       </div>
+
+      <div class="auth-stamp absolute -bottom-3 -right-6 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold">
+        <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m5 12 5 5 9-10" />
+        </svg>
+        Autorizada por el SRI
+      </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="max-w-md text-2xl font-semibold leading-snug text-white">Factura, cobra y controla tu negocio desde un solo lugar.</p>
+      <p class="mt-3 max-w-md text-sm leading-relaxed text-white/65">
+        Facturación electrónica, punto de venta e inventario para tiendas, servicios, restaurantes y cualquier tipo de negocio.
+      </p>
     </div>
   </aside>
 
-  <!-- Lado derecho (form/card) -->
-  <main class="relative flex w-full flex-1 items-center justify-center overflow-hidden p-6">
-    <div class="pointer-events-none absolute -top-20 -right-20 h-56 w-56 rounded-full bg-primary/10 blur-3xl"></div>
-    <div class="pointer-events-none absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-primary/10 blur-3xl"></div>
-
-    <div class="w-full max-w-md">
-      <!-- Marca compacta -->
-      <div class="flex items-center justify-center gap-3">
-        <a href="/" aria-label="Inicio FacturADA" class="rounded-xl bg-primary/10 p-2 ring-1 ring-primary/30">
-          <img *ngIf="logoPreview; else defaultLogo" [src]="logoPreview" alt="FA" class="mx-auto  h-20 w-auto"
-            loading="lazy" />
-
-
-          <ng-template #defaultLogo>
-            <img src="./assets/images/only_logo_FA.png" alt="Logo de FacturADA" class="mx-auto  h-20 w-auto"
-              loading="lazy" />
-          </ng-template>
-
-
-        </a>
-        <div class="text-center">
-          <p class="text-[11px] uppercase tracking-widest text-muted-foreground">Bienvenido a</p>
-          <b class="block text-lg font-bold text-foreground">Facturación y Punto de Venta</b>
-        </div>
+  <!-- Formulario -->
+  <main class="flex flex-1 flex-col px-4 py-6 sm:px-8">
+    <div class="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-6">
+      <!-- En pantallas angostas el panel de marca no se ve: el logo va aquí -->
+      <div class="mb-10 lg:hidden">
+        <img src="assets/brand/facturada-logo-principal.svg" alt="FacturADA" class="auth-logo-light h-7 w-auto" />
+        <img src="assets/brand/facturada-logo-sobre-oscuro.svg" alt="FacturADA" class="auth-logo-dark h-7 w-auto" />
       </div>
 
-      <!-- Card del contenido (login/registro, etc.) -->
-      <section class="mt-6 rounded-2xl border border-border/50 bg-card/85 p-6 shadow-2xl backdrop-blur-md transition-all duration-300">
-        <router-outlet></router-outlet>
-      </section>
-
-      <p class="mt-4 text-center text-[11px] text-muted-foreground">
-        Desarrollado por
-        <a
-          href="https://bmarc-corp.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="font-semibold text-primary transition hover:text-primary/80 hover:underline">
-          BMARC-CORP
-        </a>
-      </p>
+      <router-outlet></router-outlet>
     </div>
+
+    <p class="auth-muted text-center text-xs">
+      Desarrollado por
+      <a href="https://bmarc-corp.com/" target="_blank" rel="noopener noreferrer" class="auth-link font-semibold">BMARC-CORP</a>
+    </p>
   </main>
 </div>

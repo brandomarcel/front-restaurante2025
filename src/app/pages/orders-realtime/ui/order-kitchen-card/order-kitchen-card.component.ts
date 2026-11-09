@@ -61,9 +61,9 @@ export class OrderKitchenCardComponent implements OnInit, OnDestroy {
 
 
   urgencyPillClass(): string {
-    if (this.minutes >= 20) return 'border-rose-500/40 bg-rose-500/15 text-rose-700 dark:text-rose-300';
-    if (this.minutes >= 10) return 'border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300';
-    return 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
+    if (this.minutes >= 20) return 'border-danger-500/40 bg-danger-500/15 text-danger-700 ';
+    if (this.minutes >= 10) return 'border-warning-500/40 bg-warning-500/15 text-warning-700 ';
+    return 'border-success-500/40 bg-success-500/15 text-success-700 ';
   }
 
   /** Lo primero que cocina necesita leer: mesa o alias del pedido. */

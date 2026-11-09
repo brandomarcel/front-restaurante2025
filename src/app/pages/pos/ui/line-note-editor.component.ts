@@ -16,13 +16,13 @@ export const LINE_NOTE_PRESETS = ['Sin azúcar', 'Sin hielo', 'Sin cebolla', 'Si
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="space-y-2 rounded-lg border border-amber-300 bg-card p-2">
+    <div class="space-y-2 rounded-lg border border-warning-300 bg-card p-2">
       <div *ngIf="removable.length" class="space-y-1">
         <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Quitar del plato</p>
         <div class="flex flex-wrap gap-1.5">
           <button *ngFor="let line of removable" type="button"
             class="rounded-full border px-2.5 py-1 text-[11px] font-semibold transition"
-            [ngClass]="isRemoved(line.ingredient) ? 'border-red-500 bg-red-500 text-white' : 'border-border bg-muted/50 text-foreground/80 hover:bg-muted'"
+            [ngClass]="isRemoved(line.ingredient) ? 'border-danger-500 bg-danger-500 text-white' : 'border-border bg-muted/50 text-foreground/80 hover:bg-muted'"
             [attr.aria-pressed]="isRemoved(line.ingredient)"
             (click)="toggleRemoved(line)">
             Sin {{ line.name }}
@@ -34,7 +34,7 @@ export const LINE_NOTE_PRESETS = ['Sin azúcar', 'Sin hielo', 'Sin cebolla', 'Si
       <div class="flex flex-wrap gap-1.5">
         <button *ngFor="let preset of presets" type="button"
           class="rounded-full border px-2.5 py-1 text-[11px] font-semibold transition"
-          [ngClass]="hasPreset(preset) ? 'border-amber-500 bg-amber-500 text-white' : 'border-border bg-muted/50 text-foreground/80 hover:bg-muted'"
+          [ngClass]="hasPreset(preset) ? 'border-warning-500 bg-warning-500 text-white' : 'border-border bg-muted/50 text-foreground/80 hover:bg-muted'"
           [attr.aria-pressed]="hasPreset(preset)"
           (click)="togglePreset(preset)">
           {{ preset }}
@@ -44,16 +44,16 @@ export const LINE_NOTE_PRESETS = ['Sin azúcar', 'Sin hielo', 'Sin cebolla', 'Si
         [(ngModel)]="draft" [ngModelOptions]="{ standalone: true }"
         placeholder="Ej. sin azúcar, poco hielo"
         aria-label="Nota para cocina"
-        class="w-full resize-none rounded-lg border border-border bg-card px-2 py-1.5 text-xs text-foreground outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"></textarea>
+        class="w-full resize-none rounded-lg border border-border bg-card px-2 py-1.5 text-xs text-foreground outline-none focus:border-warning-500 focus:ring-2 focus:ring-warning-500/20"></textarea>
       <div class="flex flex-wrap items-center justify-end gap-1.5">
-        <button *ngIf="item.notes" type="button" class="mr-auto text-[11px] font-semibold text-red-600 hover:underline" (click)="save('')">Quitar nota</button>
+        <button *ngIf="item.notes" type="button" class="mr-auto text-[11px] font-semibold text-danger-600 hover:underline" (click)="save('')">Quitar nota</button>
         <button type="button" class="h-8 rounded-lg px-2.5 text-[11px] font-bold text-muted-foreground hover:bg-muted" (click)="done.emit()">Cancelar</button>
         <ng-container *ngIf="item.quantity > 1; else singleUnit">
-          <button type="button" class="h-8 rounded-lg border border-amber-500 px-2.5 text-[11px] font-bold text-amber-700 dark:text-amber-300" (click)="save(draft, true)">Solo a 1</button>
-          <button type="button" class="h-8 rounded-lg bg-amber-500 px-2.5 text-[11px] font-bold text-white" (click)="save(draft)">A las {{ item.quantity }}</button>
+          <button type="button" class="h-8 rounded-lg border border-warning-500 px-2.5 text-[11px] font-bold text-warning-700 " (click)="save(draft, true)">Solo a 1</button>
+          <button type="button" class="h-8 rounded-lg bg-warning-500 px-2.5 text-[11px] font-bold text-white" (click)="save(draft)">A las {{ item.quantity }}</button>
         </ng-container>
         <ng-template #singleUnit>
-          <button type="button" class="h-8 rounded-lg bg-amber-500 px-3 text-[11px] font-bold text-white" (click)="save(draft)">Guardar nota</button>
+          <button type="button" class="h-8 rounded-lg bg-warning-500 px-3 text-[11px] font-bold text-white" (click)="save(draft)">Guardar nota</button>
         </ng-template>
       </div>
     </div>

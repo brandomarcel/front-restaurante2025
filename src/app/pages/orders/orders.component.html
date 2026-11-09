@@ -10,13 +10,13 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
-        <span class="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-red-700">
+        <span class="rounded-md border border-danger-200 bg-danger-50 px-2 py-1 text-danger-700">
           {{ countByEstado('Ingresada') }} ingresadas
         </span>
-        <span class="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-amber-700">
+        <span class="rounded-md border border-warning-200 bg-warning-50 px-2 py-1 text-warning-700">
           {{ countByEstado('Preparación') }} preparación
         </span>
-        <span class="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-emerald-700">
+        <span class="rounded-md border border-success-200 bg-success-50 px-2 py-1 text-success-700">
           {{ countByEstado('Cerrada') }} cerradas
         </span>
       </div>
@@ -42,19 +42,19 @@
             </button>
             <button
               class="min-h-[30px] rounded-md border px-2.5 text-left text-[11px] font-semibold transition"
-              [ngClass]="isEstadoActivo('Ingresada') ? 'border-red-300 bg-red-50 text-red-700' : 'border-border bg-card text-foreground/80 hover:border-red-300'"
+              [ngClass]="isEstadoActivo('Ingresada') ? 'border-danger-300 bg-danger-50 text-danger-700' : 'border-border bg-card text-foreground/80 hover:border-danger-300'"
               (click)="setEstadoFiltro('Ingresada')">
               Ingresadas ({{ countByEstado('Ingresada') }})
             </button>
             <button
               class="min-h-[30px] rounded-md border px-2.5 text-left text-[11px] font-semibold transition"
-              [ngClass]="isEstadoActivo('Preparación') ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-border bg-card text-foreground/80 hover:border-amber-300'"
+              [ngClass]="isEstadoActivo('Preparación') ? 'border-warning-300 bg-warning-50 text-warning-700' : 'border-border bg-card text-foreground/80 hover:border-warning-300'"
               (click)="setEstadoFiltro('Preparación')">
               Preparacion ({{ countByEstado('Preparación') }})
             </button>
             <button
               class="min-h-[30px] rounded-md border px-2.5 text-left text-[11px] font-semibold transition"
-              [ngClass]="isEstadoActivo('Cerrada') ? 'border-green-300 bg-green-50 text-green-700' : 'border-border bg-card text-foreground/80 hover:border-green-300'"
+              [ngClass]="isEstadoActivo('Cerrada') ? 'border-success-300 bg-success-50 text-success-700' : 'border-border bg-card text-foreground/80 hover:border-success-300'"
               (click)="setEstadoFiltro('Cerrada')">
               Cerradas ({{ countByEstado('Cerrada') }})
             </button>
@@ -134,8 +134,8 @@
           </div>
 
           <div class="mt-2 grid grid-cols-2 gap-1.5">
-            <div class="rounded-md bg-emerald-50 px-2 py-1 text-[10px] text-emerald-700">
-              <p class="text-emerald-600/80">Tipo</p>
+            <div class="rounded-md bg-success-50 px-2 py-1 text-[10px] text-success-700">
+              <p class="text-success-600/80">Tipo</p>
               <p class="font-semibold">{{ order.type || 'Sin tipo' }}</p>
             </div>
             <div class="rounded-md bg-muted px-2 py-1 text-right text-[10px] text-foreground/80">

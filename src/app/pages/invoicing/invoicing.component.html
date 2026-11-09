@@ -32,15 +32,15 @@
 
     <!-- ¿Desde dónde facturas? Solo cuando hay algo que elegir (sin terminales POS). -->
     <div *ngIf="canSelectFiscalLocation && fiscalChoiceAvailable" class="rounded-xl border p-4 transition-colors"
-      [ngClass]="selectedFiscalSeries ? 'border-border bg-card' : 'border-amber-500/40 bg-amber-500/5'">
-      <p class="mb-3 text-sm font-semibold" [ngClass]="selectedFiscalSeries ? 'text-foreground' : 'text-amber-900 dark:text-amber-200'">
+      [ngClass]="selectedFiscalSeries ? 'border-border bg-card' : 'border-warning-500/40 bg-warning-500/5'">
+      <p class="mb-3 text-sm font-semibold" [ngClass]="selectedFiscalSeries ? 'text-foreground' : 'text-warning-900 '">
         {{ selectedFiscalSeries ? '¿Desde dónde facturas?' : 'Elige desde dónde vas a facturar' }}
       </p>
       <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
         <label class="min-w-0 flex-1">
           <span class="field-label">Establecimiento</span>
           <select *ngIf="fiscalEstablishments.length > 1; else singleEstablishment" class="select !h-10 !w-full !text-sm"
-            [ngClass]="{ '!border-amber-500 !ring-2 !ring-amber-500/20': !selectedEstablishmentId }"
+            [ngClass]="{ '!border-warning-500 !ring-2 !ring-warning-500/20': !selectedEstablishmentId }"
             [ngModel]="selectedEstablishmentId" (ngModelChange)="selectFiscalEstablishment($event)"
             [ngModelOptions]="{standalone: true}" [disabled]="fiscalSelectionLocked" aria-label="Establecimiento de facturación">
             <option value="">Selecciona…</option>
@@ -53,7 +53,7 @@
         <label class="min-w-0 flex-1">
           <span class="field-label">Punto de emisión</span>
           <select *ngIf="fiscalEmissionPoints.length > 1; else singleEmissionPoint" class="select !h-10 !w-full !text-sm"
-            [ngClass]="{ '!border-amber-500 !ring-2 !ring-amber-500/20': !selectedEmissionPointId }"
+            [ngClass]="{ '!border-warning-500 !ring-2 !ring-warning-500/20': !selectedEmissionPointId }"
             [ngModel]="selectedEmissionPointId" (ngModelChange)="selectFiscalEmissionPoint($event)"
             [ngModelOptions]="{standalone: true}" [disabled]="fiscalSelectionLocked" aria-label="Punto de emisión de facturación">
             <option value="">Selecciona…</option>
@@ -97,15 +97,15 @@
   <!-- Resultado de la emisión -->
   <section *ngIf="emissionState" class="rounded-xl border p-4 sm:p-5" role="status"
     [ngClass]="{
-      'border-emerald-500/30 tone-ok': emissionState === 'AUTHORIZED',
-      'border-sky-500/30 tone-info': emissionState === 'PROCESSING',
-      'border-red-500/30 tone-danger': emissionState === 'REJECTED' || emissionState === 'ERROR',
-      'border-orange-500/30 tone-alert': emissionState === 'PROVIDER_ERROR'
+      'border-success-500/30 tone-ok': emissionState === 'AUTHORIZED',
+      'border-info-500/30 tone-info': emissionState === 'PROCESSING',
+      'border-danger-500/30 tone-danger': emissionState === 'REJECTED' || emissionState === 'ERROR',
+      'border-warning-500/30 tone-alert': emissionState === 'PROVIDER_ERROR'
     }">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div class="flex min-w-0 gap-3">
         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-bold text-white"
-          [ngClass]="emissionState === 'AUTHORIZED' ? 'bg-emerald-600' : (emissionState === 'PROCESSING' ? 'bg-sky-600' : (emissionState === 'PROVIDER_ERROR' ? 'bg-orange-600' : 'bg-red-600'))" aria-hidden="true">
+          [ngClass]="emissionState === 'AUTHORIZED' ? 'bg-success-600' : (emissionState === 'PROCESSING' ? 'bg-info-600' : (emissionState === 'PROVIDER_ERROR' ? 'bg-warning-600' : 'bg-danger-600'))" aria-hidden="true">
           {{ emissionState === 'AUTHORIZED' ? '✓' : (emissionState === 'PROCESSING' ? '…' : '!') }}
         </span>
         <div class="min-w-0 text-sm">
@@ -158,7 +158,7 @@
               <ng-container *ngIf="selectedCustomer.correo"> · {{ selectedCustomer.correo }}</ng-container>
               <ng-container *ngIf="selectedCustomer.telefono"> · {{ selectedCustomer.telefono }}</ng-container>
             </p>
-            <p *ngIf="!selectedCustomer.correo && !isFinalConsumerSelected" class="mt-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">Sin correo registrado.</p>
+            <p *ngIf="!selectedCustomer.correo && !isFinalConsumerSelected" class="mt-0.5 text-xs font-medium text-warning-700 ">Sin correo registrado.</p>
           </div>
           <button type="button" class="btn btn-outline" (click)="clearSelectedCustomer()">Cambiar</button>
         </div>
@@ -174,7 +174,7 @@
                 (focus)="openCustomerSearch()" (blur)="closeCustomerSearchSoon()" (keyup.enter)="selectFirstCustomerSuggestion()"
                 placeholder="Buscar por nombre, cédula, RUC, teléfono o correo" aria-label="Buscar cliente"
                 [attr.aria-expanded]="isCustomerSearchOpen" aria-controls="customer-options"
-                [ngClass]="{ '!border-red-500': invoiceForm.get('selectedCustomer')?.invalid && invoiceForm.get('selectedCustomer')?.touched }" />
+                [ngClass]="{ '!border-danger-500': invoiceForm.get('selectedCustomer')?.invalid && invoiceForm.get('selectedCustomer')?.touched }" />
               <div *ngIf="isCustomerSearchOpen" id="customer-options" role="listbox" class="absolute inset-x-0 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-lg border border-border bg-card p-1 shadow-xl">
                 <p *ngIf="customerSearchLoading" class="px-3 py-2 text-sm text-muted-foreground">Buscando…</p>
                 <button *ngFor="let c of customers; trackBy: trackByCustomerId" type="button" role="option" (mousedown)="selectCustomer(c)"
@@ -303,7 +303,7 @@
                 <div class="line-total">
                   <p class="money text-sm font-semibold text-foreground">{{ item.total | currency }}</p>
                   <p class="line-iva-inline money text-xs text-muted-foreground">IVA {{ (item.iva || 0) | currency }}</p>
-                  <p *ngIf="(item.discount_total || 0) > 0" class="money text-xs font-medium text-emerald-700 dark:text-emerald-400">−{{ item.discount_total | currency }}</p>
+                  <p *ngIf="(item.discount_total || 0) > 0" class="money text-xs font-medium text-success-700 ">−{{ item.discount_total | currency }}</p>
                 </div>
               </li>
             </ul>
@@ -355,7 +355,7 @@
         </div>
 
         <!-- Crédito -->
-        <div *ngIf="isCreditInvoice" class="space-y-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+        <div *ngIf="isCreditInvoice" class="space-y-3 rounded-lg border border-warning-500/30 bg-warning-500/5 p-3">
           <label class="block">
             <span class="field-label">Vence el *</span>
             <input type="date" class="input !h-10 !w-full !text-sm" formControlName="payment_due_date" aria-required="true" />
@@ -382,7 +382,7 @@
               <p class="text-xs text-muted-foreground">Un abono en efectivo necesita la caja abierta.</p>
             </div>
           </details>
-          <div class="flex items-center justify-between text-sm text-amber-900 dark:text-amber-200" aria-live="polite">
+          <div class="flex items-center justify-between text-sm text-warning-900 " aria-live="polite">
             <span>Queda por cobrar</span><strong class="money">{{ estimatedOutstandingAmount | currency }}</strong>
           </div>
         </div>
@@ -421,7 +421,7 @@
       <div class="space-y-4 border-t border-dashed border-border p-4 sm:p-5">
         <dl class="money space-y-1.5 text-sm">
           <div class="flex justify-between text-muted-foreground"><dt>Subtotal</dt><dd>{{ subtotal | currency }}</dd></div>
-          <div *ngIf="totalDiscount > 0" class="flex justify-between text-emerald-700 dark:text-emerald-400"><dt>Descuentos</dt><dd>−{{ totalDiscount | currency }}</dd></div>
+          <div *ngIf="totalDiscount > 0" class="flex justify-between text-success-700 "><dt>Descuentos</dt><dd>−{{ totalDiscount | currency }}</dd></div>
           <div class="flex justify-between text-muted-foreground"><dt>IVA</dt><dd>{{ iva | currency }}</dd></div>
           <div class="flex items-baseline justify-between pt-2"><dt class="text-base font-semibold text-foreground">Total</dt><dd class="text-3xl font-bold tracking-tight text-foreground">{{ total | currency }}</dd></div>
         </dl>
@@ -433,7 +433,7 @@
 
         <ul *ngIf="blockingReasons.length" class="space-y-1 text-sm text-muted-foreground" aria-live="polite" aria-label="Lo que falta para emitir">
           <li class="font-medium text-foreground">Para emitir falta:</li>
-          <li *ngFor="let reason of blockingReasons" class="flex gap-2"><span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" aria-hidden="true"></span>{{ reason }}</li>
+          <li *ngFor="let reason of blockingReasons" class="flex gap-2"><span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-warning-500" aria-hidden="true"></span>{{ reason }}</li>
         </ul>
       </div>
     </aside>
@@ -452,7 +452,7 @@
       {{ isEmitting ? 'Emitiendo…' : (isConfirmingEmission ? 'Confirmando…' : 'Emitir factura') }}
     </button>
   </div>
-  <p *ngIf="blockingReasons.length" class="mt-1 truncate text-xs text-amber-700 dark:text-amber-300">Falta: {{ blockingReasons[0] }}</p>
+  <p *ngIf="blockingReasons.length" class="mt-1 truncate text-xs text-warning-700 ">Falta: {{ blockingReasons[0] }}</p>
 </div>
 
 <!-- Alta rápida de cliente -->

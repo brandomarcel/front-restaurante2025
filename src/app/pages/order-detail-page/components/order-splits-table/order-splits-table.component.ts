@@ -81,11 +81,11 @@ export class OrderSplitsTableComponent {
 
   getStatusClass(row: OrderSplitRow): string {
     const status = String(row?.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
-    if (status.includes('PAGADA') || status.includes('FACTURADA') || status.includes('AUTORIZ')) return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
-    if (status.includes('PENDIENTE')) return 'bg-amber-500/15 text-amber-700 dark:text-amber-300';
+    if (status.includes('PAGADA') || status.includes('FACTURADA') || status.includes('AUTORIZ')) return 'bg-success-500/15 text-success-700 ';
+    if (status.includes('PENDIENTE')) return 'bg-warning-500/15 text-warning-700 ';
     if (status.includes('RECHAZ') || status.includes('ERROR')) return 'bg-destructive/10 text-destructive';
     if (status.includes('CANCEL')) return 'bg-muted text-muted-foreground';
-    return 'bg-sky-500/15 text-sky-700 dark:text-sky-300';
+    return 'bg-info-500/15 text-info-700 ';
   }
 
   toggleExpanded(row: OrderSplitRow | null | undefined): void {

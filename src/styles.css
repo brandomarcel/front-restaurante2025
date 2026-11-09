@@ -43,6 +43,61 @@
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
 
+  /* Colores de estado con escala propia (50…950), al estilo de Tailwind pero adaptables: en modo oscuro la escala se
+     invierte sola (50 = fondo sutil oscuro, 800 = texto claro), así que `bg-success-50 text-success-800` se lee bien en
+     los dos modos sin escribir `dark:`. Úsalos en vez de emerald/amber/red/sky fijos. */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-50: var(--success-50);
+  --color-success-100: var(--success-100);
+  --color-success-200: var(--success-200);
+  --color-success-300: var(--success-300);
+  --color-success-400: var(--success-400);
+  --color-success-500: var(--success-500);
+  --color-success-600: var(--success-600);
+  --color-success-700: var(--success-700);
+  --color-success-800: var(--success-800);
+  --color-success-900: var(--success-900);
+  --color-success-950: var(--success-950);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-50: var(--warning-50);
+  --color-warning-100: var(--warning-100);
+  --color-warning-200: var(--warning-200);
+  --color-warning-300: var(--warning-300);
+  --color-warning-400: var(--warning-400);
+  --color-warning-500: var(--warning-500);
+  --color-warning-600: var(--warning-600);
+  --color-warning-700: var(--warning-700);
+  --color-warning-800: var(--warning-800);
+  --color-warning-900: var(--warning-900);
+  --color-warning-950: var(--warning-950);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-50: var(--danger-50);
+  --color-danger-100: var(--danger-100);
+  --color-danger-200: var(--danger-200);
+  --color-danger-300: var(--danger-300);
+  --color-danger-400: var(--danger-400);
+  --color-danger-500: var(--danger-500);
+  --color-danger-600: var(--danger-600);
+  --color-danger-700: var(--danger-700);
+  --color-danger-800: var(--danger-800);
+  --color-danger-900: var(--danger-900);
+  --color-danger-950: var(--danger-950);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-50: var(--info-50);
+  --color-info-100: var(--info-100);
+  --color-info-200: var(--info-200);
+  --color-info-300: var(--info-300);
+  --color-info-400: var(--info-400);
+  --color-info-500: var(--info-500);
+  --color-info-600: var(--info-600);
+  --color-info-700: var(--info-700);
+  --color-info-800: var(--info-800);
+  --color-info-900: var(--info-900);
+  --color-info-950: var(--info-950);
 }
 
 /* Las animaciones se mantienen fuera de @theme para que el compilador CSS no
@@ -84,7 +139,7 @@
 /* Tailwind v4 compat: borde por defecto como v3 */
 @layer base {
   *, ::after, ::before, ::backdrop, ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
+    border-color: var(--border, currentColor);
   }
 
   @layer base {
@@ -114,91 +169,167 @@
   }
 }
 
-/* Tema base (variables) */
+/* Tema base (variables)
+   - Un solo juego de neutros (fondo, tarjeta, bordes, textos) para todos los colores de tema; cada tema cambia solo el
+     color principal (`--primary`) y su texto (`--primary-foreground`), elegidos para que se lean (contraste AA).
+   - Tema por defecto: FacturADA (azul de la marca; en oscuro, un azul claro de la misma familia). Los demás quedan
+     disponibles por `data-theme`.
+   - Estados (éxito, aviso, peligro, información): un color base por modo y una escala derivada (ver @theme). */
 @layer base {
   :root {
     color-scheme: light;
     --background: #FFFFFF;
-    --foreground: #0C1420;
-    --card: #F1F5F9;
-    --card-foreground: #000000;
-    --primary: #E11D48;
+    --foreground: #151A2D;
+    --card: #F4F5F8;
+    --card-foreground: #151A2D;
+    --primary: #2E3A8C;
     --primary-foreground: #FFFFFF;
-    --muted: #CFD9E5;
-    --muted-foreground: #64748B;
-    --destructive: #CC0033;
-    --destructive-foreground: #FAFAFA;
-    --border: #E2E8F0;
+    --muted: #E7E9EF;
+    --muted-foreground: #5D6275;
+    --destructive: #C81E1E;
+    --destructive-foreground: #FFFFFF;
+    --border: #E1E4EB;
+
+    --success: #16A34A;
+    --success-foreground: #FFFFFF;
+    --warning: #F59E0B;
+    --warning-foreground: #1F1300;
+    --danger: #DC2626;
+    --danger-foreground: #FFFFFF;
+    --info: #0284C7;
+    --info-foreground: #FFFFFF;
+
+    --success-50: color-mix(in srgb, var(--success) 7%, white);
+    --success-100: color-mix(in srgb, var(--success) 14%, white);
+    --success-200: color-mix(in srgb, var(--success) 28%, white);
+    --success-300: color-mix(in srgb, var(--success) 45%, white);
+    --success-400: color-mix(in srgb, var(--success) 70%, white);
+    --success-500: var(--success);
+    --success-600: color-mix(in srgb, var(--success) 82%, black);
+    --success-700: color-mix(in srgb, var(--success) 64%, black);
+    --success-800: color-mix(in srgb, var(--success) 50%, black);
+    --success-900: color-mix(in srgb, var(--success) 40%, black);
+    --success-950: color-mix(in srgb, var(--success) 30%, black);
+    --warning-50: color-mix(in srgb, var(--warning) 7%, white);
+    --warning-100: color-mix(in srgb, var(--warning) 14%, white);
+    --warning-200: color-mix(in srgb, var(--warning) 28%, white);
+    --warning-300: color-mix(in srgb, var(--warning) 45%, white);
+    --warning-400: color-mix(in srgb, var(--warning) 70%, white);
+    --warning-500: var(--warning);
+    --warning-600: color-mix(in srgb, var(--warning) 82%, black);
+    --warning-700: color-mix(in srgb, var(--warning) 64%, black);
+    --warning-800: color-mix(in srgb, var(--warning) 50%, black);
+    --warning-900: color-mix(in srgb, var(--warning) 40%, black);
+    --warning-950: color-mix(in srgb, var(--warning) 30%, black);
+    --danger-50: color-mix(in srgb, var(--danger) 7%, white);
+    --danger-100: color-mix(in srgb, var(--danger) 14%, white);
+    --danger-200: color-mix(in srgb, var(--danger) 28%, white);
+    --danger-300: color-mix(in srgb, var(--danger) 45%, white);
+    --danger-400: color-mix(in srgb, var(--danger) 70%, white);
+    --danger-500: var(--danger);
+    --danger-600: color-mix(in srgb, var(--danger) 82%, black);
+    --danger-700: color-mix(in srgb, var(--danger) 64%, black);
+    --danger-800: color-mix(in srgb, var(--danger) 50%, black);
+    --danger-900: color-mix(in srgb, var(--danger) 40%, black);
+    --danger-950: color-mix(in srgb, var(--danger) 30%, black);
+    --info-50: color-mix(in srgb, var(--info) 7%, white);
+    --info-100: color-mix(in srgb, var(--info) 14%, white);
+    --info-200: color-mix(in srgb, var(--info) 28%, white);
+    --info-300: color-mix(in srgb, var(--info) 45%, white);
+    --info-400: color-mix(in srgb, var(--info) 70%, white);
+    --info-500: var(--info);
+    --info-600: color-mix(in srgb, var(--info) 82%, black);
+    --info-700: color-mix(in srgb, var(--info) 64%, black);
+    --info-800: color-mix(in srgb, var(--info) 50%, black);
+    --info-900: color-mix(in srgb, var(--info) 40%, black);
+    --info-950: color-mix(in srgb, var(--info) 30%, black);
   }
 
   .dark {
     color-scheme: dark;
-    --background: #0A0A0A;
-    --foreground: #F2F2F2;
-    --card: #121212;
-    --card-foreground: #262626;
-    --muted: #262626;
-    --muted-foreground: #A3A3A3;
-    --border: #262626;
+    --background: #0E1020;
+    --foreground: #ECEEF5;
+    --card: #161A2E;
+    --card-foreground: #ECEEF5;
+    /* Azul claro de la familia de la marca: el ámbar como principal pintaba de ámbar todos los encabezados. */
+    --primary: #8B98F7;
+    --primary-foreground: #0E1020;
+    --muted: #232842;
+    --muted-foreground: #A3A7BA;
+    --destructive: #F05252;
+    --destructive-foreground: #1B0606;
+    --border: #272C47;
+
+    /* --success/--warning/--danger/--info: mismo color base que en claro (los sólidos con texto blanco se siguen
+       leyendo); lo que cambia en oscuro es la escala derivada, aquí abajo. */
+
+    --success-50: color-mix(in srgb, var(--success) 12%, var(--background));
+    --success-100: color-mix(in srgb, var(--success) 18%, var(--background));
+    --success-200: color-mix(in srgb, var(--success) 28%, var(--background));
+    --success-300: color-mix(in srgb, var(--success) 40%, var(--background));
+    --success-400: color-mix(in srgb, var(--success) 75%, var(--background));
+    --success-500: var(--success);
+    --success-600: color-mix(in srgb, var(--success) 80%, white);
+    --success-700: color-mix(in srgb, var(--success) 62%, white);
+    --success-800: color-mix(in srgb, var(--success) 50%, white);
+    --success-900: color-mix(in srgb, var(--success) 40%, white);
+    --success-950: color-mix(in srgb, var(--success) 30%, white);
+    --warning-50: color-mix(in srgb, var(--warning) 12%, var(--background));
+    --warning-100: color-mix(in srgb, var(--warning) 18%, var(--background));
+    --warning-200: color-mix(in srgb, var(--warning) 28%, var(--background));
+    --warning-300: color-mix(in srgb, var(--warning) 40%, var(--background));
+    --warning-400: color-mix(in srgb, var(--warning) 75%, var(--background));
+    --warning-500: var(--warning);
+    --warning-600: color-mix(in srgb, var(--warning) 80%, white);
+    --warning-700: color-mix(in srgb, var(--warning) 62%, white);
+    --warning-800: color-mix(in srgb, var(--warning) 50%, white);
+    --warning-900: color-mix(in srgb, var(--warning) 40%, white);
+    --warning-950: color-mix(in srgb, var(--warning) 30%, white);
+    --danger-50: color-mix(in srgb, var(--danger) 12%, var(--background));
+    --danger-100: color-mix(in srgb, var(--danger) 18%, var(--background));
+    --danger-200: color-mix(in srgb, var(--danger) 28%, var(--background));
+    --danger-300: color-mix(in srgb, var(--danger) 40%, var(--background));
+    --danger-400: color-mix(in srgb, var(--danger) 75%, var(--background));
+    --danger-500: var(--danger);
+    --danger-600: color-mix(in srgb, var(--danger) 80%, white);
+    --danger-700: color-mix(in srgb, var(--danger) 62%, white);
+    --danger-800: color-mix(in srgb, var(--danger) 50%, white);
+    --danger-900: color-mix(in srgb, var(--danger) 40%, white);
+    --danger-950: color-mix(in srgb, var(--danger) 30%, white);
+    --info-50: color-mix(in srgb, var(--info) 12%, var(--background));
+    --info-100: color-mix(in srgb, var(--info) 18%, var(--background));
+    --info-200: color-mix(in srgb, var(--info) 28%, var(--background));
+    --info-300: color-mix(in srgb, var(--info) 40%, var(--background));
+    --info-400: color-mix(in srgb, var(--info) 75%, var(--background));
+    --info-500: var(--info);
+    --info-600: color-mix(in srgb, var(--info) 80%, white);
+    --info-700: color-mix(in srgb, var(--info) 62%, white);
+    --info-800: color-mix(in srgb, var(--info) 50%, white);
+    --info-900: color-mix(in srgb, var(--info) 40%, white);
+    --info-950: color-mix(in srgb, var(--info) 30%, white);
   }
 
-  :root[data-theme='violet'] { --primary: #6E56CF; }
-  .dark[data-theme='violet'] {
-    --background: #060815;
-    --foreground: #F6F8FB;
-    --card: #0B0F1A;
-    --card-foreground: #F6F8FB;
-    --primary-foreground: #F6F8FB;
-    --muted: #232B3D;
-    --muted-foreground: #A1A8BF;
-    --border: #232B3D;
-  }
+  /* Otros colores de tema (no hay selector en pantalla hoy; se conservan por `data-theme`). Solo cambian el principal. */
+  :root[data-theme='violet'] { --primary: #6E56CF; --primary-foreground: #FFFFFF; }
+  .dark[data-theme='violet'] { --primary: #9E8CFC; --primary-foreground: #160F3A; }
 
-  :root[data-theme='red'] { --primary: #CC0033; }
-  .dark[data-theme='red'] { --primary-foreground: #FFE5E5; }
+  :root[data-theme='base'] { --primary: #E11D48; --primary-foreground: #FFFFFF; }
+  .dark[data-theme='base'] { --primary: #FB7185; --primary-foreground: #2A0510; }
 
-  :root[data-theme='blue'] { --primary: #2490FF; }
-  .dark[data-theme='blue'] {
-    --background: #02080F;
-    --foreground: #F8FAFC;
-    --card: #0B1117;
-    --card-foreground: #F8FAFC;
-    --primary-foreground: #0F1729;
-    --muted: #1E293B;
-    --muted-foreground: #94A3B8;
-    --border: #1E293B;
-  }
+  :root[data-theme='red'] { --primary: #CC0033; --primary-foreground: #FFFFFF; }
+  .dark[data-theme='red'] { --primary: #FF5C7A; --primary-foreground: #2A0510; }
 
-  :root[data-theme='orange'] { --primary: #EA580C; }
-  .dark[data-theme='orange'] {
-    --background: #0C0A09;
-    --foreground: #FAFAF9;
-    --card: #141110;
-    --card-foreground: #FAFAF9;
-    --primary-foreground: #FAFAF9;
-    --muted: #292524;
-    --muted-foreground: #A8A29E;
-    --border: #292524;
-  }
+  :root[data-theme='blue'] { --primary: #1D6FD6; --primary-foreground: #FFFFFF; }
+  .dark[data-theme='blue'] { --primary: #60A5FA; --primary-foreground: #0F1729; }
 
-  :root[data-theme='yellow'] { --primary: #FACC15; }
-  .dark[data-theme='yellow'] {
-    --background: #0C0A09;
-    --foreground: #FAFAF9;
-    --card: #141110;
-    --card-foreground: #FAFAF9;
-    --primary: #FACC15;
-    --primary-foreground: #422006;
-    --muted: #292524;
-    --muted-foreground: #A8A29E;
-    --border: #292524;
-  }
+  :root[data-theme='orange'] { --primary: #C2410C; --primary-foreground: #FFFFFF; }
+  .dark[data-theme='orange'] { --primary: #FB923C; --primary-foreground: #1C0A00; }
 
-  :root[data-theme='green'] { --primary: #22C55E; }
-  .dark[data-theme='green'] {
-    --primary: #22C55E;
-    --primary-foreground: #052E16;
-  }
+  :root[data-theme='yellow'] { --primary: #A16207; --primary-foreground: #FFFFFF; }
+  .dark[data-theme='yellow'] { --primary: #FACC15; --primary-foreground: #422006; }
+
+  :root[data-theme='green'] { --primary: #15803D; --primary-foreground: #FFFFFF; }
+  .dark[data-theme='green'] { --primary: #4ADE80; --primary-foreground: #052E16; }
 }
 
 /** Scroll bar **/
@@ -371,14 +502,14 @@ select {
   }
 
   .table-compact { @apply text-xs leading-4; }
-  .table-compact thead th { @apply px-3 py-2 text-[11px] uppercase tracking-wide text-gray-500; }
+  .table-compact thead th { @apply px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground; }
   .table-compact tbody td { @apply px-3 py-2; }
   .table-compact input { @apply h-8 text-xs; }
   .table-compact .qty-input { @apply w-14 text-center; }
   .table-compact .price-input { @apply w-24 text-center; }
   .table-compact .disc-input { @apply w-16 text-center; }
     .input { @apply block w-full h-9 rounded-md border border-border bg-card text-foreground px-3 text-[13px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20; }
-  .field-error { @apply block mt-1 text-[11px] text-red-600; }
+  .field-error { @apply block mt-1 text-[11px] text-destructive; }
 }
 
 /* No spinners en inputs number */
@@ -421,27 +552,26 @@ select {
   }
   .btn:disabled { @apply opacity-50 cursor-not-allowed active:scale-100; }
   .btn-primary { @apply bg-primary text-primary-foreground shadow-sm hover:opacity-90 hover:shadow-md; }
-  .btn-success { @apply bg-green-500 text-primary-foreground shadow-sm hover:opacity-90 hover:shadow-md; }
+  .btn-success { @apply bg-success text-success-foreground shadow-sm hover:opacity-90 hover:shadow-md; }
   .btn-ghost   { @apply bg-muted text-foreground hover:bg-muted-foreground/20; }
   .btn-outline { @apply border border-border text-foreground bg-card shadow-sm hover:border-primary/40 hover:bg-muted hover:text-primary; }
-  .btn-warn    { @apply bg-amber-300 text-black shadow-sm hover:opacity-90 hover:shadow-md; }
-  .btn-danger    { @apply bg-red-400 text-black shadow-sm hover:opacity-90 hover:shadow-md; }
+  .btn-warn    { @apply bg-warning text-warning-foreground shadow-sm hover:opacity-90 hover:shadow-md; }
+  .btn-danger  { @apply bg-destructive text-destructive-foreground shadow-sm hover:opacity-90 hover:shadow-md; }
 
   /* Badges */
   .badge { @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium; }
-  .badge-green  { @apply bg-green-100 text-green-800; }
-  .badge-yellow { @apply bg-yellow-100 text-yellow-800; }
-  .badge-red    { @apply bg-red-100 text-red-800; }
-  .badge-gray   { @apply bg-gray-100 text-gray-800; }
-  .badge-blue   { @apply bg-blue-100 text-blue-800; }
+  .badge-green  { @apply bg-success-100 text-success-800; }
+  .badge-yellow { @apply bg-warning-100 text-warning-800; }
+  .badge-red    { @apply bg-danger-100 text-danger-800; }
+  .badge-gray   { @apply bg-muted text-foreground; }
+  .badge-blue   { @apply bg-info-100 text-info-800; }
 
-  /* Tonos de estado: tinte translúcido + texto con variante oscura (legibles en ambos temas).
-     Preferirlos a bg-*-50 / bg-*-100 fijos, que en modo oscuro quedan como cajas claras. */
-  .tone-ok     { @apply bg-emerald-500/10 text-emerald-800 dark:text-emerald-300; }
-  .tone-info   { @apply bg-sky-500/10 text-sky-800 dark:text-sky-300; }
-  .tone-warn   { @apply bg-amber-500/10 text-amber-900 dark:text-amber-200; }
-  .tone-alert  { @apply bg-orange-500/10 text-orange-900 dark:text-orange-200; }
-  .tone-danger { @apply bg-red-500/10 text-red-800 dark:text-red-300; }
+  /* Tonos de estado: tinte translúcido + texto de la escala adaptable (se leen en claro y oscuro sin `dark:`). */
+  .tone-ok     { @apply bg-success-500/10 text-success-800; }
+  .tone-info   { @apply bg-info-500/10 text-info-800; }
+  .tone-warn   { @apply bg-warning-500/12 text-warning-900; }
+  .tone-alert  { @apply bg-warning-500/20 text-warning-950; }
+  .tone-danger { @apply bg-danger-500/10 text-danger-800; }
 
   /* Cards */
   .app-card { @apply bg-card rounded-xl shadow-sm border border-border text-foreground; }
@@ -517,9 +647,9 @@ select {
   .fixed.inset-0.z-50 { z-index: 220 !important; }
 
   /* Tabs */
-  .tabs { @apply mb-4 border-b border-gray-200 flex gap-4 text-xs font-medium; }
-  .tab { @apply px-3 py-2 -mb-px border-b-2 border-transparent text-gray-600 hover:text-blue-700; }
-  .tab-active { @apply border-blue-600 text-blue-600; }
+  .tabs { @apply mb-4 border-b border-border flex gap-4 text-xs font-medium; }
+  .tab { @apply px-3 py-2 -mb-px border-b-2 border-transparent text-muted-foreground hover:text-foreground; }
+  .tab-active { @apply border-primary text-primary; }
 }
 
 /* (Opcional) Si tu herramienta no soporta nesting en @utility dropdown, usa esto plano:
@@ -580,12 +710,12 @@ select {
    del tema. */
 
 /* texto del archivo: que no salte */
-.file-name { @apply text-gray-600 truncate max-w-full; }
+.file-name { @apply text-muted-foreground truncate max-w-full; }
 
 /* preview del logo: cuadro limpio */
 .logo-preview {
   width: 48px; height: 48px;
-  border: 1px solid #e5e7eb; border-radius: 6px; background: white;
+  border: 1px solid var(--border); border-radius: 6px; background: white; /* el logo necesita fondo blanco */
   object-fit: contain; padding: 4px;
 }
 

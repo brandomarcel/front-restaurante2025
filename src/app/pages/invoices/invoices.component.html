@@ -52,7 +52,7 @@
                   {{ documentNumber(inv) }}
                 </a>
                 <div class="text-[11px] text-muted-foreground">{{ inv.name || '—' }} <span *ngIf="inv.legacy_import" class="font-semibold text-primary">· Migrado · {{ inv.legacy_source_name }}</span></div>
-                <div *ngIf="isCancelled(inv)" class="text-[11px] font-semibold text-red-700 dark:text-red-300">Documento anulado · Ver historial</div>
+                <div *ngIf="isCancelled(inv)" class="text-[11px] font-semibold text-danger-700 ">Documento anulado · Ver historial</div>
                 <div *ngIf="accessKey(inv) as key" class="max-w-[200px] truncate font-mono text-[10px] text-muted-foreground"
                   [title]="key">{{ key }}</div>
               </td>
@@ -66,8 +66,8 @@
               </td>
               <td class="app-td">
                 <app-electronic-status-badge [document]="inv" />
-                <div *ngIf="inv.credit_note_summary?.state === 'PARTIAL'" class="mt-1 text-[11px] font-semibold text-amber-700">Con nota de crédito parcial</div>
-                <div *ngIf="inv.credit_note_summary?.state === 'PENDING'" class="mt-1 text-[11px] text-amber-700">Nota de crédito sin autorizar</div>
+                <div *ngIf="inv.credit_note_summary?.state === 'PARTIAL'" class="mt-1 text-[11px] font-semibold text-warning-700">Con nota de crédito parcial</div>
+                <div *ngIf="inv.credit_note_summary?.state === 'PENDING'" class="mt-1 text-[11px] text-warning-700">Nota de crédito sin autorizar</div>
                 <div *ngIf="providerStatus(inv)" class="mt-0.5 text-[10px] text-muted-foreground">
                   Proveedor: {{ providerStatus(inv) }}
                 </div>
@@ -101,8 +101,8 @@
                   {{ invoiceTotal(inv) | currency:(inv.currency || 'USD'):'symbol':'1.2-2' }}
                 </span>
                 <app-electronic-status-badge [document]="inv" />
-                <span *ngIf="inv.credit_note_summary?.state === 'PARTIAL'" class="text-[10px] text-amber-700">NC parcial</span>
-                <span *ngIf="inv.credit_note_summary?.state === 'PENDING'" class="text-[10px] text-amber-700">NC sin autorizar</span>
+                <span *ngIf="inv.credit_note_summary?.state === 'PARTIAL'" class="text-[10px] text-warning-700">NC parcial</span>
+                <span *ngIf="inv.credit_note_summary?.state === 'PENDING'" class="text-[10px] text-warning-700">NC sin autorizar</span>
               </div>
             </div>
             <p *ngIf="sriMessage(inv) as message" class="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{{ message }}</p>

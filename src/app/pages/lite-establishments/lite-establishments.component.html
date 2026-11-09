@@ -10,7 +10,7 @@
     </ng-container>
   </app-fiscal-setup-header>
 
-  <div *ngIf="!canManage" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+  <div *ngIf="!canManage" class="rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-xs text-warning-800">
     Modo lectura: solo Administrador o Gerente pueden crear o modificar establecimientos.
   </div>
 
@@ -25,7 +25,7 @@
     </div>
   </div>
 
-  <section *ngIf="error && !loading" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800" role="alert">{{ error }}</section>
+  <section *ngIf="error && !loading" class="rounded-xl border border-warning-200 bg-warning-50 p-4 text-sm text-warning-800" role="alert">{{ error }}</section>
 
   <section *ngIf="loading" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
     <div *ngFor="let _ of [1, 2, 3]" class="h-44 animate-pulse rounded-xl bg-muted"></div>
@@ -46,7 +46,7 @@
             <span *ngIf="isMain(establishment)" class="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">Matriz</span>
           </div>
           <span class="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
-            [ngClass]="isActive(establishment) ? 'bg-emerald-100 text-emerald-800' : 'bg-muted text-muted-foreground'">
+            [ngClass]="isActive(establishment) ? 'bg-success-100 text-success-800' : 'bg-muted text-muted-foreground'">
             <span class="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true"></span>{{ establishment.status || 'Activo' }}
           </span>
         </div>
@@ -72,7 +72,7 @@
         <span *ngIf="!isActive(establishment)" class="text-[11px] text-muted-foreground">Inactivo: no emite comprobantes</span>
         <div *ngIf="canManage" class="flex shrink-0 gap-1">
           <button type="button" class="btn btn-ghost !px-2 !py-1 !text-[11px]" [disabled]="saving" (click)="openEdit(establishment)">Editar</button>
-          <button *ngIf="isActive(establishment)" type="button" class="btn btn-ghost !px-2 !py-1 !text-[11px] !text-red-700"
+          <button *ngIf="isActive(establishment)" type="button" class="btn btn-ghost !px-2 !py-1 !text-[11px] !text-danger-700"
             [disabled]="saving" (click)="deactivate(establishment)">Desactivar</button>
         </div>
       </div>

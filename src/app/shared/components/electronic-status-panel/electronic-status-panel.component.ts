@@ -21,7 +21,7 @@ import { ElectronicDocumentUpdatesService } from 'src/app/services/electronic-do
       </div>
       <div class="grid gap-3 sm:grid-cols-2">
         <div class="rounded-lg bg-muted/40 p-3"><p class="text-xs text-muted-foreground">Recepción SRI</p><strong>{{ reception }}</strong>
-          <p *ngIf="confirmed" class="text-xs text-emerald-700">Recepción confirmada por backend</p></div>
+          <p *ngIf="confirmed" class="text-xs text-success-700">Recepción confirmada por backend</p></div>
         <div class="rounded-lg bg-muted/40 p-3"><p class="text-xs text-muted-foreground">Autorización SRI</p><strong>{{ authorization }}</strong></div>
       </div>
       <p *ngFor="let message of messages" class="text-sm break-words">{{ message }}</p>
@@ -30,8 +30,8 @@ import { ElectronicDocumentUpdatesService } from 'src/app/services/electronic-do
       <p *ngIf="automaticQueryActive" class="rounded-lg bg-muted/40 p-3 text-sm">Consulta automática programada
         <span *ngIf="electronic.next_status_check_at"> · Próxima consulta: {{ electronic.next_status_check_at }}</span></p>
       <p *ngIf="electronic.fecha_ultima_consulta || electronic.last_status_check_at" class="text-xs text-muted-foreground">Última consulta: {{ electronic.fecha_ultima_consulta || electronic.last_status_check_at }}</p>
-      <p *ngIf="electronic.status_check_error" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{{ queryError }}</p>
-      <p *ngIf="manualReviewAvailable && reviewRequired" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Revisión manual requerida. No reintentar hasta revisar el resultado.</p>
+      <p *ngIf="electronic.status_check_error" class="rounded-lg bg-warning-50 p-3 text-sm text-warning-900">{{ queryError }}</p>
+      <p *ngIf="manualReviewAvailable && reviewRequired" class="rounded-lg bg-warning-50 p-3 text-sm text-warning-900">Revisión manual requerida. No reintentar hasta revisar el resultado.</p>
       <p *ngIf="manualReviewAvailable && electronic.manual_reviewed_at" class="text-xs text-muted-foreground">Revisado por {{ electronic.manual_reviewed_by }} · {{ electronic.manual_reviewed_at }}</p>
       <div *ngIf="canManage && manualReviewAvailable && (reviewRequired || canVerify)" class="space-y-2 border-t border-border pt-3">
         <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold" (click)="reviewOpen = !reviewOpen" [disabled]="busy">Registrar revisión SRI</button>
@@ -45,7 +45,7 @@ import { ElectronicDocumentUpdatesService } from 'src/app/services/electronic-do
       </div>
       <div *ngIf="canManage && canRegenerate" class="border-t border-border pt-3 space-y-2">
         <p class="text-sm text-muted-foreground">{{ electronic.regeneration_reason || document.regeneration_reason }}</p>
-        <button type="button" class="rounded-lg border border-amber-300 px-3 py-2 text-sm font-semibold" [disabled]="busy" (click)="regenerate()">Regenerar mismo secuencial</button>
+        <button type="button" class="rounded-lg border border-warning-300 px-3 py-2 text-sm font-semibold" [disabled]="busy" (click)="regenerate()">Regenerar mismo secuencial</button>
       </div>
     </section>`
 })

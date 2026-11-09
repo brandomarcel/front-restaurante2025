@@ -46,7 +46,7 @@
             row.customer || '—' }}</td>
           <td class="app-td text-right">{{ grandTotal(row) | currency:'USD':'symbol':'1.2-2' }}</td>
           <td class="app-td text-right">{{ collected(row) | currency:'USD':'symbol':'1.2-2' }}</td>
-          <td class="app-td text-right font-bold text-amber-700">{{ outstanding(row) | currency:'USD':'symbol':'1.2-2'
+          <td class="app-td text-right font-bold text-warning-700">{{ outstanding(row) | currency:'USD':'symbol':'1.2-2'
             }}</td>
           <td class="app-td"><span class="rounded-full px-2 py-1 text-[10px] font-bold"
               [ngClass]="collectionClass(row)">{{ collectionLabel(row) }}</span></td>

@@ -11,17 +11,17 @@
     </button>
   </header>
 
-  <div *ngIf="!canView" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800" role="alert">
+  <div *ngIf="!canView" class="rounded-xl border border-warning-200 bg-warning-50 px-4 py-3 text-sm font-semibold text-warning-800" role="alert">
     Solo un gerente o administrador puede consultar toda la gestión de caja.
   </div>
 
   <ng-container *ngIf="canView">
     <!-- Indicadores -->
     <section class="grid grid-cols-2 gap-2 lg:grid-cols-4" aria-label="Resumen">
-      <article class="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-        <p class="text-[10px] font-bold uppercase tracking-wide text-emerald-800">Abiertas ahora</p>
-        <p class="mt-1 text-2xl font-black text-emerald-900">{{ countSummary('open_openings', 'currently_open', 'aperturas_abiertas', 'abiertas_actualmente') }}</p>
-        <p class="text-[10px] text-emerald-800/80">
+      <article class="rounded-xl border border-success-200 bg-success-50 p-3">
+        <p class="text-[10px] font-bold uppercase tracking-wide text-success-800">Abiertas ahora</p>
+        <p class="mt-1 text-2xl font-black text-success-900">{{ countSummary('open_openings', 'currently_open', 'aperturas_abiertas', 'abiertas_actualmente') }}</p>
+        <p class="text-[10px] text-success-800/80">
           Efectivo esperado {{ moneySummary('open_expected_cash') | currency }} · {{ countSummary('total_openings', 'total_aperturas', 'aperturas_total', 'openings_count') }} aperturas
         </p>
       </article>
@@ -32,7 +32,7 @@
       </article>
       <article class="rounded-xl border border-border bg-card p-3">
         <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Retirado</p>
-        <p class="mt-1 text-2xl font-black text-rose-700">{{ moneySummary('withdrawals_amount', 'monto_total_retirado', 'total_withdrawals_amount', 'total_retirado') | currency }}</p>
+        <p class="mt-1 text-2xl font-black text-danger-700">{{ moneySummary('withdrawals_amount', 'monto_total_retirado', 'total_withdrawals_amount', 'total_retirado') | currency }}</p>
         <p class="text-[10px] text-muted-foreground">en {{ countSummary('withdrawals_count', 'cantidad_retiros', 'total_withdrawals', 'retiros_total') }} retiros</p>
       </article>
       <article class="rounded-xl border border-border bg-card p-3">
@@ -82,7 +82,7 @@
           <div class="h-3 w-24 rounded bg-muted"></div><div class="h-3 flex-1 rounded bg-muted"></div><div class="h-5 w-20 rounded-full bg-muted"></div>
         </div>
       </div>
-      <div *ngIf="!loading && error" class="p-8 text-center text-sm font-semibold text-red-700" role="alert">{{ error }}</div>
+      <div *ngIf="!loading && error" class="p-8 text-center text-sm font-semibold text-danger-700" role="alert">{{ error }}</div>
 
       <ng-container *ngIf="!loading && !error">
         <!-- Aperturas -->
@@ -122,7 +122,7 @@
                       <tr><td class="px-3 py-1.5">Fondo inicial</td><td class="px-3 py-1.5 text-right">{{ (row.opening_amount ?? 0) | currency }}</td></tr>
                       <tr *ngFor="let pay of openingPayments(row)"><td class="px-3 py-1.5">Cobrado en {{ pay.method }}</td><td class="px-3 py-1.5 text-right">{{ pay.amount | currency }}</td></tr>
                       <tr *ngIf="!openingPayments(row).length"><td class="px-3 py-1.5 text-muted-foreground" colspan="2">Sin cobros todavía en este turno.</td></tr>
-                      <tr><td class="px-3 py-1.5">Retiros</td><td class="px-3 py-1.5 text-right text-rose-700">−{{ (row.withdrawals_total ?? 0) | currency }}</td></tr>
+                      <tr><td class="px-3 py-1.5">Retiros</td><td class="px-3 py-1.5 text-right text-danger-700">−{{ (row.withdrawals_total ?? 0) | currency }}</td></tr>
                       <tr class="bg-muted/40 font-bold"><td class="px-3 py-1.5">Efectivo esperado en caja</td><td class="px-3 py-1.5 text-right">{{ (row.expected_cash ?? 0) | currency }}</td></tr>
                     </tbody>
                   </table>
@@ -144,7 +144,7 @@
               <p class="truncate text-[11px] text-muted-foreground">{{ rowUser(row) }} · {{ rowDate(row) | date:'short' }} · <span class="font-mono">{{ row.name || '—' }} <span *ngIf="row.name?.startsWith('MIG-')" class="text-primary">· Migrado</span></span></p>
             </div>
             <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold" [ngClass]="statusClass(row)">{{ rowStatus(row) }}</span>
-            <p class="w-24 shrink-0 text-right text-sm font-bold text-rose-700">−{{ rowAmount(row) | currency }}</p>
+            <p class="w-24 shrink-0 text-right text-sm font-bold text-danger-700">−{{ rowAmount(row) | currency }}</p>
           </li>
           <li *ngIf="!visibleWithdrawals.length" class="px-4 py-10 text-center text-xs text-muted-foreground">No hay retiros para los filtros seleccionados.</li>
         </ul>
@@ -197,7 +197,7 @@
 
               <dl class="grid grid-cols-3 gap-2 text-xs">
                 <div class="rounded-lg bg-card px-3 py-2"><dt class="text-[10px] font-bold uppercase text-muted-foreground">Fondo inicial</dt><dd class="font-bold text-foreground">{{ (row.monto_apertura ?? row.opened_amount ?? 0) | currency }}</dd></div>
-                <div class="rounded-lg bg-card px-3 py-2"><dt class="text-[10px] font-bold uppercase text-muted-foreground">Retiros</dt><dd class="font-bold text-rose-700">−{{ (row.total_retiros ?? row.withdrawals_total ?? 0) | currency }}</dd></div>
+                <div class="rounded-lg bg-card px-3 py-2"><dt class="text-[10px] font-bold uppercase text-muted-foreground">Retiros</dt><dd class="font-bold text-danger-700">−{{ (row.total_retiros ?? row.withdrawals_total ?? 0) | currency }}</dd></div>
                 <div class="rounded-lg bg-card px-3 py-2"><dt class="text-[10px] font-bold uppercase text-muted-foreground">Diferencia total</dt><dd class="font-bold" [ngClass]="differenceClass(rowDifference(row))">{{ rowDifference(row) > 0 ? '+' : '' }}{{ rowDifference(row) | currency }}</dd></div>
               </dl>
               <p *ngIf="row.notes" class="rounded-lg bg-card px-3 py-2 text-xs text-muted-foreground"><b class="text-foreground">Observación:</b> {{ row.notes }}</p>

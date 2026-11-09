@@ -18,7 +18,7 @@ const SERVICE_SHORTCUTS: DashboardShortcut[] = [
     label: 'Mesas',
     detail: 'Mapa del salón y mesas ocupadas',
     route: '/dashboard/tables',
-    classes: 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100',
+    classes: 'border-info-200 bg-info-50 text-info-700 hover:bg-info-100',
     features: ['tables'],
     permission: 'restaurant.orders.read'
   },

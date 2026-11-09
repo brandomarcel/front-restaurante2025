@@ -1,22 +1,15 @@
 <!-- Spinner global -->
-<ngx-spinner bdColor="rgba(0, 0, 0, 0.8)" size="large" color="#001c71" type="ball-scale-multiple" [fullScreen]="true">
+<ngx-spinner bdColor="rgba(0, 0, 0, 0.8)" size="large" color="#FFB020" type="ball-scale-multiple" [fullScreen]="true">
     <p class="text-sm font-semibold text-white">Creando tu cuenta...</p>
 </ngx-spinner>
 
 <div class="register-shell">
 
-    <!-- Panel de marca (solo escritorio), mismo lenguaje visual que el login -->
-    <aside class="register-hero" style="background-image: url('./assets/bg/auth.png');" aria-hidden="true">
-        <div class="absolute inset-0 bg-gradient-to-br from-slate-950/85 via-primary/85 to-primary/70"></div>
-        <div class="absolute -left-24 top-10 h-72 w-72 rounded-full bg-yellow-300/15 blur-3xl"></div>
-        <div class="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-cyan-300/10 blur-3xl"></div>
-
+    <!-- Panel de marca (solo escritorio): azul marino de la marca en ambos modos, como el login -->
+    <aside class="register-hero" aria-hidden="true">
         <div class="relative z-10 w-full max-w-md p-10 text-white">
-            <img src="./assets/images/only_logo_FA.png" alt="" class="mb-5 h-16 w-auto brightness-0 invert" loading="lazy" />
-            <h1 class="text-4xl font-extrabold tracking-tight">
-                Factur<span class="text-yellow-400">ADA</span>
-            </h1>
-            <p class="mt-3 text-sm leading-relaxed text-white/85">
+            <img src="assets/brand/facturada-logo-sobre-oscuro.svg" alt="" class="h-9 w-auto" />
+            <p class="mt-6 text-sm leading-relaxed text-white/85">
                 Crea tu cuenta en minutos y empieza a emitir comprobantes electrónicos autorizados por el SRI.
             </p>
 
@@ -33,7 +26,7 @@
                         <svg-icon src="assets/icons/heroicons/outline/check.svg" [svgClass]="'h-4 w-4'"></svg-icon>
                     </span>
                     <span><b class="font-semibold">Punto de venta e inventario</b><br />
-                        <span class="text-white/75">Restaurante, retail o venta general.</span></span>
+                        <span class="text-white/75">Para tiendas, servicios, restaurantes y cualquier negocio.</span></span>
                 </li>
                 <li class="hero-benefit">
                     <span class="hero-benefit-icon">
@@ -50,10 +43,8 @@
     <main #scrollArea class="register-main">
         <header class="register-topbar">
             <a routerLink="/" class="flex items-center gap-2 lg:invisible" aria-label="Inicio FacturADA">
-                <img src="./assets/images/only_logo_FA.png" alt="" class="h-8 w-auto" />
-                <span class="text-sm font-extrabold tracking-tight text-foreground">
-                    Factur<span class="text-primary">ADA</span>
-                </span>
+                <img src="assets/brand/facturada-logo-principal.svg" alt="FacturADA" class="h-6 w-auto dark:hidden" />
+                <img src="assets/brand/facturada-logo-sobre-oscuro.svg" alt="FacturADA" class="hidden h-6 w-auto dark:block" />
             </a>
             <p class="text-xs text-muted-foreground">
                 ¿Ya tienes cuenta?
@@ -182,7 +173,7 @@
                             </div>
                             <small *ngIf="showError('confirm_password')" class="field-error">Confirma tu contraseña</small>
                             <small *ngIf="!showError('confirm_password') && showPasswordMismatch" class="field-error">Las contraseñas no coinciden</small>
-                            <small *ngIf="passwordsMatch" class="field-hint text-emerald-600">Las contraseñas coinciden</small>
+                            <small *ngIf="passwordsMatch" class="field-hint text-success-600">Las contraseñas coinciden</small>
                         </div>
                     </div>
 

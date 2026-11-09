@@ -14,7 +14,7 @@
     <tbody class="divide-y divide-border">
       <tr *ngFor="let o of orders; trackBy: trackByName"
         class="cursor-pointer transition hover:bg-muted/40"
-        [ngClass]="{ 'bg-sky-500/5': o._flashType === 'insert' }"
+        [ngClass]="{ 'bg-info-500/5': o._flashType === 'insert' }"
         (click)="open.emit(o)">
         <td class="px-3 py-2.5">
           <p class="font-bold text-foreground">{{ headline(o) }}</p>

@@ -150,8 +150,8 @@ export class ProductSearchModalComponent {
   stockClass(product: any): string {
     if (!hasInventoryControl(product)) return 'text-muted-foreground/60';
     if (isOutOfStockProduct(product)) return 'text-destructive';
-    if (isLowStockProduct(product)) return 'text-amber-600';
-    return 'text-emerald-600';
+    if (isLowStockProduct(product)) return 'text-warning-600';
+    return 'text-success-600';
   }
 
   trackByProduct = (_: number, product: any) => product?.name || product?.codigo;

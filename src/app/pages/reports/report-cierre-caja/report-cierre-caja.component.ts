@@ -184,7 +184,7 @@ export class ReportCierreCajaComponent implements OnInit, OnDestroy {
 
   diferenciaClass(value: number | null): string {
     if (value === null || Math.abs(value) < 0.009) return 'text-foreground';
-    return value > 0 ? 'text-emerald-600' : 'text-red-600';
+    return value > 0 ? 'text-success-600' : 'text-danger-600';
   }
 
   statusBadgeClass(status: string): string {

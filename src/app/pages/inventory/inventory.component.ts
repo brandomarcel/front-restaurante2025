@@ -612,9 +612,9 @@ export class InventoryComponent implements OnInit {
 
   /** Estado único de stock para la tabla: evita repetir "Disponible/Agotado" en dos columnas. */
   stockStatus(product: InventoryProduct): { label: string; tone: string } {
-    if (this.isOutOfStock(product)) return { label: 'Agotado', tone: 'bg-red-100 text-red-800' };
-    if (this.isLowStock(product)) return { label: 'Bajo mínimo', tone: 'bg-amber-100 text-amber-900' };
-    return { label: 'Disponible', tone: 'bg-emerald-100 text-emerald-800' };
+    if (this.isOutOfStock(product)) return { label: 'Agotado', tone: 'bg-danger-100 text-danger-800' };
+    if (this.isLowStock(product)) return { label: 'Bajo mínimo', tone: 'bg-warning-100 text-warning-900' };
+    return { label: 'Disponible', tone: 'bg-success-100 text-success-800' };
   }
 
   stockNumber(product: Partial<Product> | null | undefined): number {
@@ -871,8 +871,8 @@ export class InventoryComponent implements OnInit {
 
   movementVariationClass(movement: any): string {
     const variation = this.movementVariation(movement);
-    if (variation > 0) return 'text-emerald-600';
-    if (variation < 0) return 'text-red-600';
+    if (variation > 0) return 'text-success-600';
+    if (variation < 0) return 'text-danger-600';
     return 'text-muted-foreground';
   }
 

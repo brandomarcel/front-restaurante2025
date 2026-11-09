@@ -6,8 +6,8 @@ import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabi
   standalone: true,
   template: `
     <section class="mx-auto mt-10 max-w-xl rounded-lg border bg-white p-8 text-center shadow-sm">
-      <h1 class="text-xl font-semibold text-slate-800">No tienes módulos disponibles</h1>
-      <p class="mt-2 text-sm text-slate-500">
+      <h1 class="text-xl font-semibold text-foreground">No tienes módulos disponibles</h1>
+      <p class="mt-2 text-sm text-muted-foreground">
         Tu rol no tiene acceso a módulos habilitados para el modo de operación de esta empresa.
       </p>
     </section>

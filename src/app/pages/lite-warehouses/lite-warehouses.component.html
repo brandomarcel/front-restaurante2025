@@ -11,8 +11,8 @@
     </div>
   </header>
 
-  <div *ngIf="error" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800" role="alert">{{ error }}</div>
-  <div *ngIf="!canManage" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">Modo lectura: solo un administrador puede cambiar el modo o las bodegas.</div>
+  <div *ngIf="error" class="rounded-xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm font-semibold text-danger-800" role="alert">{{ error }}</div>
+  <div *ngIf="!canManage" class="rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-xs text-warning-800">Modo lectura: solo un administrador puede cambiar el modo o las bodegas.</div>
 
   <ng-container *ngIf="!error">
     <!-- Modo de inventario -->
@@ -45,12 +45,12 @@
         <ul class="mt-2 space-y-1.5 text-xs">
           <li class="flex items-start gap-2">
             <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
-              [ngClass]="hasDefaultActiveWarehouse ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground'">{{ hasDefaultActiveWarehouse ? '✓' : '1' }}</span>
+              [ngClass]="hasDefaultActiveWarehouse ? 'bg-success-500 text-white' : 'bg-muted text-muted-foreground'">{{ hasDefaultActiveWarehouse ? '✓' : '1' }}</span>
             <span [ngClass]="hasDefaultActiveWarehouse ? 'text-muted-foreground' : 'text-foreground'">Una bodega activa marcada como <b>predeterminada</b>.</span>
           </li>
           <li class="flex items-start gap-2">
             <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
-              [ngClass]="!terminalsWithoutWarehouse.length ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground'">{{ !terminalsWithoutWarehouse.length ? '✓' : '2' }}</span>
+              [ngClass]="!terminalsWithoutWarehouse.length ? 'bg-success-500 text-white' : 'bg-muted text-muted-foreground'">{{ !terminalsWithoutWarehouse.length ? '✓' : '2' }}</span>
             <span [ngClass]="!terminalsWithoutWarehouse.length ? 'text-muted-foreground' : 'text-foreground'">
               Todas las terminales POS con una bodega asignada.
               <ng-container *ngIf="terminalsWithoutWarehouse.length">
@@ -60,7 +60,7 @@
             </span>
           </li>
         </ul>
-        <p *ngIf="canActivateWarehouseMode" class="mt-2 text-[11px] font-semibold text-emerald-700">Todo listo: ya puedes activar "Por bodega".</p>
+        <p *ngIf="canActivateWarehouseMode" class="mt-2 text-[11px] font-semibold text-success-700">Todo listo: ya puedes activar "Por bodega".</p>
       </div>
     </section>
 
@@ -90,7 +90,7 @@
               <span *ngIf="warehouse.is_default" class="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">Predeterminada</span>
             </div>
             <span class="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
-              [ngClass]="isActive(warehouse) ? 'bg-emerald-100 text-emerald-800' : 'bg-muted text-muted-foreground'">
+              [ngClass]="isActive(warehouse) ? 'bg-success-100 text-success-800' : 'bg-muted text-muted-foreground'">
               <span class="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true"></span>{{ warehouse.status || 'Activo' }}
             </span>
             <dl class="mt-3 space-y-1 text-xs">

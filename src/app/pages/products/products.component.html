@@ -41,9 +41,9 @@
             (click)="setEstado('Inactivo')">Inactivos</button>
         </div>
         <button *ngIf="inventoryEnabled" type="button" class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition"
-          [ngClass]="soloBajoStock ? 'border-amber-500/40 tone-warn' : 'border-border text-muted-foreground hover:bg-muted'"
+          [ngClass]="soloBajoStock ? 'border-warning-500/40 tone-warn' : 'border-border text-muted-foreground hover:bg-muted'"
           [attr.aria-pressed]="soloBajoStock" (click)="toggleBajoStock()">
-          <span class="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true"></span>Poco stock
+          <span class="h-1.5 w-1.5 rounded-full bg-warning-500" aria-hidden="true"></span>Poco stock
         </button>
         <button *ngIf="hasActiveFilters" type="button" class="btn btn-ghost !text-xs" (click)="limpiarFiltros()">Limpiar</button>
       </div>
@@ -55,8 +55,8 @@
     <div *ngIf="inventoryEnabled && productosFiltradosList.length && (outOfStockCount || lowStockCount)"
       class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-4 py-2 text-[11px] text-muted-foreground">
       <span class="font-semibold text-foreground/80">En esta página:</span>
-      <span *ngIf="outOfStockCount" class="inline-flex items-center gap-1 font-semibold text-red-700 dark:text-red-400"><span class="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true"></span>{{ outOfStockCount }} agotado(s)</span>
-      <span *ngIf="lowStockCount" class="inline-flex items-center gap-1 font-semibold text-amber-700 dark:text-amber-400"><span class="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true"></span>{{ lowStockCount }} con poco stock</span>
+      <span *ngIf="outOfStockCount" class="inline-flex items-center gap-1 font-semibold text-danger-700 "><span class="h-1.5 w-1.5 rounded-full bg-danger-500" aria-hidden="true"></span>{{ outOfStockCount }} agotado(s)</span>
+      <span *ngIf="lowStockCount" class="inline-flex items-center gap-1 font-semibold text-warning-700 "><span class="h-1.5 w-1.5 rounded-full bg-warning-500" aria-hidden="true"></span>{{ lowStockCount }} con poco stock</span>
     </div>
 
     <app-list-state [loading]="loading" [empty]="!productosFiltradosList.length" [hasFilters]="hasActiveFilters"
@@ -106,9 +106,9 @@
           </div>
           <div *ngIf="inventoryEnabled" class="w-28 shrink-0 text-left lg:text-right">
             <ng-container *ngIf="hasInventory(p); else noStockData">
-              <p class="text-sm font-semibold" [ngClass]="isOutOfStock(p) ? 'text-red-700 dark:text-red-400' : (isLowStock(p) ? 'text-amber-700 dark:text-amber-400' : 'text-foreground')">{{ formatStock(p) }}</p>
-              <p *ngIf="isOutOfStock(p)" class="text-[11px] font-semibold text-red-700 dark:text-red-400">Agotado</p>
-              <p *ngIf="!isOutOfStock(p) && isLowStock(p)" class="text-[11px] font-semibold text-amber-700 dark:text-amber-400">Poco stock</p>
+              <p class="text-sm font-semibold" [ngClass]="isOutOfStock(p) ? 'text-danger-700 ' : (isLowStock(p) ? 'text-warning-700 ' : 'text-foreground')">{{ formatStock(p) }}</p>
+              <p *ngIf="isOutOfStock(p)" class="text-[11px] font-semibold text-danger-700 ">Agotado</p>
+              <p *ngIf="!isOutOfStock(p) && isLowStock(p)" class="text-[11px] font-semibold text-warning-700 ">Poco stock</p>
             </ng-container>
             <ng-template #noStockData><p class="text-[11px] text-muted-foreground">{{ (p.variant_count || 0) > 0 ? copy.inVariants : 'Sin control' }}</p></ng-template>
           </div>
@@ -127,8 +127,8 @@
                   <b class="block text-foreground">{{ isActiveProduct(p) ? 'Desactivar' : 'Activar' }}</b>
                   <span class="text-[10px] text-muted-foreground">{{ isActiveProduct(p) ? 'Deja de venderse; se conserva el historial.' : 'Vuelve a estar disponible para la venta.' }}</span>
                 </button>
-                <button type="button" role="menuitem" class="w-full rounded-md px-3 py-2 text-left text-xs hover:bg-red-500/10" (click)="rowMenu = null; eliminar(p.name)">
-                  <b class="block text-red-700 dark:text-red-400">Eliminar</b>
+                <button type="button" role="menuitem" class="w-full rounded-md px-3 py-2 text-left text-xs hover:bg-danger-500/10" (click)="rowMenu = null; eliminar(p.name)">
+                  <b class="block text-danger-700 ">Eliminar</b>
                   <span class="text-[10px] text-muted-foreground">Solo si nunca se vendió.</span>
                 </button>
               </div>
@@ -183,7 +183,7 @@
 
       <form *ngIf="productModalStep !== 'choose'" [formGroup]="productoForm" (ngSubmit)="guardarProducto()" class="flex max-h-[78vh] flex-col">
         <div class="space-y-5 overflow-y-auto p-5 text-sm">
-          <div *ngIf="isEditingWithVariants" class="flex flex-wrap items-center justify-between gap-2 tone-info rounded-lg border border-sky-500/20 px-3 py-2 text-xs">
+          <div *ngIf="isEditingWithVariants" class="flex flex-wrap items-center justify-between gap-2 tone-info rounded-lg border border-info-500/20 px-3 py-2 text-xs">
             <span>{{ copy.editNote }} ({{ productoEditando?.variant_count }})</span>
             <button type="button" class="btn btn-outline !bg-card !px-2.5 !py-1 !text-[11px]" (click)="irAVariantesDesdeEdicion()">{{ copy.goTo }}</button>
           </div>
@@ -258,7 +258,7 @@
           </section>
 
           <!-- Inventario -->
-          <section *ngIf="inventoryEnabled && productModalStep !== 'grouped' && !isEditingWithVariants && stockFromRecipe" class="tone-ok flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/20 p-4">
+          <section *ngIf="inventoryEnabled && productModalStep !== 'grouped' && !isEditingWithVariants && stockFromRecipe" class="tone-ok flex flex-wrap items-center justify-between gap-3 rounded-xl border border-success-500/20 p-4">
             <span>
               <span class="block text-sm font-semibold">Inventario por receta</span>
               <span class="block text-xs">Este plato no lleva stock propio: al venderse descuenta sus {{ productoEditando?.recipe_count || '' }} insumos.</span>
@@ -403,7 +403,7 @@
                 </p>
               </div>
               <p class="w-20 shrink-0 text-sm font-bold text-foreground sm:text-right">{{ v.precio | currency }}</p>
-              <p class="w-24 shrink-0 text-xs sm:text-right" [ngClass]="isOutOfStock(v) ? 'font-semibold text-red-700 dark:text-red-400' : (isLowStock(v) ? 'font-semibold text-amber-700 dark:text-amber-400' : 'text-foreground')">
+              <p class="w-24 shrink-0 text-xs sm:text-right" [ngClass]="isOutOfStock(v) ? 'font-semibold text-danger-700 ' : (isLowStock(v) ? 'font-semibold text-warning-700 ' : 'text-foreground')">
                 {{ hasInventory(v) ? formatStock(v) : 'Sin control' }}
               </p>
               <span *ngIf="!isActiveProduct(v)" class="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">Inactiva</span>
@@ -453,7 +453,7 @@
                 <input type="text" class="input" formControlName="value" [placeholder]="copy.valuePlaceholder" [attr.aria-label]="'Valor del atributo ' + (i + 1)" />
                 <p *ngIf="varianteSubmitted && group.get('value')?.invalid" class="field-error">Requerido.</p>
               </div>
-              <button type="button" class="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-400 disabled:opacity-30"
+              <button type="button" class="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-danger-500/10 hover:text-danger-700 disabled:opacity-30"
                 (click)="removeAtributoRow(i)" [disabled]="vfAttributes.length <= 1" [attr.aria-label]="'Quitar atributo ' + (i + 1)">×</button>
             </div>
             <button type="button" class="text-xs font-semibold text-primary hover:underline" (click)="addAtributoRow()">+ Agregar atributo</button>

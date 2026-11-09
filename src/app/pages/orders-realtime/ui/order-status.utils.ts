@@ -22,11 +22,11 @@ export const ORDER_STAGE_LABEL: Record<OrderStage, string> = {
 
 /** Clases de la etiqueta de estado; usan opacidad para verse bien en tema claro y oscuro. */
 export const ORDER_STAGE_BADGE: Record<OrderStage, string> = {
-  new: 'bg-sky-500/15 text-sky-700 dark:text-sky-300',
-  prep: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
-  ready: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+  new: 'bg-info-500/15 text-info-700 ',
+  prep: 'bg-warning-500/15 text-warning-700 ',
+  ready: 'bg-success-500/15 text-success-700 ',
   closed: 'bg-muted text-muted-foreground',
-  cancelled: 'bg-rose-500/15 text-rose-700 dark:text-rose-300',
+  cancelled: 'bg-danger-500/15 text-danger-700 ',
 };
 
 /** Minutos desde la creación de la orden (0 si la fecha no es válida). */

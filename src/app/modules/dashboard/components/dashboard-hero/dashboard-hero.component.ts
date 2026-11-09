@@ -16,7 +16,7 @@ export class DashboardHeroComponent {
   @Input() title = '';
   @Input() subtitle = '';
   @Input() userName = 'Equipo';
-  @Input() gradientClasses = 'from-slate-950 via-primary to-sky-700';
+  @Input() gradientClasses = 'from-slate-950 via-primary to-info-700';
   /** `null` oculta el estado de la firma. */
   @Input() signature: SignatureStatus | null = null;
   /** `null` oculta el estado de caja. */

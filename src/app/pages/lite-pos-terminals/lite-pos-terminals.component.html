@@ -8,13 +8,13 @@
     </ng-container>
   </app-fiscal-setup-header>
 
-  <div *ngIf="!canManage" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">Modo lectura: solo Administrador o Gerente pueden administrar terminales.</div>
-  <div *ngIf="!activeEstablishments.length && !loading" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+  <div *ngIf="!canManage" class="rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-xs text-warning-800">Modo lectura: solo Administrador o Gerente pueden administrar terminales.</div>
+  <div *ngIf="!activeEstablishments.length && !loading" class="rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-xs text-warning-900">
     Para crear una terminal primero necesitas un establecimiento y un punto de emisión.
     <a routerLink="/settings/lite/establishments" class="ml-1 font-semibold underline">Configurarlos →</a>
   </div>
 
-  <section *ngIf="error && !loading" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800" role="alert">{{ error }}</section>
+  <section *ngIf="error && !loading" class="rounded-xl border border-warning-200 bg-warning-50 p-4 text-sm text-warning-800" role="alert">{{ error }}</section>
 
   <section *ngIf="loading" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
     <div *ngFor="let _ of [1, 2, 3]" class="h-44 animate-pulse rounded-xl bg-muted"></div>
@@ -28,7 +28,7 @@
           <h2 class="truncate text-sm font-bold text-foreground">{{ terminal.terminal_name || 'Terminal POS' }}</h2>
           <p class="truncate text-[11px] text-muted-foreground">{{ terminal.establishment_name || terminal.establishment || '—' }}</p>
           <span class="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
-            [ngClass]="isActive(terminal) ? 'bg-emerald-100 text-emerald-800' : 'bg-muted text-muted-foreground'">
+            [ngClass]="isActive(terminal) ? 'bg-success-100 text-success-800' : 'bg-muted text-muted-foreground'">
             <span class="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true"></span>{{ terminal.status || 'Activo' }}
           </span>
         </div>
@@ -50,14 +50,14 @@
       </dl>
 
       <ul *ngIf="warnings(terminal).length" class="space-y-1 px-4 pb-3">
-        <li *ngFor="let warning of warnings(terminal)" class="flex items-start gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-900">
+        <li *ngFor="let warning of warnings(terminal)" class="flex items-start gap-1.5 rounded-lg bg-warning-50 px-2.5 py-1.5 text-[11px] text-warning-900">
           <span aria-hidden="true">⚠</span>{{ warning }}
         </li>
       </ul>
 
       <div *ngIf="canManage" class="mt-auto flex justify-end gap-1 border-t border-border px-4 py-2">
         <button type="button" class="btn btn-ghost !px-2 !py-1 !text-[11px]" [disabled]="saving" (click)="openEdit(terminal)">Editar</button>
-        <button *ngIf="isActive(terminal)" type="button" class="btn btn-ghost !px-2 !py-1 !text-[11px] !text-red-700" [disabled]="saving" (click)="deactivate(terminal)">Desactivar</button>
+        <button *ngIf="isActive(terminal)" type="button" class="btn btn-ghost !px-2 !py-1 !text-[11px] !text-danger-700" [disabled]="saving" (click)="deactivate(terminal)">Desactivar</button>
       </div>
     </article>
   </section>
@@ -113,7 +113,7 @@
               </button>
             </div>
             <ng-template #noPoints>
-              <p class="text-[11px] text-amber-800">Este establecimiento no tiene puntos de emisión activos. <a routerLink="/settings/lite/emission-points" [queryParams]="{ establishment: form.get('establishment')?.value }" class="font-semibold underline" (click)="closeModal()">Crear uno →</a></p>
+              <p class="text-[11px] text-warning-800">Este establecimiento no tiene puntos de emisión activos. <a routerLink="/settings/lite/emission-points" [queryParams]="{ establishment: form.get('establishment')?.value }" class="font-semibold underline" (click)="closeModal()">Crear uno →</a></p>
             </ng-template>
             <p *ngIf="submitted && form.get('emission_point')?.invalid" class="field-error">Elige un punto de emisión.</p>
           </div>
@@ -126,7 +126,7 @@
             <option value="">Sin bodega asignada</option>
             <option *ngFor="let warehouse of warehouseOptions" [value]="warehouse.name">{{ warehouse.warehouse_name || warehouse.name }}</option>
           </select>
-          <p class="text-[11px]" [ngClass]="form.get('warehouse')?.value ? 'text-muted-foreground' : 'text-amber-700'">
+          <p class="text-[11px]" [ngClass]="form.get('warehouse')?.value ? 'text-muted-foreground' : 'text-warning-700'">
             {{ form.get('warehouse')?.value ? 'Las ventas de esta terminal descuentan stock de esta bodega.' : 'Sin bodega, la terminal no podrá vender si el inventario es "Por bodega".' }}
           </p>
         </fieldset>
@@ -152,8 +152,8 @@
               </label>
             </div>
           </ng-container>
-          <p *ngIf="!usersLoading && !businessUsers.length" class="text-xs text-amber-700">No hay usuarios activos para asignar.</p>
-          <p *ngIf="!usersLoading && businessUsers.length && !selectedUserIds.length" class="text-[11px] text-amber-700">Sin usuarios asignados nadie podrá abrir esta terminal.</p>
+          <p *ngIf="!usersLoading && !businessUsers.length" class="text-xs text-warning-700">No hay usuarios activos para asignar.</p>
+          <p *ngIf="!usersLoading && businessUsers.length && !selectedUserIds.length" class="text-[11px] text-warning-700">Sin usuarios asignados nadie podrá abrir esta terminal.</p>
         </fieldset>
 
         <div>

@@ -2,11 +2,11 @@
   <div *ngFor="let i of [1, 2, 3, 4]" class="h-20 animate-pulse rounded-xl border border-border bg-card"></div>
 </div>
 
-<div *ngIf="!loading && needsTerminal" class="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm font-semibold text-amber-700">
+<div *ngIf="!loading && needsTerminal" class="mb-3 rounded-xl border border-warning-500/30 bg-warning-500/10 p-3 text-sm font-semibold text-warning-700">
   Tienes varias terminales POS asignadas. Elige una en el selector de terminal de la barra superior para ver tus métricas.
 </div>
 
-<div *ngIf="!loading && !needsTerminal && error" class="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm font-semibold text-red-600">
+<div *ngIf="!loading && !needsTerminal && error" class="mb-3 rounded-xl border border-danger-500/30 bg-danger-500/10 p-3 text-sm font-semibold text-danger-600">
   {{ error }}
 </div>
 
@@ -150,9 +150,9 @@
     <p *ngIf="retailStock.loading; else retailCounts" class="text-xs text-muted-foreground">Cargando stock…</p>
     <ng-template #retailCounts>
       <div class="grid grid-cols-2 gap-2">
-        <div class="rounded-lg p-2.5" [ngClass]="retailStock.lowStock > 0 ? 'border border-amber-200 bg-amber-50' : 'border border-border bg-muted/40'">
-          <p class="text-[10px] font-bold uppercase tracking-wide" [ngClass]="retailStock.lowStock > 0 ? 'text-amber-700' : 'text-muted-foreground'">Bajo stock</p>
-          <p class="mt-1 text-lg font-black" [ngClass]="retailStock.lowStock > 0 ? 'text-amber-700' : 'text-foreground'">{{ retailStock.lowStock }}</p>
+        <div class="rounded-lg p-2.5" [ngClass]="retailStock.lowStock > 0 ? 'border border-warning-200 bg-warning-50' : 'border border-border bg-muted/40'">
+          <p class="text-[10px] font-bold uppercase tracking-wide" [ngClass]="retailStock.lowStock > 0 ? 'text-warning-700' : 'text-muted-foreground'">Bajo stock</p>
+          <p class="mt-1 text-lg font-black" [ngClass]="retailStock.lowStock > 0 ? 'text-warning-700' : 'text-foreground'">{{ retailStock.lowStock }}</p>
         </div>
         <div class="rounded-lg p-2.5" [ngClass]="retailStock.outOfStock > 0 ? 'border border-destructive/30 bg-destructive/10' : 'border border-border bg-muted/40'">
           <p class="text-[10px] font-bold uppercase tracking-wide" [ngClass]="retailStock.outOfStock > 0 ? 'text-destructive' : 'text-muted-foreground'">Sin stock</p>

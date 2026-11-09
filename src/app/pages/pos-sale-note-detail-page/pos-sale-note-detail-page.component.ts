@@ -86,12 +86,12 @@ export class PosSaleNoteDetailPageComponent implements OnInit {
 
   statusClass(status: string): string {
     const classes: Record<string, string> = {
-      Borrador: 'bg-slate-100 text-slate-700',
-      Cobrada: 'bg-emerald-100 text-emerald-700',
-      Facturada: 'bg-blue-100 text-blue-700',
-      Anulada: 'bg-red-100 text-red-700'
+      Borrador: 'bg-muted text-foreground',
+      Cobrada: 'bg-success-100 text-success-700',
+      Facturada: 'bg-info-100 text-info-700',
+      Anulada: 'bg-danger-100 text-danger-700'
     };
-    return classes[status] || 'bg-amber-100 text-amber-700';
+    return classes[status] || 'bg-warning-100 text-warning-700';
   }
 
   customerName(note: any): string {

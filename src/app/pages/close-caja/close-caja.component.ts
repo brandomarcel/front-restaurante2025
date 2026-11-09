@@ -342,7 +342,7 @@ export class CloseCajaComponent implements OnInit {
   paymentDifferenceClass(code: string): string {
     const diff = this.paymentDifference(code);
     if (Math.abs(diff) < 0.009) return 'text-muted-foreground';
-    return diff > 0 ? 'text-emerald-600' : 'text-red-600';
+    return diff > 0 ? 'text-success-600' : 'text-danger-600';
   }
 
   trackPayment(_index: number, payment: { payment_code: string }): string {

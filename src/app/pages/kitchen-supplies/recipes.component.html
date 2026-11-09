@@ -20,8 +20,8 @@
     <section class="flex flex-col gap-2 rounded-xl border border-border bg-card p-2 shadow-sm sm:flex-row sm:items-center" aria-label="Filtros">
       <div class="inline-flex shrink-0 rounded-lg border border-border bg-muted/40 p-0.5" role="radiogroup" aria-label="Mostrar">
         <button type="button" role="radio" [attr.aria-checked]="filter === 'with'" class="rounded-md px-3 py-1.5 text-xs font-semibold transition" [ngClass]="filter === 'with' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'" (click)="setFilter('with')">Con receta <span class="ml-1 text-muted-foreground">{{ counts['with'] }}</span></button>
-        <button type="button" role="radio" [attr.aria-checked]="filter === 'without'" class="rounded-md px-3 py-1.5 text-xs font-semibold transition" [ngClass]="filter === 'without' ? 'bg-card text-amber-700 shadow-sm' : 'text-muted-foreground hover:text-foreground'" (click)="setFilter('without')">Sin receta <span class="ml-1" [ngClass]="counts['without'] ? 'text-amber-600' : 'text-muted-foreground'">{{ counts['without'] }}</span></button>
-        <button *ngIf="counts['low']" type="button" role="radio" [attr.aria-checked]="filter === 'low'" class="rounded-md px-3 py-1.5 text-xs font-semibold transition" [ngClass]="filter === 'low' ? 'bg-card text-red-700 shadow-sm' : 'text-muted-foreground hover:text-foreground'" (click)="setFilter('low')">Por agotarse <span class="ml-1 text-red-600">{{ counts['low'] }}</span></button>
+        <button type="button" role="radio" [attr.aria-checked]="filter === 'without'" class="rounded-md px-3 py-1.5 text-xs font-semibold transition" [ngClass]="filter === 'without' ? 'bg-card text-warning-700 shadow-sm' : 'text-muted-foreground hover:text-foreground'" (click)="setFilter('without')">Sin receta <span class="ml-1" [ngClass]="counts['without'] ? 'text-warning-600' : 'text-muted-foreground'">{{ counts['without'] }}</span></button>
+        <button *ngIf="counts['low']" type="button" role="radio" [attr.aria-checked]="filter === 'low'" class="rounded-md px-3 py-1.5 text-xs font-semibold transition" [ngClass]="filter === 'low' ? 'bg-card text-danger-700 shadow-sm' : 'text-muted-foreground hover:text-foreground'" (click)="setFilter('low')">Por agotarse <span class="ml-1 text-danger-600">{{ counts['low'] }}</span></button>
       </div>
       <input class="input h-9 flex-1 text-xs md:!w-auto" type="search" [ngModel]="search" (ngModelChange)="onSearch($event)" placeholder="Buscar plato…" aria-label="Buscar plato" autocomplete="off" />
     </section>
@@ -96,7 +96,7 @@
       </header>
 
       <div class="max-h-[62vh] space-y-3 overflow-y-auto p-5">
-        <p *ngIf="dish.track_stock" class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+        <p *ngIf="dish.track_stock" class="rounded-lg border border-warning-300 bg-warning-50 px-3 py-2 text-[11px] text-warning-900 ">
           Este plato controla stock propio. Al guardar la receta dejará de hacerlo (su saldo debe estar en 0) y descontará solo los insumos.
         </p>
 
@@ -125,7 +125,7 @@
                   <span class="w-8 shrink-0 text-[11px] text-muted-foreground">{{ unitOf(line) }}</span>
                 </div>
               </div>
-              <button type="button" class="btn btn-ghost !h-9 !px-2 text-red-600" (click)="removeLine(i)" [attr.aria-label]="'Quitar insumo ' + (i + 1)">×</button>
+              <button type="button" class="btn btn-ghost !h-9 !px-2 text-danger-600" (click)="removeLine(i)" [attr.aria-label]="'Quitar insumo ' + (i + 1)">×</button>
             </div>
             <p *ngIf="lineError(line)" class="field-error" role="alert">{{ lineError(line) }}</p>
             <label class="mt-1.5 flex cursor-pointer items-center gap-2 text-[11px] text-muted-foreground" title="Aparece como botón «Sin …» en el POS y no se descuenta.">
@@ -138,7 +138,7 @@
 
           <!-- Qué pasa con el stock de hoy -->
           <div *ngIf="preview.portions !== null" class="flex items-center justify-between rounded-lg px-3 py-2 text-xs"
-            [ngClass]="preview.portions === 0 ? 'bg-red-50 text-red-800 dark:bg-red-500/10 dark:text-red-300' : preview.portions <= 5 ? 'bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200' : 'bg-emerald-50 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300'" role="status">
+            [ngClass]="preview.portions === 0 ? 'bg-danger-50 text-danger-800 ' : preview.portions <= 5 ? 'bg-warning-50 text-warning-900 ' : 'bg-success-50 text-success-800 '" role="status">
             <span>Con el stock de hoy alcanza para</span>
             <b class="text-sm">{{ preview.portions }} {{ preview.portions === 1 ? 'porción' : 'porciones' }}<span *ngIf="preview.portions <= 5" class="font-normal"> · limita {{ preview.limiting }}</span></b>
           </div>
@@ -146,7 +146,7 @@
       </div>
 
       <footer class="flex flex-wrap items-center justify-between gap-2 border-t border-border px-5 py-4">
-        <button *ngIf="dish.has_recipe" type="button" class="text-xs font-semibold text-red-600 hover:underline" [disabled]="saving" (click)="removeRecipe()">Quitar receta</button>
+        <button *ngIf="dish.has_recipe" type="button" class="text-xs font-semibold text-danger-600 hover:underline" [disabled]="saving" (click)="removeRecipe()">Quitar receta</button>
         <span *ngIf="!dish.has_recipe"></span>
         <div class="flex gap-2">
           <button type="button" class="btn btn-outline" [disabled]="saving" (click)="close()">Cancelar</button>

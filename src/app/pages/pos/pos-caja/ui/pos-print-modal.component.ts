@@ -14,7 +14,7 @@ export type PosPrintOption = 'comanda' | 'recibo' | 'ambas' | 'ticket' | 'ride' 
         <button type="button" class="absolute right-3 top-3 h-8 w-8 rounded-md border border-border text-muted-foreground hover:bg-muted" (click)="close.emit()" aria-label="Cerrar">×</button>
 
         <div class="mb-4 flex items-start gap-3">
-          <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-lg font-bold text-emerald-700" aria-hidden="true">✓</span>
+          <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success-100 text-lg font-bold text-success-700" aria-hidden="true">✓</span>
           <div>
             <h3 id="pos-print-title" class="text-lg font-semibold text-foreground">{{ context === 'invoice' ? 'Venta registrada' : 'Pedido registrado' }}</h3>
             <p class="text-sm text-muted-foreground">{{ context === 'invoice' ? '¿Qué comprobante entregas al cliente?' : '¿Qué documento quieres imprimir?' }}</p>
@@ -25,7 +25,7 @@ export type PosPrintOption = 'comanda' | 'recibo' | 'ambas' | 'ticket' | 'ride' 
           <button type="button" class="min-h-[52px] rounded-lg bg-primary px-3 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90" (click)="choose.emit('ticket')">
             Ticket<span class="block text-[10px] font-normal opacity-80">Impresora térmica</span>
           </button>
-          <button type="button" class="min-h-[52px] rounded-lg border border-sky-200 bg-sky-50 px-3 py-3 text-sm font-semibold text-sky-800 transition hover:bg-sky-100" (click)="choose.emit('ride')">
+          <button type="button" class="min-h-[52px] rounded-lg border border-info-200 bg-info-50 px-3 py-3 text-sm font-semibold text-info-800 transition hover:bg-info-100" (click)="choose.emit('ride')">
             RIDE<span class="block text-[10px] font-normal opacity-80">Formato A4 del SRI</span>
           </button>
           <button type="button" class="min-h-[52px] rounded-lg border border-border bg-card px-3 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-muted" (click)="choose.emit('skip')">
@@ -34,10 +34,10 @@ export type PosPrintOption = 'comanda' | 'recibo' | 'ambas' | 'ticket' | 'ride' 
         </div>
 
         <div *ngIf="context === 'order'" class="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-          <button type="button" class="min-h-[52px] rounded-lg border border-sky-200 bg-sky-50 px-3 py-3 text-sm font-semibold text-sky-800 transition hover:bg-sky-100" (click)="choose.emit('comanda')">
+          <button type="button" class="min-h-[52px] rounded-lg border border-info-200 bg-info-50 px-3 py-3 text-sm font-semibold text-info-800 transition hover:bg-info-100" (click)="choose.emit('comanda')">
             Comanda<span class="block text-[10px] font-normal opacity-80">Para cocina</span>
           </button>
-          <button type="button" class="min-h-[52px] rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100" (click)="choose.emit('recibo')">
+          <button type="button" class="min-h-[52px] rounded-lg border border-success-200 bg-success-50 px-3 py-3 text-sm font-semibold text-success-800 transition hover:bg-success-100" (click)="choose.emit('recibo')">
             Recibo<span class="block text-[10px] font-normal opacity-80">Para el cliente</span>
           </button>
           <button type="button" class="min-h-[52px] rounded-lg bg-primary px-3 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90" (click)="choose.emit('ambas')">

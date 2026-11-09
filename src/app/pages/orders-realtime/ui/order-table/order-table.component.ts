@@ -72,8 +72,8 @@ export class OrderTableComponent {
 
   waitClass(o: OrderVM): string {
     switch (waitTone(orderAgeMinutes(o, this.now))) {
-      case 'late': return 'text-rose-600 dark:text-rose-400';
-      case 'warn': return 'text-amber-600 dark:text-amber-400';
+      case 'late': return 'text-danger-600 ';
+      case 'warn': return 'text-warning-600 ';
       default: return 'text-muted-foreground';
     }
   }
@@ -81,8 +81,8 @@ export class OrderTableComponent {
   getSriBadge(status?: string): string {
     const value = String(status ?? '').toLowerCase();
     if (!value || value.includes('sin factura')) return 'bg-muted text-muted-foreground';
-    if (value.includes('autor')) return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
-    if (value.includes('error') || value.includes('rechaz')) return 'bg-rose-500/15 text-rose-700 dark:text-rose-300';
-    return 'bg-amber-500/15 text-amber-700 dark:text-amber-300';
+    if (value.includes('autor')) return 'bg-success-500/15 text-success-700 ';
+    if (value.includes('error') || value.includes('rechaz')) return 'bg-danger-500/15 text-danger-700 ';
+    return 'bg-warning-500/15 text-warning-700 ';
   }
 }

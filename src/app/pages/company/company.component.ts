@@ -272,9 +272,9 @@ export class CompanyComponent implements OnInit, DoCheck {
 
   get certificateStatusClasses(): string {
     const status = this.normalizeStatus(this.certificateStatusLabel);
-    if (status === 'VIGENTE') return 'tone-ok border-emerald-500/30';
-    if (status === 'POR VENCER') return 'tone-warn border-amber-500/30';
-    if (status === 'NO CONFIGURADO' || status === 'VENCIDO' || status === 'NO VIGENTE' || status === 'ERROR DE LECTURA') return 'tone-danger border-red-500/30';
+    if (status === 'VIGENTE') return 'tone-ok border-success-500/30';
+    if (status === 'POR VENCER') return 'tone-warn border-warning-500/30';
+    if (status === 'NO CONFIGURADO' || status === 'VENCIDO' || status === 'NO VIGENTE' || status === 'ERROR DE LECTURA') return 'tone-danger border-danger-500/30';
     return 'bg-muted text-muted-foreground border-border';
   }
 
@@ -1599,10 +1599,10 @@ export class CompanyComponent implements OnInit, DoCheck {
       .toUpperCase()
       .trim();
 
-    if (normalized === 'ACTIVO') return 'tone-ok border-emerald-500/30';
-    if (normalized === 'PRUEBA') return 'tone-info border-sky-500/30';
-    if (normalized === 'VENCIDO') return 'tone-danger border-red-500/30';
-    if (normalized === 'SUSPENDIDO') return 'tone-alert border-orange-500/30';
+    if (normalized === 'ACTIVO') return 'tone-ok border-success-500/30';
+    if (normalized === 'PRUEBA') return 'tone-info border-info-500/30';
+    if (normalized === 'VENCIDO') return 'tone-danger border-danger-500/30';
+    if (normalized === 'SUSPENDIDO') return 'tone-alert border-warning-500/30';
     if (normalized === 'CANCELADO' || normalized === 'RENOVADO') return 'bg-muted text-muted-foreground border-border';
     return 'bg-muted text-muted-foreground border-border';
   }

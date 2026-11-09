@@ -8,19 +8,19 @@ import { FormsModule } from '@angular/forms';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <nav *ngIf="totalPages > 0" class="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-3 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between" aria-label="Paginación">
+    <nav *ngIf="totalPages > 0" class="mt-4 flex flex-col gap-3 border-t border-border pt-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between" aria-label="Paginación">
       <span *ngIf="totalItems > 0">Mostrando {{ fromItem }}–{{ toItem }} de {{ totalItems }}</span>
       <span *ngIf="totalItems === 0">Sin registros</span>
       <div class="flex flex-wrap items-center gap-2">
         <label class="flex items-center gap-1 whitespace-nowrap">
           Filas
-          <select class="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs" [ngModel]="pageSize" (ngModelChange)="changePageSize($event)" aria-label="Filas por página">
+          <select class="rounded-md border border-border bg-white px-2 py-1 text-xs" [ngModel]="pageSize" (ngModelChange)="changePageSize($event)" aria-label="Filas por página">
             <option *ngFor="let size of pageSizes" [ngValue]="size">{{ size }}</option>
           </select>
         </label>
-        <button type="button" class="rounded-md border border-slate-300 bg-white px-3 py-1.5 font-medium transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40" (click)="changePage(page - 1)" [disabled]="page <= 1">Anterior</button>
-        <span class="min-w-[92px] text-center font-medium text-slate-700">Página {{ page }} de {{ totalPages }}</span>
-        <button type="button" class="rounded-md border border-slate-300 bg-white px-3 py-1.5 font-medium transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40" (click)="changePage(page + 1)" [disabled]="page >= totalPages">Siguiente</button>
+        <button type="button" class="rounded-md border border-border bg-white px-3 py-1.5 font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40" (click)="changePage(page - 1)" [disabled]="page <= 1">Anterior</button>
+        <span class="min-w-[92px] text-center font-medium text-foreground">Página {{ page }} de {{ totalPages }}</span>
+        <button type="button" class="rounded-md border border-border bg-white px-3 py-1.5 font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40" (click)="changePage(page + 1)" [disabled]="page >= totalPages">Siguiente</button>
       </div>
     </nav>
   `

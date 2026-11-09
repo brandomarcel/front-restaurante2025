@@ -99,7 +99,7 @@ export class ReceivablesComponent implements OnInit, DoCheck {
   collectionLabel(row: any): string { return String(row?.collection_status || row?.totals?.collection_status || 'Pendiente'); }
   collectionClass(row: any): string {
     const status = this.collectionLabel(row).toLowerCase();
-    return status.includes('pagada') ? 'bg-emerald-100 text-emerald-700' : status.includes('abonada') ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-700';
+    return status.includes('pagada') ? 'bg-success-100 text-success-700' : status.includes('abonada') ? 'bg-warning-100 text-warning-800' : 'bg-danger-100 text-danger-700';
   }
 
   private errorMessage(error: any): string {

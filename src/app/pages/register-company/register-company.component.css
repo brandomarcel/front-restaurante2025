@@ -11,8 +11,10 @@
   @apply flex h-[100dvh] bg-background;
 }
 
+/* Color de marca fijo (no el principal del tema): en modo oscuro el principal es claro y el texto blanco no se leía. */
 .register-hero {
-  @apply relative hidden flex-1 items-center justify-center overflow-hidden bg-cover bg-center lg:flex;
+  @apply relative hidden flex-1 items-center justify-center overflow-hidden lg:flex;
+  background: #1b1f3a;
 }
 
 .hero-benefit {

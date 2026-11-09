@@ -101,9 +101,9 @@ export class OrderModalComponent {
   get sriBadgeClass(): string {
     const value = String(this.order?.sri?.status ?? '').toLowerCase();
     if (!value || value.includes('sin factura')) return 'bg-muted text-muted-foreground';
-    if (value.includes('autor')) return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
-    if (value.includes('error') || value.includes('rechaz')) return 'bg-rose-500/15 text-rose-700 dark:text-rose-300';
-    return 'bg-amber-500/15 text-amber-700 dark:text-amber-300';
+    if (value.includes('autor')) return 'bg-success-500/15 text-success-700 ';
+    if (value.includes('error') || value.includes('rechaz')) return 'bg-danger-500/15 text-danger-700 ';
+    return 'bg-warning-500/15 text-warning-700 ';
   }
 
   get canGoToOrder(): boolean {

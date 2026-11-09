@@ -1,27 +1,81 @@
-/* Reutiliza el tema/utilidades sin duplicar el CSS global en el bundle del
-   componente. */
-@reference "../../../../../styles.css";
+/* Usa las variables --auth-* que define el marco del login (auth.component.css). */
+:host { display: block; }
 
-.is__invalid-input {
-  @apply border-destructive focus:border-destructive focus:outline-none focus:ring-2 focus:ring-destructive/15;
+.si-muted { color: var(--auth-muted); }
+.si-error { color: var(--auth-danger); }
+
+/* 16px: en iPhone, un campo con letra menor hace zoom al tocarlo */
+.si-input {
+  display: block;
+  width: 100%;
+  height: 3rem;
+  padding: 0 0.875rem;
+  font-size: 16px;
+  color: var(--auth-ink);
+  background: var(--auth-surface);
+  border: 1px solid var(--auth-line);
+  border-radius: 0.5rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.si-input:focus {
+  border-color: var(--auth-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--auth-focus) 18%, transparent);
+}
+.si-input-invalid,
+.si-input-invalid:focus {
+  border-color: var(--auth-danger);
+}
+.si-input-invalid:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--auth-danger) 18%, transparent);
 }
 
-.is__invalid-error {
-  @apply px-1 text-[11px] font-semibold text-destructive animate-fade-in-down;
+.si-icon-btn { color: var(--auth-muted); }
+.si-icon-btn:hover { color: var(--auth-ink); }
+
+.si-btn {
+  background: var(--auth-btn-bg);
+  color: var(--auth-btn-ink);
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+.si-btn:hover:not(:disabled) { filter: brightness(1.15); }
+.si-btn:active:not(:disabled) { transform: translateY(1px); }
+.si-btn:disabled { cursor: progress; opacity: 0.85; }
+
+.si-link {
+  color: var(--auth-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--auth-line);
+  text-underline-offset: 4px;
+}
+.si-link:hover { text-decoration-color: currentColor; }
+
+.si-alert {
+  color: var(--auth-danger);
+  background: var(--auth-danger-bg);
+  border: 1px solid var(--auth-danger-line);
 }
 
-.input-icon {
-  @apply pointer-events-none absolute left-3.5 top-1/2 z-20 -translate-y-1/2 text-muted-foreground transition-all duration-200;
+.si-divider { border-top: 1px solid var(--auth-line); }
+
+.si-outline,
+.si-business {
+  background: var(--auth-surface);
+  border: 1px solid var(--auth-line);
+  color: var(--auth-ink);
+}
+.si-business:hover:not(:disabled) { border-color: var(--auth-focus); }
+.si-business:disabled { cursor: progress; opacity: 0.7; }
+
+.si-btn:focus-visible,
+.si-link:focus-visible,
+.si-icon-btn:focus-visible,
+.si-outline:focus-visible,
+.si-business:focus-visible {
+  outline: 2px solid var(--auth-focus);
+  outline-offset: 2px;
 }
 
-.relative:focus-within .input-icon {
-  @apply text-primary scale-110;
-}
-
-.login-label {
-  @apply text-[11px] font-bold uppercase tracking-wide text-muted-foreground;
-}
-
-.login-input {
-  @apply block h-11 w-full rounded-xl border border-border bg-card px-3 pl-10 text-sm font-medium text-foreground shadow-sm outline-none transition-all duration-200 placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-primary/15;
+@media (prefers-reduced-motion: reduce) {
+  .si-input, .si-btn { transition: none; }
 }

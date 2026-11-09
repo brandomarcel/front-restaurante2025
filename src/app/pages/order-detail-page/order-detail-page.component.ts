@@ -1520,11 +1520,11 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
 
   get orderStatusClass(): string {
     // Opacidades en lugar de tonos fijos: legibles en tema claro y oscuro.
-    if (this.isLocked) return 'border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
+    if (this.isLocked) return 'border-success-500/30 bg-success-500/15 text-success-700 ';
     const status = this.orderStatusLabel;
-    if (status === 'Ingresada') return 'border-sky-500/30 bg-sky-500/15 text-sky-700 dark:text-sky-300';
-    if (status === 'Preparación') return 'border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-300';
-    if (status === 'Lista') return 'border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
+    if (status === 'Ingresada') return 'border-info-500/30 bg-info-500/15 text-info-700 ';
+    if (status === 'Preparación') return 'border-warning-500/30 bg-warning-500/15 text-warning-700 ';
+    if (status === 'Lista') return 'border-success-500/30 bg-success-500/15 text-success-700 ';
     if (status === 'Cerrada') return 'border-border bg-muted text-muted-foreground';
     if (status === 'Cancelada') return 'border-destructive/30 bg-destructive/10 text-destructive';
     return 'border-border bg-muted text-muted-foreground';

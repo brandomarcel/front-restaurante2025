@@ -3,7 +3,7 @@
     <h2 class="text-base font-bold text-foreground">Subcuentas</h2>
     <p class="text-xs text-muted-foreground">
       Divididas ${{ splitTotalSum | number:'1.2-2' }} de ${{ orderGrandTotal | number:'1.2-2' }}
-      <span *ngIf="pendingToSplitFromOrder > 0" class="font-bold text-amber-700 dark:text-amber-300"> · falta ${{ pendingToSplitFromOrder | number:'1.2-2' }}</span>
+      <span *ngIf="pendingToSplitFromOrder > 0" class="font-bold text-warning-700 "> · falta ${{ pendingToSplitFromOrder | number:'1.2-2' }}</span>
     </p>
   </div>
   <span class="rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">{{ splits.length }}</span>
@@ -27,7 +27,7 @@
         </p>
       </div>
 
-      <span class="rounded-full px-2.5 py-0.5 text-[11px] font-bold" [ngClass]="hasInvoice(row) ? getStatusClass(row) : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'">
+      <span class="rounded-full px-2.5 py-0.5 text-[11px] font-bold" [ngClass]="hasInvoice(row) ? getStatusClass(row) : 'bg-warning-500/15 text-warning-700 '">
         {{ getChargeLabel(row) }}
       </span>
 
@@ -36,7 +36,7 @@
 
     <div class="mt-2 flex flex-wrap items-center gap-2 pl-12">
       <button *ngIf="canInvoice && !hasInvoice(row)" type="button"
-        class="inline-flex h-9 items-center rounded-lg bg-emerald-600 px-3 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+        class="inline-flex h-9 items-center rounded-lg bg-success-600 px-3 text-xs font-bold text-white transition hover:bg-success-700 disabled:opacity-50"
         (click)="onInvoice(row)" [disabled]="isInvoicing(row) || isDeleting(row)">
         {{ isInvoicing(row) ? 'Facturando…' : 'Facturar $' + ((row.total || 0) | number:'1.2-2') }}
       </button>
@@ -76,7 +76,7 @@
           <li *ngFor="let item of (row.items || [])" class="flex justify-between gap-2">
             <span class="min-w-0 truncate text-foreground">
               <b>{{ getItemQty(item) | number:'1.0-2' }}×</b> {{ getItemName(item) }}
-              <span *ngIf="item?.discount_amount" class="text-xs text-emerald-600"> (desc. −${{ item.discount_amount | number:'1.2-2' }})</span>
+              <span *ngIf="item?.discount_amount" class="text-xs text-success-600"> (desc. −${{ item.discount_amount | number:'1.2-2' }})</span>
             </span>
             <span class="shrink-0 tabular-nums text-muted-foreground">${{ (item?.total_amount ?? item?.subtotal ?? item?.total ?? 0) | number:'1.2-2' }}</span>
           </li>
@@ -99,10 +99,10 @@
           </ul>
         </div>
         <p class="rounded-lg px-2 py-1 text-xs font-bold"
-          [ngClass]="hasPaymentMismatch(row) ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'">
+          [ngClass]="hasPaymentMismatch(row) ? 'bg-warning-500/15 text-warning-700 ' : 'bg-success-500/15 text-success-700 '">
           {{ getPaymentDifferenceLabel(row) }}
         </p>
-        <p *ngIf="row.sri_message" class="text-xs text-amber-700 dark:text-amber-300">{{ row.sri_message }}</p>
+        <p *ngIf="row.sri_message" class="text-xs text-warning-700 ">{{ row.sri_message }}</p>
         <p *ngIf="row.sri?.access_key || row.access_key" class="break-all text-[10px] text-muted-foreground">Clave: {{ row.sri?.access_key || row.access_key }}</p>
       </div>
     </div>

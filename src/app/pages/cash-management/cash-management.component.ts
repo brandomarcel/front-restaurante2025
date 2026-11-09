@@ -131,10 +131,10 @@ export class CashManagementComponent implements OnInit, OnDestroy {
 
   statusClass(row: any): string {
     const status = normalizeCashStatus(this.rowStatus(row));
-    if (status === 'ABIERTA' || status === 'OPEN') return 'bg-emerald-100 text-emerald-800';
+    if (status === 'ABIERTA' || status === 'OPEN') return 'bg-success-100 text-success-800';
     if (isClosedCashStatus(status)) return 'bg-muted text-muted-foreground';
-    if (status === 'BORRADOR' || status === 'DRAFT') return 'bg-amber-100 text-amber-900';
-    return 'bg-sky-100 text-sky-800';
+    if (status === 'BORRADOR' || status === 'DRAFT') return 'bg-warning-100 text-warning-900';
+    return 'bg-info-100 text-info-800';
   }
 
   rowDifference(row: any): number {
@@ -143,7 +143,7 @@ export class CashManagementComponent implements OnInit, OnDestroy {
 
   differenceClass(value: number): string {
     const kind = cashDifferenceKind(value);
-    return kind === 'even' ? 'text-muted-foreground' : (kind === 'short' ? 'text-red-700' : 'text-amber-700');
+    return kind === 'even' ? 'text-muted-foreground' : (kind === 'short' ? 'text-danger-700' : 'text-warning-700');
   }
 
   get visibleOpenings(): any[] {

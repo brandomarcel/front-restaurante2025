@@ -71,8 +71,8 @@ export class OrderCardComponent {
 
   get waitClass(): string {
     switch (waitTone(orderAgeMinutes(this.order, this.now))) {
-      case 'late': return 'text-rose-600 dark:text-rose-400';
-      case 'warn': return 'text-amber-600 dark:text-amber-400';
+      case 'late': return 'text-danger-600 ';
+      case 'warn': return 'text-warning-600 ';
       default: return 'text-muted-foreground';
     }
   }

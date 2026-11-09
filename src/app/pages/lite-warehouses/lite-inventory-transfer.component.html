@@ -6,9 +6,9 @@
     <p class="text-xs text-muted-foreground">Mueve mercadería de una bodega a otra. Se registra una salida en el origen y una entrada en el destino.</p>
   </header>
 
-  <div *ngIf="error" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800" role="alert">{{ error }}</div>
+  <div *ngIf="error" class="rounded-xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm font-semibold text-danger-800" role="alert">{{ error }}</div>
 
-  <section *ngIf="lastResult" class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900" role="status">
+  <section *ngIf="lastResult" class="rounded-xl border border-success-200 bg-success-50 p-4 text-success-900" role="status">
     <div class="flex flex-wrap items-start justify-between gap-2">
       <div>
         <p class="text-sm font-bold">✓ Traslado registrado</p>
@@ -55,7 +55,7 @@
           <input id="transfer-date" type="date" class="input" formControlName="posting_date" />
         </div>
       </div>
-      <p *ngIf="sameWarehouseSelected" class="mt-2 text-[11px] font-semibold text-red-700">El origen y el destino deben ser distintos.</p>
+      <p *ngIf="sameWarehouseSelected" class="mt-2 text-[11px] font-semibold text-danger-700">El origen y el destino deben ser distintos.</p>
     </section>
 
     <div *ngIf="!sourceSelected" class="rounded-xl border border-dashed border-border bg-card px-4 py-8 text-center text-xs text-muted-foreground">
@@ -80,7 +80,7 @@
               <p class="truncate text-xs font-semibold text-foreground">{{ product.nombre }}</p>
               <p class="text-[10px] text-muted-foreground">
                 <span class="font-mono">{{ product.codigo }}</span> ·
-                Disponible <b [ngClass]="availableStock(product.name || product.codigo) > 0 ? 'text-emerald-700' : 'text-red-700'">{{ availableStock(product.name || product.codigo) }}</b>
+                Disponible <b [ngClass]="availableStock(product.name || product.codigo) > 0 ? 'text-success-700' : 'text-danger-700'">{{ availableStock(product.name || product.codigo) }}</b>
                 <span *ngIf="bothWarehousesSelected"> · En destino {{ targetStock(product.name || product.codigo) }}</span>
               </p>
             </div>
@@ -123,9 +123,9 @@
                 <span class="min-w-0 flex-1 truncate text-xs font-semibold text-foreground" [title]="productLabel(group.get('item')?.value)">{{ productLabel(group.get('item')?.value) }}</span>
                 <input type="text" inputmode="decimal" appDecimalInput min="0.0001" step="0.01" class="input !h-8 !w-20 text-right text-xs" formControlName="qty"
                   [attr.aria-label]="'Cantidad a trasladar de ' + productLabel(group.get('item')?.value)" />
-                <button type="button" class="text-sm text-muted-foreground hover:text-red-700" (click)="removeItem(i)" aria-label="Quitar producto">×</button>
+                <button type="button" class="text-sm text-muted-foreground hover:text-danger-700" (click)="removeItem(i)" aria-label="Quitar producto">×</button>
               </div>
-              <p *ngIf="lineExceedsAvailable(group)" class="mt-0.5 text-[10px] font-semibold text-red-700">Solo hay {{ availableStock(group.get('item')?.value) }} disponibles.</p>
+              <p *ngIf="lineExceedsAvailable(group)" class="mt-0.5 text-[10px] font-semibold text-danger-700">Solo hay {{ availableStock(group.get('item')?.value) }} disponibles.</p>
             </li>
           </ul>
 

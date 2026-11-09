@@ -12,13 +12,13 @@
         <div class="rounded-full bg-card/20 px-3 py-1 text-xs font-semibold">
           Registros: {{ suppliers.length || 0 }}
         </div>
-        <div class="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold">
+        <div class="rounded-full bg-success-500/20 px-3 py-1 text-xs font-semibold">
           Activos: {{ activeCount }}
         </div>
         <div class="rounded-full bg-slate-800/20 px-3 py-1 text-xs font-semibold">
           Inactivos: {{ inactiveCount }}
         </div>
-        <div class="rounded-full bg-sky-500/20 px-3 py-1 text-xs font-semibold">
+        <div class="rounded-full bg-info-500/20 px-3 py-1 text-xs font-semibold">
           A credito: {{ creditCount }}
         </div>
         <app-button impact="bold" tone="light" shape="rounded" size="small" (click)="abrirModalCrear()">
@@ -74,7 +74,7 @@
           </app-button>
         </div>
 
-        <div *ngIf="identificationLookupError" class="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+        <div *ngIf="identificationLookupError" class="mt-2 rounded-lg border border-danger-200 bg-danger-50 px-3 py-2 text-xs text-danger-700">
           {{ identificationLookupError }}
         </div>
       </div>
@@ -85,7 +85,7 @@
     Cargando proveedores...
   </div>
 
-  <div *ngIf="!isLoadingList && listError" class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 shadow-sm">
+  <div *ngIf="!isLoadingList && listError" class="rounded-xl border border-danger-200 bg-danger-50 p-4 text-sm text-danger-700 shadow-sm">
     {{ listError }}
   </div>
 

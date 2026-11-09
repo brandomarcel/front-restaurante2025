@@ -36,8 +36,9 @@ export class ButtonComponent implements OnInit {
   public classes: string = '';
 
   baseClasses =
-    'flex items-center justify-center border font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:translate-y-px disabled:pointer-events-none disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none';
+    'flex items-center justify-center border font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:translate-y-px disabled:pointer-events-none disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none';
 
+  // Solo tokens del tema (styles.css): se adaptan al modo oscuro y al color de tema sin `dark:`.
   impactClasses: Record<ButtonProps['tone'], Record<ButtonProps['impact'], string>> = {
     primary: {
       bold: 'border-primary bg-primary text-primary-foreground hover:border-primary/90 hover:bg-primary/90 focus-visible:ring-primary',
@@ -45,29 +46,29 @@ export class ButtonComponent implements OnInit {
       none: 'border-transparent bg-transparent text-primary hover:bg-primary/10 focus-visible:ring-primary',
     },
     danger: {
-      bold: 'border-destructive bg-destructive text-white hover:border-destructive/90 hover:bg-destructive/90 focus-visible:ring-destructive',
+      bold: 'border-destructive bg-destructive text-destructive-foreground hover:border-destructive/90 hover:bg-destructive/90 focus-visible:ring-destructive',
       light: 'border-destructive/25 bg-destructive/15 text-destructive hover:border-destructive/35 hover:bg-destructive/25 focus-visible:ring-destructive',
       none: 'border-transparent bg-transparent text-destructive hover:bg-destructive/10 focus-visible:ring-destructive',
     },
     success: {
-      bold: 'border-green-500 bg-green-500 text-green-950 hover:border-green-600 hover:bg-green-600 focus-visible:ring-green-500',
-      light: 'border-green-300 bg-green-50 text-green-700 hover:border-green-400 hover:bg-green-100 focus-visible:ring-green-500',
-      none: 'border-transparent bg-transparent text-green-700 hover:bg-green-500/10 focus-visible:ring-green-500',
+      bold: 'border-success bg-success text-success-foreground hover:border-success/90 hover:bg-success/90 focus-visible:ring-success',
+      light: 'border-success-300 bg-success-50 text-success-800 hover:border-success-400 hover:bg-success-100 focus-visible:ring-success',
+      none: 'border-transparent bg-transparent text-success-700 hover:bg-success/10 focus-visible:ring-success',
     },
     warning: {
-      bold: 'border-yellow-500 bg-yellow-500 text-yellow-950 hover:border-yellow-600 hover:bg-yellow-600 focus-visible:ring-yellow-500',
-      light: 'border-yellow-300 bg-yellow-50 text-yellow-700 hover:border-yellow-400 hover:bg-yellow-100 focus-visible:ring-yellow-500',
-      none: 'border-transparent bg-transparent text-yellow-700 hover:bg-yellow-500/10 focus-visible:ring-yellow-500',
+      bold: 'border-warning bg-warning text-warning-foreground hover:border-warning/90 hover:bg-warning/90 focus-visible:ring-warning',
+      light: 'border-warning-300 bg-warning-50 text-warning-800 hover:border-warning-400 hover:bg-warning-100 focus-visible:ring-warning',
+      none: 'border-transparent bg-transparent text-warning-800 hover:bg-warning/10 focus-visible:ring-warning',
     },
     info: {
-      bold: 'border-violet-500 bg-violet-500 text-white hover:border-violet-600 hover:bg-violet-600 focus-visible:ring-violet-500',
-      light: 'border-violet-300 bg-violet-50 text-violet-700 hover:border-violet-400 hover:bg-violet-100 focus-visible:ring-violet-500',
-      none: 'border-transparent bg-transparent text-violet-700 hover:bg-violet-500/10 focus-visible:ring-violet-500',
+      bold: 'border-info bg-info text-info-foreground hover:border-info/90 hover:bg-info/90 focus-visible:ring-info',
+      light: 'border-info-300 bg-info-50 text-info-800 hover:border-info-400 hover:bg-info-100 focus-visible:ring-info',
+      none: 'border-transparent bg-transparent text-info-700 hover:bg-info/10 focus-visible:ring-info',
     },
     light: {
-      bold: 'border-slate-300 bg-slate-200 text-slate-800 hover:border-slate-400 hover:bg-slate-300 focus-visible:ring-slate-400',
-      light: 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100 focus-visible:ring-slate-400',
-      none: 'border-transparent bg-transparent text-slate-700 hover:bg-slate-100 focus-visible:ring-slate-400',
+      bold: 'border-border bg-muted text-foreground hover:bg-muted-foreground/20 focus-visible:ring-muted-foreground',
+      light: 'border-border bg-card text-foreground hover:bg-muted focus-visible:ring-muted-foreground',
+      none: 'border-transparent bg-transparent text-foreground hover:bg-muted focus-visible:ring-muted-foreground',
     },
   };
 

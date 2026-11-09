@@ -50,7 +50,7 @@ export class IconActionButtonComponent {
       return 'border-destructive/30 bg-destructive/10 text-destructive hover:border-destructive/50 hover:bg-destructive/20';
     }
     if (this.variant === 'activate') {
-      return 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-100';
+      return 'border-success-300 bg-success-50 text-success-700 hover:border-success-400 hover:bg-success-100';
     }
     if (this.tone === 'primary') {
       return 'border-primary bg-primary text-primary-foreground hover:bg-primary/90';

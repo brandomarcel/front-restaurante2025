@@ -54,7 +54,7 @@
             <p class="truncate text-[11px] text-muted-foreground">{{ (categoryDescription(categoria) | uppercase) || 'Sin descripción' }}</p>
           </div>
           <span class="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
-            [ngClass]="isActive(categoria) ? 'bg-emerald-100 text-emerald-800' : 'bg-muted text-muted-foreground'">
+            [ngClass]="isActive(categoria) ? 'bg-success-100 text-success-800' : 'bg-muted text-muted-foreground'">
             <span class="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true"></span>{{ isActive(categoria) ? 'Activa' : 'Inactiva' }}
           </span>
           <div *ngIf="canManageCategories" class="flex shrink-0 gap-1.5">

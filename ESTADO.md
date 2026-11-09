@@ -9,6 +9,51 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-08 (Claude): paleta de colores de toda la app, a pedido del usuario («hazlo lo más recomendable»).
+  - Base única en `styles.css`: neutros con tinte marino compartidos por todos los temas, y cada tema cambia solo el
+    principal, con texto legible. Se arreglaron amarillo/verde/azul/naranja (texto blanco ilegible) y el
+    `card-foreground` oscuro en modo oscuro.
+  - Tema por defecto «facturada»: azul de marca `#2E3A8C`; en oscuro `#8B98F7`, porque con ámbar como principal todos
+    los encabezados salían ámbar. `ThemeService` migra una vez el `violet` guardado (no había selector, nadie lo
+    eligió; marca `theme_palette`). `index.html` arranca con `data-theme="facturada"` y `lang="es"`.
+  - Nuevos tokens de estado `success`/`warning`/`danger`/`info` con escala 50…950 que se invierte sola en modo oscuro.
+  - Migración automática en 93 archivos (unas 900 clases):
+    - emerald/green → success; amber/yellow/orange → warning; red/rose → danger; sky/blue/cyan → info;
+    - violet/indigo → `primary`; grises claros → neutros;
+    - 122 `dark:` sobrantes quitados.
+    - Se dejaron a propósito: capas y encabezados oscuros, degradados de iconos de reportes y texto claro (≤ 400) sobre
+      fondos de color.
+  - Clases compartidas pasadas a tokens: `.badge-*`, `.tone-*`, `.btn-success/warn/danger`, `.tabs`, `.field-error`,
+    tabla compacta, borde por defecto, `app-button`.
+  - Gráficos del dashboard leen el tema (`themeColor`), con tooltip oscuro en modo oscuro.
+  - Spinners globales en ámbar (antes azul oscuro sobre negro).
+  - Registro: panel de marca en azul marino fijo con el logo SVG (en oscuro quedaba lavado), sin foto de stock, y
+    «Para tiendas, servicios, restaurantes y cualquier negocio».
+  - Login: el ticket muestra cada vez un negocio distinto (ferretería, boutique, servicio técnico, minimarket,
+    cafetería), con subtotal e IVA calculados; el sello pasó al borde de abajo.
+  - Verificado: `tsc` app y specs OK, `ng build` dev OK. Página de muestra con el CSS compilado en claro y oscuro
+    (botones, insignias, tonos, tabla, pestañas). Registro y login revisados con Playwright.
+  - **Sin ver**: pantallas internas con sesión (no hubo credenciales de prueba). Conviene recorrer POS, Facturar,
+    Órdenes, Caja y Dashboard en claro y oscuro antes de subir.
+  - `NavbarMobileComponent` no se usa en ninguna pantalla (código muerto, conserva el logo viejo): queda pendiente
+    decidir si se borra.
+
+- 2026-11-08 (Claude): login rediseñado y corregido, a pedido del usuario. Marca FacturADA (azul marino `#1B1F3A` y
+  ámbar `#FFB020`, logos SVG de `assets/brand/`) en vez del morado del tema y el PNG viejo; panel izquierdo (≥ 1024 px)
+  con un ticket de factura dibujado y el sello «Autorizada por el SRI» (única animación, respeta movimiento reducido); en
+  celular, logo pequeño y formulario directo, sin tarjeta. Sigue el modo oscuro del panel (`.dark`). Arreglos: el logo ya
+  no enlaza a `href="/"` (en producción salía de `/portal/`); ya no muestra el logo del último negocio del equipo
+  (`localStorage.logo`, quedaba a la vista en equipos compartidos) ni hace `console.log`; errores junto al formulario
+  (contraseña incorrecta, sin conexión, demasiados intentos) en vez de toast, y uno por campo en vez de tres; un solo
+  indicador de carga (se quitó el spinner a pantalla completa); campos de 16 px (iOS no hace zoom); aviso de Bloq Mayús;
+  cursor en el usuario solo con ratón; elegir negocio con botones en vez de select. «¿Olvidaste tu contraseña?» muestra
+  «Pide al administrador de tu negocio que te asigne una nueva desde Usuarios» (no hay recuperación por correo).
+  Borradas las pantallas de plantilla en inglés sin función (sign-up, forgot-password, new-password, two-steps) y sus
+  rutas: cualquier `/auth/*` va al login. Quitados 91 KB de CSS sin uso de `auth.component.css`. `tsc` OK; revisado con
+  Playwright a 1440/1024/390 px, claro y oscuro, campos vacíos y 401 simulado. **Sin ver**: el paso «Elige el negocio»
+  (pide un usuario con varios negocios) y el inicio de sesión real. Pendiente: recuperación de contraseña por correo
+  (requiere correo saliente de Frappe en producción).
+
 - 2026-11-08 (Claude): carta / catálogo pública: el encabezado ocupaba ~280 px antes de la carta (logo grande, nombre,
   mensaje y botón «Compartir» apilados). Ahora es una sola fila de ~70 px: logo 48 px, nombre (una línea), mensaje
   (hasta 2 líneas) y compartir como botón de ícono con `aria-label`. Revisado con Playwright a 390 px claro y oscuro.

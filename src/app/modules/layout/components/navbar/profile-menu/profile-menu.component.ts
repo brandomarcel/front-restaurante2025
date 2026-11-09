@@ -75,6 +75,7 @@ export class ProfileMenuComponent implements OnInit {
   public visibleProfileMenu: ProfileItem[] = [];
 
   public themeColors = [
+    { name: 'facturada', code: '#2e3a8c' },
     { name: 'base', code: '#e11d48' },
     { name: 'yellow', code: '#f59e0b' },
     { name: 'green', code: '#22c55e' },
@@ -245,11 +246,11 @@ export class ProfileMenuComponent implements OnInit {
   }
 
   get roleBadgeClass(): string {
-    if (this.roleUpper === 'GERENTE') return 'bg-emerald-100 text-emerald-700';
-    if (this.roleUpper === 'CAJERO') return 'bg-sky-100 text-sky-700';
-    if (this.roleUpper === 'FACTURACION') return 'bg-blue-100 text-blue-700';
-    if (this.roleUpper === 'MESERO') return 'bg-violet-100 text-violet-700';
-    if (this.roleUpper === 'COCINA') return 'bg-amber-100 text-amber-700';
-    return 'bg-gray-100 text-gray-700';
+    if (this.roleUpper === 'GERENTE') return 'bg-success-100 text-success-700';
+    if (this.roleUpper === 'CAJERO') return 'bg-info-100 text-info-700';
+    if (this.roleUpper === 'FACTURACION') return 'bg-info-100 text-info-700';
+    if (this.roleUpper === 'MESERO') return 'bg-primary/10 text-primary';
+    if (this.roleUpper === 'COCINA') return 'bg-warning-100 text-warning-700';
+    return 'bg-muted text-foreground';
   }
 }

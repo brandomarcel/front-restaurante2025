@@ -29,12 +29,12 @@ const CERTIFICATE_SETUP_KEYS = ['CERTIFICATE', 'ELECTRONIC CERTIFICATE', 'SIGNAT
           <span class="rounded-full px-2 py-1 text-[10px] font-bold" [ngClass]="toneClasses[setupStatus.tone]">{{ setupStatus.label }}</span>
         </div>
         <div class="grid gap-1.5 text-[11px]">
-          <div class="flex justify-between rounded-lg bg-muted/40 px-2.5 py-2"><span>API</span><b class="text-emerald-700">Activa</b></div>
+          <div class="flex justify-between rounded-lg bg-muted/40 px-2.5 py-2"><span>API</span><b class="text-success-700">Activa</b></div>
           <div class="flex justify-between rounded-lg bg-muted/40 px-2.5 py-2"><span>RUC tributario</span><b>{{ ruc }}</b></div>
           <div class="flex justify-between rounded-lg bg-muted/40 px-2.5 py-2"><span>Ambiente</span><b>{{ environment }}</b></div>
           <div class="flex justify-between rounded-lg bg-muted/40 px-2.5 py-2"><span>Secuencia factura</span><b>{{ sequenceLabel }}</b></div>
         </div>
-        <p *ngIf="capabilities.liteSetupMissing.length" class="mt-2 rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] font-semibold text-amber-800">
+        <p *ngIf="capabilities.liteSetupMissing.length" class="mt-2 rounded-lg bg-warning-50 px-2.5 py-2 text-[11px] font-semibold text-warning-800">
           Pendiente: {{ capabilities.liteSetupMissing.join(', ') }}
         </p>
       </article>
@@ -53,7 +53,7 @@ const CERTIFICATE_SETUP_KEYS = ['CERTIFICATE', 'ELECTRONIC CERTIFICATE', 'SIGNAT
         <div class="mt-3 flex flex-wrap gap-2">
           <a *ngIf="capabilities.apiConfiguration?.enabled === true" routerLink="/settings/lite/api" class="rounded-md bg-slate-900 px-3 py-2 text-[10px] font-bold text-white">Integración API</a>
           <a routerLink="/dashboard/invoices" class="rounded-md bg-primary px-3 py-2 text-[10px] font-bold text-white">Ver facturas</a>
-          <a routerLink="/dashboard/credit-notes" class="rounded-md bg-amber-500 px-3 py-2 text-[10px] font-bold text-white">Notas de crédito</a>
+          <a routerLink="/dashboard/credit-notes" class="rounded-md bg-warning-500 px-3 py-2 text-[10px] font-bold text-white">Notas de crédito</a>
         </div>
       </article>
     </section>

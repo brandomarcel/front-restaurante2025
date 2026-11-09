@@ -49,10 +49,10 @@
             <button *ngIf="canAddItems" type="button" class="btn-outline" (click)="addProducts()">+ Agregar productos</button>
 
             <!-- Siguiente paso de la orden: un solo botón principal -->
-            <button *ngIf="canStartPreparation" type="button" class="btn-main bg-amber-500 hover:bg-amber-600" (click)="advanceKitchen('En preparacion')" [disabled]="closingOrder">
+            <button *ngIf="canStartPreparation" type="button" class="btn-main bg-warning-500 hover:bg-warning-600" (click)="advanceKitchen('En preparacion')" [disabled]="closingOrder">
               Iniciar preparación
             </button>
-            <button *ngIf="!canStartPreparation && canMarkReady" type="button" class="btn-main bg-emerald-600 hover:bg-emerald-700" (click)="advanceKitchen('Listo')" [disabled]="closingOrder">
+            <button *ngIf="!canStartPreparation && canMarkReady" type="button" class="btn-main bg-success-600 hover:bg-success-700" (click)="advanceKitchen('Listo')" [disabled]="closingOrder">
               Marcar lista
             </button>
             <button *ngIf="!canStartPreparation && !canMarkReady && canCloseOrder" type="button" class="btn-main bg-primary hover:bg-primary/90" (click)="closeOrder()" [disabled]="closingOrder">
@@ -114,7 +114,7 @@
                       <p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                         <span *ngIf="kitchenEnabled && item.rowName" class="kitchen-chip" [ngClass]="kitchenStatusClass(item.kitchenStatus)">{{ kitchenStatusLabel(item.kitchenStatus) }}</span>
                         <span>IVA {{ item.tax_value ?? 0 }}%</span>
-                        <span *ngIf="item.discount" class="font-semibold text-emerald-700 dark:text-emerald-300">Descuento ${{ item.discount | number:'1.2-2' }}</span>
+                        <span *ngIf="item.discount" class="font-semibold text-success-700 ">Descuento ${{ item.discount | number:'1.2-2' }}</span>
                       </p>
                       <p *ngIf="item.notes" class="item-note">{{ item.notes }}</p>
                     </div>
@@ -159,7 +159,7 @@
             </ng-template>
 
             <dl class="totals">
-              <div *ngIf="orderDiscount > 0"><dt>Descuentos aplicados</dt><dd class="!text-emerald-700 dark:!text-emerald-300">−${{ orderDiscount | number:'1.2-2' }}</dd></div>
+              <div *ngIf="orderDiscount > 0"><dt>Descuentos aplicados</dt><dd class="!text-success-700 dark:!text-emerald-300">−${{ orderDiscount | number:'1.2-2' }}</dd></div>
               <div><dt>Subtotal sin IVA</dt><dd>${{ orderSubtotal | number:'1.2-2' }}</dd></div>
               <div><dt>IVA</dt><dd>${{ orderIva | number:'1.2-2' }}</dd></div>
               <div class="is-total"><dt>Total</dt><dd>${{ orderTotal | number:'1.2-2' }}</dd></div>
@@ -266,7 +266,7 @@
                 {{ isSplitPayment ? '+ Otra forma de pago' : 'Paga con dos formas (dividir el pago)' }}
               </button>
 
-              <button type="button" class="btn-main mt-3 w-full bg-emerald-600 hover:bg-emerald-700"
+              <button type="button" class="btn-main mt-3 w-full bg-success-600 hover:bg-success-700"
                 (click)="emitirFacturaOrden()" [disabled]="!canCreateInvoice || orderInvoiceEmitting || savingOrderChanges || !orderPayments.length">
                 <fa-icon [icon]="['fas','file-invoice']" class="mr-1.5"></fa-icon>
                 {{ orderInvoiceEmitting ? 'Facturando…' : 'Facturar $' + (orderTotal | number:'1.2-2') }}
@@ -284,11 +284,11 @@
 
               <ng-container *ngIf="hasSplits">
                 <div class="mt-2 h-2 overflow-hidden rounded-full bg-muted" role="progressbar" [attr.aria-valuenow]="splitProgressPct" aria-valuemin="0" aria-valuemax="100" aria-label="Avance de la cuenta dividida">
-                  <div class="h-full rounded-full bg-emerald-500 transition-all" [style.width.%]="splitProgressPct"></div>
+                  <div class="h-full rounded-full bg-success-500 transition-all" [style.width.%]="splitProgressPct"></div>
                 </div>
                 <p class="mt-1.5 flex justify-between text-xs text-muted-foreground">
                   <span>{{ orderSplits.length }} {{ orderSplits.length === 1 ? 'subcuenta' : 'subcuentas' }}, {{ invoicedSplitsCount }} {{ invoicedSplitsCount === 1 ? 'facturada' : 'facturadas' }}</span>
-                  <span class="font-bold" [ngClass]="pendingOrderToSplit > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'">
+                  <span class="font-bold" [ngClass]="pendingOrderToSplit > 0 ? 'text-warning-700 ' : 'text-success-700 '">
                     {{ pendingOrderToSplit > 0 ? 'Falta $' + (pendingOrderToSplit | number:'1.2-2') : 'Todo dividido' }}
                   </span>
                 </p>
@@ -308,7 +308,7 @@
       <div class="min-w-0">
         <p class="text-sm font-bold text-foreground">Tienes cambios sin guardar</p>
         <p *ngIf="pendingChangesSummary" class="text-xs text-muted-foreground">{{ pendingChangesSummary }}</p>
-        <p *ngIf="saveBlockReason" class="mt-1 text-xs font-semibold text-amber-800 dark:text-amber-300">{{ saveBlockReason }}</p>
+        <p *ngIf="saveBlockReason" class="mt-1 text-xs font-semibold text-warning-800 ">{{ saveBlockReason }}</p>
       </div>
       <div class="flex shrink-0 gap-2">
         <button type="button" class="btn-outline" (click)="discardChanges()" [disabled]="savingOrderChanges">Descartar</button>

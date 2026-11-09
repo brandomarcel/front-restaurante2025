@@ -9,7 +9,7 @@ import { Component, Input } from '@angular/core';
   template: `
     <dl class="space-y-0.5 text-[11px] text-muted-foreground">
       <div class="flex justify-between"><dt>Subtotal</dt><dd>\${{ subtotal | number:'1.2-2' }}</dd></div>
-      <div *ngIf="discount > 0" class="flex justify-between text-emerald-600"><dt>Descuento</dt><dd>-\${{ discount | number:'1.2-2' }}</dd></div>
+      <div *ngIf="discount > 0" class="flex justify-between text-success-600"><dt>Descuento</dt><dd>-\${{ discount | number:'1.2-2' }}</dd></div>
       <div class="flex justify-between"><dt>IVA</dt><dd>\${{ iva | number:'1.2-2' }}</dd></div>
       <div class="mt-1.5 flex items-end justify-between border-t border-border pt-1.5">
         <dt class="text-[11px] font-semibold text-foreground">Total</dt>

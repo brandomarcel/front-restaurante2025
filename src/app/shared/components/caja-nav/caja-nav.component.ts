@@ -32,8 +32,8 @@ export type CajaTurnState = 'loading' | 'open' | 'closed' | 'unknown';
         Gestión de cajas
       </a>
       <span *ngIf="active !== 'gestion'" class="ml-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold" role="status"
-        [ngClass]="state === 'open' ? 'bg-emerald-100 text-emerald-800' : (state === 'loading' ? 'bg-muted text-muted-foreground' : 'bg-amber-100 text-amber-900')">
-        <span class="h-2 w-2 rounded-full" [ngClass]="state === 'open' ? 'bg-emerald-500 animate-pulse' : (state === 'loading' ? 'bg-muted-foreground/50' : 'bg-amber-500')" aria-hidden="true"></span>
+        [ngClass]="state === 'open' ? 'bg-success-100 text-success-800' : (state === 'loading' ? 'bg-muted text-muted-foreground' : 'bg-warning-100 text-warning-900')">
+        <span class="h-2 w-2 rounded-full" [ngClass]="state === 'open' ? 'bg-success-500 animate-pulse' : (state === 'loading' ? 'bg-muted-foreground/50' : 'bg-warning-500')" aria-hidden="true"></span>
         {{ state === 'open' ? 'Caja abierta' : (state === 'loading' ? 'Consultando…' : 'Caja cerrada') }}
         <span *ngIf="state === 'open' && opening" class="hidden font-mono text-[10px] font-normal sm:inline">· {{ opening }}</span>
       </span>
