@@ -9,6 +9,8 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-08 (Codex, validación): 30 pruebas nuevas de login/selección de negocio (13), tema (4), ticket/identidad del login (6) y etapas/etiquetas de cocina (7), todas aprobadas. Angular completo: 531 ejecutadas, 510 OK y 21 fallas heredadas (checkout inicial: 480 OK/21 fallas, sin regresiones nuevas). Backend: Core 79 + Lite 251 + Restaurante 59 + API 30 = 419 OK, solo facturada_core_simple_test migrado, Redis disponible y HTTP/SMTP reales bloqueados. Desk 7 pruebas navegador OK; login 16 casos responsive con API simulada y captura claro/oscuro. Build optimizado OK (2,57 MB inicial); 4 advertencias de selectores CSS. El fallo DNS inicial de fuentes se resolvió al verificar el build fuera del sandbox de red. No se cambiaron funcionalidades ni se desplegó. Reporte PRUEBAS_CODEX_2026-11-08.md. Pendientes: fixtures heredados y cobertura de componentes/acciones de cocina, anulaciones y catálogo digital que TESTING_CODEX.md aún enumera.
+
 - 2026-11-08 (Claude): paleta de colores de toda la app, a pedido del usuario («hazlo lo más recomendable»).
   - Base única en `styles.css`: neutros con tinte marino compartidos por todos los temas, y cada tema cambia solo el
     principal, con texto legible. Se arreglaron amarillo/verde/azul/naranja (texto blanco ilegible) y el

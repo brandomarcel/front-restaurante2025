@@ -93,19 +93,19 @@ npx ng test --watch=false --browsers=ChromeHeadless
 (Con `CHROME_BIN` y `LD_LIBRARY_PATH` exportados, ver sección 3.) No uses `npm test` a
 secas: abre Chrome en modo watch y no termina.
 
-### Línea base conocida (2026-10-29)
+### Línea base conocida (2026-11-08)
 
-Última ejecución completa: **504 pruebas, 479 aprobadas y 25 fallidas heredadas**, sin error
-global asíncrono. Se retiraron las 5 pruebas de carga Angular al moverla al Desk; se conserva la prueba de acciones fiscales de históricos. El fixture de Company se corrigió y prueba que no ofrece importación. Desde la línea base del 27/10 se añadieron specs de Insumos
-(`pages/kitchen-supplies/*.spec.ts`), carrito y editor de notas del POS
-(`pages/pos/services/cart.service.spec.ts`, `pages/pos/ui/line-note-editor.component.spec.ts`),
-lenguaje de variantes por tipo de negocio, stock inicial y «Ajustar en Inventario» en
-`products.behavior.spec.ts`, bodegas por tipo de negocio
-(`core/services/company-capabilities.warehouse-ui.spec.ts`, navegación de inventario) y la apertura del
-movimiento desde la ficha (`pages/inventory/inventory.adjust-from-product.spec.ts`).
-Los fixtures de `products.behavior.spec.ts` y del spec de navegación representan ahora un
-comercio **sin** `restaurant`; los casos de restaurante lo activan explícitamente.
-Detalle y comandos en [PRUEBAS_CODEX_2026-10-27.md](PRUEBAS_CODEX_2026-10-27.md).
+Última ejecución completa: **531 pruebas, 510 aprobadas y 21 fallidas heredadas**,
+sin regresiones nuevas observadas. Antes de añadir cobertura, el checkout limpio
+ya daba 501 pruebas, 480 aprobadas y las mismas 21 fallas.
+
+Se añadieron 30 pruebas: SignInComponent (13), ThemeService (4), ticket/identidad
+AuthComponent (6), utilidades de etapas/etiquetas de cocina (7). Todas pasan. Se
+conservan las pruebas anteriores; no se relajaron aserciones para ocultar fallos.
+Reporte: [PRUEBAS_CODEX_2026-11-08.md](PRUEBAS_CODEX_2026-11-08.md).
+
+Referencia del 29/10: 504 pruebas, 479 OK y 25 fallas heredadas. Desde entonces
+se retiraron tres pantallas/specs de plantilla y Sidebar ya no falla.
 
 Referencia del 27/10: 426 pruebas, 400 aprobadas y 26 fallidas heredadas.
 
@@ -118,21 +118,18 @@ fiscales, guard y capacidades. Resultado completo y comandos en
 Resultado anterior (26/10): **421 pruebas, 395 aprobadas y 26 fallidas**, todas estas
 ultimas pertenecen a la lista heredada siguiente. Las 53 pruebas nuevas pasan.
 
-Las 25 fallas heredadas actuales corresponden a specs
+Las 21 fallas heredadas actuales corresponden a specs
 "should create" heredados de la plantilla, a los que les faltan providers, y no
 indican regresiones:
 
 `AperturaCajaComponent`, `AppComponent` (3), `CloseCajaComponent`,
-`DashboardComponent`, `Error404Component`, `Error500Component`, `ForgotPasswordComponent`,
-`LayoutComponent`, `NavbarComponent`, `NavbarMobileComponent`, `NewPasswordComponent`,
+`DashboardComponent`, `Error404Component`, `Error500Component`,
+`LayoutComponent`, `NavbarComponent`, `NavbarMobileComponent`,
 `OrderCardComponent`, `OrderKitchenCardComponent`, `OrderModalComponent`,
-`ProfileMenuComponent`, `RetiroCajaComponent`, `SidebarComponent`, `TableActionComponent`,
-`TableComponent`, `TableFooterComponent`, `TableRowComponent`, `TwoStepsComponent`,
+`ProfileMenuComponent`, `RetiroCajaComponent`, `TableActionComponent`,
+`TableComponent`, `TableFooterComponent`, `TableRowComponent`,
 `UsersComponent`.
 
-- 2026-11-08: se borraron las pantallas de plantilla del login (`ForgotPasswordComponent`, `NewPasswordComponent`,
-  `TwoStepsComponent`, `SignUpComponent`) con sus specs; esas 3 fallas heredadas desaparecen (la próxima corrida debería
-  dar 22 heredadas).
 - Una falla **fuera** de esta lista es una regresión: investígala.
 - Si modificas uno de estos componentes, arregla también su spec (agrega providers y mocks).
 - Cuando la línea base cambie, actualiza esta sección.
@@ -207,22 +204,24 @@ bench --site facturada_core_simple_test run-tests --app facturada_lite
 Si agregas o cambias campos de un DocType, corre antes
 `bench --site facturada_core_simple_test migrate`.
 
-### Línea base backend (2026-10-29)
+### Línea base backend (2026-11-08)
 
 | App | Pruebas | Resultado |
 |-----|---------|-----------|
-| facturada_core | 79 | OK 29/10; incluye 4 casos de corrección de secuencia solo Desk |
-| facturada_lite | 251 | OK 29/10; incluye 13 pruebas de limpieza Desk por ambiente/negocio |
-| facturada_restaurante | 59 | OK 29/10 en revisión anterior, no repetida para traslado al Desk |
-| facturada_api | 30 | Referencia previa; no repetida el 29/10 |
+| facturada_core | 79 | OK |
+| facturada_lite | 251 | OK |
+| facturada_restaurante | 59 | OK |
+| facturada_api | 30 | OK |
 
-Última ejecución de corrección de secuencias: **314 aprobadas** (79 Core + 235 Lite),
-HTTP/SMTP real bloqueado y rollback. Restaurante 59 conserva su resultado anterior
-del mismo día; API 30 es referencia previa. Solo facturada_core_simple_test se usa
-para pruebas. Ver PRUEBAS_SECUENCIAS_DESK_2026-10-29.md.
-Exportador de restaurante_app: excepción expresamente solicitada por el usuario,
+**419 aprobadas**: las cuatro suites se ejecutaron en esta sesión, secuencialmente,
+con bloqueo HTTP/SMTP real y datos de pruebas con rollback. Redis respondió PONG
+en ambos puertos; se migró únicamente facturada_core_simple_test antes de ejecutar.
+No confundir suites existentes verdes con cobertura exhaustiva de las funciones
+recientes cuyos casos siguen pendientes más abajo (anulaciones, catálogo, etc.).
+
+Exportador de restaurante_app: excepción solicitada previamente por el usuario;
 pruebas puras desde Lite sin instalar Legacy en el sitio de pruebas.
-Reporte y comandos actuales: [PRUEBAS_MIGRACION_DESK_2026-10-29.md](PRUEBAS_MIGRACION_DESK_2026-10-29.md).
+Reporte vigente: [PRUEBAS_CODEX_2026-11-08.md](PRUEBAS_CODEX_2026-11-08.md).
 
 **Primera tarea completada:** se ejecutó `bench --site facturada_core_simple_test migrate`
 y se repitieron las cuatro suites (282 pruebas aprobadas). Los errores de `credit_days`
@@ -401,28 +400,30 @@ conserva la referencia; con dos pagos `isSplitPayment` y al quitar uno el restan
 
 ## Pendiente de pruebas: Órdenes en vivo y Cocina (2026-11-08)
 
-`order-status.utils.ts`: `kitchenStage` (por platos, ignora anulados, cae al estado de la orden), `orderHeadline`,
+`order-status.utils.ts` ya tiene 7 pruebas aprobadas (etapas mixtas, anulados, fallback, etiquetas y tiempo); faltan los componentes y acciones descritos a continuación. `kitchenStage` (por platos, ignora anulados, cae al estado de la orden), `orderHeadline`,
 `orderTypeLabel`, `KITCHEN_NEXT_ACTION`. `OrdersRealtimeComponent`: `toPreparacion`/`toLista`/`toEntregado` solo actúan en su
 etapa, con permiso y con `kitchen`, y llaman `updateKitchenOrderStatus` (nunca `updateStatus`); `setKitchenTab('DONE')`
 carga entregadas; `mobileColumn`. Tabla/tarjeta de Caja: acción siguiente según `kitchenStage`, «Cobrar»/«Ver orden»,
 sin acciones de cocina sin `kitchen`, botón deshabilitado con `pendingOrderNames`/`actionPending`. Modal: etapa con
 `orderStage` (Lista ya no sale «Cerrada»), «Ver orden» para cancelada. `RealtimeOrdersService.mapOne` llena `orderType`.
 
-## Pendiente de pruebas: login rediseñado (2026-11-08)
+## Validado: login rediseñado (2026-11-08)
 
-`SignInComponent`: campos vacíos → «Escribe tu usuario o correo.» / «Escribe tu contraseña.» y no llama a `login`;
-`login` con 401 desde `/api/method/login` → `formError` «El usuario o la contraseña no son correctos.»; status 0 → «No hay
-conexión…»; 429 → «Hubo demasiados intentos…»; otro error → `FrappeErrorService.handle`; `formError` se limpia al editar;
-`checkCapsLock` con `getModifierState('CapsLock')`; «¿Olvidaste tu contraseña?» muestra la ayuda (`aria-expanded`);
-`__LITE_BUSINESS_SELECTION_REQUIRED__` con 2+ negocios → paso «Elige el negocio» y `chooseBusiness` llama
-`selectLiteBusiness`; con 403 limpia `active_business`/`businessId` y muestra «No tienes acceso a ese negocio. Elige otro.»;
-navegación cancelada → `formError`. `AuthComponent` ya no lee `localStorage.logo`. Rutas `/auth/sign-up`,
-`/auth/forgot-password`… redirigen a `/auth/sign-in`. E2E: 1440 px con panel de marca, 1024 px, 390 px claro y oscuro (tema
-`dark` en `localStorage.theme`).
+SignInComponent: 13 casos unitarios cubren validación sin HTTP, mensajes 401/0/429,
+fallback backend, limpieza de error, contraseña/Bloq Mayús, ayuda accesible,
+selección de negocio, rechazo 403 y limpieza de selección, usuario sin negocio,
+menú/navegación y navegación cancelada. AuthComponent: 6 casos de totales IVA,
+formato y no lectura del logo previo. ThemeService: 4 casos de carga/migración,
+persistencia de preferencias y JSON inválido.
 
-## Pendiente de pruebas: paleta de colores y tema (2026-11-08)
+E2E de la aplicación compilada, 16 OK (4 casos × 1440/1024/390 claro/390 oscuro):
+validación/mostrar contraseña/ayuda, 401 y corrección, selector de negocios con
+rechazo 403, redirección de forgot-password al login. Capturas de cada tamaño.
+APIs interceptadas (también la URL absoluta del build), sin backend real.
 
-- `ThemeService`:
+## Cobertura parcial: paleta de colores y tema (2026-11-08)
+
+- `ThemeService` (4 pruebas aprobadas):
   - sin `theme` guardado usa `facturada`;
   - con `{color:'violet'}` y sin `theme_palette`, pasa a `facturada`, guarda `theme_palette`, respeta `mode` y
     `direction`;
@@ -431,7 +432,7 @@ navegación cancelada → `formError`. `AuthComponent` ya no lee `localStorage.l
 - `dashboard-charts.ts`: los builders usan `--muted-foreground`/`--border` del documento y `tooltip.theme` es `dark`
   con `.dark` en `<html>`.
 - `ButtonComponent` (app-button): ningún tono usa clases `slate`/`violet`/`green` fijas.
-- `AuthComponent`: `subtotal`, `vat` (15 %) y `total` cuadran para cada ejemplo, y `money(8.3)` da `8,30`.
+- `AuthComponent` (6 pruebas aprobadas): `subtotal`, `vat` (15 %) y `total` cuadran para cada ejemplo, y `money(8.3)` da `8,30`.
 - E2E con sesión, en claro y oscuro: POS, Facturar, Órdenes en vivo, Caja, Dashboard, Inventario y Configuración.
   Buscar cajas claras en modo oscuro y textos sin contraste.
 
@@ -472,3 +473,75 @@ Suite Desk actual: 7 OK. Ejecutar con CHROME_BIN/LD_LIBRARY_PATH de esta guía:
 `npx playwright test --config=playwright.desk-migration.config.ts`.
 No se repitieron suites Python/Karma/build Angular: solo cambió JS del Desk Core.
 Evidencia temporal: /tmp/facturada-desk-plans-tests.log. Sin plan real ni despliegue.
+
+## Ejecutar las comprobaciones actuales de login y Desk
+
+Recrear el launcher local temporal si /tmp fue limpiado:
+
+```bash
+cat > /tmp/facturada-legacy-karma.cjs <<'JS'
+module.exports = config => {
+  require('/home/frappe/front-restaurante2025/karma.conf.js')(config);
+  config.set({customLaunchers:{ChromeHeadlessNoSandbox:{base:'ChromeHeadless',flags:['--no-sandbox','--disable-dev-shm-usage']}},browsers:['ChromeHeadlessNoSandbox']});
+};
+JS
+npx ng test --watch=false --karma-config=/tmp/facturada-legacy-karma.cjs --browsers=ChromeHeadlessNoSandbox
+```
+
+Build aislado para el navegador (sin despliegue):
+
+```bash
+npm run build -- --output-path=/tmp/facturada-2026-11-08-production
+npx playwright test --config=playwright.auth.config.ts
+npx playwright test --config=playwright.desk-migration.config.ts
+```
+
+Usar CHROME_BIN/LD_LIBRARY_PATH de esta guía. Login: 16 OK; Desk: 7 OK. El servidor
+estático de pruebas escucha solo 127.0.0.1:4228, no hace proxy y devuelve 503 para
+API no interceptada. El arnés del login responde localmente a la URL absoluta de
+API de producción sin permitir que esa petición continúe al servidor real.
+No ejecutar las pruebas heredadas navbar/sidebar/table contra producción.
+
+## Bloqueo de transporte para repetir suites backend
+
+El arnés temporal se perdió al limpiarse /tmp y se recreó para esta sesión. Antes
+de ejecutar suites, crear el siguiente archivo (el nombre sitecustomize.py es
+necesario para que Python lo cargue al arrancar):
+
+```bash
+mkdir -p /tmp/facturada-2026-11-08-fence
+cat > /tmp/facturada-2026-11-08-fence/sitecustomize.py <<'PYCODE'
+import smtplib
+
+def blocked(*args, **kwargs):
+    raise AssertionError('TEST_NETWORK_FENCE: real HTTP/SMTP forbidden')
+
+try:
+    import requests.adapters
+    requests.adapters.HTTPAdapter.send = blocked
+except ImportError:
+    pass
+smtplib.SMTP.sendmail = blocked
+smtplib.SMTP.send_message = blocked
+PYCODE
+```
+
+Usarlo solo en el proceso de pruebas; los tests siguen debiendo simular cada
+llamada esperada del proveedor. Desde el Bench, repetir por app, secuencialmente:
+
+```bash
+PYTHONPATH=/tmp/facturada-2026-11-08-fence bench --site facturada_core_simple_test run-tests --app facturada_core
+PYTHONPATH=/tmp/facturada-2026-11-08-fence bench --site facturada_core_simple_test run-tests --app facturada_lite
+PYTHONPATH=/tmp/facturada-2026-11-08-fence bench --site facturada_core_simple_test run-tests --app facturada_restaurante
+PYTHONPATH=/tmp/facturada-2026-11-08-fence bench --site facturada_core_simple_test run-tests --app facturada_api
+```
+
+El build optimizado del 08/11 también pasó al permitir la descarga de las fuentes
+públicas: 2,57 MB inicial, 4 advertencias de selectores CSS. El primer intento
+restringido falló por DNS de fonts.googleapis.com; no fue un error de TypeScript.
+
+Nota de herramientas (08/11): Prettier con autodescubrimiento del plugin Tailwind
+falla al requerir DaisyUI ESM desde tailwind.config.js (ERR_REQUIRE_ESM). No es
+una prueba de funcionamiento. Los TS nuevos se formatearon/verificaron mediante
+la API de Prettier con las opciones de .prettierrc, plugins=[] y
+pluginSearchDirs=false; configuración del proyecto sin cambios.
