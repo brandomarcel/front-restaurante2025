@@ -1,9 +1,7 @@
 <!-- Paso 1: usuario y contraseña -->
 <form *ngIf="!needsBusinessSelection" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
   <h1 class="text-[28px] font-semibold leading-tight tracking-tight">Inicia sesión</h1>
-  <p class="si-muted mt-2 text-sm">Entra con el usuario que te dio tu negocio.</p>
-
-  <div class="mt-8 space-y-5">
+  <div class="mt-5 space-y-5">
     <div>
       <label for="email" class="block text-sm font-medium">Usuario o correo</label>
       <input
