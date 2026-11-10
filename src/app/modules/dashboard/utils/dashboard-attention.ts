@@ -137,8 +137,8 @@ export function buildAttentionItems(input: AttentionInput): AttentionItem[] {
   return items;
 }
 
-/** Filtro de Facturas para «Ver rechazadas»: rechazadas del mes en curso. */
+/** Filtro de Facturas para «Ver rechazadas»: grupo «Rechazadas o con error» del mes en curso. */
 function rejectedQuery(): { estado: string; desde: string; hasta: string } {
   const month = datePresetRange('month');
-  return { estado: 'Rechazada', desde: month.from, hasta: month.to };
+  return { estado: 'con-error', desde: month.from, hasta: month.to };
 }

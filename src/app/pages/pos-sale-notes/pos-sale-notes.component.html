@@ -5,32 +5,20 @@
         <h2 class="text-xl font-bold">Notas de venta</h2>
         <p class="text-xs text-primary-foreground/80">Documentos no tributarios de la empresa activa.</p>
       </div>
-      <div class="rounded-full bg-card/20 px-3 py-1 text-xs font-semibold">Registros: {{ filteredNotes.length }}</div>
-    </div>
-  </section>
-
-  <section class="rounded-xl border border-primary/15 bg-card p-4 shadow-sm">
-    <div class="toolbar !mb-0">
-      <div class="flex w-full flex-col gap-2 sm:flex-row">
-        <input class="input" type="search" [(ngModel)]="search" placeholder="Buscar número, cliente, terminal o factura..." />
-        <select class="input sm:max-w-[190px]" [(ngModel)]="status" (change)="load()">
-          <option value="">Todos los estados</option>
-          <option value="Borrador">Borrador</option>
-          <option value="Cobrada">Cobrada</option>
-          <option value="Facturada">Facturada</option>
-          <option value="Anulada">Anulada</option>
-        </select>
-        <input class="input sm:max-w-[155px]" type="date" [(ngModel)]="fromDate" (change)="load()" aria-label="Fecha desde" />
-        <input class="input sm:max-w-[155px]" type="date" [(ngModel)]="toDate" (change)="load()" aria-label="Fecha hasta" />
-      </div>
-      <div class="flex gap-2">
-        <button type="button" class="btn btn-outline" (click)="clearFilters()">Limpiar</button>
-        <button type="button" class="btn btn-primary" (click)="load()" [disabled]="loading">Actualizar</button>
+      <div class="self-start rounded-full bg-card/20 px-3 py-1 text-xs font-semibold sm:self-auto" aria-live="polite">
+        {{ total }} {{ total === 1 ? 'registro' : 'registros' }}
       </div>
     </div>
   </section>
 
-  <section class="app-table-wrap">
+  <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm" [attr.aria-busy]="loading">
+    <app-list-filter-bar [tabs]="statusTabs" tabsLabel="Filtrar notas de venta por estado" [status]="status"
+      (statusChange)="setStatus($event)" [counts]="statusCounts" [search]="search" (searchChange)="search = $event"
+      searchLabel="Buscar notas de venta" searchPlaceholder="Buscar por número, cliente, cédula/RUC, terminal o factura"
+      dateLabel="Fecha de emisión" [fromDate]="fromDate" [toDate]="toDate" (datesChange)="onDatesChange($event)"
+      [hasActiveFilters]="hasActiveFilters" (clear)="clearFilters()" />
+
+  <div class="app-table-wrap !rounded-none !border-0">
     <div *ngIf="loading" class="app-card-body text-center text-muted-foreground">Cargando notas de venta...</div>
     <div *ngIf="!loading && !filteredNotes.length" class="app-card-body text-center text-muted-foreground">No hay notas de venta para los filtros seleccionados.</div>
 
@@ -68,5 +56,11 @@
         </tr>
       </tbody>
     </table>
+  </div>
+
+    <div *ngIf="!loading && filteredNotes.length" class="px-3 pb-3">
+      <app-pagination [page]="page" [totalPages]="totalPages" [totalItems]="total" [pageSize]="pageSize"
+        (pageChange)="onPaginationPage($event)" (pageSizeChange)="onPaginationPageSize($event)"></app-pagination>
+    </div>
   </section>
 </div>

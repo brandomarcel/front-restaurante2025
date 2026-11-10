@@ -57,13 +57,16 @@ export class CreditNoteService {
   }
 
 
-  getAllCreditNotes(limit: number = 10, offset: number = 0, status?: string, search = '') {
+  /** `dates`: rango de fecha de emisión (`YYYY-MM-DD`); búsqueda, estado y fechas se aplican en el backend. */
+  getAllCreditNotes(limit: number = 10, offset: number = 0, status?: string, search = '', dates?: { from?: string; to?: string }) {
       const pageSize = Math.max(1, Number(limit) || 10);
       let params = new HttpParams()
         .set('limit', pageSize.toString())
         .set('offset', offset.toString());
       if (status) params = params.set('status', status);
       if (search.trim()) params = params.set('search', search.trim());
+      if (dates?.from) params = params.set('from_date', dates.from);
+      if (dates?.to) params = params.set('to_date', dates.to);
       const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId');
       if (!business) return throwError(() => new Error('Selecciona un negocio para consultar las notas de crédito.'));
       params = params.set('business', business);

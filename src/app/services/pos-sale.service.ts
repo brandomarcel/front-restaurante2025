@@ -49,6 +49,32 @@ export class PosSaleService {
     );
   }
 
+  /** Página de notas con búsqueda, total y conteos por estado (`status_counts`), todo resuelto en el backend. */
+  listPage(options: { status?: string; search?: string; fromDate?: string; toDate?: string; limit: number; offset: number }):
+    Observable<{ rows: any[]; total: number; hasNext: boolean; counts: Record<string, number> | null }> {
+    let params = this.withBusinessParams(new HttpParams())
+      .set('limit', String(options.limit))
+      .set('offset', String(options.offset));
+    if (options.status) params = params.set('status', options.status);
+    if (options.search?.trim()) params = params.set('search', options.search.trim());
+    if (options.fromDate) params = params.set('from_date', options.fromDate);
+    if (options.toDate) params = params.set('to_date', options.toDate);
+    return this.http.get<any>(this.endpoint('list_pos_sale_notes'), { ...this.auth(), params }).pipe(
+      map((response) => {
+        const body: any = response?.message ?? response ?? {};
+        const rows = Array.isArray(body?.data) ? body.data : [];
+        const total = Number(body?.total);
+        const counts = body?.status_counts;
+        return {
+          rows,
+          total: Number.isFinite(total) && total >= 0 ? total : rows.length,
+          hasNext: Boolean(body?.has_next),
+          counts: counts && typeof counts === 'object' ? counts : null,
+        };
+      })
+    );
+  }
+
   collect(name: string): Observable<any> {
     return this.action('collect_pos_sale_note', name);
   }

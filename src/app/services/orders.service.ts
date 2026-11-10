@@ -87,7 +87,9 @@ export class OrdersService {
     createdTo?: string,
     order: 'asc' | 'desc' = 'desc',
     status?: string,
-    mine = false
+    mine = false,
+    /** Búsqueda (número, alias, cliente o cédula) y tipo (`Factura` / `Nota Venta`), resueltos en el backend. */
+    filters?: { search?: string; fiscalStatus?: string }
   ): Observable<OrdersListResponse> {
     const pageSize = Math.max(1, Number(limit) || 10);
     let params = new HttpParams()
@@ -102,6 +104,8 @@ export class OrdersService {
     if (createdTo) params = params.set('created_to', createdTo);
     if (status) params = params.set('status', status);
     if (mine) params = params.set('mine', '1');
+    if (filters?.search?.trim()) params = params.set('search', filters.search.trim());
+    if (filters?.fiscalStatus) params = params.set('fiscal_status', filters.fiscalStatus);
 
     return this.http.get<OrdersListResponse>(`${this.urlBase}.get_all_orders`, {
       context: new HttpContext().set(REQUIRE_AUTH, true),

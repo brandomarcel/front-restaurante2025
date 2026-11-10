@@ -11,21 +11,13 @@
     </div>
   </section>
 
-  <section class="rounded-xl border border-primary/15 bg-card p-3 shadow-sm" aria-label="Filtros de notas de crédito">
-    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-      <input class="input flex-1" type="search" [(ngModel)]="search" aria-label="Buscar notas de crédito"
-        placeholder="Buscar nota, factura, clave, cliente o identificación…" autocomplete="off" />
-      <select class="input sm:max-w-[220px]" [(ngModel)]="statusFilter" (ngModelChange)="onStatusChange()"
-        aria-label="Filtrar por estado">
-        <option value="">Todos los estados</option>
-        <option *ngFor="let option of statusOptions" [value]="option.value">{{ option.label }}</option>
-      </select>
-      <app-button *ngIf="hasActiveFilters" (click)="limpiarFiltros()" impact="bold" tone="light" shape="rounded"
-        size="small">Limpiar filtros</app-button>
-    </div>
-  </section>
+  <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm" [attr.aria-busy]="loading">
+    <app-list-filter-bar [tabs]="statusTabs" tabsLabel="Filtrar notas de crédito por estado" [status]="statusFilter"
+      (statusChange)="setStatus($event)" [counts]="statusCounts" [search]="search" (searchChange)="search = $event"
+      searchLabel="Buscar notas de crédito" searchPlaceholder="Buscar por número, factura, cliente, cédula/RUC o clave"
+      dateLabel="Fecha de emisión" [fromDate]="fromDate" [toDate]="toDate" (datesChange)="onDatesChange($event)"
+      [hasActiveFilters]="hasActiveFilters" (clear)="limpiarFiltros()" />
 
-  <section class="rounded-xl border border-border bg-card shadow-sm" [attr.aria-busy]="loading">
     <app-list-state [loading]="loading" [empty]="!invoicesFiltradas.length" [hasFilters]="hasActiveFilters"
       emptyMessage="Todavía no hay notas de crédito." filteredMessage="Ninguna nota de crédito coincide con los filtros."
       (clear)="limpiarFiltros()" />

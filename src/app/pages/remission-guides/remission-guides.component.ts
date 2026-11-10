@@ -1,23 +1,24 @@
 import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { toast } from 'ngx-sonner';
 import { EcuadorTimePipe } from 'src/app/core/pipes/ecuador-time-pipe.pipe';
-import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
 import { ElectronicStatusBadgeComponent } from 'src/app/shared/components/electronic-status-badge/electronic-status-badge.component';
 import { ListStateComponent } from 'src/app/shared/components/list-state/list-state.component';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { RemissionGuidesService } from 'src/app/services/remission-guides.service';
-import { REMISSION_GUIDE_STATUS_FILTERS, electronicStatusFilterOptions } from 'src/app/core/utils/electronic-document';
+import { ELECTRONIC_STATUS_GROUPS, electronicStatusFromQuery, electronicStatusParam, electronicStatusTabs } from 'src/app/core/constants/electronic-status-tabs';
+import { FilterDates, ListFilterBarComponent } from 'src/app/shared/components/list-filter-bar/list-filter-bar.component';
+import { readListQuery, writeListQuery } from 'src/app/shared/utils/list-query';
 import { debouncedCallback } from 'src/app/shared/utils/debounced-callback';
 
 @Component({
   selector: 'app-remission-guides',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, EcuadorTimePipe, ButtonComponent, AppPaginationComponent, ElectronicStatusBadgeComponent, ListStateComponent],
+  imports: [CommonModule, FormsModule, RouterModule, EcuadorTimePipe, AppPaginationComponent, ElectronicStatusBadgeComponent, ListStateComponent, ListFilterBarComponent],
   templateUrl: './remission-guides.component.html'
 })
 export class RemissionGuidesComponent implements OnInit {
@@ -29,17 +30,26 @@ export class RemissionGuidesComponent implements OnInit {
   loading = false;
 
   _search = '';
+  /** Grupo de estado (`autorizadas`, `en-proceso`, `con-error`) o vacío. */
   statusFilter = '';
+  /** Fecha de emisión `YYYY-MM-DD` (vacío = sin límite). */
+  fromDate = '';
+  toDate = '';
+  /** Conteos por pestaña (`status_counts`); null si el backend no los envía. */
+  statusCounts: Record<string, number> | null = null;
 
-  /** Las guías se leen con el contrato electrónico Lite y no usan Reemplazada ni Anulada. */
-  readonly statusOptions = electronicStatusFilterOptions(REMISSION_GUIDE_STATUS_FILTERS, true);
+  /** Las guías no se anulan: sin pestaña «Anuladas». */
+  readonly statusOptions = ELECTRONIC_STATUS_GROUPS.filter(group => group.value !== 'anuladas');
+  readonly statusTabs = electronicStatusTabs('Todas las guías de remisión', false);
   private readonly searchBackend: () => void;
   private request?: Subscription;
 
   constructor(
     private svc: RemissionGuidesService,
     public capabilities: CompanyCapabilitiesService,
-    destroyRef: DestroyRef
+    destroyRef: DestroyRef,
+    private route: ActivatedRoute,
+    private router: Router
   ) {
     this.searchBackend = debouncedCallback(destroyRef, () => {
       this.page = 1;
@@ -49,6 +59,13 @@ export class RemissionGuidesComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Filtros y página en la dirección: al volver del detalle la lista sigue igual.
+    const query = readListQuery(this.route);
+    this.statusFilter = electronicStatusFromQuery(query.estado, false);
+    this._search = query.q;
+    this.fromDate = query.desde;
+    this.toDate = query.hasta;
+    this.page = query.pagina;
     this.loadGuides();
   }
 
@@ -59,7 +76,19 @@ export class RemissionGuidesComponent implements OnInit {
   }
 
   get hasActiveFilters(): boolean {
-    return !!this._search.trim() || !!this.statusFilter;
+    return !!this._search.trim() || !!this.statusFilter || !!this.fromDate || !!this.toDate;
+  }
+
+  setStatus(value: string): void {
+    this.statusFilter = value;
+    this.onStatusChange();
+  }
+
+  onDatesChange(range: FilterDates): void {
+    this.fromDate = range.from;
+    this.toDate = range.to;
+    this.page = 1;
+    this.loadGuides();
   }
 
   get canCreate(): boolean {
@@ -70,11 +99,17 @@ export class RemissionGuidesComponent implements OnInit {
     // Cancela la petición anterior para que una respuesta lenta no pise un filtro más reciente.
     this.request?.unsubscribe();
     this.loading = true;
+    writeListQuery(this.router, this.route,
+      { estado: this.statusFilter, q: this._search, desde: this.fromDate, hasta: this.toDate, pagina: this.page });
     const offset = (this.page - 1) * this.pageSize;
-    this.request = this.svc.getAll(this.pageSize, offset, this.statusFilter || undefined, undefined, this._search).subscribe({
+    const args: Parameters<RemissionGuidesService['getAll']> = [this.pageSize, offset, electronicStatusParam(this.statusFilter), undefined, this._search];
+    if (this.fromDate || this.toDate) args.push({ from: this.fromDate, to: this.toDate });
+    this.request = this.svc.getAll(...args).subscribe({
       next: (res: any) => {
         const msg = res?.message || res;
         this.guides = msg?.data || [];
+        const counts = msg?.status_counts;
+        this.statusCounts = counts && typeof counts === 'object' ? counts : null;
         this.pageSize = Number(msg?.limit ?? this.pageSize) || this.pageSize;
         const responseOffset = Number(msg?.offset);
         if (Number.isFinite(responseOffset) && responseOffset >= 0) {
@@ -95,6 +130,8 @@ export class RemissionGuidesComponent implements OnInit {
   limpiarFiltros(): void {
     this._search = '';
     this.statusFilter = '';
+    this.fromDate = '';
+    this.toDate = '';
     this.page = 1;
     this.loadGuides();
   }

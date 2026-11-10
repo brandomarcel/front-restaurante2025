@@ -117,9 +117,14 @@ ambas activas a la vez.
 ## FacturADA Lite (facturador)
 
 Funciones:
-- Facturación directa y notas de crédito (`invoicing`, `invoices`, `credit-notes`). La lista de Facturas filtra por búsqueda (en el
-  servidor), estado y fecha de emisión (Desde/Hasta y atajos Hoy, Este mes, Mes pasado); los filtros y la página quedan
-  en la dirección (`?estado=&q=&desde=&hasta=&pagina=`), así que al volver del detalle la lista sigue igual. «Facturar» sale en el
+- Facturación directa y notas de crédito (`invoicing`, `invoices`, `credit-notes`). Las listas de Facturas, Notas de crédito, Guías
+  de remisión, Notas de venta y Órdenes usan la misma barra de filtros (`shared/components/list-filter-bar`, con
+  `shared/utils/list-query.ts` y `core/constants/electronic-status-tabs.ts`); en Facturas: pestañas de estado con punto de color y conteo (`status_counts`, misma búsqueda y fechas): Todas,
+  Autorizadas, En proceso (pendiente de emisión, autorización pendiente y en revisión), Rechazadas o con error («Con
+  error» en celular; su conteo siempre en rojo) y Anuladas, sin Borrador ni Reemplazada; debajo, una fila con búsqueda
+  (en el servidor), fecha de emisión (Todas, Hoy, Este mes, Mes pasado, «Elegir fechas…» con Desde/Hasta) y «Limpiar
+  filtros». Filtros y página quedan en la dirección
+  (`?estado=&q=&desde=&hasta=&pagina=`); un `?estado=` antiguo (p. ej. `Rechazada`) abre su grupo. «Facturar» sale en el
   menú aunque el POS genérico esté activo: ambos conviven (solo depende de `direct_invoice` + `billing.create`).
   En «Nueva factura» cada línea muestra cantidad, precio, descuento %, descuento $, IVA y total; la fila se adapta al
   ancho de la hoja (tabla, campos en una fila, o dos filas en celular).
@@ -263,6 +268,18 @@ Funciones:
   y «Conocer más» (bmarc-corp.com). Datos en `core/constants/brand.constants.ts`. No se puede ocultar por negocio.
 - Backend: `facturada_restaurante.api.public_menu`; `get_public_menu` es el único endpoint sin sesión del sistema.
 
+## Barra de filtros de las listas
+
+- Facturas, Notas de crédito, Guías de remisión, Notas de venta y Órdenes comparten `app-list-filter-bar`: pestañas de
+  estado con punto de color y conteo (`status_counts` del backend, con la misma búsqueda, tipo y fechas), y una fila
+  con búsqueda (en el servidor), controles propios (Órdenes: tipo Factura / Nota de venta), fecha (Todas, Hoy, Este
+  mes, Mes pasado, «Elegir fechas…») y «Limpiar filtros». Filtros y página quedan en la dirección
+  (`?estado=&q=&desde=&hasta=&pagina=`, Órdenes además `tipo`).
+- Pestañas: comprobantes electrónicos = Todas, Autorizadas, En proceso, Rechazadas o con error (conteo en rojo),
+  Anuladas (las guías no tienen Anuladas); Notas de venta = Todas, Cobradas, Facturadas, Sin cobrar, Anuladas;
+  Órdenes = Todas, Ingresadas, En preparación, Listas, Cerradas, Canceladas.
+- Mesero y Cajero ven en Órdenes solo el día de hoy: sin filtro de fecha. Notas de venta ahora pagina (20 por página).
+
 ## Órdenes en vivo y pantalla de cocina (`orders-realtime`)
 
 - Una sola palabra para cada paso de cocina en Caja, Cocina, el modal y el detalle: «Empezar a preparar», «Marcar
@@ -369,7 +386,7 @@ Funciones:
   trata el panel y el estado de caja y firma (texto con punto de color, sin banda con degradado).
 - «Necesita tu atención» (`dashboard-attention.ts`): una sola lista, cada punto con su botón según permiso: firma
   (falta, vencida, vence en ≤ 30 días), plan (sin plan, inactivo, agotado, vence en ≤ 7 días), facturas rechazadas y en
-  proceso del **mes en curso** («Ver rechazadas» abre Facturas con `?estado=Rechazada&desde=<1 del mes>&hasta=<hoy>`), caja sin abrir e inventario
+  proceso del **mes en curso** («Ver rechazadas» abre Facturas con `?estado=con-error&desde=<1 del mes>&hasta=<hoy>`), caja sin abrir e inventario
   bajo. Sin pendientes: «Todo en orden», solo cuando terminó de cargar.
 - Restaurante/POS: «Vendido hoy» en grande (restaurante: solo órdenes cerradas, como suma el backend), pedidos, ticket
   promedio (restaurante: venta ÷ órdenes cerradas) y en curso (POS: con factura). «Tu caja» es un ticket con el cuadre
@@ -540,7 +557,8 @@ intermedio: un push a `main` es un despliegue real.
   `Reemplazada`/con `regenerated_invoice` no permiten reintento ni revisión manual.
 - La lista de Facturas solo trae `Factura`; las NC van por `get_all_credit_notes`. Ambas aceptan `search`
   (número, cliente, cédula/RUC, clave, ID) y `from_date`/`to_date` (fecha de emisión), aplicados en el backend antes de
-  contar y paginar. El filtro `Autorizada` de Facturas excluye las anuladas (van solo en `Anulada`).
+  contar y paginar. El filtro `Autorizada` de Facturas excluye las anuladas (van solo en `Anulada`); `status` acepta
+  además los grupos `EN_PROCESO` (Pendiente Emision, Emitida, En Revision) y `CON_ERROR` (Rechazada, Error de Envio).
   `credit_note_summary` (FULL/PARTIAL/PENDING/NONE): solo FULL se muestra como anulación
   por compensación; el estado fiscal original no cambia.
 - Una orden de restaurante se factura una sola vez (también si su factura se anuló en el SRI). Una nota POS con

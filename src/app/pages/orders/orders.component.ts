@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, DestroyRef, OnInit } from '@angular/core';
 import { OrdersService } from 'src/app/services/orders.service';
 import { EcuadorTimePipe } from '../../core/pipes/ecuador-time-pipe.pipe';
 import { NgxSpinnerService } from 'ngx-spinner';
@@ -7,25 +7,40 @@ import { FormsModule } from '@angular/forms';
 import { PrintService } from 'src/app/services/print.service';
 import { PrintStationService } from 'src/app/services/print-station.service';
 import { toast } from 'ngx-sonner';
-import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { environment } from 'src/environments/environment.prod';
 import { UtilsService } from 'src/app/core/services/utils.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { OrderModalComponent } from '../orders-realtime/ui/order-modal/order-modal.component';
 import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
+import { FilterDates, FilterTab, ListFilterBarComponent } from 'src/app/shared/components/list-filter-bar/list-filter-bar.component';
+import { debouncedCallback } from 'src/app/shared/utils/debounced-callback';
+import { readListQuery, readListQueryExtra, writeListQuery } from 'src/app/shared/utils/list-query';
 
-type EstadoOrden = '' | 'Ingresada' | 'Preparación' | 'Cerrada';
+/** Estado de la orden en el backend (también la clave de `status_counts`); vacío = todas. */
+type EstadoOrden = '' | 'Ingresada' | 'Preparacion' | 'Lista' | 'Cerrada' | 'Cancelada';
+
+/** Pestañas con los colores de las insignias de estado de la tabla. */
+const ORDER_STATUS_TABS: FilterTab[] = [
+  { value: '', label: 'Todas', countKey: 'ALL', hint: 'Todas las órdenes' },
+  { value: 'Ingresada', label: 'Ingresadas', dot: 'bg-danger-500', hint: 'Recién tomadas, cocina no las empezó' },
+  { value: 'Preparacion', label: 'En preparación', shortLabel: 'Preparación', dot: 'bg-warning-500', hint: 'Cocina las está preparando' },
+  { value: 'Lista', label: 'Listas', dot: 'bg-info-500', hint: 'Listas para entregar' },
+  { value: 'Cerrada', label: 'Cerradas', dot: 'bg-success-500', hint: 'Servidas o cobradas' },
+  { value: 'Cancelada', label: 'Canceladas', dot: 'bg-muted-foreground/50', hint: 'Canceladas' },
+];
+const ORDER_TYPES = ['Factura', 'Nota Venta'] as const;
 
 @Component({
   selector: 'app-orders',
   imports: [CommonModule,
     // EcuadorTimePipe,
-    FormsModule, ButtonComponent,
+    FormsModule,
     RouterModule,
     OrderModalComponent,
-    AppPaginationComponent
+    AppPaginationComponent,
+    ListFilterBarComponent
   ],
   templateUrl: './orders.component.html',
   styleUrl: './orders.component.css'
@@ -46,10 +61,15 @@ export class OrdersComponent implements OnInit {
   activeTab = 'info';
   roleName: 'Gerente' | 'Cajero' | 'Mesero' | 'Desconocido' = 'Desconocido';
 
-  // NUEVOS filtros
+  // Filtros (todos se resuelven en el backend, con conteos por estado)
   tipoFiltro: '' | 'Factura' | 'Nota Venta' = '';
   estadoFiltro: EstadoOrden = '';
-  anulacionFiltro: '' | 'soloAnuladas' | 'excluirAnuladas' = '';
+  /** Fecha de creación `YYYY-MM-DD`; Mesero y Cajero ven siempre el día de hoy. */
+  fromDate = '';
+  toDate = '';
+  statusCounts: Record<string, number> | null = null;
+  readonly statusTabs = ORDER_STATUS_TABS;
+  private readonly searchBackend: () => void;
 
   private url = environment.URL
   constructor(
@@ -59,7 +79,15 @@ export class OrdersComponent implements OnInit {
     private printStation: PrintStationService,
     private utils: UtilsService,
     private capabilities: CompanyCapabilitiesService,
-  ) { }
+    private route: ActivatedRoute,
+    private router: Router,
+    destroyRef: DestroyRef,
+  ) {
+    this.searchBackend = debouncedCallback(destroyRef, () => {
+      this.page = 1;
+      this.loadOrders();
+    });
+  }
 
   /** El mesero solo ve las órdenes que creó. */
   get onlyMine(): boolean {
@@ -68,24 +96,35 @@ export class OrdersComponent implements OnInit {
 
   ngOnInit() {
     this.roleName = this.detectRole();
+    // Filtros y página en la dirección: al volver del detalle la lista sigue igual.
+    const query = readListQuery(this.route);
+    this.estadoFiltro = ORDER_STATUS_TABS.some(tab => tab.value && tab.value === query.estado) ? query.estado as EstadoOrden : '';
+    this._searchTerm = query.q;
+    this.fromDate = query.desde;
+    this.toDate = query.hasta;
+    this.page = query.pagina;
+    this.tipoFiltro = readListQueryExtra(this.route, 'tipo', ORDER_TYPES) as '' | 'Factura' | 'Nota Venta';
     this.loadOrders();
-    console.log('THIS.url', this.url);
   }
 
   loadOrders(): void {
     this.spinner.show();
     const offset = (this.page - 1) * this.pageSize;
     const today = String(this.utils.getSoloFechaEcuador());
-    const createdFrom = this.isMeseroOrCajero ? today : undefined;
-    const createdTo = this.isMeseroOrCajero ? today : undefined;
-    const status = this.estadoFiltro === 'Preparación' ? 'Preparacion' : (this.estadoFiltro || undefined);
+    const createdFrom = this.isMeseroOrCajero ? today : (this.fromDate || undefined);
+    const createdTo = this.isMeseroOrCajero ? today : (this.toDate || undefined);
+    writeListQuery(this.router, this.route, {
+      estado: this.estadoFiltro, q: this._searchTerm, desde: this.fromDate, hasta: this.toDate, pagina: this.page,
+      extra: { tipo: this.tipoFiltro },
+    });
 
-    this.ordersService.getAll(this.pageSize, offset, createdFrom, createdTo, 'desc', status, this.onlyMine).subscribe({
+    this.ordersService.getAll(this.pageSize, offset, createdFrom, createdTo, 'desc', this.estadoFiltro || undefined, this.onlyMine,
+      { search: this._searchTerm, fiscalStatus: this.tipoFiltro || undefined }).subscribe({
       next: (res: any) => {
-        console.log('res', res);
         const rows = res.message.data || [];
         this.orders = rows;
-        console.log('this.orders', this.orders);
+        const counts = res.message?.status_counts;
+        this.statusCounts = counts && typeof counts === 'object' ? counts : null;
         this.pageSize = Number(res.message?.limit ?? this.pageSize) || this.pageSize;
         const responseOffset = Number(res.message?.offset);
         if (Number.isFinite(responseOffset) && responseOffset >= 0) {
@@ -125,92 +164,47 @@ export class OrdersComponent implements OnInit {
   }
 
   get searchTerm(): string { return this._searchTerm; }
+  /** La búsqueda se resuelve en el backend al terminar de escribir. */
   set searchTerm(value: string) {
     this._searchTerm = value || '';
-    this.actualizarOrdenesFiltradas();
+    this.searchBackend();
   }
 
-  /** Determina si la orden está anulada (estado_sri que contenga 'anul') */
-  private esAnulada(o: any): boolean {
-    const estado = (o?.estado_sri || o?.sri?.estado_sri || '').toString().toLowerCase();
-    return estado.includes('anul'); // cubre 'ANULADO', 'ANULADA'
+  get hasActiveFilters(): boolean {
+    return !!this._searchTerm.trim() || !!this.estadoFiltro || !!this.tipoFiltro || !!this.fromDate || !!this.toDate;
   }
 
-  /** Texto para búsqueda: name, cliente, identificación, tipo, estado */
-  private textHayCoincidencia(o: any, term: string): boolean {
-    if (!term) return true;
-    const hay = [
-      o?.name,
-      o?.alias,
-      o?.customer?.nombre,
-      o?.customer?.num_identificacion,
-      o?.type,
-      o?.status,
-      o?.estado_sri || o?.sri?.estado_sri
-    ]
-      .map(v => (v ?? '').toString().toLowerCase())
-      .some(v => v.includes(term));
-    return hay;
+  onTipoChange(): void {
+    this.page = 1;
+    this.loadOrders();
   }
 
-  /** Aplica todos los filtros */
+  onDatesChange(range: FilterDates): void {
+    this.fromDate = range.from;
+    this.toDate = range.to;
+    this.page = 1;
+    this.loadOrders();
+  }
+
+  /** Compatibilidad con la plantilla: la página ya viene filtrada del backend. */
   actualizarOrdenesFiltradas(): void {
-    const term = (this._searchTerm || '').toLowerCase();
-
-    let lista = Array.isArray(this.orders) ? [...this.orders] : [];
-
-    lista = lista.filter((o: any) => {
-      // filtro por texto
-      const byText = this.textHayCoincidencia(o, term);
-
-      // filtro por tipo (Factura / Nota de venta)
-      const byTipo = !this.tipoFiltro || (o?.type === this.tipoFiltro);
-      const byEstado = !this.estadoFiltro || this.getCanonicalStatus(o?.status) === this.estadoFiltro;
-
-      // filtro por anulación
-      const anulada = this.esAnulada(o);
-      const byAnulacion =
-        this.anulacionFiltro === ''
-          ? true
-          : this.anulacionFiltro === 'soloAnuladas'
-            ? anulada
-            : !anulada; // 'excluirAnuladas'
-
-      return byText && byTipo && byEstado && byAnulacion;
-    });
-
-    this.ordersFiltradosList = lista;
+    this.ordersFiltradosList = Array.isArray(this.orders) ? [...this.orders] : [];
   }
 
   limpiarFiltros(): void {
     this._searchTerm = '';
     this.tipoFiltro = '';
     this.estadoFiltro = '';
-    this.anulacionFiltro = '';
+    this.fromDate = '';
+    this.toDate = '';
     this.page = 1;
     this.loadOrders();
   }
 
-  setEstadoFiltro(value: EstadoOrden): void {
-    this.estadoFiltro = value;
+  setEstadoFiltro(value: string): void {
+    this.estadoFiltro = value as EstadoOrden;
     this.page = 1;
     this.loadOrders();
-  }
-
-  countByEstado(value: EstadoOrden): number {
-    const lista = Array.isArray(this.orders) ? this.orders : [];
-    if (!value) return lista.length;
-    return lista.filter((o: any) => this.getCanonicalStatus(o?.status) === value).length;
-  }
-
-  countByTipo(value: '' | 'Factura' | 'Nota Venta'): number {
-    const lista = Array.isArray(this.orders) ? this.orders : [];
-    if (!value) return lista.length;
-    return lista.filter((o: any) => String(o?.type || '') === value).length;
-  }
-
-  isEstadoActivo(value: EstadoOrden): boolean {
-    return this.estadoFiltro === value;
   }
 
   getEstadoBadgeClass(value: any): string {

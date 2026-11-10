@@ -9,6 +9,39 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-10 (Claude, filtros en todas las listas): a pedido del usuario, la barra de Facturas pasa a componente
+  compartido (`shared/components/list-filter-bar/`, utilidades `shared/utils/list-query.ts` y
+  `core/constants/electronic-status-tabs.ts`) y se usa en Facturas, Notas de crédito, Guías de remisión, Notas de venta y
+  Órdenes, con conteos por pestaña (decisión del usuario).
+  - Fallas encontradas y corregidas de paso: Guías, Notas de venta y Órdenes solo buscaban en lo cargado; Notas de
+    venta no paginaba (solo traía 50) y Órdenes contaba los estados solo de la página visible.
+  - Backend Lite: `api/list_filters.py` (búsqueda escapada, fechas, grupos); `list_remission_guides` con búsqueda
+    (número, clave, transportista, placa, destinatario), grupos, fechas y `status_counts`; `list_pos_sale_notes` con
+    búsqueda, `total`/`has_next` y `status_counts`; NC con `status_counts` y búsqueda por factura relacionada.
+    Restaurante: `get_all_orders` con `search` (número, alias, cliente o cédula), `fiscal_status`, fechas por día
+    completo y `status_counts`.
+  - Front: Notas de venta pagina (20) y pierde el botón «Actualizar» (cada filtro recarga); Órdenes pierde los
+    contadores de la cabecera (eran de la página) y la vista de Mesero/Cajero usa las mismas pestañas, sin fecha.
+  - Verificado en el piloto (búsquedas, grupos, fechas y conteos de cada lista). Build OK; lint 19 heredados. Specs de
+    Codex que pueden cambiar: credit-notes y remission-guides esperaban `statusOptions` con estados técnicos
+    (`Anulada`…); `invoices.component.spec.ts` y `dashboard-attention.spec.ts` ya anotados. No se tocaron aserciones.
+
+- 2026-11-10 (Claude, filtros de Facturas 3, `/frontend-design`): barra de filtros más profesional (opción elegida
+  por el usuario). Pestañas de estado con punto de color y conteo pegadas a la tabla (conteo de «Rechazadas o con
+  error» siempre en rojo; «Con error» en celular) y una fila de búsqueda + fecha con íconos + «Limpiar filtros». Lite
+  devuelve `status_counts` (ALL, Autorizada, EN_PROCESO, CON_ERROR, Anulada) en `get_all_invoices` con la misma
+  búsqueda y fechas (`count_source_scoped_invoices`). Revisado con capturas de una maqueta con el CSS compilado (1280 y
+  390 px, claro y oscuro). Hallazgo: una regla sin capa (`[type="date"] … { width: 100% }`) le gana a las utilidades
+  de ancho; por eso los Desde/Hasta usan `sm:!w-[140px]`. Build OK; lint 19 heredados.
+
+- 2026-11-10 (Claude, filtros de Facturas 2): a pedido del usuario, filtros en una sola fila (buscar con ícono ·
+  estado · fecha · «Limpiar»; en celular se acomodan en varias líneas) y estados agrupados (decisión del usuario):
+  Autorizadas, En proceso, Rechazadas o con error, Anuladas; sin Borrador (no existe) ni Reemplazada (original técnica).
+  Fecha como selector (Todas, Hoy, Este mes, Mes pasado, «Elegir fechas…» que muestra Desde/Hasta en la misma fila).
+  Backend Lite: `status` acepta `EN_PROCESO` y `CON_ERROR`. «Ver rechazadas» del Dashboard abre `con-error` del mes.
+  Specs de Codex con regla cambiada (no se tocaron): `invoices.component.spec.ts` «offers every backend status…»
+  (esperaba los 9 estados técnicos) y `dashboard-attention.spec.ts` línea 61. Build OK; lint 19 heredados.
+
 - 2026-11-10 (Claude, filtros de Facturas): revisión pedida por el usuario.
   - Fallas corregidas: el buscador solo filtraba la página visible (el backend ignoraba `search`), así que una factura
     vieja no aparecía; y «Autorizada» incluía las anuladas con nota de crédito (salían también en «Anulada»).

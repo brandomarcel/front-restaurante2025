@@ -24,7 +24,8 @@ export class RemissionGuidesService {
     private capabilities: CompanyCapabilitiesService
   ) {}
 
-  getAll(limit = 10, offset = 0, status?: string, guideEnvironment?: string, search = '') {
+  /** `dates`: rango de fecha de emisión (`YYYY-MM-DD`); búsqueda, estado y fechas se aplican en el backend. */
+  getAll(limit = 10, offset = 0, status?: string, guideEnvironment?: string, search = '', dates?: { from?: string; to?: string }) {
     const pageSize = Math.max(1, Number(limit) || 10);
     const business = this.activeBusiness();
     if (!business) return throwError(() => new Error('Selecciona un negocio para consultar las guías de remisión.'));
@@ -35,6 +36,8 @@ export class RemissionGuidesService {
     if (status) params = params.set('status', status);
     if (guideEnvironment) params = params.set('environment', guideEnvironment);
     if (search.trim()) params = params.set('search', search.trim());
+    if (dates?.from) params = params.set('from_date', dates.from);
+    if (dates?.to) params = params.set('to_date', dates.to);
 
     return this.http.get<any>(
       `${this.api}${API_ENDPOINT.FacturadaLite}.get_all_remission_guides`,

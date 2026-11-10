@@ -320,6 +320,27 @@ Core `api/plans.py` y `effective_features`: cada plan del catálogo (roles y fea
 restaurante con `tables` y/o `kitchen` apagados. Probar en navegador un RESTO_BASICO: POS, Lista de
 órdenes y cobro sin Mesas ni Cocina.
 
+## Pendiente de pruebas: barra de filtros compartida (2026-11-10)
+
+Front:
+- `ListFilterBarComponent`: emite `statusChange` solo si cambia; conteo 0 visible, `null` oculto, `alert` en rojo;
+  atajos de fecha emiten el rango; «Elegir fechas…» sin fechas arranca en el mes; rango invertido muestra aviso y no
+  emite; `showDates=false` oculta la fecha; contenido proyectado (tipo en Órdenes).
+- `list-query.ts`: lectura valida fechas/página/búsqueda; escritura con `replaceUrl`, sin navegar si no cambió; `extra`.
+- Notas de crédito y Guías: `estado` antiguo abre su grupo; Guías sin «Anuladas». Specs actuales de credit-notes
+  (`statusOptions` contiene `Anulada`) y remission-guides (`statusOptions`) esperaban estados técnicos: regla cambiada.
+- Notas de venta: `listPage` con paginación; búsqueda con debounce al backend. Órdenes: búsqueda/tipo al backend,
+  `tipo` en la dirección, Mesero/Cajero con fecha fija de hoy.
+
+Backend:
+- Lite `list_remission_guides`: búsqueda por número, clave, transportista, placa y destinatario (razón social o
+  identificación); `EN_PROCESO`/`CON_ERROR`; fechas; `status_counts` (ALL, Autorizada, EN_PROCESO, CON_ERROR).
+- Lite `list_pos_sale_notes`: búsqueda (ID, cliente, identificación, factura, terminal), `total`, `has_next`,
+  `status_counts` (ALL + 4 estados), fechas, paginación.
+- Lite NC: `status_counts`; búsqueda por `related_document_number`.
+- Restaurante `get_all_orders`: búsqueda por ID, alias, nombre o identificación del cliente (solo del negocio);
+  `fiscal_status`; `created_from`/`created_to` por día completo (rango invertido = error); `mine`; `status_counts`.
+
 ## Pendiente de pruebas: filtros de la lista de Facturas (2026-11-10)
 
 Backend Lite (`list_invoices`, `get_all_invoices`, `get_all_credit_notes`):
@@ -333,8 +354,18 @@ Front:
 - `InvoicesComponent`: lee `estado`, `q`, `desde`, `hasta`, `pagina` de la dirección (descarta estado o fecha
   inválidos); los escribe con `replaceUrl`; atajos Hoy/Este mes/Mes pasado (fechas locales, `datePresetRange`),
   «Todas las fechas», aviso de rango invertido sin consultar; `getAllInvoices` recibe el rango solo si hay fechas.
-- `dashboard-attention.spec.ts` (línea 61): ahora `queryParams` = `{ estado: 'Rechazada', desde: <1 del mes>, hasta:
+- Estados agrupados: opciones `autorizadas`, `en-proceso`, `con-error`, `anuladas` que envían `Autorizada`,
+  `EN_PROCESO`, `CON_ERROR`, `Anulada`; `?estado=` antiguo (Rechazada, Emitida…) abre su grupo; desconocido = todos.
+  `invoices.component.spec.ts` «offers every backend status…» esperaba los 9 estados técnicos: regla cambiada.
+- Pestañas de estado: `setStatus` no recarga si ya está elegida; conteos desde `status_counts` (0 se muestra, sin
+  dato no); «Con error» con conteo en rojo. Backend: `status_counts` solo en Facturas, respeta búsqueda y fechas,
+  `Autorizada` sin anuladas y suma de grupos ≤ ALL (Reemplazada solo en ALL).
+- Selector de fecha: atajos ponen Desde/Hasta; «Elegir fechas…» muestra los dos campos (sin fechas arranca en el mes);
+  al abrir con `desde`/`hasta` de un atajo se selecciona ese atajo, si no «Elegir fechas…».
+- `dashboard-attention.spec.ts` (línea 61): ahora `queryParams` = `{ estado: 'con-error', desde: <1 del mes>, hasta:
   <hoy> }` (regla nueva; actualizar la aserción con fecha simulada).
+- Backend: `status=EN_PROCESO` solo Pendiente Emision/Emitida/En Revision; `status=CON_ERROR` solo Rechazada/Error de
+  Envio; ambos con búsqueda y fechas.
 
 ## Pendiente de pruebas: anulación registrada en el SRI (2026-11-10)
 

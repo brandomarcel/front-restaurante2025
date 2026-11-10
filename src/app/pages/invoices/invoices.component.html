@@ -11,44 +11,13 @@
     </div>
   </section>
 
-  <section class="rounded-xl border border-primary/15 bg-card p-3 shadow-sm" aria-label="Filtros de facturas">
-    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-      <input class="input flex-1" type="search" [(ngModel)]="search" aria-label="Buscar facturas"
-        placeholder="Buscar documento, clave, cliente o identificación…" autocomplete="off" />
-      <select class="input sm:max-w-[220px]" [(ngModel)]="statusFiltro" (ngModelChange)="onStatusChange()"
-        aria-label="Filtrar por estado">
-        <option value="">Todos los estados</option>
-        <option *ngFor="let option of statusOptions" [value]="option.value">{{ option.label }}</option>
-      </select>
-      <app-button *ngIf="hasActiveFilters" (click)="limpiarFiltros()" impact="bold" tone="light" shape="rounded"
-        size="small">Limpiar filtros</app-button>
-    </div>
+  <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm" [attr.aria-busy]="loading">
+    <app-list-filter-bar [tabs]="statusTabs" tabsLabel="Filtrar facturas por estado" [status]="statusFiltro"
+      (statusChange)="setStatus($event)" [counts]="statusCounts" [search]="search" (searchChange)="search = $event"
+      searchLabel="Buscar facturas" searchPlaceholder="Buscar por número, cliente, cédula/RUC o clave de acceso"
+      dateLabel="Fecha de emisión" [fromDate]="fromDate" [toDate]="toDate" (datesChange)="onDatesChange($event)"
+      [hasActiveFilters]="hasActiveFilters" (clear)="limpiarFiltros()" />
 
-    <div class="mt-2 flex flex-col gap-2 border-t border-border pt-2 md:flex-row md:items-end">
-      <fieldset class="flex flex-wrap items-center gap-1.5">
-        <legend class="sr-only">Atajos de fecha de emisión</legend>
-        <button *ngFor="let preset of datePresets" type="button"
-          class="rounded-full border px-3 py-1 text-xs font-semibold transition"
-          [ngClass]="activePreset === preset.id ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:bg-muted'"
-          [attr.aria-pressed]="activePreset === preset.id" (click)="applyPreset(preset.id)">{{ preset.label }}</button>
-        <button *ngIf="fromDate || toDate" type="button" class="rounded-full px-2 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
-          (click)="clearDates()">Todas las fechas</button>
-      </fieldset>
-      <div class="grid grid-cols-2 gap-2 md:ml-auto md:w-[320px]">
-        <label class="text-[11px] font-semibold text-muted-foreground">Desde
-          <input class="input mt-0.5 w-full" type="date" [(ngModel)]="fromDate" (ngModelChange)="onDatesChange()"
-            [max]="toDate || null" [attr.aria-invalid]="!!dateError" />
-        </label>
-        <label class="text-[11px] font-semibold text-muted-foreground">Hasta
-          <input class="input mt-0.5 w-full" type="date" [(ngModel)]="toDate" (ngModelChange)="onDatesChange()"
-            [min]="fromDate || null" [attr.aria-invalid]="!!dateError" />
-        </label>
-      </div>
-    </div>
-    <p *ngIf="dateError" class="mt-1 text-xs text-danger-600" role="alert">{{ dateError }}</p>
-  </section>
-
-  <section class="rounded-xl border border-border bg-card shadow-sm" [attr.aria-busy]="loading">
     <app-list-state [loading]="loading" [empty]="!invoicesFiltradas.length" [hasFilters]="hasActiveFilters"
       emptyMessage="Todavía no hay facturas registradas." filteredMessage="Ninguna factura coincide con los filtros."
       (clear)="limpiarFiltros()" />

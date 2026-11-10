@@ -1,16 +1,29 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, DestroyRef, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { finalize } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription, finalize } from 'rxjs';
 import { toast } from 'ngx-sonner';
 import { PosSaleService } from 'src/app/services/pos-sale.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { FilterDates, FilterTab, ListFilterBarComponent } from 'src/app/shared/components/list-filter-bar/list-filter-bar.component';
+import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
+import { debouncedCallback } from 'src/app/shared/utils/debounced-callback';
+import { readListQuery, writeListQuery } from 'src/app/shared/utils/list-query';
+
+/** Pestañas de estado; el valor es el estado del backend y la clave de `status_counts`. */
+const NOTE_STATUS_TABS: FilterTab[] = [
+  { value: '', label: 'Todas', countKey: 'ALL', hint: 'Todas las notas de venta' },
+  { value: 'Cobrada', label: 'Cobradas', dot: 'bg-success-500', hint: 'Cobradas, todavía sin factura' },
+  { value: 'Facturada', label: 'Facturadas', dot: 'bg-info-500', hint: 'Ya se emitió su factura' },
+  { value: 'Borrador', label: 'Sin cobrar', dot: 'bg-warning-500', hint: 'Guardadas sin cobrar' },
+  { value: 'Anulada', label: 'Anuladas', dot: 'bg-muted-foreground/50', hint: 'Anuladas antes de facturar' },
+];
 
 @Component({
   selector: 'app-pos-sale-notes',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ListFilterBarComponent, AppPaginationComponent],
   templateUrl: './pos-sale-notes.component.html'
 })
 export class PosSaleNotesComponent implements OnInit {
@@ -22,14 +35,39 @@ export class PosSaleNotesComponent implements OnInit {
   _search = '';
   loading = false;
   actionName = '';
+  page = 1;
+  pageSize = 20;
+  total = 0;
+  totalPages = 1;
+  /** Conteos por pestaña (`status_counts`); null si el backend no los envía. */
+  statusCounts: Record<string, number> | null = null;
+  readonly statusTabs = NOTE_STATUS_TABS;
+
+  private readonly searchBackend: () => void;
+  private request?: Subscription;
 
   constructor(
     private posSaleService: PosSaleService,
     public capabilities: CompanyCapabilitiesService,
-    private router: Router
-  ) {}
+    private router: Router,
+    private route: ActivatedRoute,
+    destroyRef: DestroyRef
+  ) {
+    this.searchBackend = debouncedCallback(destroyRef, () => {
+      this.page = 1;
+      this.load();
+    });
+    destroyRef.onDestroy(() => this.request?.unsubscribe());
+  }
 
   ngOnInit(): void {
+    // Filtros y página en la dirección: al volver del detalle la lista sigue igual.
+    const query = readListQuery(this.route);
+    this.status = NOTE_STATUS_TABS.some(tab => tab.value && tab.value === query.estado) ? query.estado : '';
+    this._search = query.q;
+    this.fromDate = query.desde;
+    this.toDate = query.hasta;
+    this.page = query.pagina;
     this.load();
   }
 
@@ -37,29 +75,62 @@ export class PosSaleNotesComponent implements OnInit {
     return this._search;
   }
 
+  /** La búsqueda se resuelve en el backend al terminar de escribir. */
   set search(value: string) {
     this._search = value || '';
+    this.searchBackend();
   }
 
+  /** Compatibilidad con la plantilla: la página ya viene filtrada del backend. */
   get filteredNotes(): any[] {
-    const term = this._search.trim().toLocaleLowerCase();
-    if (!term) return this.notes;
-    return this.notes.filter((note) => [
-      note?.name,
-      note?.document_number,
-      this.customerName(note),
-      this.customerIdentification(note),
-      note?.pos_terminal_name,
-      note?.pos_terminal,
-      note?.lite_invoice,
-      note?.status
-    ].some((value) => String(value ?? '').toLocaleLowerCase().includes(term)));
+    return this.notes;
+  }
+
+  get hasActiveFilters(): boolean {
+    return !!this._search.trim() || !!this.status || !!this.fromDate || !!this.toDate;
+  }
+
+  setStatus(value: string): void {
+    this.status = value;
+    this.page = 1;
+    this.load();
+  }
+
+  onDatesChange(range: FilterDates): void {
+    this.fromDate = range.from;
+    this.toDate = range.to;
+    this.page = 1;
+    this.load();
+  }
+
+  onPaginationPage(page: number): void {
+    if (page === this.page) return;
+    this.page = page;
+    this.load();
+  }
+
+  onPaginationPageSize(size: number): void {
+    this.pageSize = size;
+    this.page = 1;
+    this.load();
   }
 
   load(): void {
+    // Cancela la petición anterior para que una respuesta lenta no pise un filtro más reciente.
+    this.request?.unsubscribe();
     this.loading = true;
-    this.posSaleService.list(this.status, this.fromDate, this.toDate).pipe(finalize(() => this.loading = false)).subscribe({
-      next: (rows) => this.notes = rows || [],
+    writeListQuery(this.router, this.route,
+      { estado: this.status, q: this._search, desde: this.fromDate, hasta: this.toDate, pagina: this.page });
+    this.request = this.posSaleService.listPage({
+      status: this.status || undefined, search: this._search, fromDate: this.fromDate || undefined,
+      toDate: this.toDate || undefined, limit: this.pageSize, offset: (this.page - 1) * this.pageSize,
+    }).pipe(finalize(() => this.loading = false)).subscribe({
+      next: ({ rows, total, hasNext, counts }) => {
+        this.notes = rows;
+        this.total = total;
+        this.statusCounts = counts;
+        this.totalPages = Math.max(1, Math.ceil(total / this.pageSize) || 1, hasNext ? this.page + 1 : 1);
+      },
       error: (err) => toast.error(this.errorMessage(err) || 'No se pudieron cargar las notas de venta.')
     });
   }
@@ -166,6 +237,7 @@ export class PosSaleNotesComponent implements OnInit {
     this.status = '';
     this.fromDate = '';
     this.toDate = '';
+    this.page = 1;
     this.load();
   }
 
