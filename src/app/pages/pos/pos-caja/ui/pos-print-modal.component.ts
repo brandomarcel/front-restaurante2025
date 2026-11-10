@@ -33,14 +33,18 @@ export type PosPrintOption = 'comanda' | 'recibo' | 'ambas' | 'ticket' | 'ride' 
           </button>
         </div>
 
-        <div *ngIf="context === 'order'" class="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+        <p *ngIf="context === 'order' && kitchenSent" class="mb-3 rounded-lg border border-success-300 bg-success-50 px-3 py-2 text-xs font-semibold text-success-800">
+          La comanda se envía sola a la impresora de cocina.
+        </p>
+
+        <div *ngIf="context === 'order'" class="grid grid-cols-1 gap-2.5" [ngClass]="kitchenSent ? 'sm:grid-cols-2' : 'sm:grid-cols-3'">
           <button type="button" class="min-h-[52px] rounded-lg border border-info-200 bg-info-50 px-3 py-3 text-sm font-semibold text-info-800 transition hover:bg-info-100" (click)="choose.emit('comanda')">
-            Comanda<span class="block text-[10px] font-normal opacity-80">Para cocina</span>
+            {{ kitchenSent ? 'Reimprimir comanda' : 'Comanda' }}<span class="block text-[10px] font-normal opacity-80">Para cocina</span>
           </button>
           <button type="button" class="min-h-[52px] rounded-lg border border-success-200 bg-success-50 px-3 py-3 text-sm font-semibold text-success-800 transition hover:bg-success-100" (click)="choose.emit('recibo')">
             Recibo<span class="block text-[10px] font-normal opacity-80">Para el cliente</span>
           </button>
-          <button type="button" class="min-h-[52px] rounded-lg bg-primary px-3 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90" (click)="choose.emit('ambas')">
+          <button *ngIf="!kitchenSent" type="button" class="min-h-[52px] rounded-lg bg-primary px-3 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90" (click)="choose.emit('ambas')">
             Ambas
           </button>
         </div>
@@ -56,6 +60,8 @@ export type PosPrintOption = 'comanda' | 'recibo' | 'ambas' | 'ticket' | 'ride' 
 })
 export class PosPrintModalComponent {
   @Input() context: 'order' | 'invoice' = 'order';
+  /** Este equipo imprime la comanda solo (QZ Tray): no se ofrece imprimirla otra vez con «Ambas». */
+  @Input() kitchenSent = false;
   @Output() choose = new EventEmitter<PosPrintOption>();
   @Output() close = new EventEmitter<void>();
 }

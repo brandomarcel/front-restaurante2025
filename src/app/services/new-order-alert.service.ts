@@ -1,11 +1,10 @@
 import { Injectable } from '@angular/core';
 import { toast } from 'ngx-sonner';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
-import { PrintService } from './print.service';
+import { PrintStationService } from './print-station.service';
 import { RestaurantRealtimeService } from './restaurant-realtime.service';
 
 const ALERT_SOUND_KEY = 'facturada.caja.sound';
-const AUTO_PRINT_KEY = 'facturada.caja.autoprint';
 const ALERT_DURATION_MS = 30000;
 
 /**
@@ -15,6 +14,10 @@ const ALERT_DURATION_MS = 30000;
  *
  * Solo avisa a quien cobra (`billing.create`) y puede ver órdenes. El mesero y
  * Cocina no reciben este aviso; Cocina ya tiene su propia pantalla.
+ *
+ * Si este equipo es estación de impresión (`PrintStationService`, QZ Tray), además
+ * manda la comanda a cocina: también la de los pedidos que crea la propia Caja y
+ * también en un equipo de Cocina.
  */
 @Injectable({ providedIn: 'root' })
 export class NewOrderAlertService {
@@ -27,13 +30,14 @@ export class NewOrderAlertService {
   constructor(
     private realtime: RestaurantRealtimeService,
     private capabilities: CompanyCapabilitiesService,
-    private printService: PrintService
+    private station: PrintStationService
   ) {}
 
   /** Idempotente: el layout lo llama al entrar; solo se engancha una vez. */
   start(): void {
-    if (this.started || !this.shouldAlert()) return;
+    if (this.started || (!this.shouldAlert() && !this.station.available)) return;
     this.started = true;
+    this.station.reportStartup();
     this.baseTitle = document.title;
     this.realtime.activate();
     this.realtime.events$.subscribe((event) => {
@@ -62,15 +66,6 @@ export class NewOrderAlertService {
     if (enabled) this.playSound();
   }
 
-  /** Imprimir la comanda sola al llegar el pedido. Es por equipo: solo la PC de la impresora debe activarlo. */
-  get autoPrint(): boolean {
-    try { return localStorage.getItem(AUTO_PRINT_KEY) === '1'; } catch { return false; }
-  }
-
-  setAutoPrint(enabled: boolean): void {
-    try { localStorage.setItem(AUTO_PRINT_KEY, enabled ? '1' : '0'); } catch { /* solo esta sesión */ }
-  }
-
   /** El usuario actual recibe avisos de pedidos (cobra y ve órdenes). */
   get available(): boolean {
     return this.shouldAlert();
@@ -84,30 +79,32 @@ export class NewOrderAlertService {
 
   private onOrderCreated(order: any): void {
     const name = String(order?.name || '').trim();
-    if (!name || this.seen.has(name) || !this.shouldAlert()) return;
+    if (!name || this.seen.has(name)) return;
     this.seen.add(name);
     if (/cancel/i.test(String(order?.status || ''))) return;
+    const where = order?.table_name || order?.table ? `Mesa ${order.table_name || order.table}` : (order?.alias || 'Sin mesa');
+    // La comanda va a cocina aunque el pedido lo haya creado este mismo equipo.
+    const autoPrint = this.station.autoPrintActive;
     // Lo que crea el propio usuario (POS de Caja) no necesita aviso.
     const me = this.currentUserEmail();
-    if (me && String(order?.waiter || '').toLowerCase() === me) return;
+    if (!this.shouldAlert() || (me && String(order?.waiter || '').toLowerCase() === me)) {
+      if (autoPrint) this.printQuietly(name, false, name, where);
+      return;
+    }
 
-    const where = order?.table_name || order?.table ? `Mesa ${order.table_name || order.table}` : 'Sin mesa';
     const who = order?.waiter_name || order?.waiter || '';
     const count = (order?.items || []).reduce((sum: number, row: any) => sum + (Number(row?.qty) || 0), 0);
     const detail = [who, count ? `${count} ${count === 1 ? 'producto' : 'productos'}` : ''].filter(Boolean).join(' · ');
 
     this.playSound();
     this.addTitleBadge();
-    const autoPrint = this.autoPrint;
-    if (autoPrint) this.printService.printComandaHidden(name);
+    if (autoPrint) void this.station.autoPrint(name, false, name, where);
     toast.success(`Nuevo pedido · ${where}`, {
-      description: [detail, autoPrint ? 'Comanda enviada a la impresora' : ''].filter(Boolean).join(' · ') || undefined,
+      description: [detail, autoPrint ? 'Comanda enviada a cocina' : ''].filter(Boolean).join(' · ') || undefined,
       duration: ALERT_DURATION_MS,
       action: {
         label: autoPrint ? 'Reimprimir' : 'Imprimir comanda',
-        onClick: () => {
-          if (!this.printService.openComanda(name)) toast.error('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes.');
-        },
+        onClick: () => this.station.printComanda(name, false, () => this.station.openWindow(name)),
       },
     });
   }
@@ -134,29 +131,41 @@ export class NewOrderAlertService {
     const name = String(order?.name || '').trim();
     const batch = Number(order?.addition_batch) || 0;
     const key = `${name}#${batch}`;
-    if (!name || !batch || this.seen.has(key) || !this.shouldAlert()) return;
+    if (!name || !batch || this.seen.has(key)) return;
     this.seen.add(key);
+    const where = order?.table_name || order?.table ? `Mesa ${order.table_name || order.table}` : (order?.alias || 'Sin mesa');
+    const autoPrint = this.station.autoPrintActive;
     const me = this.currentUserEmail();
-    if (me && String(order?.added_by || '').toLowerCase() === me) return;
+    if (!this.shouldAlert() || (me && String(order?.added_by || '').toLowerCase() === me)) {
+      if (autoPrint) this.printQuietly(name, true, key, where);
+      return;
+    }
 
     const added = (order?.items || []).filter((row: any) => Number(row?.addition_batch) === batch);
     const count = added.reduce((sum: number, row: any) => sum + (Number(row?.qty) || 0), 0);
-    const where = order?.table_name || order?.table ? `Mesa ${order.table_name || order.table}` : (order?.alias || 'Sin mesa');
     const detail = [count ? `+${count} ${count === 1 ? 'producto' : 'productos'}` : '', order?.added_by || ''].filter(Boolean).join(' · ');
 
     this.playSound();
     this.addTitleBadge();
-    const autoPrint = this.autoPrint;
-    if (autoPrint) this.printService.printComandaHidden(name, true);
+    if (autoPrint) void this.station.autoPrint(name, true, key, where);
     toast.success(`Pedido ampliado · ${where}`, {
-      description: [detail, autoPrint ? 'Comanda adicional enviada a la impresora' : ''].filter(Boolean).join(' · ') || undefined,
+      description: [detail, autoPrint ? 'Comanda adicional enviada a cocina' : ''].filter(Boolean).join(' · ') || undefined,
       duration: ALERT_DURATION_MS,
       action: {
         label: autoPrint ? 'Reimprimir' : 'Imprimir comanda adicional',
-        onClick: () => {
-          if (!this.printService.openComanda(name, true)) toast.error('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes.');
-        },
+        onClick: () => this.station.printComanda(name, true, () => this.station.openWindow(name, true)),
       },
+    });
+  }
+
+  /** Sin aviso de pedido (lo creó este equipo, o es un equipo de Cocina): solo confirma que salió. */
+  private printQuietly(name: string, additional: boolean, key: string, where: string): void {
+    void this.station.autoPrint(name, additional, key, where).then((printed) => {
+      if (!printed) return;
+      toast.success(`${additional ? 'Comanda adicional' : 'Comanda'} enviada a cocina · ${where}`, {
+        duration: 6000,
+        action: { label: 'Reimprimir', onClick: () => this.station.printComanda(name, additional, () => this.station.openWindow(name, additional)) },
+      });
     });
   }
 

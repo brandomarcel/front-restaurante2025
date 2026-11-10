@@ -24,3 +24,5 @@
     <app-footer *ngIf="!menuService.isPosMode" class="hidden flex-shrink-0 xl:block"></app-footer>
   </div>
 </div>
+
+<app-print-station-settings *ngIf="printStation.settingsOpen()"></app-print-station-settings>

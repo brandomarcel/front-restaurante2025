@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { toast } from 'ngx-sonner';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
@@ -39,7 +39,8 @@ export class InvoicesComponent implements OnInit {
   constructor(
     private svc: InvoicesService,
     public capabilities: CompanyCapabilitiesService,
-    destroyRef: DestroyRef
+    destroyRef: DestroyRef,
+    private route: ActivatedRoute
   ) {
     this.searchBackend = debouncedCallback(destroyRef, () => {
       this.page = 1;
@@ -49,6 +50,9 @@ export class InvoicesComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // El dashboard enlaza aquí ya filtrado (`?estado=Rechazada`); solo se aceptan estados conocidos.
+    const estado = this.route.snapshot.queryParamMap.get('estado') || '';
+    if ((ELECTRONIC_STATUS_FILTERS as readonly string[]).includes(estado)) this.statusFiltro = estado;
     this.loadInvoices();
   }
 

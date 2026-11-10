@@ -10,16 +10,18 @@ import { CompanyService } from 'src/app/services/company.service';
 import { FacturadaLiteDashboardService, LiteDashboard } from 'src/app/services/facturada-lite-dashboard.service';
 import { InventoryService } from 'src/app/services/inventory.service';
 import { OrdersService } from 'src/app/services/orders.service';
-import { Aviso, AvisosComponent } from 'src/app/shared/components/avisos/avisos.component';
+import { CASH_OPERATOR_PERMISSIONS } from 'src/app/core/utils/cash-register';
 import { ApiPanelComponent } from '../../components/api-panel/api-panel.component';
+import { AttentionListComponent } from '../../components/attention-list/attention-list.component';
 import { BillingKpisComponent } from '../../components/billing-kpis/billing-kpis.component';
 import { BillingPanelComponent } from '../../components/billing-panel/billing-panel.component';
 import { DashboardHeroComponent } from '../../components/dashboard-hero/dashboard-hero.component';
-import { CashierExperience, OperationsPanelComponent } from '../../components/operations-panel/operations-panel.component';
+import { OperationsPanelComponent } from '../../components/operations-panel/operations-panel.component';
 import { PlanUsageCardComponent } from '../../components/plan-usage-card/plan-usage-card.component';
 import { ServicePanelComponent } from '../../components/service-panel/service-panel.component';
 import { DashboardLayout, resolveDashboardLayout } from '../../dashboard-view';
 import {
+  AttentionItem,
   CompanySummary,
   OperationsKind,
   OperationsMetrics,
@@ -28,17 +30,10 @@ import {
   SignatureStatus
 } from '../../dashboard.models';
 import { parseCompanySummary, signatureStatus } from '../../utils/company-summary';
-import { buildDashboardAlerts } from '../../utils/dashboard-alerts';
-import { isRecord, toIsoDate, toNumber } from '../../utils/dashboard-values';
+import { buildAttentionItems } from '../../utils/dashboard-attention';
+import { toIsoDate, toNumber } from '../../utils/dashboard-values';
 import { normalizeOperationsMetrics } from '../../utils/operations-metrics';
 import { buildPlanSummary } from '../../utils/plan-summary';
-
-interface HeroCopy {
-  modeLabel: string;
-  title: string;
-  subtitle: string;
-  gradient: string;
-}
 
 type OperationsResult = { metrics: OperationsMetrics } | { error: unknown };
 
@@ -53,7 +48,7 @@ type OperationsResult = { metrics: OperationsMetrics } | { error: unknown };
     CommonModule,
     FormsModule,
     RouterModule,
-    AvisosComponent,
+    AttentionListComponent,
     DashboardHeroComponent,
     PlanUsageCardComponent,
     OperationsPanelComponent,
@@ -62,8 +57,7 @@ type OperationsResult = { metrics: OperationsMetrics } | { error: unknown };
     ApiPanelComponent,
     ServicePanelComponent
   ],
-  templateUrl: './dashboard-home.component.html',
-  styleUrls: ['./dashboard-home.component.scss']
+  templateUrl: './dashboard-home.component.html'
 })
 export class DashboardHomeComponent implements OnInit, OnDestroy {
   layout: DashboardLayout = { view: 'none', billingSummary: false };
@@ -72,8 +66,7 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
   company: CompanySummary | null = null;
   signature: SignatureStatus = signatureStatus(null);
   plan: PlanSummary | null = null;
-  userName = 'Equipo';
-  avisos: Aviso[] = [];
+  attention: AttentionItem[] = [];
 
   operationsMetrics: OperationsMetrics | null = null;
   operationsLoading = false;
@@ -144,7 +137,6 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
     this.selectBillingMonth(toIsoDate(new Date(year, month - 1 + offset, 1)).slice(0, 7));
   }
 
-  private alertCounter = 0;
   private readonly destroy$ = new Subject<void>();
   private readonly operationsLoad$ = new Subject<void>();
   private readonly liteLoad$ = new Subject<void>();
@@ -164,7 +156,6 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.userName = this.readUserName();
     this.layout = this.resolveLayout();
     if (this.redirectKitchen()) return;
 
@@ -198,7 +189,7 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
         this.liteDashboard = result;
       }
       this.refreshPlan();
-      this.refreshAlerts();
+      this.refreshAttention();
     });
 
     window.addEventListener('facturada:restaurant-data-changed', this.onRestaurantDataChanged);
@@ -245,39 +236,40 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
     return this.operationsMetrics.cash.isOpen;
   }
 
-  get cashierExperience(): CashierExperience | null {
-    if (this.capabilities.isRestaurantCashier) return 'Restaurante';
-    if (this.capabilities.isRetailCashier) return 'Retail';
-    if (this.capabilities.isGeneralCashier) return 'General';
-    return null;
+  /** De qué trata el panel, en palabras de quien lo usa. */
+  get heroSubtitle(): string {
+    switch (this.layout.view) {
+      case 'api': return 'Facturación electrónica por API';
+      case 'billing': return 'Facturación electrónica del negocio';
+      case 'service': return 'Mesas y pedidos de tu turno';
+      default:
+        if (this.capabilities.dashboardScreen === 'cashier_shift') return 'Tu turno de hoy';
+        return this.operationsKind === 'restaurant'
+          ? 'Resumen de hoy: ventas, caja y órdenes'
+          : 'Resumen de hoy: ventas y caja';
+    }
   }
 
-  get hero(): HeroCopy {
-    switch (this.layout.view) {
-      case 'api':
-        return {
-          modeLabel: 'FacturADA API',
-          title: 'Panel API',
-          subtitle: 'Consumo de API, comprobantes y configuración tributaria',
-          gradient: 'from-slate-950 via-slate-700 to-info-700'
-        };
-      case 'billing':
-        return {
-          modeLabel: 'FacturADA Lite',
-          title: 'Panel de facturación',
-          subtitle: 'Facturación electrónica, clientes y documentos',
-          gradient: 'from-slate-950 via-primary to-primary'
-        };
-      case 'service':
-        return {
-          modeLabel: 'Mesero',
-          title: 'Panel de salón',
-          subtitle: 'Mesas y pedidos del turno',
-          gradient: 'from-slate-950 via-primary to-info-700'
-        };
-      default:
-        return this.operationsHero();
-    }
+  /** Lo que puede abrir quien mira; las rutas destino exigen esos permisos. */
+  get canOperateCash(): boolean {
+    return CASH_OPERATOR_PERMISSIONS.some((permission) => this.capabilities.hasPermission(permission));
+  }
+
+  get canSeeOrders(): boolean {
+    return this.capabilities.isEnabled('orders') && this.capabilities.hasPermission('restaurant.orders.read');
+  }
+
+  get canReadInvoices(): boolean {
+    return this.capabilities.hasPermission('billing.read')
+      && (['direct_invoice', 'generic_pos', 'api'] as const).some((feature) => this.capabilities.isEnabled(feature));
+  }
+
+  /** «Todo en orden» solo cuando terminó de cargar todo lo que se revisa. */
+  get attentionSettled(): boolean {
+    if (!this.ready) return false;
+    if (this.layout.view === 'operations' && (this.operationsLoading || (!this.operationsMetrics && !this.needsTerminal))) return false;
+    if (this.showBillingPeriod && (this.liteLoading || !this.liteDashboard)) return false;
+    return !this.retailStock?.loading;
   }
 
   onPeriodChange(): void {
@@ -287,27 +279,6 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
 
   refreshLite(): void {
     this.liteLoad$.next();
-  }
-
-  removeAlert(id: string): void {
-    this.avisos = this.avisos.filter((aviso) => aviso.id !== id);
-  }
-
-  private operationsHero(): HeroCopy {
-    const restaurant = this.operationsKind === 'restaurant';
-    const gradient = restaurant ? 'from-slate-950 via-primary to-info-700' : 'from-slate-950 via-primary to-primary';
-    const experience = this.cashierExperience;
-    if (experience) {
-      const subtitles: Record<CashierExperience, string> = {
-        Restaurante: 'Turno de caja, mesas y comandas del restaurante',
-        Retail: 'Turno de caja, ventas y stock de tienda',
-        General: 'Turno de caja y ventas del punto de venta'
-      };
-      return { modeLabel: `Cajero · ${experience}`, title: `Panel de Cajero · ${experience}`, subtitle: subtitles[experience], gradient };
-    }
-    return restaurant
-      ? { modeLabel: 'Restaurante', title: 'Panel operativo', subtitle: 'Operación del restaurante, caja y órdenes', gradient }
-      : { modeLabel: 'Punto de venta', title: 'Panel operativo', subtitle: 'Ventas del punto de venta, caja y comprobantes', gradient };
   }
 
   private get operationsKind(): OperationsKind {
@@ -365,7 +336,7 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
       if (!this.fromDate || !this.toDate) this.initializeMonthRange();
       this.liteLoad$.next();
     }
-    this.refreshAlerts();
+    this.refreshAttention();
   }
 
   /**
@@ -380,7 +351,7 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
       && this.capabilities.needsPosTerminalSelection
       && !isManager;
     if (this.needsTerminal) {
-      this.refreshAlerts();
+      this.refreshAttention();
       return;
     }
     this.operationsLoad$.next();
@@ -409,7 +380,7 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
         ? 'Selecciona un terminal POS válido para ver las métricas.'
         : 'No se pudieron cargar las métricas del dashboard.';
     }
-    this.refreshAlerts();
+    this.refreshAttention();
   }
 
   /** Bajo stock y agotados de la bodega activa en un POS Retail. */
@@ -427,9 +398,11 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
             ? outOfStock.length
             : toNumber(outOfStock ?? products.filter((item) => item?.is_out_of_stock).length)
         };
+        this.refreshAttention();
       },
       error: () => {
         this.retailStock = { loading: false, lowStock: 0, outOfStock: 0 };
+        this.refreshAttention();
       }
     });
   }
@@ -438,18 +411,36 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
     this.plan = buildPlanSummary(this.capabilities.plan, this.liteDashboard?.plan ?? null);
   }
 
-  private refreshAlerts(): void {
+  private refreshAttention(): void {
     const metrics = this.operationsMetrics;
     const cashClosed = this.layout.view === 'operations'
       && this.showCash
       && !!metrics
       && !metrics.cash.isOpen;
-    this.avisos = buildDashboardAlerts({
+    // Rechazadas y en proceso solo del mes en curso: lo de otro mes elegido no es «para hoy».
+    const sales = this.liteDashboard && this.billingMonth === this.currentMonth ? this.liteDashboard.sales : null;
+    const inventoryReadable = this.capabilities.isEnabled('inventory') && this.capabilities.hasPermission('inventory.read');
+    const retail = this.retailStock && !this.retailStock.loading ? this.retailStock : null;
+    const liteLowStock = inventoryReadable && this.liteDashboard ? this.liteDashboard.inventory.low_stock_items : null;
+
+    this.attention = buildAttentionItems({
       view: this.layout.view,
       signature: this.signature,
       cashClosed,
-      billingError: this.liteError
-    }).map((alert) => ({ ...alert, id: `aviso_${this.alertCounter++}`, fecha: new Date() }));
+      plan: this.plan,
+      showPlan: this.showPlanCard,
+      rejected: sales ? sales.rejected_count : null,
+      pending: sales ? sales.pending_count : null,
+      lowStock: retail ? retail.lowStock : liteLowStock,
+      outOfStock: retail ? retail.outOfStock : null,
+      billingError: this.liteError,
+      can: {
+        openCash: this.canOperateCash,
+        manageSettings: this.capabilities.hasPermission('business.settings.manage'),
+        readInvoices: this.canReadInvoices,
+        readInventory: inventoryReadable
+      }
+    });
   }
 
   private initializeMonthRange(): void {
@@ -468,14 +459,5 @@ export class DashboardHomeComponent implements OnInit, OnDestroy {
   private readErrorMessage(error: any, fallback: string): string {
     const message = error?.error?.message ?? error?.message;
     return typeof message === 'string' && message.trim() ? message : fallback;
-  }
-
-  private readUserName(): string {
-    try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      return isRecord(user) && user['fullName'] ? String(user['fullName']) : 'Equipo';
-    } catch {
-      return 'Equipo';
-    }
   }
 }

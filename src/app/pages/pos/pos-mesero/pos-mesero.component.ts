@@ -5,6 +5,7 @@ import { LineNoteEditorComponent } from '../ui/line-note-editor.component';
 import { ProductsService } from 'src/app/services/products.service';
 import { CategoryService } from 'src/app/services/category.service';
 import { PrintService } from 'src/app/services/print.service';
+import { PrintStationService } from 'src/app/services/print-station.service';
 import { OrdersService } from 'src/app/services/orders.service';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { toast } from 'ngx-sonner';
@@ -66,7 +67,8 @@ export class PosMeseroComponent implements OnInit {
     private alertService: AlertService,
     private router: Router,
     private capabilities: CompanyCapabilitiesService,
-    private printService: PrintService
+    private printService: PrintService,
+    private printStation: PrintStationService
   ) {}
 
   get isAddMode(): boolean {
@@ -388,13 +390,12 @@ export class PosMeseroComponent implements OnInit {
         window.dispatchEvent(new CustomEvent('facturada:restaurant-data-changed'));
         this.cartService.clear();
         const canPrint = this.capabilities.hasPermission('billing.create');
+        const addedTo = this.addToOrder;
         toast.success('Productos agregados. Cocina ya los ve.', canPrint ? {
           duration: 15000,
           action: {
-            label: 'Imprimir comanda adicional',
-            onClick: () => {
-              if (!this.printService.openComanda(this.addToOrder, true)) toast.error('El navegador bloqueó la ventana de impresión.');
-            }
+            label: this.printStation.autoPrintActive ? 'Reimprimir comanda adicional' : 'Imprimir comanda adicional',
+            onClick: () => this.printStation.printComanda(addedTo, true, () => this.printStation.openWindow(addedTo, true))
           }
         } : undefined);
         this.backToOrder();

@@ -86,7 +86,8 @@ Colores y tema (`src/styles.css`, `ThemeService`):
 - Tema por defecto «facturada»: azul de la marca `#2E3A8C` (en oscuro `#8B98F7`) y neutros con tinte marino. Los otros
   colores (`violet`, `blue`…) solo cambian el principal; no hay selector en pantalla. `ThemeService` pasa una vez a
   «facturada» a quien tenía `violet` guardado (marca `theme_palette` en `localStorage`).
-- Gráficos ApexCharts: colores con `themeColor()` de `dashboard-charts.ts`, que lee las variables del tema.
+- Sin gráficos ApexCharts desde 2026-11-09 (el dashboard usa barras simples con tokens). La librería sigue en
+  `package.json`/`angular.json` sin uso; si vuelve un gráfico, sus colores deben leer las variables del tema.
 - Azul marino `#1B1F3A` y ámbar `#FFB020` fijos solo en piezas de marca: login, panel del registro, logos y la carta
   pública (que tiene su propia paleta `--pm-*`).
 - Los colores fijos que quedan son a propósito: capas oscuras detrás de ventanas, encabezados oscuros, degradados de los
@@ -231,8 +232,15 @@ Funciones:
 ## Aviso de pedidos a Caja
 
 - `NewOrderAlertService` avisa (sonido + toast con «Imprimir comanda») a quien cobra cuando otra persona
-  crea una orden; también hay «Imprimir comanda» en cada orden abierta de Órdenes en vivo y un interruptor por equipo
-  «Imprimir comandas solas» (marco oculto; sin diálogo solo con Chrome `--kiosk-printing`).
+  crea una orden; también hay «Imprimir comanda» en cada orden abierta de Órdenes en vivo.
+- Impresora de comandas (`PrintStationService`, QZ Tray): configuración por equipo en «Impresoras de este equipo»
+  (layout, `PrintStationSettingsComponent`), con modo «Normal» o «Directo» (`enabled`; `configured` exige `enabled` y
+  destino válido; lo guardado antes sin `enabled` sigue en directo si tenía impresora). Con «Imprimir comandas solas» imprime pedidos nuevos y lotes agregados,
+  también los propios, una sola vez por equipo (Web Locks + marca en `localStorage`). Todo botón de comanda pasa por
+  `printStation.printComanda(nombre, adicional, fallback)`: QZ si hay impresora, si no la ventana de siempre.
+  `qz-tray` se carga solo al usarse. La firma la hace el backend; nunca poner la llave privada en el front.
+  Cada equipo informa su estado al Desk (`report_print_station`: al guardar, al iniciar y en cada comanda; si falla no
+  afecta la impresión). El identificador del equipo vive en `facturada.printstation.device`.
 
 ## Planes y módulos por negocio
 
@@ -256,6 +264,22 @@ Funciones:
 - Regla crítica: ante códigos SRI 43/70 solo se permite *consultar*, nunca reemitir
   el mismo comprobante (`lite-invoice-actions.ts`)
 - Datos tributarios: RUC, régimen, agente de retención, obligado a llevar contabilidad
+
+## Dashboard (`/dashboard/main`)
+
+- Responde en orden: cómo va el día, qué necesita atención y el detalle. Cabecera con logo y nombre del negocio, de qué
+  trata el panel y el estado de caja y firma (texto con punto de color, sin banda con degradado).
+- «Necesita tu atención» (`dashboard-attention.ts`): una sola lista, cada punto con su botón según permiso: firma
+  (falta, vencida, vence en ≤ 30 días), plan (sin plan, inactivo, agotado, vence en ≤ 7 días), facturas rechazadas y en
+  proceso del **mes en curso** («Ver rechazadas» abre Facturas con `?estado=Rechazada`), caja sin abrir e inventario
+  bajo. Sin pendientes: «Todo en orden», solo cuando terminó de cargar.
+- Restaurante/POS: «Vendido hoy» en grande (restaurante: solo órdenes cerradas, como suma el backend), pedidos, ticket
+  promedio (restaurante: venta ÷ órdenes cerradas) y en curso (POS: con factura). «Tu caja» es un ticket con el cuadre
+  de la caja **de quien mira**: fondo + cobrado en efectivo (código `01`) − retiros = debe haber (`expected_cash`), las
+  otras formas de pago aparte y botones Abrir / Registrar retiro / Cerrar caja. «Lo más vendido hoy» (5, barras) y
+  por tipo de pedido; «Órdenes de hoy» por etapa. No hay calificaciones automáticas (ritmo, ticket bajo, mix).
+- Facturación: «Comprobantes electrónicos del mes» con selector de mes, Facturado / Cobrado / Autorizadas / En proceso /
+  Rechazadas y una fila del plan; Lite y API suman «Últimas facturas» (cada una abre su detalle).
 
 ## Reportes
 

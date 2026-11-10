@@ -20,7 +20,7 @@ describe('POS caja — interfaz', () => {
     };
     component = new PosCajaComponent({} as any, { getAll: () => of([]) } as any, {} as any, {} as any,
       {} as any, {} as any, {} as any, { getReceivables: () => of({ message: { data: [] } }) } as any,
-      { show: () => undefined, hide: () => undefined } as any, {} as any, cart, {} as any, capabilities as any, {} as any,
+      { show: () => undefined, hide: () => undefined } as any, {} as any, { configured: false } as any, cart, {} as any, capabilities as any, {} as any,
       { url: '/dashboard/pos-generic', navigate: () => undefined } as any);
     component.customer = { name: 'C-1' };
   });

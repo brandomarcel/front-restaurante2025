@@ -10,7 +10,6 @@ const SERVICE_SHORTCUTS: DashboardShortcut[] = [
     label: 'Tomar pedido',
     detail: 'Abrir el POS de salón',
     route: '/dashboard/pos',
-    classes: 'border-primary/20 bg-primary/5 text-primary hover:bg-primary/10',
     features: ['restaurant', 'orders', 'pos'],
     permission: 'restaurant.orders.create'
   },
@@ -18,7 +17,6 @@ const SERVICE_SHORTCUTS: DashboardShortcut[] = [
     label: 'Mesas',
     detail: 'Mapa del salón y mesas ocupadas',
     route: '/dashboard/tables',
-    classes: 'border-info-200 bg-info-50 text-info-700 hover:bg-info-100',
     features: ['tables'],
     permission: 'restaurant.orders.read'
   },
@@ -26,7 +24,6 @@ const SERVICE_SHORTCUTS: DashboardShortcut[] = [
     label: 'Órdenes',
     detail: 'Seguimiento de pedidos del día',
     route: '/dashboard/orders',
-    classes: 'border-border bg-muted/40 text-foreground/80 hover:bg-muted',
     features: ['orders'],
     permission: 'restaurant.orders.read'
   }
@@ -41,18 +38,18 @@ const SERVICE_SHORTCUTS: DashboardShortcut[] = [
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
-    <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
-      <h2 class="text-sm font-bold text-foreground">Atención en salón</h2>
-      <p class="mb-3 text-[10px] text-muted-foreground">Accesos rápidos para tu turno.</p>
-      <div *ngIf="shortcuts.length; else noShortcuts" class="grid gap-2 sm:grid-cols-3">
-        <a *ngFor="let shortcut of shortcuts" [routerLink]="shortcut.route"
-          class="rounded-lg border p-3 transition" [ngClass]="shortcut.classes">
-          <p class="text-sm font-black">{{ shortcut.label }}</p>
-          <p class="text-[11px]">{{ shortcut.detail }}</p>
+    <section aria-labelledby="service-title">
+      <h2 id="service-title" class="mb-3 text-[15px] font-semibold text-foreground">Tu turno en el salón</h2>
+      <div *ngIf="shortcuts.length; else noShortcuts" class="grid gap-3 sm:grid-cols-3">
+        <a *ngFor="let shortcut of shortcuts; let first = first" [routerLink]="shortcut.route"
+          class="rounded-xl border px-5 py-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          [ngClass]="first ? 'border-primary bg-primary text-primary-foreground hover:opacity-90' : 'border-border bg-card text-foreground hover:bg-muted'">
+          <p class="text-base font-semibold">{{ shortcut.label }}</p>
+          <p class="mt-0.5 text-[13px]" [ngClass]="first ? 'opacity-85' : 'text-muted-foreground'">{{ shortcut.detail }}</p>
         </a>
       </div>
       <ng-template #noShortcuts>
-        <p class="text-xs text-muted-foreground">No tienes módulos de salón habilitados en este negocio.</p>
+        <p class="text-[13px] text-muted-foreground">No tienes módulos de salón habilitados en este negocio.</p>
       </ng-template>
     </section>
   `

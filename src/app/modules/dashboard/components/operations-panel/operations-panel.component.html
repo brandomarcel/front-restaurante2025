@@ -1,240 +1,123 @@
-<div *ngIf="loading" class="mb-3 grid grid-cols-2 gap-2 xl:grid-cols-4">
-  <div *ngFor="let i of [1, 2, 3, 4]" class="h-20 animate-pulse rounded-xl border border-border bg-card"></div>
-</div>
+<div *ngIf="loading" class="mb-5 h-36 animate-pulse rounded-xl border border-border bg-card" role="status" aria-label="Cargando las cifras de hoy"></div>
 
-<div *ngIf="!loading && needsTerminal" class="mb-3 rounded-xl border border-warning-500/30 bg-warning-500/10 p-3 text-sm font-semibold text-warning-700">
-  Tienes varias terminales POS asignadas. Elige una en el selector de terminal de la barra superior para ver tus métricas.
-</div>
+<p *ngIf="!loading && needsTerminal" class="mb-5 rounded-xl border border-warning-300 bg-warning-50 px-4 py-3 text-sm text-warning-800">
+  Tienes varias terminales POS asignadas. Elige una en «Elegir terminal», arriba, para ver las cifras de tu turno.
+</p>
 
-<div *ngIf="!loading && !needsTerminal && error" class="mb-3 rounded-xl border border-danger-500/30 bg-danger-500/10 p-3 text-sm font-semibold text-danger-600">
+<p *ngIf="!loading && !needsTerminal && error" class="mb-5 rounded-xl border border-danger-300 bg-danger-50 px-4 py-3 text-sm text-danger-800" role="alert">
   {{ error }}
-</div>
+</p>
 
-<ng-container *ngIf="!loading && !needsTerminal && !error && metrics && insights">
-  <section class="mb-3 grid grid-cols-2 gap-2 xl:grid-cols-4">
-    <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
-      <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{{ metrics.kind === 'pos' ? 'Ventas registradas' : 'Pedidos' }}</p>
-      <p class="mt-1 text-xl font-black text-foreground">{{ metrics.ordersCount }}</p>
-      <p class="text-[10px] text-muted-foreground">{{ paceStatus?.label }}</p>
-    </article>
+<ng-container *ngIf="!loading && !needsTerminal && !error && metrics as m">
+  <!-- Cómo va el día: la venta primero y en grande; el resto la explica. -->
+  <section class="mb-5 grid grid-cols-2 overflow-hidden rounded-xl border border-border bg-card sm:grid-cols-3 lg:grid-cols-[1.6fr_1fr_1fr_1fr]" aria-labelledby="today-title">
+    <div class="col-span-2 border-b border-border bg-primary/[0.06] px-5 py-5 sm:col-span-3 lg:col-span-1 lg:border-b-0">
+      <h2 id="today-title" class="text-[13px] font-medium text-primary">Vendido hoy</h2>
+      <p class="mt-1 text-[34px] font-semibold leading-none tracking-tight text-foreground tabular-nums">
+        {{ m.salesTotal | currency:'USD':'symbol':'1.2-2' }}
+      </p>
+      <p class="mt-2 text-[13px] text-muted-foreground">
+        <ng-container *ngIf="m.kind === 'restaurant'; else posSold">En {{ sold }} {{ sold === 1 ? 'orden cerrada' : 'órdenes cerradas' }}</ng-container>
+        <ng-template #posSold>En {{ sold }} {{ sold === 1 ? 'venta' : 'ventas' }}</ng-template>
+      </p>
+    </div>
 
-    <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
-      <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Ventas</p>
-      <p class="mt-1 text-xl font-black text-primary">{{ metrics.salesTotal | currency:'USD':'symbol':'1.0-0' }}</p>
-      <p class="text-[10px] text-muted-foreground">total del día</p>
-    </article>
+    <div class="px-4 py-4 lg:border-l lg:border-border lg:px-5">
+      <p class="text-[13px] text-muted-foreground">{{ m.kind === 'pos' ? 'Ventas' : 'Pedidos' }}</p>
+      <p class="mt-1 text-[22px] font-semibold leading-tight text-foreground tabular-nums">{{ m.ordersCount }}</p>
+      <p *ngIf="cancelled" class="mt-1 text-[12px] text-muted-foreground">{{ cancelled }} {{ cancelled === 1 ? 'cancelado' : 'cancelados' }}</p>
+    </div>
 
-    <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
-      <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Ticket promedio</p>
-      <p class="mt-1 text-xl font-black text-foreground">{{ ticket | currency:'USD':'symbol':'1.0-2' }}</p>
-      <p *ngIf="ticketStatus" class="inline-block rounded px-1 text-[10px]" [ngClass]="toneClasses[ticketStatus.tone]">{{ ticketStatus.label }}</p>
-    </article>
+    <div class="border-l border-border px-4 py-4 lg:px-5">
+      <p class="text-[13px] text-muted-foreground">Ticket promedio</p>
+      <p class="mt-1 text-[22px] font-semibold leading-tight text-foreground tabular-nums">{{ ticket | currency:'USD':'symbol':'1.2-2' }}</p>
+      <p class="mt-1 text-[12px] text-muted-foreground">Por {{ m.kind === 'pos' ? 'venta' : 'orden cerrada' }}</p>
+    </div>
 
-    <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
-      <ng-container *ngIf="showCash; else signatureTile">
-        <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Caja esperada</p>
-        <p class="mt-1 text-xl font-black text-foreground">{{ metrics.cash.expectedCash | currency:'USD':'symbol':'1.0-0' }}</p>
-        <p *ngIf="cashStatus" class="inline-block rounded px-1 text-[10px]" [ngClass]="toneClasses[cashStatus.tone]">{{ cashStatus.label }}</p>
+    <div class="col-span-2 border-t border-border px-4 py-4 sm:col-span-1 sm:border-l sm:border-t-0 lg:px-5">
+      <ng-container *ngIf="m.kind === 'restaurant'; else posInvoiced">
+        <p class="text-[13px] text-muted-foreground">En curso</p>
+        <p class="mt-1 text-[22px] font-semibold leading-tight text-foreground tabular-nums">{{ m.activeOrders }}</p>
+        <p class="mt-1 text-[12px] text-muted-foreground tabular-nums">
+          {{ m.activeTotal | currency:'USD':'symbol':'1.2-2' }} en órdenes abiertas
+        </p>
+        <a *ngIf="canSeeOrders && m.activeOrders" routerLink="/dashboard/orders" class="mt-1 inline-block text-[12px] font-medium text-primary hover:underline">Ver órdenes</a>
       </ng-container>
-      <ng-template #signatureTile>
-        <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Estado firma</p>
-        <p class="mt-1 text-xl font-black text-foreground">{{ signature.label }}</p>
-        <p class="inline-block rounded px-1 text-[10px]" [ngClass]="toneClasses[signature.tone]">Firma electrónica</p>
+      <ng-template #posInvoiced>
+        <p class="text-[13px] text-muted-foreground">Con factura</p>
+        <p class="mt-1 text-[22px] font-semibold leading-tight text-foreground tabular-nums">{{ invoicedCount }}</p>
+        <p class="mt-1 text-[12px] text-muted-foreground">De {{ m.ordersCount }} {{ m.ordersCount === 1 ? 'venta' : 'ventas' }}</p>
       </ng-template>
-    </article>
+    </div>
   </section>
 
-  <section class="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
-    <article class="rounded-xl border border-border bg-card p-3 shadow-sm xl:col-span-7">
-      <div class="mb-2 flex items-center justify-between gap-2">
-        <div>
-          <h2 class="text-sm font-bold text-foreground">Panorama del turno</h2>
-          <p class="text-[10px] text-muted-foreground">Lectura rápida para decidir qué hacer ahora.</p>
-        </div>
-        <span class="rounded-md px-2 py-1 text-[10px] font-bold" [ngClass]="toneClasses[insights.status.tone]">{{ insights.status.label }}</span>
-      </div>
-      <div class="grid gap-2 md:grid-cols-3">
-        <div class="rounded-lg border border-border bg-muted/40 p-2.5">
-          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Ventas de hoy</p>
-          <p class="mt-1 text-[11px] font-semibold text-foreground">{{ insights.salesSummary }}</p>
-        </div>
-        <div class="rounded-lg border border-border bg-muted/40 p-2.5">
-          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{{ insights.cashTitle }}</p>
-          <p class="mt-1 text-[11px] font-semibold text-foreground">{{ insights.cashSummary }}</p>
-        </div>
-        <div class="rounded-lg border border-border bg-muted/40 p-2.5">
-          <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Producto destacado</p>
-          <p class="mt-1 text-[11px] font-semibold text-foreground">{{ insights.productSummary }}</p>
-        </div>
-      </div>
-    </article>
+  <div class="mb-5 grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
+    <app-cash-ticket *ngIf="showCash" class="xl:col-span-5" [cash]="m.cash" [canOperate]="canOperateCash"></app-cash-ticket>
 
-    <article class="rounded-xl border border-border bg-card p-3 shadow-sm xl:col-span-5">
-      <h2 class="text-sm font-bold text-foreground">Qué revisar ahora</h2>
-      <p class="mb-2 text-[10px] text-muted-foreground">Prioridades del responsable de turno.</p>
-      <ul class="grid gap-1.5">
-        <li *ngFor="let action of insights.actions" class="rounded-lg border border-border bg-muted/40 px-2.5 py-2 text-[11px] font-medium text-foreground/80">
-          {{ action }}
+    <section class="rounded-xl border border-border bg-card" [ngClass]="showCash ? 'xl:col-span-7' : 'xl:col-span-12'" aria-labelledby="top-products-title">
+      <div class="flex items-baseline justify-between gap-3 px-5 pb-3 pt-4">
+        <h2 id="top-products-title" class="text-[15px] font-semibold text-foreground">Lo más vendido hoy</h2>
+        <span *ngIf="products.length" class="text-[12px] text-muted-foreground">Unidades y monto</span>
+      </div>
+
+      <ol *ngIf="products.length; else noProducts" class="space-y-3.5 px-5 pb-5">
+        <li *ngFor="let product of products; let i = index" class="grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5">
+          <span class="row-span-2 grid h-6 w-6 place-items-center rounded-full text-[12px] font-semibold tabular-nums"
+            [ngClass]="i === 0 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'">{{ i + 1 }}</span>
+          <span class="truncate text-sm text-foreground" [title]="product.name">{{ product.name }}</span>
+          <span class="text-sm tabular-nums text-foreground">
+            <span class="font-semibold">{{ product.count | number:'1.0-2' }}</span>
+            <span *ngIf="product.total" class="ml-3 inline-block min-w-[4.5rem] text-right text-muted-foreground">{{ product.total | currency:'USD':'symbol':'1.2-2' }}</span>
+          </span>
+          <span class="col-span-2 h-1 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+            <span class="block h-full rounded-full" [ngClass]="i === 0 ? 'bg-primary' : 'bg-primary/45'" [style.width.%]="product.share"></span>
+          </span>
         </li>
-      </ul>
-    </article>
-  </section>
+      </ol>
+      <ng-template #noProducts>
+        <p class="px-5 pb-5 text-[13px] text-muted-foreground">Aún no hay ventas hoy. Aquí verás qué productos salen más.</p>
+      </ng-template>
 
-  <!-- Restaurante: estados de orden, tipos de venta y órdenes activas. -->
-  <section *ngIf="metrics.kind === 'restaurant'" class="mb-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
-    <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
-      <h2 class="mb-2 text-sm font-bold text-foreground">Órdenes por estado</h2>
-      <div class="grid grid-cols-2 gap-1.5 text-[11px]">
-        <div *ngFor="let status of restaurantStatuses" class="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-2 py-1.5">
-          <span class="text-muted-foreground">{{ status === 'Preparacion' ? 'Preparación' : status }}</span>
-          <span class="font-bold text-foreground">{{ countFor(metrics.ordersByStatus, status) }}</span>
-        </div>
-      </div>
-    </article>
-
-    <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
-      <h2 class="mb-2 text-sm font-bold text-foreground">Ventas por tipo</h2>
-      <div class="grid grid-cols-1 gap-1.5 text-[11px]">
-        <div *ngFor="let type of restaurantSaleTypes" class="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-2 py-1.5">
-          <span class="text-muted-foreground">{{ type }}</span>
-          <span class="font-bold text-foreground">{{ countFor(metrics.salesByType, type) | currency:'USD':'symbol':'1.0-2' }}</span>
-        </div>
-      </div>
-    </article>
-
-    <article class="rounded-xl border border-border bg-card p-3 shadow-sm">
-      <h2 class="mb-2 text-sm font-bold text-foreground">Órdenes activas</h2>
-      <div class="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-2">
-        <span class="text-[11px] text-muted-foreground">En curso</span>
-        <span class="text-lg font-black text-primary">{{ metrics.activeOrders }}</span>
-      </div>
-      <div class="mt-1.5 flex items-center justify-between rounded-lg border border-border bg-muted/40 px-2.5 py-2">
-        <span class="text-[11px] text-muted-foreground">Monto acumulado</span>
-        <span class="text-sm font-bold text-foreground">{{ metrics.activeTotal | currency:'USD':'symbol':'1.0-2' }}</span>
-      </div>
-    </article>
-  </section>
-
-  <!-- POS genérico: notas y facturas por estado. -->
-  <section *ngIf="metrics.kind === 'pos'" class="mb-3 rounded-xl border border-border bg-card p-3 shadow-sm">
-    <div class="mb-2 flex items-center justify-between gap-2">
-      <h2 class="text-sm font-bold text-foreground">Resumen POS</h2>
-      <span class="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">{{ cashierExperience === 'Retail' ? 'POS Retail' : 'POS genérico' }}</span>
-    </div>
-    <div class="grid grid-cols-2 gap-2 lg:grid-cols-4">
-      <div class="rounded-lg border border-border bg-muted/40 p-2.5">
-        <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Notas cobradas</p>
-        <p class="mt-1 text-lg font-black text-foreground">{{ countFor(metrics.ordersByStatus, 'Cobrada') }}</p>
-      </div>
-      <div class="rounded-lg border border-border bg-muted/40 p-2.5">
-        <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Notas facturadas</p>
-        <p class="mt-1 text-lg font-black text-foreground">{{ countFor(metrics.ordersByStatus, 'Facturada') }}</p>
-      </div>
-      <div class="rounded-lg border border-border bg-muted/40 p-2.5">
-        <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Factura directa</p>
-        <p class="mt-1 text-lg font-black text-foreground">{{ countFor(metrics.ordersByStatus, 'Factura directa') }}</p>
-      </div>
-      <div class="rounded-lg border border-primary/20 bg-primary/5 p-2.5">
-        <p class="text-[10px] font-bold uppercase tracking-wide text-primary">Ventas POS</p>
-        <p class="mt-1 text-lg font-black text-primary">{{ countFor(metrics.salesByType, 'POS') | currency:'USD':'symbol':'1.0-2' }}</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Retail: alerta de stock, lo más urgente para un cajero de tienda. -->
-  <section *ngIf="retailStock" class="mb-3 rounded-xl border border-border bg-card p-3 shadow-sm">
-    <div class="mb-2 flex items-center justify-between gap-2">
-      <h2 class="text-sm font-bold text-foreground">Inventario de la tienda</h2>
-      <a routerLink="/dashboard/inventory" class="text-[11px] font-semibold text-primary">Ver inventario</a>
-    </div>
-    <p *ngIf="retailStock.loading; else retailCounts" class="text-xs text-muted-foreground">Cargando stock…</p>
-    <ng-template #retailCounts>
-      <div class="grid grid-cols-2 gap-2">
-        <div class="rounded-lg p-2.5" [ngClass]="retailStock.lowStock > 0 ? 'border border-warning-200 bg-warning-50' : 'border border-border bg-muted/40'">
-          <p class="text-[10px] font-bold uppercase tracking-wide" [ngClass]="retailStock.lowStock > 0 ? 'text-warning-700' : 'text-muted-foreground'">Bajo stock</p>
-          <p class="mt-1 text-lg font-black" [ngClass]="retailStock.lowStock > 0 ? 'text-warning-700' : 'text-foreground'">{{ retailStock.lowStock }}</p>
-        </div>
-        <div class="rounded-lg p-2.5" [ngClass]="retailStock.outOfStock > 0 ? 'border border-destructive/30 bg-destructive/10' : 'border border-border bg-muted/40'">
-          <p class="text-[10px] font-bold uppercase tracking-wide" [ngClass]="retailStock.outOfStock > 0 ? 'text-destructive' : 'text-muted-foreground'">Sin stock</p>
-          <p class="mt-1 text-lg font-black" [ngClass]="retailStock.outOfStock > 0 ? 'text-destructive' : 'text-foreground'">{{ retailStock.outOfStock }}</p>
-        </div>
-      </div>
-    </ng-template>
-  </section>
-
-  <section *ngIf="showCash && metrics.cash.paymentTotals.length" class="mb-3 rounded-xl border border-border bg-card p-3 shadow-sm">
-    <h2 class="mb-2 text-sm font-bold text-foreground">Pagos del turno por método</h2>
-    <div class="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
-      <div *ngFor="let payment of metrics.cash.paymentTotals" class="rounded-lg border border-border bg-muted/40 px-2.5 py-2">
-        <p class="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{{ payment.method }}</p>
-        <p class="mt-0.5 text-sm font-bold text-foreground">{{ payment.amount | currency:'USD':'symbol':'1.0-2' }}</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
-    <article class="rounded-xl border border-border bg-card p-3 shadow-sm" [ngClass]="cashFlowChart ? 'xl:col-span-8' : 'xl:col-span-12'">
-      <div class="mb-2 flex items-center justify-between gap-2">
-        <div>
-          <h2 class="text-sm font-bold text-foreground">Top productos vendidos</h2>
-          <p class="text-[10px] text-muted-foreground">Ranking por unidades del día.</p>
-        </div>
-        <span class="rounded-md bg-slate-900 px-2 py-1 text-[10px] font-bold text-white">{{ mix?.topName }}</span>
-      </div>
-      <apx-chart *ngIf="topProductsChart"
-        [series]="topProductsChart['series']" [chart]="topProductsChart['chart']" [plotOptions]="topProductsChart['plotOptions']"
-        [dataLabels]="topProductsChart['dataLabels']" [xaxis]="topProductsChart['xaxis']" [yaxis]="topProductsChart['yaxis']"
-        [colors]="topProductsChart['colors']" [grid]="topProductsChart['grid']" [tooltip]="topProductsChart['tooltip']">
-      </apx-chart>
-    </article>
-
-    <article *ngIf="cashFlowChart" class="rounded-xl border border-border bg-card p-3 shadow-sm xl:col-span-4">
-      <h2 class="text-sm font-bold text-foreground">Flujo de caja</h2>
-      <p class="mb-2 text-[10px] text-muted-foreground">Apertura, ventas y retiros.</p>
-      <apx-chart
-        [series]="cashFlowChart['series']" [chart]="cashFlowChart['chart']" [labels]="cashFlowChart['labels']"
-        [colors]="cashFlowChart['colors']" [legend]="cashFlowChart['legend']" [dataLabels]="cashFlowChart['dataLabels']"
-        [plotOptions]="cashFlowChart['plotOptions']" [stroke]="cashFlowChart['stroke']" [tooltip]="cashFlowChart['tooltip']"
-        [responsive]="cashFlowChart['responsive']">
-      </apx-chart>
-    </article>
-  </section>
-
-  <section class="grid grid-cols-1 gap-3 xl:grid-cols-12">
-    <article *ngIf="moneyChart" class="rounded-xl border border-border bg-card p-3 shadow-sm xl:col-span-8">
-      <h2 class="text-sm font-bold text-foreground">Comparativo monetario</h2>
-      <p class="mb-2 text-[10px] text-muted-foreground">Ventas, retiros, efectivo actual, esperado y diferencia.</p>
-      <apx-chart
-        [series]="moneyChart['series']" [chart]="moneyChart['chart']" [plotOptions]="moneyChart['plotOptions']"
-        [dataLabels]="moneyChart['dataLabels']" [xaxis]="moneyChart['xaxis']" [yaxis]="moneyChart['yaxis']"
-        [colors]="moneyChart['colors']" [grid]="moneyChart['grid']" [tooltip]="moneyChart['tooltip']">
-      </apx-chart>
-    </article>
-
-    <article class="rounded-xl border border-border bg-card p-3 shadow-sm" [ngClass]="moneyChart ? 'xl:col-span-4' : 'xl:col-span-12'">
-      <h2 class="text-sm font-bold text-foreground">Rendimiento comercial</h2>
-      <p class="mb-2 text-[10px] text-muted-foreground">Ritmo de venta y mix de productos.</p>
-      <div class="grid gap-2">
-        <div class="rounded-lg border border-border bg-muted/40 p-2.5">
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <p class="text-[10px] uppercase tracking-wide text-muted-foreground">Ritmo</p>
-              <p class="text-base font-black text-foreground">{{ pace | number:'1.0-1' }} {{ unit }}/h</p>
-            </div>
-            <span *ngIf="paceStatus" class="rounded-md px-2 py-1 text-[10px] font-bold" [ngClass]="toneClasses[paceStatus.tone]">{{ paceStatus.label }}</span>
+      <div *ngIf="m.kind === 'restaurant' && hasSaleTypes" class="border-t border-border px-5 py-4">
+        <h3 class="mb-2 text-[13px] text-muted-foreground">Por tipo de pedido</h3>
+        <dl class="grid grid-cols-3 gap-3">
+          <div *ngFor="let type of saleTypes">
+            <dt class="text-[12px] text-muted-foreground">{{ type.label }}</dt>
+            <dd class="text-sm font-semibold tabular-nums text-foreground">
+              {{ countFor(m.salesByType, type.key) | currency:'USD':'symbol':'1.2-2' }}
+              <span class="ml-1 text-[12px] font-normal text-muted-foreground">{{ shareOf(countFor(m.salesByType, type.key)) | number:'1.0-0' }}%</span>
+            </dd>
           </div>
-        </div>
-        <div *ngIf="mix" class="rounded-lg border border-border bg-muted/40 p-2.5">
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <p class="text-[10px] uppercase tracking-wide text-muted-foreground">Mix</p>
-              <p class="text-base font-black text-foreground">{{ mix.label }}</p>
-            </div>
-            <span class="rounded-md px-2 py-1 text-[10px] font-bold" [ngClass]="toneClasses[mix.tone]">{{ mix.topShare | number:'1.0-1' }}%</span>
-          </div>
-          <p class="mt-1 text-[10px] text-muted-foreground">{{ mix.detail }}</p>
-        </div>
+        </dl>
       </div>
-    </article>
+    </section>
+  </div>
+
+  <!-- Restaurante: las órdenes de hoy por etapa, en el orden en que avanzan. -->
+  <section *ngIf="m.kind === 'restaurant'" class="mb-5 rounded-xl border border-border bg-card" aria-labelledby="order-stages-title">
+    <div class="flex items-baseline justify-between gap-3 px-5 pb-1 pt-4">
+      <h2 id="order-stages-title" class="text-[15px] font-semibold text-foreground">Órdenes de hoy</h2>
+      <a *ngIf="canSeeOrders" routerLink="/dashboard/orders" class="text-[13px] font-medium text-primary hover:underline">Ver órdenes</a>
+    </div>
+    <ol class="grid grid-cols-2 gap-2 px-5 pb-4 pt-3 sm:grid-cols-4 sm:gap-0">
+      <li *ngFor="let stage of stages; let first = first; let last = last"
+        class="relative rounded-lg border px-4 py-3 sm:rounded-none"
+        [ngClass]="[
+          countFor(m.ordersByStatus, stage.key) && !last ? stage.active : 'border-border bg-background',
+          first ? 'sm:rounded-l-lg' : 'sm:-ml-px',
+          last ? 'sm:rounded-r-lg' : ''
+        ]">
+        <p class="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+          <span class="h-2 w-2 rounded-full" [ngClass]="stage.dot" aria-hidden="true"></span>{{ stage.label }}
+        </p>
+        <p class="mt-1 text-[22px] font-semibold leading-tight tabular-nums"
+          [ngClass]="countFor(m.ordersByStatus, stage.key) ? 'text-foreground' : 'text-muted-foreground/60'">
+          {{ countFor(m.ordersByStatus, stage.key) }}
+        </p>
+      </li>
+    </ol>
+    <p *ngIf="cancelled" class="border-t border-border px-5 py-2.5 text-[13px] text-muted-foreground">
+      {{ cancelled }} {{ cancelled === 1 ? 'orden cancelada' : 'órdenes canceladas' }} hoy, fuera de la venta.
+    </p>
   </section>
 </ng-container>

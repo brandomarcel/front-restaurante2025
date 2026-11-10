@@ -9,6 +9,7 @@ import { Subscription } from 'rxjs';
 
 import { EcuadorTimePipe } from 'src/app/core/pipes/ecuador-time-pipe.pipe';
 import { PrintService } from 'src/app/services/print.service';
+import { PrintStationService } from 'src/app/services/print-station.service';
 import { environment } from 'src/environments/environment';
 import { OrdersService } from 'src/app/services/orders.service';
 import { OrderSplitService } from 'src/app/services/order-split.service';
@@ -105,6 +106,7 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private printSvc: PrintService,
+    private printStation: PrintStationService,
     private router: Router,
     private ordersSvc: OrdersService,
     private orderSplitSvc: OrderSplitService,
@@ -213,7 +215,9 @@ export class OrderDetailPageComponent implements OnInit, OnDestroy {
       return
     }
     const url = this.baseUrl + this.printSvc.getComanda(this.order.name);
-    const w = window.open(url, '_blank'); if (!w) toast.error('No se pudo abrir la impresión');
+    this.printStation.printComanda(this.order.name, false, () => {
+      const w = window.open(url, '_blank'); if (!w) toast.error('No se pudo abrir la impresión');
+    });
   }
   getRecibo() {
     if (!this.order?.name) {

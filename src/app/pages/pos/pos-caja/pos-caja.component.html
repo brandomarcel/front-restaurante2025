@@ -438,7 +438,7 @@
   </section>
 </div>
 
-<app-pos-print-modal *ngIf="showPrintModal" [context]="printContext" (choose)="handlePrintSelection($event)" (close)="closePrintModal()" />
+<app-pos-print-modal *ngIf="showPrintModal" [context]="printContext" [kitchenSent]="printStation.autoPrintActive" (choose)="handlePrintSelection($event)" (close)="closePrintModal()" />
 <app-pos-shortcuts-help *ngIf="showShortcutsHelp" [genericMode]="genericMode" (close)="closeShortcutsHelp()" />
 
 <app-product-variant-picker #productVariantPicker (resolved)="onVariantResolved($event)" (cancelled)="refocusScanner()"></app-product-variant-picker>

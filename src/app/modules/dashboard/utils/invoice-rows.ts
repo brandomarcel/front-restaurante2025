@@ -1,6 +1,8 @@
 import { formatDisplayDate, toNumber } from './dashboard-values';
 
 export interface InvoiceRow {
+  /** Nombre del documento en Frappe; abre el detalle (`/dashboard/invoices/:id`). */
+  id: string;
   name: string;
   date: string;
   customer: string;
@@ -11,6 +13,7 @@ export interface InvoiceRow {
 /** Filas de `recent_invoices` del dashboard Lite (últimos comprobantes del negocio). */
 export function toInvoiceRows(invoices: unknown[] | undefined | null): InvoiceRow[] {
   return (invoices ?? []).map((raw: any) => ({
+    id: String(raw?.name || ''),
     name: String(raw?.document_number || raw?.name || '—'),
     date: formatDisplayDate(raw?.posting_date || raw?.date || raw?.issue_date),
     customer: String(raw?.customer_name || raw?.customer || 'Consumidor final'),

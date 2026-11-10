@@ -9,6 +9,72 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-09 (Claude, 4): a pedido del usuario se arreglaron las specs del POS de Caja que dejaron de compilar al sumar
+  `PrintStationService` al constructor de `PosCajaComponent` (trabajo de impresión de comandas en curso, de otra
+  sesión): `pos-caja.behavior.spec.ts` y `pos-caja.component.spec.ts` pasan un doble `{ configured: false }` (sin
+  estación de impresión, el flujo de siempre). Solo se ajustó el fixture, no las aserciones. Corridas: POS de Caja,
+  dashboard, facturas y decimales = 81 pruebas, 80 OK; la que falla es `DashboardComponent should create`, ya en la
+  lista de fallas heredadas (sin providers de HttpClient).
+
+- 2026-11-09 (Claude, impresora de cocina): comandas directo a la térmica de cocina con QZ Tray, a pedido del usuario
+  (descartó el modo kiosco de Chrome; certificado propio, sin pagar licencia de QZ).
+  - Por qué: el kiosco solo imprime en la impresora predeterminada y Cocina no podía abrir `/printview` (no tiene rol
+    del Desk: `PermissionError`, comprobado en el piloto). El PDF mide 297 mm y gastaría papel.
+  - Nuevo: `services/print-station.service.ts`, `shared/components/print-station-settings/` (abre el layout desde el
+    menú del perfil), `src/types/qz-tray.d.ts`, dependencia `qz-tray` 2.3.0 (carga diferida; en
+    `allowedCommonJsDependencies`).
+  - Cambiado: `NewOrderAlertService` (sin el interruptor del kiosco; imprime también lo propio y en equipos de Cocina),
+    botones de comanda de POS Caja (`pos-print-modal` con `kitchenSent`), POS en modo agregar, Órdenes en vivo, detalle
+    y lista de órdenes. Quitado `PrintService.printComandaHidden` (era del kiosco).
+  - Backend Restaurante: `get_kitchen_ticket_escpos`, `get_test_ticket_escpos`, `api/qz_tray.py` (certificado y firma).
+    Piloto: certificado generado en su `site_config`.
+  - Verificado: build de desarrollo OK; lint sin avisos nuevos; en el piloto, la firma de Cocina se valida con el
+    certificado, se rechaza texto libre y otro negocio, la comanda no lleva precios y la adicional solo trae el lote.
+  - Después, a pedido: «Impresoras de este equipo» empieza con «Normal / Directo a cocina con QZ Tray» (`enabled`). Antes
+    no se podía volver a la forma normal con impresora USB (Guardar quedaba desactivado). Build y lint OK.
+  - Después, a pedido: Desk ▸ negocio ▸ «Impresora de cocina (QZ Tray)» con el certificado y los equipos que imprimen
+    (DocType nuevo `FacturADA Restaurant Print Station`, migrado en el piloto). El front informa al guardar, al iniciar
+    y en cada comanda; «Nombre de este equipo» en la ventana. Probado en el piloto con rollback: reporte de Cocina,
+    rechazo de otro negocio, del Mesero y de datos malos; solo System Manager ve el resumen.
+  - Pendiente: probar con QZ Tray y la RPT006 reales (tildes PC850, corte, IP); generar el certificado en producción
+    (Desk ▸ negocio ▸ «Impresora de cocina» ▸ «Generar certificado», o `bench … execute
+    facturada_restaurante.api.qz_tray.generate_qz_certificate`), `bench migrate` por el DocType nuevo y reiniciar;
+    pruebas de Codex. Fase 2 opcional: recibo y factura directo a la impresora de Caja.
+
+- 2026-11-09 (Claude, 3): dashboard rediseñado, a pedido del usuario («hazlo todo»; propuesta aprobada antes).
+  - Antes: tres bloques de indicadores apilados, la caja repetida en cinco lugares y el plan en dos; texto de 10–11 px
+    con etiquetas en mayúsculas; gráficos de ApexCharts que con un día sin ventas ocupaban media pantalla (página de
+    2200 px); calificaciones engañosas: «Ritmo bajo» contaba las horas desde la medianoche, «Ticket bajo» si era menor
+    a $8 en cualquier negocio, «Alta dependencia» en rojo. Ventas y caja sin centavos. Avisos sin botón.
+  - Ahora: cabecera sobria (logo, negocio, de qué trata el panel, caja y firma) y «Necesita tu atención», una lista
+    con botón por punto que reemplaza los avisos sueltos (`dashboard-attention.ts`). Le siguen «Vendido hoy» y tres
+    cifras en una franja, «Tu caja» como ticket con el cuadre (`cash-ticket`, borde dentado como el ticket del login),
+    «Lo más vendido hoy» con barras simples y «Órdenes de hoy» por etapa. Los comprobantes del mes van en una sección
+    con selector de mes, cinco cifras y el plan en una fila; Lite suma «Últimas facturas» clicables con su estado.
+  - Arreglos de datos: el ticket promedio de restaurante dividía la venta (solo órdenes cerradas) entre todas las
+    órdenes, incluidas las abiertas; ahora divide entre las cerradas (`soldCount`). Montos con centavos.
+  - Facturas acepta `?estado=<estado conocido>` (el dashboard enlaza «Ver rechazadas»).
+  - Borrados: `dashboard-charts.ts`, `dashboard-alerts.ts` (+ su spec), plantilla del hero, `plan-usage-card.html`,
+    `dashboard-home.scss`, `TONE_CLASSES`; en `operations-metrics.ts` las calificaciones (ritmo, ticket, mix,
+    `buildOperationsInsights`). La spec de métricas de Codex: se quitaron los bloques de esas funciones y lo esperado
+    suma `total` (producto) y `code` (forma de pago).
+  - Hallazgos del backend, sin cambiar: `efectivo_sistema` = `expected_cash` siempre, así que el antiguo
+    «Sobrante/Faltante» nunca podía salir (el cuadre real es el cierre de caja). La caja del dashboard es la de quien
+    mira: un Administrador que no abrió caja ve «No tienes una caja abierta» aunque un cajero sí la tenga. En Lite,
+    `out_of_stock_items` trae los productos en o bajo el mínimo, no solo los agotados.
+  - Verificado: `tsc` app y specs, `ngc --noEmit`, lint sin avisos nuevos (19). **Visto en navegador** con
+    cafeteria@gmail.com (CAFETERIA DEMO) a 1440 px claro y oscuro y a 390 px: datos reales (día sin ventas) y datos de
+    ejemplo interceptados en el navegador (caja abierta, productos, facturas rechazadas); panel Lite forzando
+    `billing_overview` en la respuesta de contexto. **Sin ver**: panel API, Mesero y Cajero reales.
+  - Segunda vuelta de estilo (el usuario pidió «que se vea profesional», sin cambiar el contenido): ícono por tipo de
+    aviso en un círculo del color de su gravedad (en lugar de la barra lateral); «Vendido hoy» y «Facturado» con fondo
+    suave de marca; «Lo más vendido» con posición 1–5, barras finas y el primero resaltado; «Órdenes de hoy» como etapas
+    conectadas con los colores de la pantalla de cocina (resaltadas si tienen órdenes); «Ver órdenes» bajo «En curso».
+    Revisado en claro, oscuro y 390 px.
+  - Pendiente propuesto: quitar `apexcharts`/`ng-apexcharts` de `package.json` y `angular.json` (ya nada los usa y el
+    script global carga en todas las pantallas); hora de apertura de la caja («Abierta desde 08:02») y comparación con
+    ayer requieren cambios en el backend. Pruebas para Codex en `TESTING_CODEX.md`.
+
 - 2026-11-09 (Claude, 2): pendientes chicos, a pedido del usuario («hagamos el 5»).
   - **Montos con dos decimales:** `appDecimalInput` muestra «5.50» en vez de «5.5» en todo campo con `step="0.01"`
     (al cargar y al salir del campo), sin recortar decimales que el valor ya tenga (1.2345 queda igual) y sin tocar lo
@@ -472,15 +538,7 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
   tarjetas «Nuevas» tienen «Imprimir comanda» junto a «Enviar a cocina» (tarjeta y tabla).
   Backend Restaurante: `serialize_order` ahora trae `table_name` y `waiter_name` (reiniciar workers).
   Compila con `ngc --noEmit`; Restaurante 59 OK. Sin probar en navegador ni con dos usuarios.
-  Impresión automática (servidor en la nube + térmica USB: no sirve imprimir desde el servidor):
-  menú del perfil → «Imprimir comandas solas» (por equipo, `facturada.caja.autoprint`) y «Sonido de
-  pedidos nuevos»; la comanda se carga en un marco oculto (`PrintService.printComandaHidden`, no una
-  ventana emergente, que el navegador bloquea sin clic). Sale sin diálogo solo si la PC de caja abre
-  Chrome con `--kiosk-printing` y la térmica es la impresora predeterminada; si no, aparece el
-  diálogo normal. Ejemplo (Windows): `chrome.exe --kiosk-printing --app=https://<dominio>/portal/`.
-  Activarlo solo en la PC de la impresora (si hay dos cajas con el interruptor, sale doble).
-  Pendiente: probar con la térmica real; si luego hay impresoras de red/cocina, evaluar
-  impresión desde el servidor (solo con servidor local o VPN) o un programa local (QZ Tray).
+  La impresión automática por Chrome `--kiosk-printing` se reemplazó el 2026-11-09 por QZ Tray (ver arriba).
 
 - 2026-10-28 (Claude, 3): planes por módulos (el trabajo está en Core, ver su ESTADO). El front no
   cambió: ya oculta Mesas (`tables`) y Cocina (`kitchen`) por `featureKey` y el POS Mesero no exige

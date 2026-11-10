@@ -27,14 +27,6 @@ export type OperationsKind = 'restaurant' | 'pos';
 
 export type Tone = 'neutral' | 'success' | 'info' | 'warning' | 'danger';
 
-export const TONE_CLASSES: Record<Tone, string> = {
-  neutral: 'bg-muted text-foreground',
-  success: 'bg-success-100 text-success-700',
-  info: 'bg-info-100 text-info-700',
-  warning: 'bg-warning-100 text-warning-700',
-  danger: 'bg-danger-100 text-danger-700'
-};
-
 export interface Indicator {
   label: string;
   tone: Tone;
@@ -42,6 +34,8 @@ export interface Indicator {
 
 export interface PaymentTotal {
   method: string;
+  /** Código SRI de la forma de pago: `01` es efectivo (el único que entra a la caja). */
+  code: string;
   amount: number;
 }
 
@@ -59,6 +53,8 @@ export interface CashSnapshot {
 export interface TopProduct {
   name: string;
   count: number;
+  /** Monto vendido del producto en el día. */
+  total: number;
 }
 
 export interface OperationsMetrics {
@@ -111,11 +107,19 @@ export interface RetailStockSummary {
   outOfStock: number;
 }
 
+/** Algo que pide una acción de quien administra; se muestra en «Necesita tu atención». */
+export interface AttentionItem {
+  id: string;
+  tone: 'danger' | 'warning' | 'info';
+  title: string;
+  detail?: string;
+  action?: { label: string; route: string; queryParams?: Record<string, string> };
+}
+
 export interface DashboardShortcut {
   label: string;
   detail: string;
   route: string;
-  classes: string;
   /** Debe coincidir con `requiredFeatures`/`featureKey` de la ruta destino. */
   features: CompanyFeatureKey[];
   permission: string;

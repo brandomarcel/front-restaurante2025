@@ -57,7 +57,7 @@ describe('POS caja — reglas de venta', () => {
     const products = { getAll: () => of([]) };
     component = new PosCajaComponent(
       {} as any, products as any, {} as any, {} as any,
-      orders, posSales, invoices, collections, spinner as any, {} as any, cart, alert,
+      orders, posSales, invoices, collections, spinner as any, {} as any, { configured: false } as any, cart, alert,
       capabilities as any, {} as any, router
     );
     (component as any).productVariantPicker = { clearCache: () => undefined };

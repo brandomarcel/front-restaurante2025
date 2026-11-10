@@ -7,12 +7,14 @@ import { NavbarComponent } from './components/navbar/navbar.component';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
 import { MenuService } from './services/menu.service';
 import { NewOrderAlertService } from 'src/app/services/new-order-alert.service';
+import { PrintStationService } from 'src/app/services/print-station.service';
+import { PrintStationSettingsComponent } from 'src/app/shared/components/print-station-settings/print-station-settings.component';
 
 @Component({
   selector: 'app-layout',
   templateUrl: './layout.component.html',
   styleUrls: ['./layout.component.css'],
-  imports: [NgClass, NgIf, SidebarComponent, NavbarComponent, RouterOutlet, FooterComponent, BottomNavbarComponent],
+  imports: [NgClass, NgIf, SidebarComponent, NavbarComponent, RouterOutlet, FooterComponent, BottomNavbarComponent, PrintStationSettingsComponent],
 })
 export class LayoutComponent implements OnInit, OnDestroy {
   private mainContent: HTMLElement | null = null;
@@ -21,6 +23,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
     private router: Router,
     public menuService: MenuService,
     private newOrderAlerts: NewOrderAlertService,
+    public printStation: PrintStationService,
   ) {
     this.router.events.subscribe((event: Event) => {
       if (event instanceof NavigationEnd) {

@@ -10,6 +10,7 @@ import { OrdersService } from 'src/app/services/orders.service';
 import { RestaurantRealtimeService } from 'src/app/services/restaurant-realtime.service';
 import { UtilsService } from 'src/app/core/services/utils.service';
 import { PrintService } from 'src/app/services/print.service';
+import { PrintStationService } from 'src/app/services/print-station.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 import { OrderCardComponent } from './ui/order-card/order-card.component';
@@ -100,6 +101,7 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
     private utils: UtilsService,
     private router: Router,
     private printService: PrintService,
+    private printStation: PrintStationService,
     private restaurantRealtime: RestaurantRealtimeService,
     private capabilities: CompanyCapabilitiesService,
     private host: ElementRef<HTMLElement>,
@@ -385,9 +387,16 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   handlePrintSelection(option: 'comanda' | 'recibo' | 'ambas') {
     if (!this.pendingPrintOrderId) return;
 
-    if (option === 'comanda') this.openPrintWindow(this.printService.getComanda(this.pendingPrintOrderId));
-    if (option === 'recibo') this.openPrintWindow(this.printService.getRecibo(this.pendingPrintOrderId));
-    if (option === 'ambas') this.openPrintWindow(this.printService.getOrderPdf(this.pendingPrintOrderId));
+    const orderId = this.pendingPrintOrderId;
+    if (this.printStation.configured && (option === 'comanda' || option === 'ambas')) {
+      // Comanda directo a cocina (QZ Tray); el recibo, por la ventana de siempre.
+      if (option === 'ambas') this.openPrintWindow(this.printService.getRecibo(orderId));
+      this.printStation.printComanda(orderId, false, () => this.openPrintWindow(this.printService.getComanda(orderId)));
+    } else {
+      if (option === 'comanda') this.openPrintWindow(this.printService.getComanda(orderId));
+      if (option === 'recibo') this.openPrintWindow(this.printService.getRecibo(orderId));
+      if (option === 'ambas') this.openPrintWindow(this.printService.getOrderPdf(orderId));
+    }
 
     this.closePrintModal();
   }
@@ -400,7 +409,8 @@ export class OrdersRealtimeComponent implements OnInit, OnDestroy {
   /** Imprime la comanda directo desde la tarjeta «Nuevas», sin pasar por el modal. */
   printComanda(o: OrderVM): void {
     if (!o?.name) return;
-    if (!this.printService.openComanda(o.name)) toast.error('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes.');
+    const name = o.name;
+    this.printStation.printComanda(name, false, () => this.printStation.openWindow(name));
   }
 
   /**

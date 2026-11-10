@@ -5,6 +5,7 @@ import { EcuadorTimePipe } from '../../core/pipes/ecuador-time-pipe.pipe';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { FormsModule } from '@angular/forms';
 import { PrintService } from 'src/app/services/print.service';
+import { PrintStationService } from 'src/app/services/print-station.service';
 import { toast } from 'ngx-sonner';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
 
@@ -55,6 +56,7 @@ export class OrdersComponent implements OnInit {
     private ordersService: OrdersService,
     public spinner: NgxSpinnerService,
     private printService: PrintService,
+    private printStation: PrintStationService,
     private utils: UtilsService,
     private capabilities: CompanyCapabilitiesService,
   ) { }
@@ -274,9 +276,14 @@ export class OrdersComponent implements OnInit {
     this.getNotaVentaPdf();
   }
 
+  /** Por QZ Tray si este equipo tiene impresora de comandas; si no, la ventana de siempre. */
   getComandaPdf() {
-    const order = this.url + this.printService.getComanda(this.orderSelected.name);
-    console.log('order', order);
+    const name = this.orderSelected.name;
+    this.printStation.printComanda(name, false, () => this.openComandaWindow(name));
+  }
+
+  private openComandaWindow(name: string) {
+    const order = this.url + this.printService.getComanda(name);
     const width = 800;
     const height = 800;
 

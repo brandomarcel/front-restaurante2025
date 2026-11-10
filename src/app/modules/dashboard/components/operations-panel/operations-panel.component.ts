@@ -1,35 +1,32 @@
 import { Component, Input, OnChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { NgApexchartsModule } from 'ng-apexcharts';
-import {
-  Indicator,
-  OperationsMetrics,
-  RetailStockSummary,
-  SignatureStatus,
-  TONE_CLASSES
-} from '../../dashboard.models';
-import { ChartOptions, buildCashFlowChart, buildMoneySummaryChart, buildTopProductsChart } from '../../utils/dashboard-charts';
-import {
-  OperationsInsights,
-  ProductMix,
-  averageTicket,
-  buildOperationsInsights,
-  cashDifferenceIndicator,
-  ordersPerHour,
-  paceIndicator,
-  productMix,
-  ticketIndicator,
-  unitLabel
-} from '../../utils/operations-metrics';
+import { OperationsMetrics, TopProduct } from '../../dashboard.models';
+import { averageTicket, productShares, soldCount, unitLabel } from '../../utils/operations-metrics';
+import { CashTicketComponent } from '../cash-ticket/cash-ticket.component';
 
-export type CashierExperience = 'Restaurante' | 'Retail' | 'General';
+/**
+ * Etapas de una orden de salón, en el orden en que avanza; colores de la pantalla
+ * de cocina (`order-status.utils.ts`). Las etapas con órdenes pendientes se resaltan.
+ */
+const ORDER_STAGES = [
+  { key: 'Ingresada', label: 'Ingresadas', dot: 'bg-info-500', active: 'z-[1] border-info-300 bg-info-50' },
+  { key: 'Preparacion', label: 'En preparación', dot: 'bg-warning-500', active: 'z-[1] border-warning-300 bg-warning-50' },
+  { key: 'Lista', label: 'Listas', dot: 'bg-success-500', active: 'z-[1] border-success-300 bg-success-50' },
+  { key: 'Cerrada', label: 'Cerradas', dot: 'bg-muted-foreground', active: '' }
+] as const;
 
-/** Turno de Restaurante o POS genérico: ventas, caja, órdenes y productos. */
+const SALE_TYPES = [
+  { key: 'Servirse', label: 'En el local' },
+  { key: 'Llevar', label: 'Para llevar' },
+  { key: 'Domicilio', label: 'A domicilio' }
+] as const;
+
+/** Turno de Restaurante o POS genérico: cifras del día, caja y lo más vendido. */
 @Component({
   selector: 'app-operations-panel',
   standalone: true,
-  imports: [CommonModule, RouterModule, NgApexchartsModule],
+  imports: [CommonModule, RouterModule, CashTicketComponent],
   templateUrl: './operations-panel.component.html'
 })
 export class OperationsPanelComponent implements OnChanges {
@@ -38,47 +35,48 @@ export class OperationsPanelComponent implements OnChanges {
   @Input() error = '';
   @Input() needsTerminal = false;
   @Input() showCash = false;
-  @Input({ required: true }) signature!: SignatureStatus;
-  @Input() cashierExperience: CashierExperience | null = null;
-  @Input() retailStock: RetailStockSummary | null = null;
+  /** Puede abrir, retirar y cerrar su caja. */
+  @Input() canOperateCash = false;
+  /** Puede abrir la pantalla Órdenes. */
+  @Input() canSeeOrders = false;
 
-  readonly toneClasses = TONE_CLASSES;
-  readonly restaurantStatuses = ['Ingresada', 'Preparacion', 'Lista', 'Cerrada', 'Cancelada'];
-  readonly restaurantSaleTypes = ['Servirse', 'Llevar', 'Domicilio'];
+  readonly stages = ORDER_STAGES;
+  readonly saleTypes = SALE_TYPES;
 
-  insights: OperationsInsights | null = null;
   ticket = 0;
-  ticketStatus: Indicator | null = null;
-  pace = 0;
-  paceStatus: Indicator | null = null;
-  cashStatus: Indicator | null = null;
-  mix: ProductMix | null = null;
+  sold = 0;
   unit = 'pedidos';
-  topProductsChart: ChartOptions | null = null;
-  cashFlowChart: ChartOptions | null = null;
-  moneyChart: ChartOptions | null = null;
+  products: (TopProduct & { share: number })[] = [];
 
   ngOnChanges(): void {
     const metrics = this.metrics;
-    if (!metrics) {
-      this.insights = null;
-      return;
-    }
-    const now = new Date();
+    if (!metrics) return;
     this.unit = unitLabel(metrics.kind);
-    this.insights = buildOperationsInsights(metrics, { showCash: this.showCash, signature: this.signature });
     this.ticket = averageTicket(metrics);
-    this.ticketStatus = ticketIndicator(metrics);
-    this.pace = ordersPerHour(metrics.ordersCount, now);
-    this.paceStatus = paceIndicator(metrics, now);
-    this.cashStatus = cashDifferenceIndicator(metrics.cash);
-    this.mix = productMix(metrics.topProducts);
-    this.topProductsChart = buildTopProductsChart(metrics.topProducts);
-    this.cashFlowChart = this.showCash ? buildCashFlowChart(metrics.cash, metrics.salesTotal) : null;
-    this.moneyChart = this.showCash ? buildMoneySummaryChart(metrics.cash, metrics.salesTotal) : null;
+    this.sold = soldCount(metrics);
+    this.products = productShares(metrics.topProducts.slice(0, 5));
   }
 
   countFor(map: Record<string, number>, key: string): number {
     return map[key] ?? 0;
+  }
+
+  /** Porcentaje de la venta del día que aporta cada tipo de pedido. */
+  shareOf(amount: number): number {
+    return this.metrics?.salesTotal ? (amount / this.metrics.salesTotal) * 100 : 0;
+  }
+
+  get cancelled(): number {
+    return this.metrics ? this.countFor(this.metrics.ordersByStatus, 'Cancelada') : 0;
+  }
+
+  /** POS: notas y facturas directas que ya tienen comprobante electrónico. */
+  get invoicedCount(): number {
+    if (!this.metrics) return 0;
+    return this.countFor(this.metrics.ordersByStatus, 'Facturada') + this.countFor(this.metrics.ordersByStatus, 'Factura directa');
+  }
+
+  get hasSaleTypes(): boolean {
+    return !!this.metrics && SALE_TYPES.some((type) => this.countFor(this.metrics!.salesByType, type.key) > 0);
   }
 }

@@ -13,6 +13,7 @@ import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabi
 import { AlertService } from '../../../../../core/services/alert.service';
 import { PwaService } from '../../../../../core/services/pwa.service';
 import { NewOrderAlertService } from 'src/app/services/new-order-alert.service';
+import { PrintStationService } from 'src/app/services/print-station.service';
 
 interface ProfileItem {
   title: string;
@@ -55,6 +56,7 @@ export class ProfileMenuComponent implements OnInit {
   private utilsService = inject(UtilsService);
   public pwa = inject(PwaService);
   public orderAlerts = inject(NewOrderAlertService);
+  public station = inject(PrintStationService);
 
   ambiente$ = this.utilsService.ambiente$;
 
@@ -143,6 +145,12 @@ export class ProfileMenuComponent implements OnInit {
 
   public toggleMenu(): void {
     this.isOpen = !this.isOpen;
+  }
+
+  /** La ventana la pinta el layout, fuera del menú (que se oculta al cerrarse). */
+  public openPrintStation(): void {
+    this.isOpen = false;
+    this.station.openSettings();
   }
 
   public logout() {

@@ -16,6 +16,7 @@ import { PosSaleService } from 'src/app/services/pos-sale.service';
 import { InvoicesService } from 'src/app/services/invoices.service';
 import { InvoiceCollectionsService } from 'src/app/services/invoice-collections.service';
 import { PrintService } from 'src/app/services/print.service';
+import { PrintStationService } from 'src/app/services/print-station.service';
 import { ProductsService } from 'src/app/services/products.service';
 import { environment } from 'src/environments/environment';
 import { CartService } from '../services/cart.service';
@@ -130,6 +131,7 @@ export class PosCajaComponent implements OnInit, OnDestroy {
     private collectionsService: InvoiceCollectionsService,
     private spinner: NgxSpinnerService,
     private printService: PrintService,
+    public printStation: PrintStationService,
     public cartService: CartService,
     public alertService: AlertService,
     private capabilities: CompanyCapabilitiesService,
@@ -798,18 +800,33 @@ export class PosCajaComponent implements OnInit, OnDestroy {
 
     if (!this.pendingOrderId) return;
 
+    const orderId = this.pendingOrderId;
+    // Con impresora de comandas en este equipo (QZ Tray) la comanda va a cocina y el
+    // documento del cliente sale aparte; sin ella, todo por la ventana de siempre.
+    const toKitchen = this.printStation.configured && (option === 'comanda' || option === 'ambas');
+    if (toKitchen) {
+      if (option === 'ambas') {
+        this.openPrintWindow(this.pendingInvoiceId
+          ? this.printService.getSalesInvoiceTicket(this.pendingInvoiceId)
+          : this.printService.getRecibo(orderId));
+      }
+      this.printStation.printComanda(orderId, false, () => this.openPrintWindow(this.printService.getComanda(orderId)));
+      if (this.pendingInvoiceId && option === 'ambas') this.finishPrintFlow();
+      return;
+    }
+
     if (this.pendingInvoiceId && option !== 'comanda') {
       const invoicePath = option === 'ambas'
-        ? this.printService.getOrderPdf(this.pendingOrderId)
+        ? this.printService.getOrderPdf(orderId)
         : this.printService.getSalesInvoiceTicket(this.pendingInvoiceId);
       this.openPrintWindow(invoicePath);
       this.finishPrintFlow();
       return;
     }
 
-    if (option === 'comanda') this.openPrintWindow(this.printService.getComanda(this.pendingOrderId));
-    if (option === 'recibo') this.openPrintWindow(this.printService.getRecibo(this.pendingOrderId));
-    if (option === 'ambas') this.openPrintWindow(this.printService.getOrderPdf(this.pendingOrderId));
+    if (option === 'comanda') this.openPrintWindow(this.printService.getComanda(orderId));
+    if (option === 'recibo') this.openPrintWindow(this.printService.getRecibo(orderId));
+    if (option === 'ambas') this.openPrintWindow(this.printService.getOrderPdf(orderId));
 
   }
 

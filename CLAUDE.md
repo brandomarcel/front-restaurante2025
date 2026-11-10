@@ -86,7 +86,8 @@ Colores y tema (`src/styles.css`, `ThemeService`):
 - Tema por defecto «facturada»: azul de la marca `#2E3A8C` (en oscuro `#8B98F7`) y neutros con tinte marino. Los otros
   colores (`violet`, `blue`…) solo cambian el principal; no hay selector en pantalla. `ThemeService` pasa una vez a
   «facturada» a quien tenía `violet` guardado (marca `theme_palette` en `localStorage`).
-- Gráficos ApexCharts: colores con `themeColor()` de `dashboard-charts.ts`, que lee las variables del tema.
+- Sin gráficos ApexCharts desde 2026-11-09 (el dashboard usa barras simples con tokens). La librería sigue en
+  `package.json`/`angular.json` sin uso; si vuelve un gráfico, sus colores deben leer las variables del tema.
 - Azul marino `#1B1F3A` y ámbar `#FFB020` fijos solo en piezas de marca: login, panel del registro, logos y la carta
   pública (que tiene su propia paleta `--pm-*`).
 - Los colores fijos que quedan son a propósito: capas oscuras detrás de ventanas, encabezados oscuros, degradados de los
@@ -293,8 +294,26 @@ Funciones:
 
 - Quien cobra (`billing.create`) recibe en cualquier pantalla un aviso sonoro y un toast con «Imprimir
   comanda» cuando otra persona crea una orden (`NewOrderAlertService`). La comanda también se imprime
-  desde cada orden abierta de Órdenes en vivo (botón de impresora). «Imprimir comandas solas» (menú del perfil, por equipo) la
-  manda sin ventana; sin diálogo solo con Chrome `--kiosk-printing` y la térmica como predeterminada.
+  desde cada orden abierta de Órdenes en vivo (botón de impresora).
+
+## Impresora de comandas en cocina (QZ Tray)
+
+- Un equipo con QZ Tray (gratis, certificado propio, sin licencia) manda la comanda directo a la térmica de cocina por
+  red (IP:9100) o instalada (USB), sin diálogo. Menú del perfil ▸ «Impresoras de este equipo» (Caja y Cocina; el mesero
+  no): «Normal» (ventana del navegador, lo de siempre) o «Directo a cocina con QZ Tray» (impresora, «Imprimir comandas
+  solas», «Imprimir sin tildes», prueba y descarga del certificado `override.crt`). En «Normal» se conserva la impresora
+  guardada. Se guarda por equipo (`facturada.printstation`, campo `enabled`); activarla en un solo equipo.
+- Con «Imprimir comandas solas» sale cada pedido nuevo y cada lote agregado, también los que crea la propia Caja; una
+  sola vez aunque haya varias pestañas. Los botones «Imprimir comanda» usan QZ si el equipo tiene impresora de comandas
+  (si falla, «Imprimir con diálogo»); el recibo y la factura siguen por la ventana de siempre. En el POS, con impresión
+  automática, «Comanda» pasa a «Reimprimir comanda» y no hay «Ambas».
+- La comanda va en ESC/POS (`get_kitchen_ticket_escpos`, sin precios, con «SIN: …» de la receta); cada llamada de QZ
+  va firmada por el backend (`api/qz_tray.py`). El modo kiosco de Chrome se descartó (2026-11-09).
+- Equipo apagado, QZ cerrado o sin internet = la comanda no sale sola; se reimprime desde la orden.
+- Desk (System Manager): FacturADA Business ▸ «Impresora de cocina (QZ Tray)»: certificado del servidor (generar,
+  descargar `override.crt`, regenerar con aviso) y los equipos del negocio (nombre, usuario, Normal/Directo, impresora,
+  última comanda, último error, visto), con aviso si dos imprimen solos. Cada equipo lo informa al guardar, al abrir la
+  app y en cada comanda (DocType «FacturADA Restaurant Print Station», solo lectura). «Nombre de este equipo» es opcional.
 
 ## Planes y módulos por negocio
 
@@ -320,6 +339,22 @@ Funciones:
 - Regla crítica: ante códigos SRI 43/70 solo se permite *consultar*, nunca reemitir
   el mismo comprobante (`lite-invoice-actions.ts`)
 - Datos tributarios: RUC, régimen, agente de retención, obligado a llevar contabilidad
+
+## Dashboard (`/dashboard/main`)
+
+- Responde en orden: cómo va el día, qué necesita atención y el detalle. Cabecera con logo y nombre del negocio, de qué
+  trata el panel y el estado de caja y firma (texto con punto de color, sin banda con degradado).
+- «Necesita tu atención» (`dashboard-attention.ts`): una sola lista, cada punto con su botón según permiso: firma
+  (falta, vencida, vence en ≤ 30 días), plan (sin plan, inactivo, agotado, vence en ≤ 7 días), facturas rechazadas y en
+  proceso del **mes en curso** («Ver rechazadas» abre Facturas con `?estado=Rechazada`), caja sin abrir e inventario
+  bajo. Sin pendientes: «Todo en orden», solo cuando terminó de cargar.
+- Restaurante/POS: «Vendido hoy» en grande (restaurante: solo órdenes cerradas, como suma el backend), pedidos, ticket
+  promedio (restaurante: venta ÷ órdenes cerradas) y en curso (POS: con factura). «Tu caja» es un ticket con el cuadre
+  de la caja **de quien mira**: fondo + cobrado en efectivo (código `01`) − retiros = debe haber (`expected_cash`), las
+  otras formas de pago aparte y botones Abrir / Registrar retiro / Cerrar caja. «Lo más vendido hoy» (5, barras) y
+  por tipo de pedido; «Órdenes de hoy» por etapa. No hay calificaciones automáticas (ritmo, ticket bajo, mix).
+- Facturación: «Comprobantes electrónicos del mes» con selector de mes, Facturado / Cobrado / Autorizadas / En proceso /
+  Rechazadas y una fila del plan; Lite y API suman «Últimas facturas» (cada una abre su detalle).
 
 ## Reportes
 

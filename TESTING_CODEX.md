@@ -319,8 +319,23 @@ restaurante con `tables` y/o `kitchen` apagados. Probar en navegador un RESTO_BA
 Mesero/Cocina ni por órdenes propias, canceladas o repetidas; `openComanda` bloqueado por el navegador
 muestra error; botón «Imprimir comanda» en tarjeta y tabla de «Nuevas». Prueba manual con dos
 sesiones (mesero crea, cajero ve y oye el aviso).
-Impresión automática: `printComandaHidden` (marco oculto que se elimina a los 30 s), interruptor
-`autoPrint` por equipo, toast «Reimprimir». Prueba manual con Chrome `--kiosk-printing` y la térmica real.
+La impresión automática por kiosco ya no existe (2026-11-09): ver «impresora de comandas con QZ Tray».
+
+## Pendiente de pruebas: impresora de comandas con QZ Tray (2026-11-09)
+
+Backend (Restaurante): `kitchen_escpos.build_kitchen_ticket` (sin precios; anulados fuera; adicional = último lote;
+«SIN:» con nombres; mesa sin «MESA Mesa…» doble; cliente para llevar), `get_kitchen_ticket_escpos` (otro negocio →
+PermissionError; adicional sin lote → error), `qz_tray.sign_qz_request` (solo 64 hex; exige `restaurant.orders.read`
+del negocio; la firma valida con el certificado), `generate_qz_certificate` (no reemplaza sin `force`),
+`report_print_station` (crea o actualiza por negocio + equipo; rechaza Mesero, otro negocio, `device_id` y evento
+inválidos; `printed` solo enlaza órdenes del negocio), `get_print_station_overview` y `desk_generate_qz_certificate`
+(solo System Manager). Para probar en
+un sitio sin certificado, generarlo antes y no tocar el `site_config` de otros sitios.
+Front: `PrintStationService` (`available` sin Mesero; `isValidTarget`; `configured` falso en «Normal» aunque haya
+impresora; lectura de lo guardado sin `enabled`; `claim` imprime una sola vez por clave;
+`printComanda` sin impresora llama al fallback), `NewOrderAlertService` (con impresión automática imprime pedidos propios
+y en Cocina; sin ella no cambia el aviso), `pos-print-modal` con `kitchenSent`. Manual: QZ Tray + térmica real por IP y
+por USB, «Imprimir prueba», tildes, corte y una sola comanda con dos pestañas abiertas.
 
 ## Pendiente de pruebas: cierre administrativo de órdenes (2026-10-28)
 
@@ -429,6 +444,26 @@ sin acciones de cocina sin `kitchen`, botón deshabilitado con `pendingOrderName
   el mensaje y no cambia el perfil.
 - Front `company.component`: con `isDemo`, botón «Producción» deshabilitado, nota visible, `onLiteEnvironmentSelected`
   y `saveLiteEnvironment` no cambian a Producción; `cambiarAmbiente` (clásico) revierte el check sin llamar al servicio.
+
+## Pendiente de pruebas: dashboard rediseñado (2026-11-09)
+
+- `dashboard-attention.ts` (`buildAttentionItems`): vacío para service/kitchen/none; firma falta/vencida/≤ 30 días
+  (acción solo con `manageSettings`); plan sin plan/inactivo/agotado/por vencer solo con `showPlan`; rechazadas y en
+  proceso con su enlace (`estado=Rechazada`) solo con `readInvoices`; caja cerrada con «Abrir caja» solo con
+  `openCash`; stock (agotados → danger, solo bajo → warning); singular/plural de los títulos; orden de la lista.
+- `operations-metrics.ts`: `soldCount`/`averageTicket` (restaurante divide entre `Cerrada`, POS entre todas; 0 sin
+  ventas), `cashBreakdown` (efectivo = código `01`, otras formas aparte sin montos 0, total cobrado),
+  `productShares` (100 al más vendido, 0 si todo es 0), y `normalizeOperationsMetrics` con `total` y `payment_code`.
+- Componentes: `AttentionListComponent` («Todo en orden» solo con `showAllClear`), `CashTicketComponent` (abierta con
+  cuadre y botones según `canOperate`; cerrada con «Abrir caja»), `OperationsPanelComponent` (restaurante vs POS:
+  «En curso» o «Con factura», etapas y cancelados), `BillingKpisComponent` («Ver y corregir» solo con rechazadas y
+  permiso), `RecentInvoicesComponent` (fila enlazada solo con `canOpen` e id), `PlanUsageCardComponent`.
+- `DashboardHomeComponent`: rechazadas/en proceso de «Necesita tu atención» solo con el mes en curso; `attentionSettled`
+  falso mientras carga; las pruebas existentes siguen apuntando a `#billing-month`, `#billing-year`,
+  `[aria-label="Período de comprobantes"]`, «Comprobantes electrónicos del mes» y «Firma: …».
+- `InvoicesComponent`: `?estado=Rechazada` aplica el filtro; un estado desconocido se ignora.
+- Se borró `utils/dashboard-alerts.spec.ts` (su función ya no existe) y en `operations-metrics.spec.ts` los bloques de
+  calificaciones e insights; lo esperado de `normalizeOperationsMetrics` suma `total` y `code`.
 
 ## Pendiente de pruebas: decimales y toasts (2026-11-09)
 

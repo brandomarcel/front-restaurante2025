@@ -41,7 +41,8 @@
             ],
             "allowedCommonJsDependencies": [
               "apexcharts",
-              "sweetalert2"
+              "sweetalert2",
+              "qz-tray"
             ],
             "browser": "src/main.ts"
           },
