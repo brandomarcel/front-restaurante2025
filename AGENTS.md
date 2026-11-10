@@ -117,7 +117,9 @@ ambas activas a la vez.
 ## FacturADA Lite (facturador)
 
 Funciones:
-- Facturación directa y notas de crédito (`invoicing`, `invoices`, `credit-notes`)
+- Facturación directa y notas de crédito (`invoicing`, `invoices`, `credit-notes`). La lista de Facturas filtra por
+  búsqueda (en el servidor), estado y fecha de emisión (Desde/Hasta y atajos Hoy, Este mes, Mes pasado); los filtros y
+  la página quedan en la dirección (`?estado=&q=&desde=&hasta=&pagina=`). `Autorizada` excluye las anuladas.
 - Punto de venta genérico y notas de venta (`pos-generic`, `pos-sale-notes`)
 - Configuración tributaria: establecimientos, puntos de emisión, secuencias,
   certificado electrónico, terminales POS (`settings/lite/*`)
@@ -267,7 +269,8 @@ Funciones:
 - Regla crítica: ante códigos SRI 43/70 solo se permite *consultar*, nunca reemitir
   el mismo comprobante (`lite-invoice-actions.ts`)
 - Anular una factura autorizada que el negocio **ya anuló en el portal del SRI** (desde 2026-11-10): detalle de la
-  factura ▸ «Anular» ▸ «Ya la anulé en el SRI» (o el botón del lateral «Anular factura»). Fecha de la anulación en el
+  factura ▸ tarjeta lateral «Anular factura» (único lugar para anular: «Anular con nota de crédito» y «Ya la anulé en el
+  SRI», con su explicación y el motivo si está bloqueado; el encabezado no tiene botón «Anular»). Fecha de la anulación en el
   SRI (entre la emisión y hoy), motivo, referencia opcional y la casilla «Confirmo que ya está anulada en el portal del
   SRI». No envía nada al SRI: la factura queda «Anulada en el SRI», sale de ventas y reportes, conserva su autorización
   y muestra quién, cuándo y por qué. Solo Administrador y Gerente (`billing.void`). Vuelve al inventario lo que salió
@@ -283,7 +286,7 @@ Funciones:
   trata el panel y el estado de caja y firma (texto con punto de color, sin banda con degradado).
 - «Necesita tu atención» (`dashboard-attention.ts`): una sola lista, cada punto con su botón según permiso: firma
   (falta, vencida, vence en ≤ 30 días), plan (sin plan, inactivo, agotado, vence en ≤ 7 días), facturas rechazadas y en
-  proceso del **mes en curso** («Ver rechazadas» abre Facturas con `?estado=Rechazada`), caja sin abrir e inventario
+  proceso del **mes en curso** («Ver rechazadas» abre Facturas con `?estado=Rechazada&desde=<1 del mes>&hasta=<hoy>`), caja sin abrir e inventario
   bajo. Sin pendientes: «Todo en orden», solo cuando terminó de cargar.
 - Restaurante/POS: «Vendido hoy» en grande (restaurante: solo órdenes cerradas, como suma el backend), pedidos, ticket
   promedio (restaurante: venta ÷ órdenes cerradas) y en curso (POS: con factura). «Tu caja» es un ticket con el cuadre

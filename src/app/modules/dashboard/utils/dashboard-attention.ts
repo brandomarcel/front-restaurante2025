@@ -1,5 +1,6 @@
 import { AttentionItem, DashboardView, PlanSummary, SignatureStatus } from '../dashboard.models';
 import { planExpiringSoon } from './plan-summary';
+import { datePresetRange } from 'src/app/shared/utils/date-presets';
 
 /** Ruta de cada pantalla destino; el permiso se decide antes de llamar a `buildAttentionItems`. */
 export const ATTENTION_ROUTES = {
@@ -92,7 +93,8 @@ export function buildAttentionItems(input: AttentionInput): AttentionItem[] {
       tone: 'danger',
       title: input.rejected === 1 ? '1 factura rechazada por el SRI este mes' : `${input.rejected} facturas rechazadas por el SRI este mes`,
       detail: 'Revisa el motivo y corrígela.',
-      action: can.readInvoices ? { label: 'Ver rechazadas', route: ATTENTION_ROUTES.invoices, queryParams: { estado: 'Rechazada' } } : undefined
+      // Mismo período que cuenta el panel (mes en curso), para que la lista muestre el mismo número.
+      action: can.readInvoices ? { label: 'Ver rechazadas', route: ATTENTION_ROUTES.invoices, queryParams: rejectedQuery() } : undefined
     });
   }
 
@@ -133,4 +135,10 @@ export function buildAttentionItems(input: AttentionInput): AttentionItem[] {
   }
 
   return items;
+}
+
+/** Filtro de Facturas para «Ver rechazadas»: rechazadas del mes en curso. */
+function rejectedQuery(): { estado: string; desde: string; hasta: string } {
+  const month = datePresetRange('month');
+  return { estado: 'Rechazada', desde: month.from, hasta: month.to };
 }

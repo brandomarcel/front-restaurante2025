@@ -52,8 +52,6 @@ export class InvoiceDetailPageComponent implements OnInit {
     'Otro'
   ];
   showMotivoModal = false;
-  /** Elegir entre nota de crédito y «Ya la anulé en el SRI» cuando ambas están disponibles. */
-  showAnnulChoice = false;
   showSriAnnulment = false;
   liteActionRunning = false;
   emailActionRunning = false;
@@ -508,19 +506,6 @@ export class InvoiceDetailPageComponent implements OnInit {
   }
   closeMotivo() { this.showMotivoModal = false; }
 
-  /** «Anular» del encabezado: nota de crédito, registro de la anulación hecha en el SRI, o elegir. */
-  openAnnul(): void {
-    if (this.canAnnul && this.canRegisterSriAnnulment) this.showAnnulChoice = true;
-    else if (this.canAnnul) this.openMotivo();
-    else if (this.canRegisterSriAnnulment) this.openSriAnnulment();
-  }
-
-  chooseAnnulment(kind: 'credit-note' | 'sri'): void {
-    this.showAnnulChoice = false;
-    if (kind === 'credit-note') this.openMotivo();
-    else this.openSriAnnulment();
-  }
-
   openSriAnnulment(): void { this.showSriAnnulment = true; }
 
   onSriAnnulled(): void {
@@ -610,7 +595,6 @@ export class InvoiceDetailPageComponent implements OnInit {
   @HostListener('document:keydown.escape')
   onEsc() {
     if (this.showMotivoModal) this.closeMotivo();
-    this.showAnnulChoice = false;
     // El diálogo de anulación en el SRI maneja su propio Escape (no se cierra mientras guarda).
   }
 
@@ -696,6 +680,7 @@ export class InvoiceDetailPageComponent implements OnInit {
     return !!this.sriAnnulment?.available && !this.isCancelled;
   }
 
+  /** La tarjeta lateral «Anular factura» es el único lugar para anular. */
   get canShowAnnul(): boolean {
     return this.canAnnul || this.canRegisterSriAnnulment;
   }

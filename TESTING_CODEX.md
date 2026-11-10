@@ -320,6 +320,22 @@ Core `api/plans.py` y `effective_features`: cada plan del catálogo (roles y fea
 restaurante con `tables` y/o `kitchen` apagados. Probar en navegador un RESTO_BASICO: POS, Lista de
 órdenes y cobro sin Mesas ni Cocina.
 
+## Pendiente de pruebas: filtros de la lista de Facturas (2026-11-10)
+
+Backend Lite (`list_invoices`, `get_all_invoices`, `get_all_credit_notes`):
+- `search` encuentra por número, cliente, cédula/RUC, clave de acceso e ID en cualquier página; `total` y paginación
+  cuentan solo lo encontrado; `%` y `_` se buscan literales; combinado con estado y fechas.
+- `from_date`/`to_date` por `posting_date` (inclusive); `from_date > to_date` lanza error.
+- `status=Autorizada` (Factura) excluye `status=Anulada`, `docstatus=2` y NC total; cada factura cae en un solo
+  estado; en NC el filtro no cambia.
+
+Front:
+- `InvoicesComponent`: lee `estado`, `q`, `desde`, `hasta`, `pagina` de la dirección (descarta estado o fecha
+  inválidos); los escribe con `replaceUrl`; atajos Hoy/Este mes/Mes pasado (fechas locales, `datePresetRange`),
+  «Todas las fechas», aviso de rango invertido sin consultar; `getAllInvoices` recibe el rango solo si hay fechas.
+- `dashboard-attention.spec.ts` (línea 61): ahora `queryParams` = `{ estado: 'Rechazada', desde: <1 del mes>, hasta:
+  <hoy> }` (regla nueva; actualizar la aserción con fecha simulada).
+
 ## Pendiente de pruebas: anulación registrada en el SRI (2026-11-10)
 
 Backend Lite (`facturada_lite.api.invoice_annulment`, módulo nuevo `test_invoice_annulment`; fixtures con rollback):
@@ -341,7 +357,8 @@ Front (specs nuevos de `SriAnnulmentDialogComponent` y del detalle con `Invoices
 - Diálogo: botón deshabilitado sin casilla, sin motivo, con «Otro» sin detalle o con fecha fuera de rango; motivo final
   «Motivo: detalle»; payload de `registerSriAnnulment`; inventario listado o texto de orden/nota; Escape no cierra
   mientras guarda.
-- Detalle: «Anular» abre la elección si hay NC y SRI, solo NC o solo SRI según el caso; lateral con ambos botones;
+- Detalle: sin botón «Anular» en el encabezado; la tarjeta lateral muestra «Anular con nota de crédito» y/o «Ya la
+  anulé en el SRI» según el caso, con su explicación, y el motivo de bloqueo cuando no hay ninguna;
   bloqueo del SRI visible solo con permiso; aviso «Factura anulada en el SRI» con datos; etiqueta «Anulada en el SRI».
 
 ## Pendiente de pruebas: renovación, cambio de plan e historial (2026-11-10)

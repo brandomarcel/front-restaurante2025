@@ -9,6 +9,21 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-10 (Claude, filtros de Facturas): revisión pedida por el usuario.
+  - Fallas corregidas: el buscador solo filtraba la página visible (el backend ignoraba `search`), así que una factura
+    vieja no aparecía; y «Autorizada» incluía las anuladas con nota de crédito (salían también en «Anulada»).
+  - Backend Lite: `list_invoices` acepta `search` (número, cliente, cédula/RUC, clave, ID; comodines escapados),
+    `from_date`/`to_date` (fecha de emisión, rango invertido rechazado), antes de contar y paginar; `Autorizada` de
+    facturas excluye `cancelled_invoice_condition`. `get_all_invoices` y `get_all_credit_notes` los reciben (las NC ya
+    enviaban `search`: también quedó arreglado ahí).
+  - Front: Desde/Hasta con atajos (Hoy, Este mes, Mes pasado, Todas las fechas), filtros y página en la dirección
+    (`?estado=&q=&desde=&hasta=&pagina=`, `replaceUrl`), utilidad `shared/utils/date-presets.ts`; «Ver rechazadas» del
+    Dashboard abre las del mes en curso (el panel cuenta ese mes). A pedido del usuario no se agregaron «Por cobrar»
+    ni Pruebas/Producción.
+  - Verificado en el piloto (búsqueda de una factura de la página 2, cliente, comodines, fechas, estados sin
+    repetidos). Build OK; lint 19 heredados. Specs de Codex que cambian de regla: `dashboard-attention.spec.ts` línea
+    61 espera `{ estado: 'Rechazada' }` y ahora lleva `desde`/`hasta`; no se tocó la aserción.
+
 - 2026-11-10 (Claude, anulación en el SRI): registrar en el sistema una factura autorizada que el negocio ya anuló
   en el portal del SRI (pedido de clientes; decisiones del usuario: solo autorizadas ya anuladas en el SRI,
   Administrador y Gerente, la orden queda cerrada).
@@ -17,7 +32,8 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
     `sri_annulment` (disponible, permitido, motivo de bloqueo, lo que vuelve al inventario). Core: permiso
     `billing.void` (Gerente; Administrador por `*`). Detalle en el `ESTADO.md` de Lite.
   - Front: `pages/invoice-detail-page/sri-annulment-dialog/` (fecha, motivo, referencia, inventario y confirmación),
-    «Anular» del encabezado elige entre nota de crédito y «Ya la anulé en el SRI», lateral «Anular factura» con ambos,
+    la tarjeta lateral «Anular factura» es el único lugar para anular (con nota de crédito o «Ya la anulé en el SRI»;
+    a pedido del usuario se quitó el botón «Anular» del encabezado y su ventana de elegir, que confundían),
     aviso «Factura anulada en el SRI» con motivo, quién, cuándo, referencia e inventario; etiqueta «Anulada en el SRI»
     (`invoiceCancellationLabel`). `InvoicesService.registerSriAnnulment`.
   - Verificado en el piloto con script y rollback (validaciones, Cajero bloqueado, stock devuelto a la bodega, NC y no

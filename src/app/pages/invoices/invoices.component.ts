@@ -1,17 +1,20 @@
 import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Params, Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { toast } from 'ngx-sonner';
 import { ButtonComponent } from 'src/app/shared/components/button/button.component';
-import { InvoicesService } from 'src/app/services/invoices.service';
+import { InvoiceDateRange, InvoicesService } from 'src/app/services/invoices.service';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
 import { ElectronicStatusBadgeComponent } from 'src/app/shared/components/electronic-status-badge/electronic-status-badge.component';
 import { ListStateComponent } from 'src/app/shared/components/list-state/list-state.component';
 import { ELECTRONIC_STATUS_FILTERS, electronicStatusFilterOptions, isCancelledInvoice } from 'src/app/core/utils/electronic-document';
 import { debouncedCallback } from 'src/app/shared/utils/debounced-callback';
+import { DatePreset, datePresetRange } from 'src/app/shared/utils/date-presets';
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 @Component({
   selector: 'app-invoices',
@@ -32,6 +35,14 @@ export class InvoicesComponent implements OnInit {
 
   _search = '';
   statusFiltro = '';
+  /** Fecha de emisión `YYYY-MM-DD` (vacío = sin límite). */
+  fromDate = '';
+  toDate = '';
+  readonly datePresets: { id: DatePreset; label: string }[] = [
+    { id: 'today', label: 'Hoy' },
+    { id: 'month', label: 'Este mes' },
+    { id: 'lastMonth', label: 'Mes pasado' },
+  ];
 
   private readonly searchBackend: () => void;
   private request?: Subscription;
@@ -40,7 +51,8 @@ export class InvoicesComponent implements OnInit {
     private svc: InvoicesService,
     public capabilities: CompanyCapabilitiesService,
     destroyRef: DestroyRef,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private router: Router
   ) {
     this.searchBackend = debouncedCallback(destroyRef, () => {
       this.page = 1;
@@ -50,9 +62,18 @@ export class InvoicesComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // El dashboard enlaza aquí ya filtrado (`?estado=Rechazada`); solo se aceptan estados conocidos.
-    const estado = this.route.snapshot.queryParamMap.get('estado') || '';
+    // Los filtros viven en la dirección (`?estado=&q=&desde=&hasta=&pagina=`): al volver del detalle la lista sigue
+    // igual, y el dashboard enlaza ya filtrado. Solo se aceptan estados y fechas válidos.
+    const query = this.route.snapshot.queryParamMap;
+    const estado = query.get('estado') || '';
     if ((ELECTRONIC_STATUS_FILTERS as readonly string[]).includes(estado)) this.statusFiltro = estado;
+    this._search = (query.get('q') || '').slice(0, 100);
+    const desde = query.get('desde') || '';
+    const hasta = query.get('hasta') || '';
+    if (ISO_DATE.test(desde)) this.fromDate = desde;
+    if (ISO_DATE.test(hasta)) this.toDate = hasta;
+    const pagina = Number(query.get('pagina'));
+    if (Number.isInteger(pagina) && pagina > 1) this.page = pagina;
     this.loadInvoices();
   }
 
@@ -60,8 +81,12 @@ export class InvoicesComponent implements OnInit {
     // Cancela la petición anterior para que una respuesta lenta no pise un filtro más reciente.
     this.request?.unsubscribe();
     this.loading = true;
+    this.syncUrl();
     const offset = (this.page - 1) * this.pageSize;
-    this.request = this.svc.getAllInvoices(this.pageSize, offset, this.statusFiltro || undefined, this._search).subscribe({
+    const dates = this.dateRange;
+    const args: Parameters<InvoicesService['getAllInvoices']> = [this.pageSize, offset, this.statusFiltro || undefined, this._search];
+    if (dates) args.push(dates);
+    this.request = this.svc.getAllInvoices(...args).subscribe({
       next: (res: any) => {
         const msg = res.message || res;
         this.invoices = msg.data || [];
@@ -92,7 +117,46 @@ export class InvoicesComponent implements OnInit {
   }
 
   get hasActiveFilters(): boolean {
-    return !!this._search.trim() || !!this.statusFiltro;
+    return !!this._search.trim() || !!this.statusFiltro || !!this.fromDate || !!this.toDate;
+  }
+
+  /** Rango para el backend; `undefined` sin fechas. */
+  get dateRange(): InvoiceDateRange | undefined {
+    if (!this.fromDate && !this.toDate) return undefined;
+    return { ...(this.fromDate ? { from: this.fromDate } : {}), ...(this.toDate ? { to: this.toDate } : {}) };
+  }
+
+  get dateError(): string {
+    return this.fromDate && this.toDate && this.fromDate > this.toDate ? '«Desde» es posterior a «Hasta».' : '';
+  }
+
+  /** Atajo que coincide con las fechas elegidas, para resaltarlo. */
+  get activePreset(): DatePreset | null {
+    if (!this.fromDate || !this.toDate) return null;
+    const match = this.datePresets.find(({ id }) => {
+      const range = datePresetRange(id);
+      return range.from === this.fromDate && range.to === this.toDate;
+    });
+    return match?.id ?? null;
+  }
+
+  applyPreset(preset: DatePreset): void {
+    const range = datePresetRange(preset);
+    this.fromDate = range.from;
+    this.toDate = range.to;
+    this.onDatesChange();
+  }
+
+  clearDates(): void {
+    this.fromDate = '';
+    this.toDate = '';
+    this.onDatesChange();
+  }
+
+  onDatesChange(): void {
+    if (this.dateError) return;
+    this.page = 1;
+    this.loadInvoices();
   }
 
   get statusOptions(): { value: string; label: string }[] {
@@ -127,6 +191,8 @@ export class InvoicesComponent implements OnInit {
   limpiarFiltros(): void {
     this._search = '';
     this.statusFiltro = '';
+    this.fromDate = '';
+    this.toDate = '';
     this.page = 1;
     this.loadInvoices();
   }
@@ -141,6 +207,21 @@ export class InvoicesComponent implements OnInit {
     this.pageSize = size;
     this.page = 1;
     this.loadInvoices();
+  }
+
+  /** Refleja los filtros en la dirección sin agregar entradas al historial. */
+  private syncUrl(): void {
+    const queryParams: Params = {
+      estado: this.statusFiltro || null,
+      q: this._search.trim() || null,
+      desde: this.fromDate || null,
+      hasta: this.toDate || null,
+      pagina: this.page > 1 ? this.page : null,
+    };
+    const current = this.route.snapshot.queryParamMap;
+    const same = Object.entries(queryParams).every(([key, value]) => (current.get(key) ?? null) === (value === null ? null : String(value)));
+    if (same) return;
+    this.router.navigate([], { relativeTo: this.route, queryParams, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
   trackByName(_: number, invoice: any): string {

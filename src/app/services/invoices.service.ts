@@ -11,6 +11,11 @@ import { normalizeLiteEmissionResponse } from '../core/utils/lite-invoice-emissi
 import { parseLocalizedDecimal } from '../shared/utils/decimal.utils';
 import { isCreditNoteDocument } from '../core/utils/electronic-document';
 
+export interface InvoiceDateRange {
+  from?: string;
+  to?: string;
+}
+
 export interface SriAnnulmentStockRow {
   item: string;
   item_name: string;
@@ -139,13 +144,16 @@ export class InvoicesService {
     return this.retryLiteInvoice(invoice_name);
   }
 
-  getAllInvoices(limit: number = 10, offset: number = 0, status?: string, search = '') {
+  /** `dates`: rango de fecha de emisión (`YYYY-MM-DD`); la búsqueda y las fechas se aplican en el backend. */
+  getAllInvoices(limit: number = 10, offset: number = 0, status?: string, search = '', dates?: InvoiceDateRange) {
   const pageSize = Math.max(1, Number(limit) || 10);
   let params = new HttpParams()
     .set('limit', pageSize.toString())
     .set('offset', offset.toString());
   if (status) params = params.set('status', this.normalizeLiteStatusFilter(status));
   if (search.trim()) params = params.set('search', search.trim());
+  if (dates?.from) params = params.set('from_date', dates.from);
+  if (dates?.to) params = params.set('to_date', dates.to);
   const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId');
   if (business) params = params.set('business', business);
 

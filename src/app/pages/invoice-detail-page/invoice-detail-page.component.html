@@ -40,13 +40,8 @@
         </div>
       </div>
 
-      <div *ngIf="documentActions.length || canShowAnnul" class="hidden flex-wrap items-center gap-1.5 md:flex">
+      <div *ngIf="documentActions.length" class="hidden flex-wrap items-center gap-1.5 md:flex">
         <app-document-actions [actions]="documentActions" />
-        <ng-container *ngIf="canShowAnnul">
-          <span class="mx-1 h-5 w-px bg-border" aria-hidden="true"></span>
-          <button type="button" class="btn btn-outline !border-danger-300 !px-3 !py-1.5 !text-[11px] !text-danger-700"
-            (click)="openAnnul()" [title]="canAnnul ? 'Anular la factura' : 'Registrar la anulación hecha en el SRI'">Anular</button>
-        </ng-container>
       </div>
     </div>
   </header>
@@ -416,8 +411,9 @@
             (click)="openMotivo()">Anular con nota de crédito</button>
           <button *ngIf="canRegisterSriAnnulment" type="button" class="btn btn-outline w-full !py-1.5 !text-[11px]"
             (click)="openSriAnnulment()">Ya la anulé en el SRI</button>
-          <p *ngIf="canRegisterSriAnnulment" class="text-[11px] text-muted-foreground">
-            «Ya la anulé en el SRI» solo la registra aquí; no envía nada al SRI.
+          <p *ngIf="canShowAnnul" class="text-[11px] text-muted-foreground">
+            <ng-container *ngIf="canAnnul">La nota de crédito se emite al SRI por el total.</ng-container>
+            <ng-container *ngIf="canRegisterSriAnnulment"> «Ya la anulé en el SRI» solo la registra aquí; no envía nada al SRI.</ng-container>
           </p>
           <p *ngIf="!canShowAnnul && annulBlockReason" class="rounded-lg bg-warning-50 px-2.5 py-2 text-[11px] text-warning-800">
             {{ annulBlockReason }}
@@ -472,32 +468,6 @@
         <button type="submit" class="btn btn-primary !px-3 !py-1.5 !text-[11px]">Emitir nota de crédito</button>
       </div>
     </form>
-  </div>
-</div>
-
-<div *ngIf="showAnnulChoice" class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 backdrop-blur-sm sm:items-center sm:p-3"
-  role="dialog" aria-modal="true" aria-labelledby="annul-choice-title" (click)="showAnnulChoice = false">
-  <div class="w-full max-w-md rounded-t-3xl border border-border bg-card p-5 shadow-2xl sm:rounded-2xl" (click)="$event.stopPropagation()">
-    <div class="mb-3 flex items-start justify-between gap-3">
-      <div class="min-w-0">
-        <h3 id="annul-choice-title" class="text-lg font-black text-foreground">Anular factura</h3>
-        <p class="text-sm text-muted-foreground">Factura {{ invoiceNumber }}</p>
-      </div>
-      <button type="button" class="h-9 w-9 shrink-0 rounded-lg border border-border text-muted-foreground hover:bg-muted"
-        (click)="showAnnulChoice = false" aria-label="Cerrar">✕</button>
-    </div>
-    <div class="space-y-2">
-      <button type="button" class="w-full rounded-xl border border-border px-4 py-3 text-left transition hover:border-primary hover:bg-primary/5"
-        (click)="chooseAnnulment('credit-note')">
-        <span class="block text-sm font-bold text-foreground">Con nota de crédito</span>
-        <span class="block text-xs text-muted-foreground">Se emite una nota de crédito al SRI por el total de la factura.</span>
-      </button>
-      <button type="button" class="w-full rounded-xl border border-border px-4 py-3 text-left transition hover:border-primary hover:bg-primary/5"
-        (click)="chooseAnnulment('sri')">
-        <span class="block text-sm font-bold text-foreground">Ya la anulé en el portal del SRI</span>
-        <span class="block text-xs text-muted-foreground">Solo se registra aquí: no se envía nada al SRI.</span>
-      </button>
-    </div>
   </div>
 </div>
 
