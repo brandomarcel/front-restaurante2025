@@ -1,6 +1,6 @@
 # Estado del proyecto Facturada
 
-Última actualización: 2026-11-08.
+Última actualización: 2026-11-09.
 
 ## Objetivo Actual
 
@@ -8,6 +8,19 @@ Mantener una memoria breve del progreso y los pendientes sin ampliar `CLAUDE.md`
 El trabajo local observado se concentra en la configuración de desarrollo del frontend Angular y su conexión con Frappe.
 
 ## Últimos Cambios (Hecho)
+
+- 2026-11-09 (Claude): empresa de demostración bloqueada en Pruebas, a pedido del usuario («si la empresa es demo no
+  debe dejar cambiar a producción»). Usa el campo existente `is_demo` de FacturADA Business (solo System Manager).
+  Backend: `ensure_production_allowed` en Core `license.py`, llamado por `enforce_document_limit` (toda emisión en
+  Producción: facturas, NC, guías, Restaurante, API, gym) y por la validación del perfil tributario y del cliente API;
+  marcar demo un negocio que ya está en Producción también se rechaza. `get_lite_setup` devuelve `business.is_demo`.
+  Front (`company.component`): «Producción» desactivada con nota «Empresa de demostración», y los dos caminos de
+  guardado (Lite y clásico) se niegan. Verificado con script contra el piloto (rollback): demo → Producción rechazado
+  en perfil, emisión y cliente API; demo en Pruebas y negocio real en Producción permitidos; marcar demo en Producción
+  rechazado. `ngc --noEmit` OK. **Sin ver en navegador** (pide sesión). Ninguna demo del piloto estaba en Producción;
+  **en producción revisar antes de desplegar** que ninguna demo esté en Producción (al guardar su perfil fallaría hasta
+  volverla a Pruebas). Despliegue: backend (`bench restart`, sin migrate) y luego front. Pruebas para Codex en
+  `TESTING_CODEX.md`.
 
 - 2026-11-08 (Codex, validación): 30 pruebas nuevas de login/selección de negocio (13), tema (4), ticket/identidad del login (6) y etapas/etiquetas de cocina (7), todas aprobadas. Angular completo: 531 ejecutadas, 510 OK y 21 fallas heredadas (checkout inicial: 480 OK/21 fallas, sin regresiones nuevas). Backend: Core 79 + Lite 251 + Restaurante 59 + API 30 = 419 OK, solo facturada_core_simple_test migrado, Redis disponible y HTTP/SMTP reales bloqueados. Desk 7 pruebas navegador OK; login 16 casos responsive con API simulada y captura claro/oscuro. Build optimizado OK (2,57 MB inicial); 4 advertencias de selectores CSS. El fallo DNS inicial de fuentes se resolvió al verificar el build fuera del sandbox de red. No se cambiaron funcionalidades ni se desplegó. Reporte PRUEBAS_CODEX_2026-11-08.md. Pendientes: fixtures heredados y cobertura de componentes/acciones de cocina, anulaciones y catálogo digital que TESTING_CODEX.md aún enumera.
 

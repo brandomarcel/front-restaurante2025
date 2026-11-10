@@ -120,6 +120,8 @@ Funciones:
 - Punto de venta genérico y notas de venta (`pos-generic`, `pos-sale-notes`)
 - Configuración tributaria: establecimientos, puntos de emisión, secuencias,
   certificado electrónico, terminales POS (`settings/lite/*`)
+- Empresa de demostración (`business.is_demo` de `get_lite_setup`): solo Pruebas. «Producción» desactivada en
+  Configuración; el backend rechaza perfil tributario, cliente API y emisión en Producción.
 - Integración por API para negocios que facturan desde un sistema externo (modo "API-only")
 
 ## FacturADA Restaurante (POS de salón)

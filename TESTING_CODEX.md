@@ -407,6 +407,18 @@ carga entregadas; `mobileColumn`. Tabla/tarjeta de Caja: acción siguiente segú
 sin acciones de cocina sin `kitchen`, botón deshabilitado con `pendingOrderNames`/`actionPending`. Modal: etapa con
 `orderStage` (Lista ya no sale «Cerrada»), «Ver orden» para cancelada. `RealtimeOrdersService.mapOne` llena `orderType`.
 
+
+## Pendiente de pruebas: empresa demo solo en Pruebas (2026-11-09)
+
+- Core: `ensure_production_allowed` / `enforce_document_limit(business, 'Produccion')` lanza para `is_demo=1` y no
+  para negocio real ni para Pruebas; perfil tributario demo a Produccion rechazado, a Pruebas permitido; marcar
+  `is_demo` en un negocio con perfil en Produccion rechazado.
+- API: `FacturADA API Client` de un negocio demo con `environment=Produccion` rechazado.
+- Lite: `get_lite_setup` incluye `business.is_demo`; `save_lite_setup` con `environment=Produccion` en demo devuelve
+  el mensaje y no cambia el perfil.
+- Front `company.component`: con `isDemo`, botón «Producción» deshabilitado, nota visible, `onLiteEnvironmentSelected`
+  y `saveLiteEnvironment` no cambian a Producción; `cambiarAmbiente` (clásico) revierte el check sin llamar al servicio.
+
 ## Validado: login rediseñado (2026-11-08)
 
 SignInComponent: 13 casos unitarios cubren validación sin HTTP, mensajes 401/0/429,

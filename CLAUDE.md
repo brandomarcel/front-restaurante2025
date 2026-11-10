@@ -122,6 +122,9 @@ Funciones:
   ancho de la hoja (tabla, campos en una fila, o dos filas en celular).
 - Configuración de la empresa (`/settings/lite`, secciones Resumen, Datos tributarios, Firma, Plan): la barra «Guardar
   cambios» aparece solo con cambios sin guardar y permite «Descartar». El ambiente (Pruebas/Producción) se guarda aparte.
+- Empresa de demostración (`is_demo`, solo la marca un System Manager en el Desk): factura solo en Pruebas. En
+  Configuración la opción «Producción» sale desactivada con la nota «Empresa de demostración»; el backend lo exige
+  (perfil tributario, cliente API y toda emisión en Producción). Una empresa ya en Producción no se marca demo.
 - Desde dónde se factura: sin POS, «Facturar» deja elegir establecimiento y punto de emisión. Con POS (`pos_terminal`)
   la factura sale de la terminal activa (fija serie, bodega y caja), que se elige o cambia desde el chip del encabezado
   de Facturar o desde la barra superior; varios establecimientos = una terminal por establecimiento. Cambiar recarga la

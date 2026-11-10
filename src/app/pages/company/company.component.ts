@@ -57,6 +57,9 @@ export class CompanyComponent implements OnInit, DoCheck {
   private loadedCompanyBusiness = '';
 
   ambiente: 'PRUEBAS' | 'PRODUCCION' = 'PRUEBAS';
+  /** Empresa de demostración: solo factura en Pruebas (el backend lo exige). */
+  isDemo = false;
+  readonly demoProductionMessage = 'Esta es una empresa de demostración: solo puede facturar en el ambiente de Pruebas.';
 
   logoFile: File | null = null;
   logoPreview: string | null = null;
@@ -434,6 +437,7 @@ export class CompanyComponent implements OnInit, DoCheck {
         if (!company) return;
 
         this.companyId = company.name || company.business || this.capabilities.businessId || '';
+        this.isDemo = setupData?.business?.is_demo === true || setupData?.business?.is_demo === 1;
         // En Lite la fuente de verdad es tax_profile.environment. El servicio
         // ya lo normaliza a `environment`/`ambiente`, pero mantenemos el
         // fallback para respuestas parciales y formatos antiguos.
@@ -763,6 +767,12 @@ export class CompanyComponent implements OnInit, DoCheck {
 
     if (!this.companyId) return;
 
+    if (this.isDemo && this.form.value.ambiente) {
+      this.form.patchValue({ ambiente: false }, { emitEvent: false });
+      this.alertService.error(this.demoProductionMessage);
+      return;
+    }
+
     this.ambiente = this.form.value.ambiente ? 'PRODUCCION' : 'PRUEBAS';
     this.service.update(this.companyId, { ambiente: this.ambiente }).subscribe({
       next: (res: any) => {
@@ -777,7 +787,9 @@ export class CompanyComponent implements OnInit, DoCheck {
 
   onLiteEnvironmentSelected(value: string): void {
     if (!this.canEditLiteSetup || this.isSaving || this.isLoadingCompany) return;
-    this.updateLiteInvoiceSequence(this.normalizeEnvironment(value));
+    const target = this.normalizeEnvironment(value);
+    if (this.isDemo && target === 'PRODUCCION') return;
+    this.updateLiteInvoiceSequence(target);
   }
 
   get previewEnvironment(): 'PRUEBAS' | 'PRODUCCION' {
@@ -791,6 +803,11 @@ export class CompanyComponent implements OnInit, DoCheck {
     const previous = this.ambiente;
     if (!this.hasPendingLiteEmissionConfiguration) {
       this.updateLiteInvoiceSequence(target);
+      return;
+    }
+
+    if (target === 'PRODUCCION' && this.isDemo) {
+      this.alertService.error(this.demoProductionMessage);
       return;
     }
 
