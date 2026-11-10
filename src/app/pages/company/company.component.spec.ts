@@ -21,7 +21,7 @@ describe('CompanyComponent', () => {
     await TestBed.configureTestingModule({
       imports: [CompanyComponent], providers: [provideRouter([]),
         { provide: CompanyCapabilitiesService, useValue: capabilities },
-        { provide: CompanyService, useValue: { getLiteSetup: () => of({}), getLiteContext: () => of({}), normalizeLiteSetup: () => null } },
+        { provide: CompanyService, useValue: { getLiteSetup: () => of({}), getLiteContext: () => of({}), normalizeLiteSetup: () => null, saveLiteSetup: jasmine.createSpy('saveLiteSetup'), update: jasmine.createSpy('update') } },
         { provide: AlertService, useValue: jasmine.createSpyObj('AlertService', ['error']) },
         { provide: UtilsService, useValue: {} }, { provide: MenuService, useValue: {} },
         { provide: NgxSpinnerService, useValue: jasmine.createSpyObj('Spinner', ['show', 'hide']) },
@@ -38,4 +38,25 @@ describe('CompanyComponent', () => {
     expect(element.querySelector('a[href*="company-migration"]')).toBeNull();
     expect(element.textContent).not.toContain('Importar datos e historial');
   });
+  it('empresa demo no selecciona ni guarda Producción en modo Lite', () => {
+    const component = fixture.componentInstance;
+    component.isDemo = true; component.companyId = 'BUSINESS-TEST';
+    component.onLiteEnvironmentSelected('PRODUCCION');
+    expect(component.previewEnvironment).toBe('PRUEBAS');
+    component.form.patchValue({ sequence_environment: 'PRODUCCION' });
+    component.saveLiteEnvironment();
+    expect(TestBed.inject(CompanyService).saveLiteSetup).not.toHaveBeenCalled();
+    expect(TestBed.inject(AlertService).error).toHaveBeenCalled();
+  });
+
+  it('empresa demo revierte el check clásico sin petición de actualización', () => {
+    const component = fixture.componentInstance;
+    const capabilities = TestBed.inject(CompanyCapabilitiesService) as any;
+    capabilities.isLiteMode = false;
+    component.isDemo = true; component.companyId = 'BUSINESS-TEST';
+    component.form.patchValue({ ambiente: true }); component.cambiarAmbiente();
+    expect(component.form.value.ambiente).toBeFalse();
+    expect(TestBed.inject(CompanyService).update).not.toHaveBeenCalled();
+  });
+
 });

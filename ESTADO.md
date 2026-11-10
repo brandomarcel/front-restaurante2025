@@ -36,6 +36,9 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
     (DocType nuevo `FacturADA Restaurant Print Station`, migrado en el piloto). El front informa al guardar, al iniciar
     y en cada comanda; «Nombre de este equipo» en la ventana. Probado en el piloto con rollback: reporte de Cocina,
     rechazo de otro negocio, del Mesero y de datos malos; solo System Manager ve el resumen.
+  - Después, a pedido: en el Desk el grupo «Impresora de cocina (QZ Tray)» en «FacturADA Configuración» y la lista de
+    equipos con «Certificado del servidor» y «Cómo funciona». Corregido «No permitido» al abrir la ventana del negocio
+    (las lecturas son solo GET y `frappe.xcall` manda POST; ahora `frappe.call` con `type: "GET"`).
   - Pendiente: probar con QZ Tray y la RPT006 reales (tildes PC850, corte, IP); generar el certificado en producción
     (Desk ▸ negocio ▸ «Impresora de cocina» ▸ «Generar certificado», o `bench … execute
     facturada_restaurante.api.qz_tray.generate_qz_certificate`), `bench migrate` por el DocType nuevo y reiniciar;

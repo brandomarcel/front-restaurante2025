@@ -19,7 +19,7 @@ export default defineConfig({
   ],
   webServer: {
     command:
-      'python3 tests-e2e/serve-isolated-app.py --directory /tmp/facturada-2026-11-08-production/browser --port 4228',
+      'python3 tests-e2e/serve-isolated-app.py --directory /tmp/facturada-2026-11-09-production/browser --port 4228',
     url: 'http://127.0.0.1:4228/portal/auth/sign-in',
     reuseExistingServer: false,
   },

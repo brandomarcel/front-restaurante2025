@@ -310,7 +310,9 @@ Funciones:
 - La comanda va en ESC/POS (`get_kitchen_ticket_escpos`, sin precios, con «SIN: …» de la receta); cada llamada de QZ
   va firmada por el backend (`api/qz_tray.py`). El modo kiosco de Chrome se descartó (2026-11-09).
 - Equipo apagado, QZ cerrado o sin internet = la comanda no sale sola; se reimprime desde la orden.
-- Desk (System Manager): FacturADA Business ▸ «Impresora de cocina (QZ Tray)»: certificado del servidor (generar,
+- Desk (System Manager): espacio «FacturADA Configuración» ▸ grupo «Impresora de cocina (QZ Tray)» ▸ «Equipos que
+  imprimen comandas» (lista con color por estado, «Certificado del servidor» y «Cómo funciona», resumen del manual).
+  También FacturADA Business ▸ «Impresora de cocina (QZ Tray)»: certificado del servidor (generar,
   descargar `override.crt`, regenerar con aviso) y los equipos del negocio (nombre, usuario, Normal/Directo, impresora,
   última comanda, último error, visto), con aviso si dos imprimen solos. Cada equipo lo informa al guardar, al abrir la
   app y en cada comanda (DocType «FacturADA Restaurant Print Station», solo lectura). «Nombre de este equipo» es opcional.

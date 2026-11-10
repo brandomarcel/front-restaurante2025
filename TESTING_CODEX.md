@@ -329,7 +329,9 @@ PermissionError; adicional sin lote → error), `qz_tray.sign_qz_request` (solo 
 del negocio; la firma valida con el certificado), `generate_qz_certificate` (no reemplaza sin `force`),
 `report_print_station` (crea o actualiza por negocio + equipo; rechaza Mesero, otro negocio, `device_id` y evento
 inválidos; `printed` solo enlaza órdenes del negocio), `get_print_station_overview` y `desk_generate_qz_certificate`
-(solo System Manager). Para probar en
+(solo System Manager; las lecturas aceptan solo GET). Desk: grupo «Impresora de cocina (QZ Tray)» en
+`facturada_core.desk_setup` solo con Restaurante instalado; manual: abrir la lista, «Certificado del servidor», «Cómo
+funciona» y el botón del negocio sin «No permitido». Para probar en
 un sitio sin certificado, generarlo antes y no tocar el `site_config` de otros sitios.
 Front: `PrintStationService` (`available` sin Mesero; `isValidTarget`; `configured` falso en «Normal» aunque haya
 impresora; lectura de lo guardado sin `enabled`; `claim` imprime una sola vez por clave;
