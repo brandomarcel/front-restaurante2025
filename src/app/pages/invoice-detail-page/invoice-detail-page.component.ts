@@ -22,13 +22,15 @@ import { ElectronicStatusPanelComponent } from 'src/app/shared/components/electr
 import { electronicDocumentLabel, isCancelledInvoice, isCreditNoteDocument } from 'src/app/core/utils/electronic-document';
 import { ElectronicStatusBadgeComponent } from 'src/app/shared/components/electronic-status-badge/electronic-status-badge.component';
 import { DocumentAction, DocumentActionsComponent } from 'src/app/shared/components/document-actions/document-actions.component';
+import { SriAnnulmentOverview } from 'src/app/services/invoices.service';
+import { SriAnnulmentDialogComponent } from './sri-annulment-dialog/sri-annulment-dialog.component';
 
 type DetailTab = 'general' | 'electronic' | 'collections';
 
 @Component({
   selector: 'app-invoice-detail-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, FontAwesomeModule, ReactiveFormsModule, NgxSpinnerComponent, DecimalInputDirective, ElectronicStatusPanelComponent, ElectronicStatusBadgeComponent, DocumentActionsComponent],
+  imports: [CommonModule, RouterModule, FontAwesomeModule, ReactiveFormsModule, NgxSpinnerComponent, DecimalInputDirective, ElectronicStatusPanelComponent, ElectronicStatusBadgeComponent, DocumentActionsComponent, SriAnnulmentDialogComponent],
   templateUrl: './invoice-detail-page.component.html'
 })
 export class InvoiceDetailPageComponent implements OnInit {
@@ -50,6 +52,9 @@ export class InvoiceDetailPageComponent implements OnInit {
     'Otro'
   ];
   showMotivoModal = false;
+  /** Elegir entre nota de crédito y «Ya la anulé en el SRI» cuando ambas están disponibles. */
+  showAnnulChoice = false;
+  showSriAnnulment = false;
   liteActionRunning = false;
   emailActionRunning = false;
   documentActionRunning = false;
@@ -503,6 +508,26 @@ export class InvoiceDetailPageComponent implements OnInit {
   }
   closeMotivo() { this.showMotivoModal = false; }
 
+  /** «Anular» del encabezado: nota de crédito, registro de la anulación hecha en el SRI, o elegir. */
+  openAnnul(): void {
+    if (this.canAnnul && this.canRegisterSriAnnulment) this.showAnnulChoice = true;
+    else if (this.canAnnul) this.openMotivo();
+    else if (this.canRegisterSriAnnulment) this.openSriAnnulment();
+  }
+
+  chooseAnnulment(kind: 'credit-note' | 'sri'): void {
+    this.showAnnulChoice = false;
+    if (kind === 'credit-note') this.openMotivo();
+    else this.openSriAnnulment();
+  }
+
+  openSriAnnulment(): void { this.showSriAnnulment = true; }
+
+  onSriAnnulled(): void {
+    this.showSriAnnulment = false;
+    if (this.invoice?.name) this.fetch(this.invoice.name, true);
+  }
+
   // si cambia selección, activa/desactiva validación del campo "otro"
   onMotivoChange() {
     const otroCtrl = this.motivoForm.get('otroTexto')!;
@@ -585,6 +610,8 @@ export class InvoiceDetailPageComponent implements OnInit {
   @HostListener('document:keydown.escape')
   onEsc() {
     if (this.showMotivoModal) this.closeMotivo();
+    this.showAnnulChoice = false;
+    // El diálogo de anulación en el SRI maneja su propio Escape (no se cierra mientras guarda).
   }
 
   get invoiceItems(): any[] {
@@ -658,6 +685,38 @@ export class InvoiceDetailPageComponent implements OnInit {
   }
   get canAnnul(): boolean {
     return !this.annulBlockReason;
+  }
+
+  /** Lo calcula el backend en el detalle (`billing.void`, autorizada, sin NC ni abonos). */
+  get sriAnnulment(): SriAnnulmentOverview | null {
+    return this.invoice?.sri_annulment ?? null;
+  }
+
+  get canRegisterSriAnnulment(): boolean {
+    return !!this.sriAnnulment?.available && !this.isCancelled;
+  }
+
+  get canShowAnnul(): boolean {
+    return this.canAnnul || this.canRegisterSriAnnulment;
+  }
+
+  /** Por qué no se puede registrar la anulación del SRI, solo para quien tiene el permiso. */
+  get sriAnnulmentBlockReason(): string {
+    if (this.isCancelled || !this.sriAnnulment?.allowed) return '';
+    return this.sriAnnulment.block_reason || '';
+  }
+
+  /** La factura se anuló en el portal del SRI y se registró aquí. */
+  get isSriAnnulled(): boolean {
+    return this.isCancelled && !!this.invoice?.annulled_at;
+  }
+
+  /** `YYYY-MM-DD[ HH:mm…]` → `DD/MM/YYYY[ HH:mm]` sin depender del parser del navegador. */
+  formatAnnulDate(value: any): string {
+    const match = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/.exec(String(value ?? ''));
+    if (!match) return String(value || '—');
+    const date = `${match[3]}/${match[2]}/${match[1]}`;
+    return match[4] ? `${date} ${match[4]}:${match[5]}` : date;
   }
 
   get annulBlockReason(): string {

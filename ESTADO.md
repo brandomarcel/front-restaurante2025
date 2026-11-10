@@ -1,6 +1,6 @@
 # Estado del proyecto Facturada
 
-Última actualización: 2026-11-09.
+Última actualización: 2026-11-10.
 
 ## Objetivo Actual
 
@@ -8,6 +8,35 @@ Mantener una memoria breve del progreso y los pendientes sin ampliar `CLAUDE.md`
 El trabajo local observado se concentra en la configuración de desarrollo del frontend Angular y su conexión con Frappe.
 
 ## Últimos Cambios (Hecho)
+
+- 2026-11-10 (Claude, anulación en el SRI): registrar en el sistema una factura autorizada que el negocio ya anuló
+  en el portal del SRI (pedido de clientes; decisiones del usuario: solo autorizadas ya anuladas en el SRI,
+  Administrador y Gerente, la orden queda cerrada).
+  - Backend: Lite `api/invoice_annulment.py` + `register_lite_invoice_sri_annulment`; campos nuevos en la factura
+    (fecha y referencia del SRI, motivo, quién, cuándo, inventario devuelto); `get_lite_invoice_detail` trae
+    `sri_annulment` (disponible, permitido, motivo de bloqueo, lo que vuelve al inventario). Core: permiso
+    `billing.void` (Gerente; Administrador por `*`). Detalle en el `ESTADO.md` de Lite.
+  - Front: `pages/invoice-detail-page/sri-annulment-dialog/` (fecha, motivo, referencia, inventario y confirmación),
+    «Anular» del encabezado elige entre nota de crédito y «Ya la anulé en el SRI», lateral «Anular factura» con ambos,
+    aviso «Factura anulada en el SRI» con motivo, quién, cuándo, referencia e inventario; etiqueta «Anulada en el SRI»
+    (`invoiceCancellationLabel`). `InvoicesService.registerSriAnnulment`.
+  - Verificado en el piloto con script y rollback (validaciones, Cajero bloqueado, stock devuelto a la bodega, NC y no
+    autorizada bloquean, factura de orden sin stock que devolver). Build de desarrollo OK; lint 19 heredados, sin
+    nuevos. Pruebas pendientes para Codex (`TESTING_CODEX.md`). Producción: desplegar Lite y Core con `migrate`.
+
+- 2026-11-10 (Claude, planes): renovar, cambiar de plan e historial de la suscripción, a pedido del usuario.
+  - Backend (Core, detalle en su `ESTADO.md`): catálogo editable `FacturADA Plan`, historial `FacturADA Subscription
+    Movement`, `api/subscriptions.py` (renovar hoy o programado, cambiar plan con la misma vigencia, tarea diaria que
+    aplica lo programado y marca Vencido) y Desk con botones, línea de tiempo, colores y «Por vencer (30 días)».
+  - Front: nuevo `services/subscription.service.ts` y `pages/company/plan-overview/` dentro de Configuración ▸ Plan:
+    módulos incluidos, aviso de vencimiento (≤ 30 días), cambio programado, historial (5 visibles, «Ver todo») y
+    «Renovar o cambiar de plan» por WhatsApp (o «Solicitar un plan» sin plan). Si el backend no responde o el rol no
+    tiene `business.settings.manage`, solo queda la tarjeta de siempre y el botón.
+  - `company.component` solo importa y coloca el componente. Build de desarrollo OK; lint 19 avisos heredados, sin
+    nuevos. Sin pruebas nuevas: pendientes para Codex (`TESTING_CODEX.md`). En producción, desplegar el backend y
+    migrar antes o junto con el front.
+
+- 2026-11-09 (Codex, pruebas): 46 casos nuevos (23 frontend y 23 backend). Front: estación QZ sin conexiones reales, permisos/Normal/fallback/deduplicación/reporte; atención y métricas/caja del dashboard; decimales y guards de empresa demo en Configuración. Backend: demo (Core/Lite/API), ESC/POS sin precios y lote adicional, firma RSA SHA-512 y certificado ficticio, permisos y reporte/consulta de equipos por negocio. Angular completo 543: 523 OK/20 fallas heredadas (baseline inicial 520: 500 OK/20); lint 19 avisos heredados, sin nuevos. Backend Core 83 + Lite 253 + Restaurante 74 + API 32 = 442 OK; sitio de pruebas migrado, HTTP/SMTP bloqueados y rollback. Navegador login 16 + Desk 7 = 23 OK. Build optimizado OK (2,57 MB, 4 advertencias CSS). No hay impresión física ni escritura de certificados reales; QZ/USB/red/corte/PC850 requiere prueba manual. Reporte PRUEBAS_CODEX_2026-11-09.md; pendientes restantes en TESTING_CODEX.md. No se hicieron cambios funcionales de producción como parte de las pruebas ni despliegue.
 
 - 2026-11-09 (Claude, 4): a pedido del usuario se arreglaron las specs del POS de Caja que dejaron de compilar al sumar
   `PrintStationService` al constructor de `PosCajaComponent` (trabajo de impresión de comandas en curso, de otra
@@ -42,7 +71,7 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
   - Pendiente: probar con QZ Tray y la RPT006 reales (tildes PC850, corte, IP); generar el certificado en producción
     (Desk ▸ negocio ▸ «Impresora de cocina» ▸ «Generar certificado», o `bench … execute
     facturada_restaurante.api.qz_tray.generate_qz_certificate`), `bench migrate` por el DocType nuevo y reiniciar;
-    pruebas de Codex. Fase 2 opcional: recibo y factura directo a la impresora de Caja.
+    pruebas automatizadas de Codex aprobadas según la entrada de hoy; falta hardware real. Fase 2 opcional: recibo y factura directo a la impresora de Caja.
 
 - 2026-11-09 (Claude, 3): dashboard rediseñado, a pedido del usuario («hazlo todo»; propuesta aprobada antes).
   - Antes: tres bloques de indicadores apilados, la caja repetida en cinco lugares y el plan en dos; texto de 10–11 px
@@ -76,7 +105,7 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
     Revisado en claro, oscuro y 390 px.
   - Pendiente propuesto: quitar `apexcharts`/`ng-apexcharts` de `package.json` y `angular.json` (ya nada los usa y el
     script global carga en todas las pantallas); hora de apertura de la caja («Abierta desde 08:02») y comparación con
-    ayer requieren cambios en el backend. Pruebas para Codex en `TESTING_CODEX.md`.
+    ayer requieren cambios en el backend. Cobertura automatizada parcial y pendientes en `TESTING_CODEX.md`.
 
 - 2026-11-09 (Claude, 2): pendientes chicos, a pedido del usuario («hagamos el 5»).
   - **Montos con dos decimales:** `appDecimalInput` muestra «5.50» en vez de «5.5» en todo campo con `step="0.01"`
@@ -96,7 +125,7 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
   - README: la ruta del proxy ya era `src/proxy.conf.json`; no hubo que cambiarla.
   - Verificado: `tsc` app y specs OK, `ngc --noEmit` OK, `npm run lint` corre (19 avisos), funciones de formato
     probadas con script. **Sin ver en navegador** (pide sesión): toasts junto al menú abierto/contraído y en celular,
-    y los montos en POS, Facturar, Caja y detalle de orden. Pruebas para Codex en `TESTING_CODEX.md`.
+    y los montos en POS, Facturar, Caja y detalle de orden. Cobertura automatizada parcial y pendientes en `TESTING_CODEX.md`.
 
 - 2026-11-09 (Claude): empresa de demostración bloqueada en Pruebas, a pedido del usuario («si la empresa es demo no
   debe dejar cambiar a producción»). Usa el campo existente `is_demo` de FacturADA Business (solo System Manager).
@@ -196,7 +225,7 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
   promedio N min» (antes «ESPERA PROM.»), marca «Para llevar»/«A domicilio», íconos FontAwesome en lugar de emojis, sin
   mayúsculas sostenidas, botón principal con contraste AA. Se quitaron código muerto (`kitchenFilter`,
   `applyKitchenFilter`, `headerSubtitle`, `toggleModoCocina`, etc.). `ngc --noEmit` OK. **Sin revisar en navegador**
-  (pide sesión). Pruebas para Codex en `TESTING_CODEX.md`.
+  (pide sesión). Cobertura automatizada parcial y pendientes en `TESTING_CODEX.md`.
 
 - 2026-11-08 (Claude): detalle de la orden revisado a pedido del usuario. (1) Los productos ya no se editan ahí: se
   quitaron el buscador «+ Agregar producto», cantidades, precio y papelera (editaban por `update_order_for_invoice`, sin
@@ -208,7 +237,7 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
   contradecía los chips de Cocina y Cuenta). (4) Cobrar: «¿Cómo paga?» con botones que quedan marcados (un toque = total),
   «Paga con dos formas» abre filas con monto; sin el desplegable «▼ Forma de pago». Etiquetas sin mayúsculas sostenidas;
   meta sin «·». `ngc --noEmit` OK. **Sin revisar en navegador** (no hay usuario de prueba con contraseña en la sesión).
-  Pruebas para Codex en `TESTING_CODEX.md`.
+  Cobertura automatizada parcial y pendientes en `TESTING_CODEX.md`.
 
 - 2026-11-08 (Claude): en producción la app Angular vive bajo `/portal` (`baseHref: /portal/`): la carta es
   `https://facturada.bmarc-corp.com/portal/menu/<código>` y `facturada_app_url` debe incluir `/portal`. El enlace de

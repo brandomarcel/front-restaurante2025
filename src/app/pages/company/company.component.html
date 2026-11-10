@@ -448,6 +448,7 @@
             <p class="mt-1 text-muted-foreground">El administrador del sistema debe asignar una suscripción.</p>
           </div>
         </ng-template>
+        <app-plan-overview [planName]="hasCurrentPlan ? planName : ''"></app-plan-overview>
       </section>
 
       <!-- Barra de guardado: en Lite solo con cambios sin guardar; sobre la navegación inferior en celular. -->

@@ -1,0 +1,46 @@
+<div class="mt-4 space-y-4 border-t border-border pt-4">
+  <p *ngIf="overview?.scheduled as next" class="tone-info rounded-lg px-3 py-2 text-sm" role="status">
+    Programado: <b>{{ movementLabel(next.movement_type) }}</b> a {{ next.plan_name }} desde el {{ formatDate(next.effective_date) }}.
+  </p>
+  <p *ngIf="expiryNote as note" class="tone-warn rounded-lg px-3 py-2 text-sm font-medium" role="status">{{ note }}</p>
+
+  <div *ngIf="overview?.modules?.length">
+    <p class="text-xs text-muted-foreground">Incluye</p>
+    <ul class="mt-1.5 flex flex-wrap gap-1.5" aria-label="Módulos incluidos en el plan">
+      <li *ngFor="let module of overview?.modules" class="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">{{ module }}</li>
+    </ul>
+    <p *ngIf="overview?.description" class="mt-2 text-sm text-muted-foreground">{{ overview?.description }}</p>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+    <a class="btn btn-primary" [href]="whatsappUrl" target="_blank" rel="noopener">
+      {{ hasPlan ? 'Renovar o cambiar de plan' : 'Solicitar un plan' }}
+    </a>
+    <p class="text-xs text-muted-foreground">Te atendemos por WhatsApp; el cambio se refleja aquí cuando queda registrado.</p>
+  </div>
+
+  <p *ngIf="loading" class="text-sm text-muted-foreground">Cargando historial…</p>
+
+  <section *ngIf="overview?.movements?.length" aria-labelledby="plan-history-title">
+    <h3 id="plan-history-title" class="text-sm font-semibold text-foreground">Historial del plan</h3>
+    <ol class="mt-2 divide-y divide-border rounded-lg border border-border">
+      <li *ngFor="let row of visibleMovements" class="flex flex-col gap-1 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-4">
+        <div class="flex items-center gap-2 sm:w-52 sm:shrink-0">
+          <span class="text-xs tabular-nums text-muted-foreground">{{ formatDate(row.effective_date) }}</span>
+          <span class="badge" [ngClass]="badgeClass(row)">{{ badgeLabel(row) }}</span>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-medium text-foreground" [title]="planChange(row)">{{ planChange(row) }}</p>
+          <p class="text-xs text-muted-foreground">
+            {{ periodLabel(row) }} · {{ quotaLabel(row) }}<ng-container *ngIf="previousUsage(row) as usage"> · {{ usage }}</ng-container>
+          </p>
+        </div>
+        <span *ngIf="row.amount > 0" class="text-sm font-semibold tabular-nums text-foreground sm:text-right">{{ formatAmount(row.amount) }}</span>
+      </li>
+    </ol>
+    <button *ngIf="(overview?.movements?.length || 0) > collapsedCount" type="button"
+      class="mt-2 text-sm font-medium text-primary hover:underline" (click)="expanded = !expanded" [attr.aria-expanded]="expanded">
+      {{ expanded ? 'Ver menos' : 'Ver todo (' + (overview?.movements?.length || 0) + ')' }}
+    </button>
+  </section>
+</div>

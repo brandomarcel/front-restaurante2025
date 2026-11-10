@@ -315,9 +315,61 @@ Reporta los resultados tal como salieron: si algo no se ejecutó o falló, dilo.
 ## Pendiente de pruebas: planes por módulos (2026-10-28)
 
 Core `api/plans.py` y `effective_features`: cada plan del catálogo (roles y features resultantes),
-`apply_plan` (crea/actualiza suscripción, solo System Manager), `expand_payload` (lo explícito gana),
+`apply_plan` (crea/actualiza suscripción, solo System Manager; desde 2026-11-10 delega en
+`subscriptions.change_plan` y exige cupo si el plan no lo define), `expand_payload` (lo explícito gana),
 restaurante con `tables` y/o `kitchen` apagados. Probar en navegador un RESTO_BASICO: POS, Lista de
 órdenes y cobro sin Mesas ni Cocina.
+
+## Pendiente de pruebas: anulación registrada en el SRI (2026-11-10)
+
+Backend Lite (`facturada_lite.api.invoice_annulment`, módulo nuevo `test_invoice_annulment`; fixtures con rollback):
+- `register_sri_annulment` rechaza sin `confirmed_in_sri`, motivo < 5 caracteres, sin fecha, fecha futura o anterior a
+  la emisión; exige `billing.void` (Cajero y Facturación no; Gerente y Administrador sí).
+- Bloqueos (`annulment_block_reason`): NC no rechazada/anulada/reemplazada, abono Confirmado, no autorizada, ya
+  Anulada, Reemplazada/`regenerated_invoice`, migrada (`legacy_import`), origen protegido (GYM), Nota de Crédito.
+- Éxito: estado Anulada, `next_status_check_at` vacío, campos `sri_annulment_*`/`annulled_*`/`annulment_*`,
+  comentario en la línea de tiempo; un segundo intento falla («ya está anulada»).
+- Stock: Entrada por lo neto que salió con la factura y con las que reemplazó (`replacement_of`), a la bodega de la
+  salida; salida sin bodega en negocio por bodega vuelve a la principal; producto inactivo o sin stock se omite e
+  informa en `stock_skipped`; factura de orden/nota POS no crea movimientos.
+- `get_lite_invoice_detail` trae `sri_annulment` solo en facturas; el filtro `status=Anulada` la lista; reportes
+  comerciales la excluyen.
+
+Core: `billing.void` en Gerente; Cajero, Facturación, Contador y Usuario sin él.
+
+Front (specs nuevos de `SriAnnulmentDialogComponent` y del detalle con `InvoicesService` simulado):
+- Diálogo: botón deshabilitado sin casilla, sin motivo, con «Otro» sin detalle o con fecha fuera de rango; motivo final
+  «Motivo: detalle»; payload de `registerSriAnnulment`; inventario listado o texto de orden/nota; Escape no cierra
+  mientras guarda.
+- Detalle: «Anular» abre la elección si hay NC y SRI, solo NC o solo SRI según el caso; lateral con ambos botones;
+  bloqueo del SRI visible solo con permiso; aviso «Factura anulada en el SRI» con datos; etiqueta «Anulada en el SRI».
+
+## Pendiente de pruebas: renovación, cambio de plan e historial (2026-11-10)
+
+Backend Core (`facturada_core.api.subscriptions`, módulo nuevo `test_subscriptions`; fixtures con negocio temporal):
+- `get_plan` / `list_plans` leen `FacturADA Plan`; respaldo a `PLAN_CATALOG` sin DocType; plan inactivo fuera del
+  catálogo; `seed_plan_catalog` no pisa un plan editado; validaciones del plan (por tiempo sin meses, negativos).
+- `renew_subscription` hoy: cupo a 0, `subscription_start` = hoy, fin = hoy + meses − 1 día, estado Activo,
+  movimiento «Renovación» (o «Cambio de plan» con otro código) con `used_before`, monto y referencia.
+- `renew_subscription` `start=end`: movimiento Programado con fechas del período siguiente; un segundo programado
+  anula el primero; rechazo si no hay fin, está vencida o no está Activa; renovar hoy anula lo programado.
+- `change_plan`: conserva fechas y usados; rechaza cupo menor que lo usado; sin suscripción la crea («Alta»).
+- `run_daily`: aplica programados con fecha ≤ hoy (y los marca Aplicado), marca Vencido lo Activo con fin pasado
+  («Vencimiento», origen Automático); un error en uno no detiene los demás (savepoint + Error Log).
+- `log_subscription_change`: edición manual = «Ajuste» con detalle; estado a Suspendido/Activo = Suspensión/
+  Reactivación; `apply_license_snapshot` = «Sincronización» (Plataforma) o «Alta» con origen Registro; guardar sin
+  cambios no crea movimiento; `consume_authorized_document` no crea movimientos.
+- Historial: solo `notes` editable; `get_subscription_overview` exige `business.settings.manage` (Cajero no), no
+  devuelve notas ni referencia de pago, excluye Anulados.
+- `get_business_usage_count` mensual/anual cuenta desde `subscription_start` si es posterior al inicio del período.
+- `test_desk_setup`: nuevos accesos «Suscripciones por vencer (30 días)», «Planes, módulos y precios», «Historial de
+  suscripciones»; etiquetas únicas también con Platform instalada.
+
+Front (spec nuevo de `PlanOverviewComponent` con `SubscriptionService` simulado): aviso de vencimiento (0, 1, 30 y
+31 días; no con programado ni inactivo), insignia de programado, «Ver todo» con más de 5, monto solo si > 0, URL de
+WhatsApp con negocio, RUC y plan (y «Solicitar un plan» sin plan), error del servicio sin romper la tarjeta.
+
+Desk (navegador): Renovar (hoy y al terminar), Cambiar plan, Anular programado, línea de tiempo, colores de la lista.
 
 ## Pendiente de pruebas: aviso de pedido nuevo a Caja (2026-10-28)
 

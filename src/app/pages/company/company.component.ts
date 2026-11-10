@@ -10,6 +10,7 @@ import { AlertService } from '../../core/services/alert.service';
 import { UtilsService } from '../../core/services/utils.service';
 import { CompanyCapabilitiesService, CompanyPlan } from 'src/app/core/services/company-capabilities.service';
 import { MenuService } from 'src/app/modules/layout/services/menu.service';
+import { PlanOverviewComponent } from './plan-overview/plan-overview.component';
 
 interface CertificateInfo {
   subject?: string;
@@ -27,7 +28,7 @@ type LiteSettingsTab = 'general' | 'tax-profile' | 'certificate' | 'plan' | 'est
 
 @Component({
   selector: 'app-company',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, OnlyNumbersDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, OnlyNumbersDirective, PlanOverviewComponent],
   templateUrl: './company.component.html',
   styleUrl: './company.component.scss'
 })

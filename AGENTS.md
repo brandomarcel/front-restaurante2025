@@ -244,9 +244,12 @@ Funciones:
 
 ## Planes y módulos por negocio
 
-- El front deriva módulos de `features`; los planes (FACTURADOR, RESTO_BASICO, RESTO_MESAS, RESTO_COCINA,
-  RESTO_COMPLETO) se aplican en el Desk (Suscripción → «Aplicar plan»), catálogo en Core `api/plans.py`.
-  Mesas y cocina son independientes de `restaurant`.
+- El front deriva módulos de `features`. Catálogo de planes en el DocType `FacturADA Plan` (Desk, editable); se
+  renueva o cambia de plan en el Desk (Suscripción ▸ «Renovar» / «Cambiar plan (misma vigencia)») y cada cambio
+  queda en `FacturADA Subscription Movement`. Renovar reinicia el cupo. Mesas y cocina son independientes de `restaurant`.
+- Configuración ▸ Plan (`pages/company/plan-overview/`, `SubscriptionService` →
+  `facturada_core.api.subscriptions.get_subscription_overview`): módulos, vencimiento, programado, historial y
+  botón de WhatsApp para pedir la renovación. Solo lectura.
 
 ## Ventas
 
@@ -263,6 +266,15 @@ Funciones:
   PROVIDER_ERROR, ERROR (`lite-invoice-emission.ts`)
 - Regla crítica: ante códigos SRI 43/70 solo se permite *consultar*, nunca reemitir
   el mismo comprobante (`lite-invoice-actions.ts`)
+- Anular una factura autorizada que el negocio **ya anuló en el portal del SRI** (desde 2026-11-10): detalle de la
+  factura ▸ «Anular» ▸ «Ya la anulé en el SRI» (o el botón del lateral «Anular factura»). Fecha de la anulación en el
+  SRI (entre la emisión y hoy), motivo, referencia opcional y la casilla «Confirmo que ya está anulada en el portal del
+  SRI». No envía nada al SRI: la factura queda «Anulada en el SRI», sale de ventas y reportes, conserva su autorización
+  y muestra quién, cuándo y por qué. Solo Administrador y Gerente (`billing.void`). Vuelve al inventario lo que salió
+  con la propia factura; una factura de orden o nota POS no devuelve nada y la orden o nota sigue cerrada (no se vuelve
+  a facturar; si hace falta otra factura se emite desde «Facturar»). Bloqueada con nota de crédito o abonos (se
+  anulan primero), en migradas, reemplazadas, de origen protegido o no autorizadas. El dinero no se mueve solo (si se
+  devolvió efectivo, retiro de caja) y el cupo del plan no vuelve. Backend `facturada_lite.api.invoice_annulment`.
 - Datos tributarios: RUC, régimen, agente de retención, obligado a llevar contabilidad
 
 ## Dashboard (`/dashboard/main`)

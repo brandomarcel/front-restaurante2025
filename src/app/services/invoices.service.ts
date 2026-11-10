@@ -11,6 +11,35 @@ import { normalizeLiteEmissionResponse } from '../core/utils/lite-invoice-emissi
 import { parseLocalizedDecimal } from '../shared/utils/decimal.utils';
 import { isCreditNoteDocument } from '../core/utils/electronic-document';
 
+export interface SriAnnulmentStockRow {
+  item: string;
+  item_name: string;
+  warehouse: string | null;
+  quantity: number;
+}
+
+/** `sri_annulment` del detalle de la factura (solo facturas). */
+export interface SriAnnulmentOverview {
+  available: boolean;
+  allowed: boolean;
+  block_reason: string | null;
+  stock_to_return: SriAnnulmentStockRow[];
+}
+
+export interface SriAnnulmentRequest {
+  /** Fecha `YYYY-MM-DD` en que se anuló en el portal del SRI. */
+  date: string;
+  reason: string;
+  reference?: string;
+  confirmed: boolean;
+}
+
+export interface SriAnnulmentResult {
+  data: any;
+  stock_returned: SriAnnulmentStockRow[];
+  stock_skipped: SriAnnulmentStockRow[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class InvoicesService {
   private readonly api = environment.apiUrl;
@@ -61,6 +90,24 @@ export class InvoicesService {
       map((response: any) => normalizeLiteEmissionResponse(response)),
       catchError((e) => throwError(() => e))
     );
+  }
+
+  /**
+   * Deja constancia de una factura autorizada que el negocio ya anuló en el portal del SRI.
+   * No envía nada al SRI; el backend exige `billing.void` (Administrador y Gerente).
+   */
+  registerSriAnnulment(invoiceName: string, data: SriAnnulmentRequest): Observable<SriAnnulmentResult> {
+    return this.http.post<any>(
+      `${this.api}${API_ENDPOINT.FacturadaLite}.register_lite_invoice_sri_annulment`,
+      {
+        invoice_name: invoiceName,
+        sri_annulment_date: data.date,
+        reason: data.reason,
+        sri_reference: data.reference || null,
+        confirmed_in_sri: data.confirmed ? 1 : 0,
+      },
+      { context: new HttpContext().set(REQUIRE_AUTH, true) }
+    ).pipe(map((response: any) => (response?.message ?? response) as SriAnnulmentResult));
   }
 
   reissueLiteInvoice(invoiceName: string, postingDate: string): Observable<any> {

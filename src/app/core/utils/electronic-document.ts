@@ -22,7 +22,9 @@ export function isCancelledInvoice(document: any): boolean {
 }
 
 export function invoiceCancellationLabel(document: any): string {
-  return document?.credit_note_summary?.state === 'FULL' ? 'Anulada con nota de crédito' : 'Anulada';
+  if (document?.credit_note_summary?.state === 'FULL') return 'Anulada con nota de crédito';
+  // Registrada con «Ya la anulé en el SRI» (detalle de la factura).
+  return document?.annulled_at ? 'Anulada en el SRI' : 'Anulada';
 }
 
 export function isClosedElectronicDocument(document: any): boolean {

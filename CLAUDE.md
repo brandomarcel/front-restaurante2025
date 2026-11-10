@@ -320,10 +320,19 @@ Funciones:
 ## Planes y módulos por negocio
 
 - Cada negocio activa solo lo que su plan incluye; el front lo deriva de `features` (no hay pantalla
-  de módulos en el front). Los planes se aplican en el Desk (Suscripción → «Aplicar plan»), catálogo en
-  `facturada_core/api/plans.py`: FACTURADOR, RESTO_BASICO (mostrador, sin mesas ni cocina), RESTO_MESAS,
-  RESTO_COCINA, RESTO_COMPLETO (+ inventario/insumos/recetas). Mesas y cocina son independientes de `restaurant`.
-  La carta / catálogo digital (`digital_menu`) va en todos los planes y se puede apagar por negocio en la Suscripción.
+  de módulos en el front). Catálogo editable en el Desk, DocType `FacturADA Plan` («Planes, módulos y precios»):
+  FACTURADOR, RESTO_BASICO (mostrador, sin mesas ni cocina), RESTO_MESAS, RESTO_COCINA, RESTO_COMPLETO
+  (+ inventario/insumos/recetas) y DEMO_5 (registro abierto). Cada plan fija módulos y, si se completa, modalidad,
+  cupo, usuarios, duración y precio. Mesas y cocina son independientes de `restaurant`. La carta / catálogo digital
+  (`digital_menu`) va en todos los planes y se puede apagar por negocio en la Suscripción.
+- Se vende y renueva desde el Desk del sitio operativo (desde 2026-11-10), en la Suscripción ▸ botón «Suscripción»:
+  «Renovar» (período nuevo, hoy o programado al terminar la vigencia; el cupo empieza de cero y lo no usado se
+  pierde), «Cambiar plan (misma vigencia)» (conserva fechas y lo usado) y «Anular cambio programado». Cada cambio,
+  también una edición manual o una sincronización de Platform, queda en el historial (`FacturADA Subscription
+  Movement`). Una tarea diaria aplica lo programado y marca Vencido lo expirado. Backend: `facturada_core.api.subscriptions`.
+- En el front, Configuración ▸ Plan (`pages/company/plan-overview/`, Administrador y Gerente) muestra módulos
+  incluidos, aviso de vencimiento (≤ 30 días), cambio programado, historial (sin notas internas ni referencia de
+  pago) y «Renovar o cambiar de plan», que abre WhatsApp de BMARC con el mensaje armado. El negocio no renueva solo.
 
 ## Ventas
 
@@ -340,6 +349,15 @@ Funciones:
   PROVIDER_ERROR, ERROR (`lite-invoice-emission.ts`)
 - Regla crítica: ante códigos SRI 43/70 solo se permite *consultar*, nunca reemitir
   el mismo comprobante (`lite-invoice-actions.ts`)
+- Anular una factura autorizada que el negocio **ya anuló en el portal del SRI** (desde 2026-11-10): detalle de la
+  factura ▸ «Anular» ▸ «Ya la anulé en el SRI» (o el botón del lateral «Anular factura»). Fecha de la anulación en el
+  SRI (entre la emisión y hoy), motivo, referencia opcional y la casilla «Confirmo que ya está anulada en el portal del
+  SRI». No envía nada al SRI: la factura queda «Anulada en el SRI», sale de ventas y reportes, conserva su autorización
+  y muestra quién, cuándo y por qué. Solo Administrador y Gerente (`billing.void`). Vuelve al inventario lo que salió
+  con la propia factura; una factura de orden o nota POS no devuelve nada y la orden o nota sigue cerrada (no se vuelve
+  a facturar; si hace falta otra factura se emite desde «Facturar»). Bloqueada con nota de crédito o abonos (se
+  anulan primero), en migradas, reemplazadas, de origen protegido o no autorizadas. El dinero no se mueve solo (si se
+  devolvió efectivo, retiro de caja) y el cupo del plan no vuelve. Backend `facturada_lite.api.invoice_annulment`.
 - Datos tributarios: RUC, régimen, agente de retención, obligado a llevar contabilidad
 
 ## Dashboard (`/dashboard/main`)
@@ -520,8 +538,8 @@ intermedio: un push a `main` es un despliegue real.
 - La lista de Facturas solo trae `Factura`; las NC van por `get_all_credit_notes`.
   `credit_note_summary` (FULL/PARTIAL/PENDING/NONE): solo FULL se muestra como anulación
   por compensación; el estado fiscal original no cambia.
-- Una orden de restaurante se factura una sola vez. Una nota POS con `lite_invoice` no se
-  cancela: se usa nota de crédito. Estados de cocina ≠ estados tributarios.
+- Una orden de restaurante se factura una sola vez (también si su factura se anuló en el SRI). Una nota POS con
+  `lite_invoice` no se cancela: se usa nota de crédito, o se registra la anulación hecha en el SRI en la factura. Estados de cocina ≠ estados tributarios.
 - El stock sale al enviar la venta numerada (antes del SRI), no al autorizar; NC
   reingresan al autorizar. Borradores no mueven stock.
 - Reportes comerciales: solo facturas vigentes; "cobrado" es acumulado actual, no caja
