@@ -101,16 +101,19 @@ npm run lint
 
 Línea base: 19 avisos heredados (18 errores, 1 advertencia). Un cambio no debe sumar avisos nuevos.
 
-### Línea base conocida (2026-11-08)
+### Línea base conocida (2026-11-09)
 
-Última ejecución completa: **531 pruebas, 510 aprobadas y 21 fallidas heredadas**,
-sin regresiones nuevas observadas. Antes de añadir cobertura, el checkout limpio
-ya daba 501 pruebas, 480 aprobadas y las mismas 21 fallas.
+Última ejecución completa: **543 pruebas, 523 aprobadas y 20 fallidas heredadas**.
+Antes de añadir cobertura en esta sesión: 520 pruebas, 500 OK y las mismas 20
+fallas. Se añadieron **23 pruebas frontend**, todas aprobadas: PrintStationService
+(8), atención del dashboard (7), métricas/caja (4), decimales (2), empresa demo en
+Configuración (2). Las 30 pruebas de login/tema/cocina del 08/11 siguen pasando.
 
-Se añadieron 30 pruebas: SignInComponent (13), ThemeService (4), ticket/identidad
-AuthComponent (6), utilidades de etapas/etiquetas de cocina (7). Todas pasan. Se
-conservan las pruebas anteriores; no se relajaron aserciones para ocultar fallos.
-Reporte: [PRUEBAS_CODEX_2026-11-08.md](PRUEBAS_CODEX_2026-11-08.md).
+Lint: **19 avisos heredados (18 errores, 1 advertencia)**, sin avisos nuevos de estos
+cambios. Build optimizado OK: 2,57 MB inicial; 4 advertencias de selectores CSS.
+Reporte: [PRUEBAS_CODEX_2026-11-09.md](PRUEBAS_CODEX_2026-11-09.md).
+Referencia del 08/11: 531, 510 OK y 21 fallas. Se retiraron los specs no aplicables
+al rediseño y NavbarMobileComponent; no se relajaron aserciones en esta sesión.
 
 Referencia del 29/10: 504 pruebas, 479 OK y 25 fallas heredadas. Desde entonces
 se retiraron tres pantallas/specs de plantilla y Sidebar ya no falla.
@@ -126,12 +129,11 @@ fiscales, guard y capacidades. Resultado completo y comandos en
 Resultado anterior (26/10): **421 pruebas, 395 aprobadas y 26 fallidas**, todas estas
 ultimas pertenecen a la lista heredada siguiente. Las 53 pruebas nuevas pasan.
 
-El 2026-11-09 se borró `NavbarMobileComponent` (no se usaba) con sus tres specs: se espera
-**3 pruebas menos y 20 fallas heredadas** (confirmar en la próxima ejecución completa).
+El 2026-11-09 se borró NavbarMobileComponent y se confirmó la línea base de 20 fallas heredadas.
 
 Las fallas heredadas actuales corresponden a specs
-"should create" heredados de la plantilla, a los que les faltan providers, y no
-indican regresiones:
+de plantilla con providers ausentes o expectativas antiguas. Coinciden con las
+20 de la corrida inicial y no son regresiones nuevas observadas:
 
 `AperturaCajaComponent`, `AppComponent` (3), `CloseCajaComponent`,
 `DashboardComponent`, `Error404Component`, `Error500Component`,
@@ -215,20 +217,24 @@ bench --site facturada_core_simple_test run-tests --app facturada_lite
 Si agregas o cambias campos de un DocType, corre antes
 `bench --site facturada_core_simple_test migrate`.
 
-### Línea base backend (2026-11-08)
+### Línea base backend (2026-11-09)
 
 | App | Pruebas | Resultado |
 |-----|---------|-----------|
-| facturada_core | 79 | OK |
-| facturada_lite | 251 | OK |
-| facturada_restaurante | 59 | OK |
-| facturada_api | 30 | OK |
+| facturada_core | 83 | OK, 4 nuevas de demo |
+| facturada_lite | 253 | OK, 2 nuevas de setup demo |
+| facturada_restaurante | 74 | OK, 15 nuevas QZ/ESC-POS/equipos |
+| facturada_api | 32 | OK, 2 nuevas de cliente API demo |
 
-**419 aprobadas**: las cuatro suites se ejecutaron en esta sesión, secuencialmente,
-con bloqueo HTTP/SMTP real y datos de pruebas con rollback. Redis respondió PONG
-en ambos puertos; se migró únicamente facturada_core_simple_test antes de ejecutar.
-No confundir suites existentes verdes con cobertura exhaustiva de las funciones
-recientes cuyos casos siguen pendientes más abajo (anulaciones, catálogo, etc.).
+**442 aprobadas**, con 23 nuevas backend. Suites secuenciales en el único sitio
+facturada_core_simple_test, previamente migrado; Redis disponible y HTTP/SMTP
+reales bloqueados. Las claves QZ son ficticias en memoria y update_site_config
+está simulado: no se generó ni cambió un certificado real. El resumen Desk de
+equipos se comprueba con dos negocios y el filtro por negocio. Se repitió el
+módulo de navegación Desk tras su actualización durante la sesión.
+
+No equivale a cobertura exhaustiva de las funciones que siguen pendientes abajo.
+Reporte vigente: [PRUEBAS_CODEX_2026-11-09.md](PRUEBAS_CODEX_2026-11-09.md).
 
 Exportador de restaurante_app: excepción solicitada previamente por el usuario;
 pruebas puras desde Lite sin instalar Legacy en el sitio de pruebas.
@@ -321,9 +327,11 @@ muestra error; botón «Imprimir comanda» en tarjeta y tabla de «Nuevas». Pru
 sesiones (mesero crea, cajero ve y oye el aviso).
 La impresión automática por kiosco ya no existe (2026-11-09): ver «impresora de comandas con QZ Tray».
 
-## Pendiente de pruebas: impresora de comandas con QZ Tray (2026-11-09)
+## Cobertura parcial: impresora de comandas con QZ Tray (2026-11-09)
 
-Backend (Restaurante): `kitchen_escpos.build_kitchen_ticket` (sin precios; anulados fuera; adicional = último lote;
+Validados: 15 pruebas backend de ESC/POS, endpoints, firma/certificado simulado y permisos/reportes de equipo; 8 frontend de destino, modo Normal, compatibilidad, fallback, reporte y deduplicación entre instancias. Quedan pendientes NewOrderAlertService y los modales de POS, además de hardware real.
+
+Casos de referencia: `kitchen_escpos.build_kitchen_ticket` (sin precios; anulados fuera; adicional = último lote;
 «SIN:» con nombres; mesa sin «MESA Mesa…» doble; cliente para llevar), `get_kitchen_ticket_escpos` (otro negocio →
 PermissionError; adicional sin lote → error), `qz_tray.sign_qz_request` (solo 64 hex; exige `restaurant.orders.read`
 del negocio; la firma valida con el certificado), `generate_qz_certificate` (no reemplaza sin `force`),
@@ -436,7 +444,9 @@ sin acciones de cocina sin `kitchen`, botón deshabilitado con `pendingOrderName
 `orderStage` (Lista ya no sale «Cerrada»), «Ver orden» para cancelada. `RealtimeOrdersService.mapOne` llena `orderType`.
 
 
-## Pendiente de pruebas: empresa demo solo en Pruebas (2026-11-09)
+## Validado: empresa demo solo en Pruebas (2026-11-09)
+
+Core 4, Lite 2, API 2 y Configuración Angular 2 casos aprobados. El estado visual del botón se conserva como revisión manual pendiente; los guards y peticiones bloqueadas se prueban en componentes.
 
 - Core: `ensure_production_allowed` / `enforce_document_limit(business, 'Produccion')` lanza para `is_demo=1` y no
   para negocio real ni para Pruebas; perfil tributario demo a Produccion rechazado, a Pruebas permitido; marcar
@@ -447,7 +457,9 @@ sin acciones de cocina sin `kitchen`, botón deshabilitado con `pendingOrderName
 - Front `company.component`: con `isDemo`, botón «Producción» deshabilitado, nota visible, `onLiteEnvironmentSelected`
   y `saveLiteEnvironment` no cambian a Producción; `cambiarAmbiente` (clásico) revierte el check sin llamar al servicio.
 
-## Pendiente de pruebas: dashboard rediseñado (2026-11-09)
+## Cobertura parcial: dashboard rediseñado (2026-11-09)
+
+Validados: 7 pruebas de atención y 4 de métricas/caja; las specs existentes del dashboard siguen pasando excepto DashboardComponent should create (heredada). E2E con sesión de cada panel/rol y los componentes individuales descritos abajo siguen pendientes.
 
 - `dashboard-attention.ts` (`buildAttentionItems`): vacío para service/kitchen/none; firma falta/vencida/≤ 30 días
   (acción solo con `manageSettings`); plan sin plan/inactivo/agotado/por vencer solo con `showPlan`; rechazadas y en
@@ -467,7 +479,9 @@ sin acciones de cocina sin `kitchen`, botón deshabilitado con `pendingOrderName
 - Se borró `utils/dashboard-alerts.spec.ts` (su función ya no existe) y en `operations-metrics.spec.ts` los bloques de
   calificaciones e insights; lo esperado de `normalizeOperationsMetrics` suma `total` y `code`.
 
-## Pendiente de pruebas: decimales y toasts (2026-11-09)
+## Cobertura parcial: decimales y toasts (2026-11-09)
+
+Utilidades: 2 pruebas nuevas aprobadas, además de las 3 existentes. El CVA con foco/blur y la posición real de toasts siguen pendientes.
 
 - `decimal.utils`: `minDecimalsFromStep` ('0.01' → 2, '1'/'any'/null/'0'/'abc' → 0, tope 6) y
   `formatDecimalForInput` (5.5 → '5.50', 5 → '5.00', 0 → '0.00', 1.2345 → '1.2345', 12.5 con 0 → '12.5',
@@ -503,8 +517,7 @@ APIs interceptadas (también la URL absoluta del build), sin backend real.
     `direction`;
   - con `theme_palette` ya guardado respeta `violet`;
   - con JSON inválido en `theme` no falla.
-- `dashboard-charts.ts`: los builders usan `--muted-foreground`/`--border` del documento y `tooltip.theme` es `dark`
-  con `.dark` en `<html>`.
+- ApexCharts fue retirado de las pantallas del dashboard el 09/11; no existen builders dashboard-charts para probar. La dependencia global pendiente de retirar no se tocó en esta validación.
 - `ButtonComponent` (app-button): ningún tono usa clases `slate`/`violet`/`green` fijas.
 - `AuthComponent` (6 pruebas aprobadas): `subtotal`, `vat` (15 %) y `total` cuadran para cada ejemplo, y `money(8.3)` da `8,30`.
 - E2E con sesión, en claro y oscuro: POS, Facturar, Órdenes en vivo, Caja, Dashboard, Inventario y Configuración.
@@ -565,7 +578,7 @@ npx ng test --watch=false --karma-config=/tmp/facturada-legacy-karma.cjs --brows
 Build aislado para el navegador (sin despliegue):
 
 ```bash
-npm run build -- --output-path=/tmp/facturada-2026-11-08-production
+npm run build -- --output-path=/tmp/facturada-2026-11-09-production
 npx playwright test --config=playwright.auth.config.ts
 npx playwright test --config=playwright.desk-migration.config.ts
 ```
@@ -583,8 +596,8 @@ de ejecutar suites, crear el siguiente archivo (el nombre sitecustomize.py es
 necesario para que Python lo cargue al arrancar):
 
 ```bash
-mkdir -p /tmp/facturada-2026-11-08-fence
-cat > /tmp/facturada-2026-11-08-fence/sitecustomize.py <<'PYCODE'
+mkdir -p /tmp/facturada-2026-11-09-fence
+cat > /tmp/facturada-2026-11-09-fence/sitecustomize.py <<'PYCODE'
 import smtplib
 
 def blocked(*args, **kwargs):
@@ -604,10 +617,10 @@ Usarlo solo en el proceso de pruebas; los tests siguen debiendo simular cada
 llamada esperada del proveedor. Desde el Bench, repetir por app, secuencialmente:
 
 ```bash
-PYTHONPATH=/tmp/facturada-2026-11-08-fence bench --site facturada_core_simple_test run-tests --app facturada_core
-PYTHONPATH=/tmp/facturada-2026-11-08-fence bench --site facturada_core_simple_test run-tests --app facturada_lite
-PYTHONPATH=/tmp/facturada-2026-11-08-fence bench --site facturada_core_simple_test run-tests --app facturada_restaurante
-PYTHONPATH=/tmp/facturada-2026-11-08-fence bench --site facturada_core_simple_test run-tests --app facturada_api
+PYTHONPATH=/tmp/facturada-2026-11-09-fence bench --site facturada_core_simple_test run-tests --app facturada_core
+PYTHONPATH=/tmp/facturada-2026-11-09-fence bench --site facturada_core_simple_test run-tests --app facturada_lite
+PYTHONPATH=/tmp/facturada-2026-11-09-fence bench --site facturada_core_simple_test run-tests --app facturada_restaurante
+PYTHONPATH=/tmp/facturada-2026-11-09-fence bench --site facturada_core_simple_test run-tests --app facturada_api
 ```
 
 El build optimizado del 08/11 también pasó al permitir la descarga de las fuentes
@@ -619,3 +632,16 @@ falla al requerir DaisyUI ESM desde tailwind.config.js (ERR_REQUIRE_ESM). No es
 una prueba de funcionamiento. Los TS nuevos se formatearon/verificaron mediante
 la API de Prettier con las opciones de .prettierrc, plugins=[] y
 pluginSearchDirs=false; configuración del proyecto sin cambios.
+
+## Verificación actual de impresión y demo (2026-11-09)
+
+Nuevos módulos backend: facturada_core.api.test_demo_environment,
+facturada_lite.api.test_demo_environment, facturada_api.api.test_demo_environment,
+facturada_restaurante.api.test_qz_printing. Todos usan datos ficticios/rollback;
+las pruebas de generación de certificados simulan la escritura de site_config.
+Nunca generar certificados ni lanzar impresiones reales como preparación automática.
+
+Navegador actual: login 16 OK sobre build optimizado del 09/11 y Desk 7 OK, con
+APIs interceptadas. No conectan a QZ ni equivalen a imprimir en USB/red.
+Prueba manual pendiente con QZ Tray y la térmica: confianza override.crt, caracteres
+PC850, corte y una sola comanda desde pestañas reales. No se hizo despliegue.
