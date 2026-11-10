@@ -550,6 +550,8 @@ intermedio: un push a `main` es un despliegue real.
   directas de un plato en Lite no descuentan insumos; carga masiva de insumos y recetas;
   al volver de Por Bodega a Simple el stock de las bodegas no se consolida; probar la factura
   SRI real de una orden con receta (sin doble salida).
+- Comandas de cocina (2026-11-09): pedido del mesero «Por confirmar» por Caja antes de ir a cocina (pedido por el
+  usuario; hoy va directo); comanda impresa de anulación y recuperar comandas no impresas (propuestas sin decidir).
 
 ## Lecturas al iniciar una sesión (si el usuario pide "retomar")
 

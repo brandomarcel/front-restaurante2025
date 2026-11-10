@@ -803,6 +803,16 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Siguientes Pasos (To-Do)
 
+### Mejoras futuras pedidas: comandas de cocina (2026-11-09)
+
+- **Pedido «Por confirmar» (pedido por el usuario):** que el pedido del mesero quede en espera hasta que Caja lo confirme
+  con un toque, y recién ahí vaya a cocina (pantalla e impresora). Opcional por negocio o por mesero (nuevos o
+  temporales). Hoy no existe: el pedido del mesero va directo a cocina. Requiere un estado nuevo en el backend
+  (cocina no lo ve ni se imprime ni se descuenta stock hasta confirmar) y cambios en POS, Caja y Órdenes en vivo.
+  Proponer antes de programar.
+- Propuestas sin decidir: comanda impresa de **anulación** («ANULADO: 1 x … · Mesa 4 · motivo») y **recuperar
+  comandas perdidas** (al volver la conexión o prender el equipo, imprimir las de hoy que no salieron).
+
 ### Retomar aquí: flujo de restaurante (sesión 2026-11-01, Claude)
 
 Hecho y sin probar en navegador: refinamiento del detalle de orden, barra de cambios, bloqueo por inventario
