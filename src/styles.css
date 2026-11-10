@@ -816,3 +816,25 @@ select {
     line-height: 0.875rem !important;
   }
 }
+
+/* Toasts (Sonner, abajo a la izquierda): no tapar el menú lateral ni la barra inferior.
+   `LayoutComponent` marca <html data-shell>; anchos del menú en sidebar.component.html. */
+@media (min-width: 1280px) {
+  html[data-shell='sidebar-open'] [data-sonner-toaster][data-x-position='left'] {
+    left: calc(218px + 16px);
+  }
+  html[data-shell='sidebar-collapsed'] [data-sonner-toaster][data-x-position='left'] {
+    left: calc(62px + 16px);
+  }
+}
+@media (min-width: 1536px) {
+  html[data-shell='sidebar-open'] [data-sonner-toaster][data-x-position='left'] {
+    left: calc(238px + 16px);
+  }
+}
+@media (max-width: 1279.98px) {
+  html[data-shell='sidebar-open'] [data-sonner-toaster][data-y-position='bottom'],
+  html[data-shell='sidebar-collapsed'] [data-sonner-toaster][data-y-position='bottom'] {
+    bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+}

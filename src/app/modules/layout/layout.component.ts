@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, effect, OnDestroy, OnInit } from '@angular/core';
 import { Event, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { NgClass, NgIf } from '@angular/common';
 import { BottomNavbarComponent } from './components/bottom-navbar/bottom-navbar.component';
@@ -14,7 +14,7 @@ import { NewOrderAlertService } from 'src/app/services/new-order-alert.service';
   styleUrls: ['./layout.component.css'],
   imports: [NgClass, NgIf, SidebarComponent, NavbarComponent, RouterOutlet, FooterComponent, BottomNavbarComponent],
 })
-export class LayoutComponent implements OnInit {
+export class LayoutComponent implements OnInit, OnDestroy {
   private mainContent: HTMLElement | null = null;
 
   constructor(
@@ -29,10 +29,21 @@ export class LayoutComponent implements OnInit {
         }
       }
     });
+
+    // Los toasts (abajo a la izquierda) se corren para no tapar el menú lateral ni la barra
+    // inferior del celular: `styles.css` lee este atributo de <html>.
+    effect(() => {
+      const shell = this.menuService.isPosMode ? 'pos' : this.menuService.showSideBar ? 'sidebar-open' : 'sidebar-collapsed';
+      document.documentElement.setAttribute('data-shell', shell);
+    });
   }
 
   ngOnInit(): void {
     this.mainContent = document.getElementById('main-content');
     this.newOrderAlerts.start();
+  }
+
+  ngOnDestroy(): void {
+    document.documentElement.removeAttribute('data-shell');
   }
 }

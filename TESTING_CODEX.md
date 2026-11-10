@@ -93,6 +93,14 @@ npx ng test --watch=false --browsers=ChromeHeadless
 (Con `CHROME_BIN` y `LD_LIBRARY_PATH` exportados, ver sección 3.) No uses `npm test` a
 secas: abre Chrome en modo watch y no termina.
 
+Lint (desde 2026-11-09 funciona; `eslint.config.js`, ESLint 9 directo):
+
+```bash
+npm run lint
+```
+
+Línea base: 19 avisos heredados (18 errores, 1 advertencia). Un cambio no debe sumar avisos nuevos.
+
 ### Línea base conocida (2026-11-08)
 
 Última ejecución completa: **531 pruebas, 510 aprobadas y 21 fallidas heredadas**,
@@ -118,13 +126,16 @@ fiscales, guard y capacidades. Resultado completo y comandos en
 Resultado anterior (26/10): **421 pruebas, 395 aprobadas y 26 fallidas**, todas estas
 ultimas pertenecen a la lista heredada siguiente. Las 53 pruebas nuevas pasan.
 
-Las 21 fallas heredadas actuales corresponden a specs
+El 2026-11-09 se borró `NavbarMobileComponent` (no se usaba) con sus tres specs: se espera
+**3 pruebas menos y 20 fallas heredadas** (confirmar en la próxima ejecución completa).
+
+Las fallas heredadas actuales corresponden a specs
 "should create" heredados de la plantilla, a los que les faltan providers, y no
 indican regresiones:
 
 `AperturaCajaComponent`, `AppComponent` (3), `CloseCajaComponent`,
 `DashboardComponent`, `Error404Component`, `Error500Component`,
-`LayoutComponent`, `NavbarComponent`, `NavbarMobileComponent`,
+`LayoutComponent`, `NavbarComponent`,
 `OrderCardComponent`, `OrderKitchenCardComponent`, `OrderModalComponent`,
 `ProfileMenuComponent`, `RetiroCajaComponent`, `TableActionComponent`,
 `TableComponent`, `TableFooterComponent`, `TableRowComponent`,
@@ -418,6 +429,20 @@ sin acciones de cocina sin `kitchen`, botón deshabilitado con `pendingOrderName
   el mensaje y no cambia el perfil.
 - Front `company.component`: con `isDemo`, botón «Producción» deshabilitado, nota visible, `onLiteEnvironmentSelected`
   y `saveLiteEnvironment` no cambian a Producción; `cambiarAmbiente` (clásico) revierte el check sin llamar al servicio.
+
+## Pendiente de pruebas: decimales y toasts (2026-11-09)
+
+- `decimal.utils`: `minDecimalsFromStep` ('0.01' → 2, '1'/'any'/null/'0'/'abc' → 0, tope 6) y
+  `formatDecimalForInput` (5.5 → '5.50', 5 → '5.00', 0 → '0.00', 1.2345 → '1.2345', 12.5 con 0 → '12.5',
+  notación exponencial sin cambios).
+- `DecimalInputDirective` (componente de prueba con `step="0.01"`, `step="1"` y `step="any"`): `writeValue(5.5)` →
+  «5.50»; al salir del campo «5,5» → «5.50» y el modelo recibe 5.5; con el campo enfocado y texto «5.» el
+  `writeValue(5)` no lo reescribe; si el modelo cambia a otro valor con foco, sí; `null` → vacío; porcentaje y cantidad
+  sin ceros de relleno.
+- `LayoutComponent`: pone `data-shell` en `<html>` (`sidebar-open` / `sidebar-collapsed` / `pos` según `MenuService`)
+  y lo quita al destruirse.
+- Manual o Playwright con sesión: toast con el menú abierto, contraído y en POS (≥ 1280 px) y en celular con barra
+  inferior; montos en POS, Facturar, Caja y detalle de orden.
 
 ## Validado: login rediseñado (2026-11-08)
 

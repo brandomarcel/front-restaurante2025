@@ -9,6 +9,26 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-09 (Claude, 2): pendientes chicos, a pedido del usuario («hagamos el 5»).
+  - **Montos con dos decimales:** `appDecimalInput` muestra «5.50» en vez de «5.5» en todo campo con `step="0.01"`
+    (al cargar y al salir del campo), sin recortar decimales que el valor ya tenga (1.2345 queda igual) y sin tocar lo
+    que se está escribiendo. Porcentajes (`step="1"`) y cantidades (`step="any"`: guía de remisión, transferencia de
+    inventario) no se rellenan. «Fondo inicial» de Apertura de caja ganó `step="0.01"`. El modelo sigue siendo
+    `number`. Funciones nuevas `minDecimalsFromStep` y `formatDecimalForInput` en `shared/utils/decimal.utils.ts`.
+  - **Toasts:** ya no tapan el menú lateral ni la barra inferior del celular. `LayoutComponent` marca
+    `<html data-shell="sidebar-open|sidebar-collapsed|pos">` y `styles.css` corre Sonner a la derecha del menú
+    (218/238/62 px) en `xl` y arriba de la barra inferior debajo de `xl`. En el POS no cambia.
+  - **Lint arreglado:** `npm run lint` corre `eslint` directo con `eslint.config.js` (ESLint 9, configuración plana);
+    se borró `.eslintrc.json` (ESLint 9 no lo lee). No se usa `ng lint` porque el builder de `angular-eslint` 22 pide
+    Angular 22. Mismas reglas de antes, menos `prefer-inject` y `prefer-control-flow` (2000 avisos de migración de
+    estilo). Quedan 19 avisos heredados, sin corregir: métodos de ciclo de vida vacíos, salidas con nombre de evento del
+    DOM (`close`…), selectores sin prefijo `app` (uikit, `clickOutside`) y dos `==` en plantillas.
+  - **Borrado `NavbarMobileComponent`** (carpeta `navbar/navbar-mobile`, con sus specs): nadie lo usaba.
+  - README: la ruta del proxy ya era `src/proxy.conf.json`; no hubo que cambiarla.
+  - Verificado: `tsc` app y specs OK, `ngc --noEmit` OK, `npm run lint` corre (19 avisos), funciones de formato
+    probadas con script. **Sin ver en navegador** (pide sesión): toasts junto al menú abierto/contraído y en celular,
+    y los montos en POS, Facturar, Caja y detalle de orden. Pruebas para Codex en `TESTING_CODEX.md`.
+
 - 2026-11-09 (Claude): empresa de demostración bloqueada en Pruebas, a pedido del usuario («si la empresa es demo no
   debe dejar cambiar a producción»). Usa el campo existente `is_demo` de FacturADA Business (solo System Manager).
   Backend: `ensure_production_allowed` en Core `license.py`, llamado por `enforce_document_limit` (toda emisión en
@@ -50,8 +70,7 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
     (botones, insignias, tonos, tabla, pestañas). Registro y login revisados con Playwright.
   - **Sin ver**: pantallas internas con sesión (no hubo credenciales de prueba). Conviene recorrer POS, Facturar,
     Órdenes, Caja y Dashboard en claro y oscuro antes de subir.
-  - `NavbarMobileComponent` no se usa en ninguna pantalla (código muerto, conserva el logo viejo): queda pendiente
-    decidir si se borra.
+  - `NavbarMobileComponent` no se usaba en ninguna pantalla: borrado el 2026-11-09.
 
 - 2026-11-08 (Claude): login rediseñado y corregido, a pedido del usuario. Marca FacturADA (azul marino `#1B1F3A` y
   ámbar `#FFB020`, logos SVG de `assets/brand/`) en vez del morado del tema y el PNG viejo; panel izquierdo (≥ 1024 px)
@@ -281,8 +300,7 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
   con descuentos la cantidad desaparecía (los descuentos pasan a una segunda fila con etiqueta visible); cantidad y
   precio con el mismo fondo. Global (`styles.css`): `.ng-select-tailwind .ng-select-container` ahora centra el valor
   verticalmente (antes quedaba pegado arriba en todos los selectores de la app).
-  Pendiente propuesto: foco automático al buscador de productos tras elegir cliente y atajo para emitir; precio `5.5`
-  en vez de `5.50` (`appDecimalInput` compartido); estilos globales `.input` duplicado y `badge-*` solo tema claro.
+  Pendiente propuesto: foco automático al buscador de productos tras elegir cliente y atajo para emitir; estilos globales `.input` duplicado y `badge-*` solo tema claro.
 
 - 2026-11-06 (Claude, 3): avisos del panel (`shared/components/avisos`, «Caja», «Firma»…) ilegibles en modo oscuro:
   fondo fijo claro (`bg-yellow-50`) con texto `text-foreground` (casi blanco en oscuro). Ahora tinte translúcido
@@ -352,8 +370,8 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
   interno); el bloqueo por inventario es un aviso `notice-info` sobre la lista; el modificador se ajusta al texto y
   cantidad + «Precio $» van en una línea; «Ir a Mesas» y «Nueva orden» pasan a enlaces en la línea de datos; en
   «Cobrar» el formulario de pago es un `<details>` que se pliega cuando no se puede facturar (el aviso queda arriba).
-  Compila con `ngc --noEmit`; sin probar en navegador. Pendiente: el precio se ve `5.5` (formato de
-  `appDecimalInput`, compartido) y los toasts de error se superponen al menú lateral (componente global).
+  Compila con `ngc --noEmit`; sin probar en navegador. (El precio `5.5` y los toasts sobre el menú se
+  resolvieron el 2026-11-09.)
 
 - 2026-11-01 (Claude, 4): en el detalle de orden, con el inventario ya descontado el front dejaba editar
   cantidad/precio y el backend rechazaba al guardar («La orden ya consumio inventario…»). Backend Restaurante
@@ -720,8 +738,7 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Problemas o Bugs Pendientes
 
-- `npm run lint` no funciona: `angular.json` carece del target `lint`, según las instrucciones del proyecto y la configuración revisada.
-- El comando nuevo del README indica `--proxy-config proxy.conf.json`, pero el archivo está en `src/proxy.conf.json`; revisar y corregir la ruta.
+- `npm run lint` muestra 19 avisos heredados (ver 2026-11-09); corregirlos cuando se toque cada archivo.
 - Falta validar la conexión con Frappe, las cookies de sesión y Socket.IO tras los cambios de proxy y entorno.
 - Revisar el impacto de la dependencia específica de Linux y los cambios amplios en `package-lock.json` sobre instalación y compilación en otros entornos.
 - No se ejecutaron build, pruebas unitarias ni E2E en esta sesión de documentación. No hay historial conversacional previo disponible para atribuir otros trabajos o confirmar su resultado.
@@ -759,14 +776,11 @@ mesa para pedir desde la mesa, limpiar las copias huérfanas de las fotos de pro
   Caja), PIN de supervisor para que el cajero pida la autorización sin cambiar de sesión, reporte de anulaciones.
 - Riesgo del buscador de la tarjeta (editaba por `update_order_for_invoice` sin cocina ni stock): resuelto el
   2026-11-08, el detalle ya no edita productos.
-- Otros: permitir agregar a una orden ya cobrada cobrando la diferencia (decidido no hacerlo por ahora); precio
-  `5.5` en vez de `5.50` (`appDecimalInput` compartido); toasts sobre el menú lateral (componente global).
+- Otros: permitir agregar a una orden ya cobrada cobrando la diferencia (decidido no hacerlo por ahora).
 
 - Confirmar qué configuración de backend se usará para la próxima validación: localhost o red local.
-- Corregir la ruta del proxy en el comando del README.
 - Revisar las diferencias de dependencias y lockfile antes de consolidarlas.
 - Ejecutar `npm run build` y validar manualmente login, selección de empresa y actualizaciones en tiempo real contra el backend elegido.
-- Resolver el target de lint cuando se aborde la configuración de herramientas.
 - Actualizar este archivo al cierre de la próxima sesión con resultados comprobados y pendientes vigentes.
 
 Recordatorio operativo: un push a `main` despliega directamente a producción, sin staging intermedio.

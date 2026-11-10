@@ -29,7 +29,7 @@
     "prettier": "prettier --config ./.prettierrc --write \"src/{app,environments}/**/*{.ts,.html,.scss,.json}\"",
     "prettier:verify": "prettier --config ./.prettierrc --check \"src/{app,environments}/**/*{.ts,.html,.scss,.json}\"",
     "prettier:staged": "pretty-quick --staged",
-    "lint": "ng lint"
+    "lint": "eslint \"src/**/*.{ts,html}\""
   },
   "private": true,
   "dependencies": {

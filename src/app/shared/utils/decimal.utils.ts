@@ -30,3 +30,25 @@ export function parseLocalizedDecimal(value: unknown): number | null {
   const numeric = Number(normalized);
   return Number.isFinite(numeric) ? numeric : null;
 }
+
+/**
+ * Decimales mínimos que se muestran según el `step` del campo: `0.01` → 2 (montos), `1` o `any` → 0.
+ */
+export function minDecimalsFromStep(step: string | null | undefined): number {
+  const text = String(step ?? '').trim();
+  if (!text || text === 'any' || !(Number(text) > 0)) return 0;
+  const dot = text.indexOf('.');
+  return dot < 0 ? 0 : Math.min(text.length - dot - 1, 6);
+}
+
+/**
+ * Texto que muestra un campo decimal: completa ceros hasta `minDecimals` (5.5 → «5.50»)
+ * sin recortar los decimales que el valor ya tenga (1.2345 sigue «1.2345»).
+ */
+export function formatDecimalForInput(value: number, minDecimals = 0): string {
+  const text = String(value);
+  if (minDecimals <= 0 || /e/i.test(text)) return text;
+  const dot = text.indexOf('.');
+  const current = dot < 0 ? 0 : text.length - dot - 1;
+  return current >= minDecimals ? text : value.toFixed(minDecimals);
+}

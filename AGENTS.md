@@ -362,8 +362,12 @@ npm run prettier
 npm run prettier:verify
 ```
 
-Lint: `npm run lint` está roto actualmente (no existe target `lint` en `angular.json`
-tras la migración a `angular-eslint` 22). No usar como validación hasta corregirlo.
+Lint (`eslint.config.js`, ESLint 9 directo; no `ng lint`, porque el builder de `angular-eslint` 22 pide Angular 22):
+```
+npm run lint
+```
+Reglas recomendadas de angular-eslint, sin `prefer-inject` ni `prefer-control-flow` (el proyecto usa constructor y
+`*ngIf`). Línea base 2026-11-09: 19 avisos heredados (18 errores, 1 advertencia); un cambio no debe sumar nuevos.
 
 Despliegue: cualquier `push` a `main` dispara `.github/workflows/deploy.yml`, que
 compila y despliega automáticamente por SSH a producción. No hay ambiente de staging

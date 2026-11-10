@@ -1,6 +1,6 @@
 import { Directive, ElementRef, forwardRef, HostListener, Renderer2 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { normalizeDecimalText, parseLocalizedDecimal } from '../utils/decimal.utils';
+import { formatDecimalForInput, minDecimalsFromStep, normalizeDecimalText, parseLocalizedDecimal } from '../utils/decimal.utils';
 
 /**
  * Campo decimal reutilizable para importes, precios y cantidades decimales.
@@ -26,8 +26,11 @@ export class DecimalInputDirective implements ControlValueAccessor {
   ) {}
 
   writeValue(value: unknown): void {
+    const input = this.element.nativeElement;
     const numeric = parseLocalizedDecimal(value);
-    this.renderer.setProperty(this.element.nativeElement, 'value', numeric === null ? '' : String(numeric));
+    // Mientras se escribe, no reescribir el texto si ya vale lo mismo («5,» o «5.0» siguen tal cual).
+    if (document.activeElement === input && numeric !== null && parseLocalizedDecimal(input.value) === numeric) return;
+    this.renderer.setProperty(input, 'value', numeric === null ? '' : this.format(numeric));
   }
 
   registerOnChange(fn: (value: number | null) => void): void { this.onChange = fn; }
@@ -45,8 +48,13 @@ export class DecimalInputDirective implements ControlValueAccessor {
   @HostListener('blur')
   onBlur(): void {
     const numeric = parseLocalizedDecimal(this.element.nativeElement.value);
-    if (numeric !== null) this.renderer.setProperty(this.element.nativeElement, 'value', String(numeric));
+    if (numeric !== null) this.renderer.setProperty(this.element.nativeElement, 'value', this.format(numeric));
     this.onChange(numeric);
     this.onTouched();
+  }
+
+  /** Montos con `step="0.01"` se muestran con dos decimales (5.5 → «5.50»); el modelo sigue siendo `number`. */
+  private format(numeric: number): string {
+    return formatDecimalForInput(numeric, minDecimalsFromStep(this.element.nativeElement.getAttribute('step')));
   }
 }
