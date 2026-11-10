@@ -13,17 +13,38 @@ describe('CompanyComponent', () => {
   let fixture: ComponentFixture<CompanyComponent>;
   beforeEach(async () => {
     const capabilities = {
-      activeBusinessId: 'BUSINESS-TEST', activeBusiness: { name: 'BUSINESS-TEST', business_name: 'Empresa de pruebas' },
-      isLiteMode: true, canManageBusinessSetup: true, liteSetupMissing: [], sequences: [], activeEstablishments: [],
-      plan: null, businesses: [], isEnabled: () => false, activeEmissionPointsFor: () => [],
-      setApiConfiguration: () => {}, setLiteSetupState: () => {},
+      activeBusinessId: 'BUSINESS-TEST',
+      activeBusiness: { name: 'BUSINESS-TEST', business_name: 'Empresa de pruebas' },
+      isLiteMode: true,
+      canManageBusinessSetup: true,
+      liteSetupMissing: [],
+      sequences: [],
+      activeEstablishments: [],
+      plan: null,
+      businesses: [],
+      isEnabled: () => false,
+      activeEmissionPointsFor: () => [],
+      setApiConfiguration: () => {},
+      setLiteSetupState: () => {},
     };
     await TestBed.configureTestingModule({
-      imports: [CompanyComponent], providers: [provideRouter([]),
+      imports: [CompanyComponent],
+      providers: [
+        provideRouter([]),
         { provide: CompanyCapabilitiesService, useValue: capabilities },
-        { provide: CompanyService, useValue: { getLiteSetup: () => of({}), getLiteContext: () => of({}), normalizeLiteSetup: () => null, saveLiteSetup: jasmine.createSpy('saveLiteSetup'), update: jasmine.createSpy('update') } },
+        {
+          provide: CompanyService,
+          useValue: {
+            getLiteSetup: () => of({}),
+            getLiteContext: () => of({}),
+            normalizeLiteSetup: () => null,
+            saveLiteSetup: jasmine.createSpy('saveLiteSetup'),
+            update: jasmine.createSpy('update'),
+          },
+        },
         { provide: AlertService, useValue: jasmine.createSpyObj('AlertService', ['error']) },
-        { provide: UtilsService, useValue: {} }, { provide: MenuService, useValue: {} },
+        { provide: UtilsService, useValue: {} },
+        { provide: MenuService, useValue: {} },
         { provide: NgxSpinnerService, useValue: jasmine.createSpyObj('Spinner', ['show', 'hide']) },
       ],
     }).compileComponents();
@@ -40,7 +61,8 @@ describe('CompanyComponent', () => {
   });
   it('empresa demo no selecciona ni guarda Producción en modo Lite', () => {
     const component = fixture.componentInstance;
-    component.isDemo = true; component.companyId = 'BUSINESS-TEST';
+    component.isDemo = true;
+    component.companyId = 'BUSINESS-TEST';
     component.onLiteEnvironmentSelected('PRODUCCION');
     expect(component.previewEnvironment).toBe('PRUEBAS');
     component.form.patchValue({ sequence_environment: 'PRODUCCION' });
@@ -53,10 +75,11 @@ describe('CompanyComponent', () => {
     const component = fixture.componentInstance;
     const capabilities = TestBed.inject(CompanyCapabilitiesService) as any;
     capabilities.isLiteMode = false;
-    component.isDemo = true; component.companyId = 'BUSINESS-TEST';
-    component.form.patchValue({ ambiente: true }); component.cambiarAmbiente();
+    component.isDemo = true;
+    component.companyId = 'BUSINESS-TEST';
+    component.form.patchValue({ ambiente: true });
+    component.cambiarAmbiente();
     expect(component.form.value.ambiente).toBeFalse();
     expect(TestBed.inject(CompanyService).update).not.toHaveBeenCalled();
   });
-
 });
