@@ -5,6 +5,7 @@ import { provideHttpClientTesting, HttpTestingController } from '@angular/common
 import { InvoicesService } from './invoices.service';
 import { FrappeErrorService } from '../core/services/frappe-error.service';
 import { CompanyCapabilitiesService } from '../core/services/company-capabilities.service';
+import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 
 describe('InvoicesService (FacturADA Lite)', () => {
   let service: InvoicesService;
@@ -17,8 +18,8 @@ describe('InvoicesService (FacturADA Lite)', () => {
         FrappeErrorService,
         { provide: CompanyCapabilitiesService, useValue: { isLiteMode: true, businessId: 'FBU-00001' } },
         provideHttpClient(),
-        provideHttpClientTesting()
-      ]
+        provideHttpClientTesting(),
+      ],
     });
     service = TestBed.inject(InvoicesService);
     http = TestBed.inject(HttpTestingController);
@@ -26,12 +27,39 @@ describe('InvoicesService (FacturADA Lite)', () => {
 
   afterEach(() => http.verify());
 
+  it('records a prior SRI annulment by authenticated POST with explicit confirmation', () => {
+    let result: any;
+    service
+      .registerSriAnnulment('INV-TEST', {
+        date: '2026-11-10',
+        reason: 'Factura duplicada',
+        reference: 'REF',
+        confirmed: true,
+      })
+      .subscribe((value) => (result = value));
+    const req = http.expectOne((request) => request.url.includes('register_lite_invoice_sri_annulment'));
+    expect(req.request.method).toBe('POST');
+    expect(req.request.context.get(REQUIRE_AUTH)).toBeTrue();
+    expect(req.request.body).toEqual({
+      invoice_name: 'INV-TEST',
+      sri_annulment_date: '2026-11-10',
+      reason: 'Factura duplicada',
+      sri_reference: 'REF',
+      confirmed_in_sri: 1,
+    });
+    req.flush({ message: { data: { name: 'INV-TEST', status: 'Anulada' }, stock_returned: [], stock_skipped: [] } });
+    expect(result.data.status).toBe('Anulada');
+  });
+
   it('lets the backend assign the Lite issue date and normalizes item and payment_method', () => {
-    service.create_and_emit_from_ui_v2({
-      customer: 'FLC-1', posting_date: '2026-09-02',
-      items: [{ item_code: 'FLI-1', qty: 1, rate: 10, tax_rate: 15 }],
-      payments: [{ formas_de_pago: 'PAY-1', monto: 11.5 }]
-    }).subscribe();
+    service
+      .create_and_emit_from_ui_v2({
+        customer: 'FLC-1',
+        posting_date: '2026-09-02',
+        items: [{ item_code: 'FLI-1', qty: 1, rate: 10, tax_rate: 15 }],
+        payments: [{ formas_de_pago: 'PAY-1', monto: 11.5 }],
+      })
+      .subscribe();
     const req = http.expectOne((request) => request.url.includes('create_and_emit_from_ui_v2'));
     expect(req.request.body.posting_date).toBeUndefined();
     expect(req.request.body.items[0].item).toBe('FLI-1');
@@ -40,24 +68,34 @@ describe('InvoicesService (FacturADA Lite)', () => {
   });
 
   it('keeps the fiscal payment separate from the initial credit collection and its cash opening', () => {
-    service.create_and_emit_from_ui_v2({
-      customer: 'FLC-1',
-      payment_condition: 'Credito',
-      payment_due_date: '2026-10-30',
-      items: [{ item: 'FLI-1', qty: 1, rate: 500, tax_rate: 0 }],
-      payments: [{ payment_method: 'TRANSFER', payment_code: '20', amount: 500 }],
-      initial_collection: {
-        payment_method: 'CASH', payment_code: '01', amount: 200,
-        reference: '', notes: 'Abono inicial acordado con cliente', cash_opening: 'FRCO-00001'
-      }
-    }).subscribe();
+    service
+      .create_and_emit_from_ui_v2({
+        customer: 'FLC-1',
+        payment_condition: 'Credito',
+        payment_due_date: '2026-10-30',
+        items: [{ item: 'FLI-1', qty: 1, rate: 500, tax_rate: 0 }],
+        payments: [{ payment_method: 'TRANSFER', payment_code: '20', amount: 500 }],
+        initial_collection: {
+          payment_method: 'CASH',
+          payment_code: '01',
+          amount: 200,
+          reference: '',
+          notes: 'Abono inicial acordado con cliente',
+          cash_opening: 'FRCO-00001',
+        },
+      })
+      .subscribe();
 
     const req = http.expectOne((request) => request.url.includes('create_and_emit_from_ui_v2'));
     expect(req.request.body.payment_condition).toBe('Credito');
     expect(req.request.body.payments).toEqual([{ payment_method: 'TRANSFER', payment_code: '20', amount: 500 }]);
     expect(req.request.body.initial_collection).toEqual({
-      payment_method: 'CASH', payment_code: '01', amount: 200,
-      reference: '', notes: 'Abono inicial acordado con cliente', cash_opening: 'FRCO-00001'
+      payment_method: 'CASH',
+      payment_code: '01',
+      amount: 200,
+      reference: '',
+      notes: 'Abono inicial acordado con cliente',
+      cash_opening: 'FRCO-00001',
     });
     req.flush({ message: { emission: { ok: true, code: 'SRI_RECEIVED' }, data: { name: 'FLINV-2' } } });
   });
@@ -65,22 +103,28 @@ describe('InvoicesService (FacturADA Lite)', () => {
   it('normalizes authorized, processing and rejected results', () => {
     const results: any[] = [];
     service.create_and_emit_from_ui_v2({}).subscribe((value) => results.push(value));
-    http.expectOne((request) => request.url.includes('create_and_emit_from_ui_v2'))
+    http
+      .expectOne((request) => request.url.includes('create_and_emit_from_ui_v2'))
       .flush({ message: { emission: { ok: true, code: 'SRI_AUTHORIZED' }, data: { name: 'A' } } });
     service.refreshLiteInvoiceStatus('A').subscribe((value) => results.push(value));
-    http.expectOne((request) => request.url.includes('refresh_lite_invoice_status'))
+    http
+      .expectOne((request) => request.url.includes('refresh_lite_invoice_status'))
       .flush({ message: { emission: { ok: true, code: 'SRI_RECEIVED' }, data: { name: 'A' } } });
     service.retryLiteInvoice('A').subscribe((value) => results.push(value));
-    http.expectOne((request) => request.url.includes('retry_lite_invoice'))
-      .flush({ message: { emission: { ok: false, code: 'SRI_REJECTED', messages: ['Uno', 'Dos'] }, data: { name: 'A' } } });
+    http
+      .expectOne((request) => request.url.includes('retry_lite_invoice'))
+      .flush({
+        message: { emission: { ok: false, code: 'SRI_REJECTED', messages: ['Uno', 'Dos'] }, data: { name: 'A' } },
+      });
     expect(results.map((value) => value.state)).toEqual(['AUTHORIZED', 'PROCESSING', 'REJECTED']);
     expect(results[2].messages).toEqual(['Uno', 'Dos']);
   });
 
   it('keeps provider HTTP errors as observable errors and supports reissue', () => {
     let error: any;
-    service.retryLiteInvoice('A').subscribe({ error: (value) => error = value });
-    http.expectOne((request) => request.url.includes('retry_lite_invoice'))
+    service.retryLiteInvoice('A').subscribe({ error: (value) => (error = value) });
+    http
+      .expectOne((request) => request.url.includes('retry_lite_invoice'))
       .flush({ message: 'validation' }, { status: 400, statusText: 'Bad Request' });
     expect(error instanceof HttpErrorResponse).toBeTrue();
 
@@ -110,9 +154,21 @@ describe('InvoicesService (FacturADA Lite)', () => {
       expect(result.data[0].customer.fullName).toBe('CONSUMIDOR FINAL');
       expect(result.data[0].total).toBe(11.5);
     });
-    http.expectOne((request) => request.url.includes('get_all_invoices')).flush({
-      message: { data: [{ name: 'FLINV-50', posting_date: '2026-09-02', status: 'Autorizada', customer_name: 'CONSUMIDOR FINAL', grand_total: 11.5 }] }
-    });
+    http
+      .expectOne((request) => request.url.includes('get_all_invoices'))
+      .flush({
+        message: {
+          data: [
+            {
+              name: 'FLINV-50',
+              posting_date: '2026-09-02',
+              status: 'Autorizada',
+              customer_name: 'CONSUMIDOR FINAL',
+              grand_total: 11.5,
+            },
+          ],
+        },
+      });
 
     service.getInvoiceDetail('FLINV-50').subscribe((invoice: any) => {
       expect(invoice.sri.status).toBe('AUTORIZADO');
@@ -121,15 +177,28 @@ describe('InvoicesService (FacturADA Lite)', () => {
       expect(invoice.items[0].quantity).toBe(1);
       expect(invoice.items[0].total).toBe(11.5);
     });
-    http.expectOne((request) => request.url.includes('get_lite_invoice_detail')).flush({
-      data: {
-        name: 'FLINV-50', status: 'Autorizada',
-        customer: { name: 'FLC-1', customer_name: 'CONSUMIDOR FINAL', identification_number: '9999999999999' },
-        items: [{ item: 'FLI-1', item_name: 'Servicio Demo', qty: 1, rate: 10, tax_rate: 15, taxable_amount: 10, total_amount: 11.5 }],
-        totals: { total_without_tax: 10, total_taxes: 1.5, grand_total: 11.5 },
-        electronic: { provider_status: 'AUTHORIZED', access_key: 'KEY' }
-      }
-    });
+    http
+      .expectOne((request) => request.url.includes('get_lite_invoice_detail'))
+      .flush({
+        data: {
+          name: 'FLINV-50',
+          status: 'Autorizada',
+          customer: { name: 'FLC-1', customer_name: 'CONSUMIDOR FINAL', identification_number: '9999999999999' },
+          items: [
+            {
+              item: 'FLI-1',
+              item_name: 'Servicio Demo',
+              qty: 1,
+              rate: 10,
+              tax_rate: 15,
+              taxable_amount: 10,
+              total_amount: 11.5,
+            },
+          ],
+          totals: { total_without_tax: 10, total_taxes: 1.5, grand_total: 11.5 },
+          electronic: { provider_status: 'AUTHORIZED', access_key: 'KEY' },
+        },
+      });
   });
 
   it('never presents a credit note returned by an older backend as an invoice', () => {
@@ -137,10 +206,22 @@ describe('InvoicesService (FacturADA Lite)', () => {
       expect(result.data.map((row: any) => row.name)).toEqual(['INV-ORIGINAL']);
       expect(result.data[0].credit_note_summary.state).toBe('FULL');
     });
-    http.expectOne(request => request.url.includes('get_all_invoices')).flush({ message: { data: [
-      { name: 'INV-NC', document_type: 'Nota de Credito', status: 'Autorizada', grand_total: 30 },
-      { name: 'INV-ORIGINAL', document_type: 'Factura', status: 'Autorizada', grand_total: 30,
-        credit_note_summary: { state: 'FULL', documents: [{ name: 'INV-NC' }] } }
-    ], total: 2 } });
+    http
+      .expectOne((request) => request.url.includes('get_all_invoices'))
+      .flush({
+        message: {
+          data: [
+            { name: 'INV-NC', document_type: 'Nota de Credito', status: 'Autorizada', grand_total: 30 },
+            {
+              name: 'INV-ORIGINAL',
+              document_type: 'Factura',
+              status: 'Autorizada',
+              grand_total: 30,
+              credit_note_summary: { state: 'FULL', documents: [{ name: 'INV-NC' }] },
+            },
+          ],
+          total: 2,
+        },
+      });
   });
 });

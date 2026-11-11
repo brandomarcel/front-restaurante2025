@@ -31,6 +31,12 @@ import { TablesComponent } from 'src/app/pages/tables/tables.component';
 import { RemissionGuidesComponent } from 'src/app/pages/remission-guides/remission-guides.component';
 import { RemissionGuideDetailComponent } from 'src/app/pages/remission-guide-detail/remission-guide-detail.component';
 import { RemissionGuideFormComponent } from 'src/app/pages/remission-guide-form/remission-guide-form.component';
+import { WithholdingsComponent } from 'src/app/pages/withholdings/withholdings.component';
+import { WithholdingDetailComponent } from 'src/app/pages/withholding-detail/withholding-detail.component';
+import { WithholdingFormComponent } from 'src/app/pages/withholding-form/withholding-form.component';
+import { PurchaseSettlementsComponent } from 'src/app/pages/purchase-settlements/purchase-settlements.component';
+import { PurchaseSettlementDetailComponent } from 'src/app/pages/purchase-settlement-detail/purchase-settlement-detail.component';
+import { PurchaseSettlementFormComponent } from 'src/app/pages/purchase-settlement-form/purchase-settlement-form.component';
 import { ReceivablesComponent } from 'src/app/pages/receivables/receivables.component';
 import { DigitalMenuComponent } from 'src/app/pages/digital-menu/digital-menu.component';
 
@@ -74,6 +80,18 @@ const routes: Routes = [
       { path: 'remission-guides/new', component: RemissionGuideFormComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'billing', permissionKey: 'billing.create' } },
       { path: 'remission-guides/:id/edit', component: RemissionGuideFormComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'billing', permissionKey: 'billing.create' } },
       { path: 'remission-guides/:id', component: RemissionGuideDetailComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'billing', readOnlyFeature: true, permissionKey: 'billing.read' } },
+
+      // Comprobantes de retención: el menú solo aparece para agentes de retención; el backend lo exige al crear y emitir.
+      { path: 'withholdings', component: WithholdingsComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'billing', readOnlyFeature: true, permissionKey: 'billing.read' } },
+      { path: 'withholdings/new', component: WithholdingFormComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'billing', permissionKey: 'billing.create' } },
+      { path: 'withholdings/:id/edit', component: WithholdingFormComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'billing', permissionKey: 'billing.create' } },
+      { path: 'withholdings/:id', component: WithholdingDetailComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'billing', readOnlyFeature: true, permissionKey: 'billing.read' } },
+
+      // Liquidaciones de compra (SRI 03): lo que el negocio compra a quien no tiene RUC. El backend exige billing y permisos.
+      { path: 'purchase-settlements', component: PurchaseSettlementsComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'billing', readOnlyFeature: true, permissionKey: 'billing.read' } },
+      { path: 'purchase-settlements/new', component: PurchaseSettlementFormComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'billing', permissionKey: 'billing.create' } },
+      { path: 'purchase-settlements/:id/edit', component: PurchaseSettlementFormComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'billing', permissionKey: 'billing.create' } },
+      { path: 'purchase-settlements/:id', component: PurchaseSettlementDetailComponent, canActivate: [RoleAccessGuard], data: { featureKey: 'billing', readOnlyFeature: true, permissionKey: 'billing.read' } },
       { path: 'no-access', component: NoAccessComponent },
 
       {

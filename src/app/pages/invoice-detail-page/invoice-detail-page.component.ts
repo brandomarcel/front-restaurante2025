@@ -23,7 +23,7 @@ import { electronicDocumentLabel, isCancelledInvoice, isCreditNoteDocument } fro
 import { ElectronicStatusBadgeComponent } from 'src/app/shared/components/electronic-status-badge/electronic-status-badge.component';
 import { DocumentAction, DocumentActionsComponent } from 'src/app/shared/components/document-actions/document-actions.component';
 import { SriAnnulmentOverview } from 'src/app/services/invoices.service';
-import { SriAnnulmentDialogComponent } from './sri-annulment-dialog/sri-annulment-dialog.component';
+import { SriAnnulmentDialogComponent } from 'src/app/shared/components/sri-annulment-dialog/sri-annulment-dialog.component';
 
 type DetailTab = 'general' | 'electronic' | 'collections';
 

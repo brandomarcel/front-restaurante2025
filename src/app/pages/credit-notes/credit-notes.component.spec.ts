@@ -10,8 +10,21 @@ describe('CreditNotesComponent', () => {
   let fixture: ComponentFixture<CreditNotesComponent>;
   let service: jasmine.SpyObj<CreditNoteService>;
   const rows = [
-    { name: 'FLINV-NC-1', document_number: '001-001-000000010', status: 'Emitida', customer_name: 'Ana Pérez', related_document_number: '001-001-000000001', grand_total: 5 },
-    { name: 'FLINV-NC-2', document_number: '001-001-000000011', status: 'Autorizada', customer_name: 'Luis Mora', grand_total: 8 }
+    {
+      name: 'FLINV-NC-1',
+      document_number: '001-001-000000010',
+      status: 'Emitida',
+      customer_name: 'Ana Pérez',
+      related_document_number: '001-001-000000001',
+      grand_total: 5,
+    },
+    {
+      name: 'FLINV-NC-2',
+      document_number: '001-001-000000011',
+      status: 'Autorizada',
+      customer_name: 'Luis Mora',
+      grand_total: 8,
+    },
   ];
 
   beforeEach(() => {
@@ -23,8 +36,8 @@ describe('CreditNotesComponent', () => {
         provideRouter([]),
         { provide: CreditNoteService, useValue: service },
         // Restaurante: las notas de crédito deben seguir leyéndose con el contrato Lite.
-        { provide: CompanyCapabilitiesService, useValue: { isLiteMode: false, hasPermission: () => true } }
-      ]
+        { provide: CompanyCapabilitiesService, useValue: { isLiteMode: false, hasPermission: () => true } },
+      ],
     });
     fixture = TestBed.createComponent(CreditNotesComponent);
     component = fixture.componentInstance;
@@ -34,7 +47,7 @@ describe('CreditNotesComponent', () => {
   it('renders Lite status labels even when the business operates as restaurant', () => {
     expect(service.getAllCreditNotes).toHaveBeenCalledOnceWith(10, 0, undefined, '');
     expect(fixture.nativeElement.textContent).toContain('Autorización pendiente');
-    expect(component.statusOptions.map(option => option.value)).toContain('Anulada');
+    expect(component.statusOptions.map((option) => option.value)).toContain('anuladas');
   });
 
   it('debounces the backend search', () => {
@@ -43,7 +56,7 @@ describe('CreditNotesComponent', () => {
     try {
       service.getAllCreditNotes.calls.reset();
       component.search = 'luis';
-      expect(component.invoicesFiltradas.map(row => row.name)).toEqual(['FLINV-NC-2']);
+      expect(component.invoicesFiltradas.map((row) => row.name)).toEqual(['FLINV-NC-2']);
       expect(service.getAllCreditNotes).not.toHaveBeenCalled();
       jasmine.clock().tick(300);
       expect(service.getAllCreditNotes).toHaveBeenCalledOnceWith(10, 0, undefined, 'luis');

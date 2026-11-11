@@ -33,6 +33,20 @@ describe('Electronic document realtime reads', () => {
   });
   afterEach(() => http.verify());
   const notification = { doctype: 'FacturADA Lite Invoice', name: 'FLINV-1', business: 'FBU-1' };
+  it('listens only to the withholding DocType and reads its scoped detail after reconnect', () => {
+    const updated = jasmine.createSpy('updated');
+    const subscription = service.watch('WH-TEST', 'FBU-1', 'withholding').subscribe(updated);
+    expect(socket.subscribeDocument).toHaveBeenCalledWith('FacturADA Lite Withholding', 'WH-TEST');
+    handlers.get('facturada_electronic_status_updated')!({ ...notification, name: 'WH-TEST' });
+    http.expectNone(() => true);
+    connected.next(true);
+    const request = http.expectOne(req => req.url.endsWith('.get_lite_withholding_detail'));
+    expect(request.request.params.get('business')).toBe('FBU-1');
+    request.flush({ message: { data: { name: 'WH-TEST', business: 'FBU-1', status: 'Autorizada' } } });
+    expect(updated).toHaveBeenCalledTimes(1);
+    subscription.unsubscribe();
+    expect(socket.unsubscribeDocument).toHaveBeenCalledWith('FacturADA Lite Withholding', 'WH-TEST');
+  });
   it('only reads local state for matching document events and releases listeners', () => {
     const updated = jasmine.createSpy('updated');
     const subscription = service.watch('FLINV-1', 'FBU-1', false).subscribe(updated);

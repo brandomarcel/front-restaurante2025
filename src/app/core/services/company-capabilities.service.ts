@@ -1,6 +1,8 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { frappeData } from '../utils/frappe-response';
+import { FiscalDocumentType } from '../utils/fiscal-setup';
 import { UtilsService } from './utils.service';
+import { FrappeSocketService } from 'src/app/services/frappe-socket.service';
 
 export type BusinessMode = 'RESTAURANTE' | 'FACTURADOR' | 'FACTURADA_LITE';
 export type CompanyFeatureKey =
@@ -119,6 +121,7 @@ export class CompanyCapabilitiesService {
   private readonly storageKey = 'company_capabilities';
   private readonly state = signal(this.readStored());
   private readonly utilsService = inject(UtilsService);
+  private readonly realtimeSocket = inject(FrappeSocketService);
 
   readonly config = this.state.asReadonly();
 
@@ -278,6 +281,18 @@ export class CompanyCapabilitiesService {
   }
 
   /** Regla 7: visibilidad del módulo Usuarios. */
+  /**
+   * Retenciones: solo con `ui_capabilities.modules.withholdings.visible` (billing + billing.read + «Agente de
+   * retención» en el perfil tributario). Sin ese dato no hay forma de saber si es agente: no se muestra.
+   */
+  get withholdingsVisible(): boolean { return this.isUiModuleVisible('withholdings', undefined); }
+
+  /**
+   * Liquidaciones de compra: solo con `ui_capabilities.modules.purchase_settlements.visible` (billing + billing.read).
+   * Sin respaldo por feature: un backend que no lo informa todavía no tiene el módulo.
+   */
+  get purchaseSettlementsVisible(): boolean { return this.isUiModuleVisible('purchase_settlements', undefined); }
+
   get usersModuleVisible(): boolean { return this.isUiModuleVisible('users', undefined) || (!this.uiModule('users') && this.hasPermission('business.users.manage')); }
   get isGeneralPos(): boolean { return this.canUsePos && this.posExperience === 'General'; }
   /** "Simple" hasta que `get_inventory_configuration` confirme lo contrario. */
@@ -552,7 +567,7 @@ export class CompanyCapabilitiesService {
   }
 
   /** Devuelve una combinación segura para emitir; no genera secuenciales. */
-  getLiteDocumentConfiguration(documentType: 'Factura' | 'Nota de Credito' | 'Guia de Remision', environment?: unknown): {
+  getLiteDocumentConfiguration(documentType: FiscalDocumentType, environment?: unknown): {
     business: string;
     establishment: any;
     emissionPoint: any;
@@ -616,7 +631,7 @@ export class CompanyCapabilitiesService {
    * Remisión).
    */
   hasActiveSequence(
-    documentType: 'Factura' | 'Nota de Credito' | 'Guia de Remision',
+    documentType: FiscalDocumentType,
     establishmentId: unknown,
     emissionPointId: unknown,
     environment?: unknown
@@ -677,6 +692,8 @@ export class CompanyCapabilitiesService {
       || rawMessage.api_configuration !== undefined
     );
     const message = (hasContextShape ? rawMessage : frappeData<any>(response)) || {};
+    // Sitio Frappe del dominio (get_user_context.site): namespace del tiempo real.
+    if (message?.site) this.realtimeSocket.setSite(message.site);
     const rawBusiness = message?.business;
     const rawCompany = rawBusiness && typeof rawBusiness === 'object'
       ? rawBusiness

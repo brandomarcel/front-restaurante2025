@@ -45,8 +45,9 @@ export interface DocumentAction {
       </ng-container>
     </div>
 
+    <!-- Encima de la navegación inferior (visible bajo xl), igual que .mobile-emit-bar en Facturar. -->
     <div *ngIf="layout === 'mobile' && actions.length" role="toolbar" aria-label="Acciones del documento"
-      class="fixed inset-x-0 bottom-0 z-40 flex gap-2 overflow-x-auto border-t border-border bg-card px-3 py-2 shadow-[0_-8px_24px_rgba(15,23,42,0.12)] md:hidden">
+      class="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+3.75rem)] z-[80] flex gap-2 overflow-x-auto border-t border-border bg-card px-3 py-2 shadow-[0_-8px_24px_rgba(15,23,42,0.12)] md:hidden">
       <ng-container *ngFor="let action of actions; trackBy: trackById">
         <ng-container *ngTemplateOutlet="button; context: { $implicit: action, compact: true }"></ng-container>
       </ng-container>

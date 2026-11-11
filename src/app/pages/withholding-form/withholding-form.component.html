@@ -1,0 +1,281 @@
+<ngx-spinner></ngx-spinner>
+
+<div class="app-container space-y-4">
+  <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
+    <h2 class="text-xl font-bold">{{ isEditMode ? 'Editar retención' : 'Nueva retención' }}</h2>
+    <p class="text-xs opacity-90">El comprobante que le entregas a tu proveedor por los impuestos que le retienes de su factura.</p>
+  </section>
+
+  <!-- Cargando / error -->
+  <section *ngIf="setupLoading" class="h-48 animate-pulse rounded-xl bg-muted" aria-busy="true"></section>
+
+  <section *ngIf="!setupLoading && setupError" class="rounded-xl border border-border bg-card px-4 py-8 text-center shadow-sm" role="alert">
+    <p class="text-sm font-semibold text-foreground">{{ setupError }}</p>
+    <div class="mt-3 flex justify-center gap-2">
+      <button type="button" class="btn btn-outline !text-xs" (click)="cancelar()">Volver</button>
+      <button type="button" class="btn btn-primary !text-xs" (click)="load()">Reintentar</button>
+    </div>
+  </section>
+
+  <!-- No es agente de retención -->
+  <section *ngIf="!setupLoading && setup && !isWithholdingAgent" class="rounded-xl border border-warning-300 bg-warning-50 p-4 shadow-sm" role="alert">
+    <p class="text-sm font-bold text-warning-900">Tu negocio no está marcado como agente de retención</p>
+    <p class="mt-1 text-xs text-warning-800">
+      {{ blockMessage || 'Solo los agentes de retención designados por el SRI emiten retenciones.' }}
+    </p>
+    <p class="mt-2 text-xs text-warning-800">
+      Si el SRI te designó, activa «Agente de retención» en Configuración ▸ Datos tributarios.
+    </p>
+    <div class="mt-3 flex flex-wrap gap-2">
+      <a *ngIf="canEditTaxProfile" class="btn btn-primary !text-xs" routerLink="/settings/lite/tax-profile">Ir a Datos tributarios</a>
+      <button type="button" class="btn btn-outline !text-xs" (click)="cancelar()">Volver</button>
+    </div>
+  </section>
+
+  <ng-container *ngIf="!setupLoading && setup && isWithholdingAgent">
+    <div [formGroup]="form" class="space-y-4">
+      <p *ngIf="blockMessage" class="rounded-xl border border-warning-300 bg-warning-50 px-3 py-2 text-xs font-semibold text-warning-900" role="alert">
+        {{ blockMessage }} Puedes guardar el borrador y emitirlo cuando esté resuelto.
+      </p>
+
+      <!-- 1. Proveedor -->
+      <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
+        <h3 class="mb-0.5 text-sm font-bold text-foreground">1. Proveedor</h3>
+        <p class="mb-2 text-[11px] text-muted-foreground">A quién le retienes. Si pegas la clave de acceso de su factura, lo buscamos por su RUC.</p>
+        <app-supplier-picker [supplier]="supplier" (supplierChange)="onSupplierChange($event)" [invalid]="submitted && !supplier" />
+        <p *ngIf="supplierMismatch" class="mt-2 rounded-lg bg-warning-50 px-3 py-2 text-[11px] font-semibold text-warning-800">
+          La clave de acceso es del RUC {{ keyRuc }}, pero el proveedor elegido tiene otra identificación. El SRI la rechazaría.
+        </p>
+      </section>
+
+      <!-- 2. Factura del proveedor -->
+      <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
+        <h3 class="mb-0.5 text-sm font-bold text-foreground">2. Factura del proveedor</h3>
+        <p class="mb-2 text-[11px] text-muted-foreground">La factura que te entregó y sobre la que retienes.</p>
+
+        <div>
+          <label for="wh-access-key" class="mb-1 block text-xs font-semibold text-foreground/80">Clave de acceso (49 dígitos)</label>
+          <input id="wh-access-key" class="input !w-full font-mono" formControlName="num_aut_doc_sustento" inputmode="numeric" autocomplete="off"
+            maxlength="60" placeholder="Pégala desde el PDF o el correo de la factura" />
+          <p class="mt-1 text-[11px] text-muted-foreground">
+            <ng-container *ngIf="keyLookupLoading">Leyendo la clave…</ng-container>
+            <ng-container *ngIf="!keyLookupLoading">
+              {{ (form.get('num_aut_doc_sustento')?.value || '').length }}/49 · Con la clave llenamos número, fecha, tipo y proveedor. Si la factura es física, escribe su autorización (10 o 37 dígitos).
+            </ng-container>
+          </p>
+          <p *ngIf="submitted && form.get('num_aut_doc_sustento')?.invalid" class="field-error">Debe tener 49, 37 o 10 dígitos.</p>
+          <p *ngIf="keyNotice && !keyLookupLoading" class="mt-1.5 rounded-lg bg-info-50 px-3 py-1.5 text-[11px] text-info-800">{{ keyNotice }}</p>
+          <p *ngFor="let warning of keyWarnings" class="mt-1.5 rounded-lg bg-warning-50 px-3 py-1.5 text-[11px] font-semibold text-warning-800" role="alert">{{ warning }}</p>
+        </div>
+
+        <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <label for="wh-doc-type" class="mb-1 block text-xs font-semibold text-foreground/80">Tipo de documento</label>
+            <select id="wh-doc-type" class="select !w-full" formControlName="cod_doc_sustento">
+              <option *ngFor="let item of setup.document_types" [value]="item.code">{{ item.code }} · {{ item.label }}</option>
+            </select>
+          </div>
+          <div>
+            <label for="wh-doc-number" class="mb-1 block text-xs font-semibold text-foreground/80">Número</label>
+            <input id="wh-doc-number" class="input !w-full font-mono" formControlName="num_doc_sustento" placeholder="001-001-000000123" autocomplete="off" />
+            <p *ngIf="submitted && form.get('num_doc_sustento')?.errors?.['required']" class="field-error">Requerido.</p>
+            <p *ngIf="submitted && form.get('num_doc_sustento')?.errors?.['pattern']" class="field-error">Así: 001-001-000000123.</p>
+          </div>
+          <div>
+            <label for="wh-doc-date" class="mb-1 block text-xs font-semibold text-foreground/80">Fecha de la factura</label>
+            <input id="wh-doc-date" type="date" class="input !w-full" formControlName="fecha_emision_doc_sustento" />
+            <p *ngIf="submitted && form.get('fecha_emision_doc_sustento')?.errors?.['required']" class="field-error">Requerido.</p>
+            <p *ngIf="submitted && form.get('fecha_emision_doc_sustento')?.errors?.['fechaFutura']" class="field-error">No puede ser posterior a hoy.</p>
+          </div>
+          <div class="sm:col-span-2 lg:col-span-2">
+            <label for="wh-support" class="mb-1 block text-xs font-semibold text-foreground/80">Sustento tributario</label>
+            <select id="wh-support" class="select !w-full" formControlName="cod_sustento">
+              <option *ngFor="let item of setup.support_codes" [value]="item.code">{{ item.code }} · {{ item.label }}</option>
+            </select>
+            <p class="mt-1 text-[11px] text-muted-foreground">Para qué usas la compra. Lo común es 01 (crédito tributario de IVA).</p>
+          </div>
+          <div>
+            <label for="wh-payment" class="mb-1 block text-xs font-semibold text-foreground/80">Forma de pago</label>
+            <select id="wh-payment" class="select !w-full" formControlName="forma_pago">
+              <option *ngFor="let item of setup.payment_methods" [value]="item.code">{{ item.label }}</option>
+            </select>
+          </div>
+        </div>
+
+        <p *ngIf="isLate" class="mt-3 rounded-lg border border-warning-300 bg-warning-50 px-3 py-2 text-[11px] text-warning-900" role="alert">
+          <b class="font-bold">Han pasado {{ daysSinceSupport }} días desde la factura.</b>
+          El SRI pide emitir la retención dentro de {{ daysLimit }} días desde la factura del proveedor. Puedes emitirla igual.
+        </p>
+
+        <!-- Valores de la factura -->
+        <div class="mt-4" formArrayName="taxes">
+          <div class="mb-1.5 flex items-center justify-between gap-2">
+            <p class="text-xs font-bold text-foreground">Valores de la factura</p>
+            <button type="button" class="btn btn-outline !px-2 !py-1 !text-[11px]" (click)="addTax()">+ Otra tarifa</button>
+          </div>
+          <p class="mb-2 text-[11px] text-muted-foreground">El valor sin IVA de cada tarifa, como aparece en la factura.</p>
+
+          <div *ngFor="let row of taxes.controls; let i = index; trackBy: trackByIndex" [formGroupName]="i"
+            class="mb-1.5 grid grid-cols-2 items-start gap-2 rounded-lg border border-border bg-muted/30 p-2 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto]">
+            <div class="col-span-2 min-w-0 sm:col-span-1">
+              <label class="mb-1 block text-[11px] text-foreground/70" [attr.for]="'wh-tax-code-' + i">Tarifa</label>
+              <select class="select !w-full" formControlName="tax_code" [id]="'wh-tax-code-' + i">
+                <option value="" disabled>Elige la tarifa</option>
+                <option *ngFor="let item of setup.tax_codes" [value]="item.code">{{ item.label }}</option>
+              </select>
+            </div>
+            <div class="min-w-0">
+              <label class="mb-1 block text-[11px] text-foreground/70" [attr.for]="'wh-tax-base-' + i">Base sin IVA</label>
+              <input class="input !w-full text-right" type="text" inputmode="decimal" appDecimalInput step="0.01" formControlName="base_imponible"
+                [id]="'wh-tax-base-' + i" placeholder="0.00" />
+            </div>
+            <div class="min-w-0">
+              <p class="mb-1 text-[11px] text-foreground/70">IVA</p>
+              <p class="py-2 text-right text-xs font-semibold text-foreground">{{ taxRowIva(row) | number:'1.2-2' }}</p>
+            </div>
+            <button type="button" class="btn btn-ghost col-span-2 !px-2 !py-1 !text-[11px] sm:col-span-1 sm:mt-5"
+              (click)="removeTax(i)" [disabled]="taxes.length <= 1" [attr.aria-label]="'Quitar tarifa ' + (i + 1)">Quitar</button>
+          </div>
+
+          <dl class="ml-auto mt-2 max-w-xs space-y-0.5 text-xs">
+            <div class="flex justify-between gap-4"><dt class="text-muted-foreground">Subtotal sin IVA</dt><dd class="font-semibold">{{ subtotal | number:'1.2-2' }}</dd></div>
+            <div class="flex justify-between gap-4"><dt class="text-muted-foreground">IVA</dt><dd class="font-semibold">{{ totalIva | number:'1.2-2' }}</dd></div>
+            <div class="flex justify-between gap-4 border-t border-border pt-0.5"><dt class="font-bold text-foreground">Total de la factura</dt><dd class="font-bold">{{ invoiceTotal | number:'1.2-2' }}</dd></div>
+          </dl>
+          <p class="mt-1 text-right text-[10px] text-muted-foreground">Valores de guía: el sistema los recalcula al guardar.</p>
+        </div>
+      </section>
+
+      <!-- 3. Retenciones -->
+      <section class="rounded-xl border border-border bg-card p-3 shadow-sm" formArrayName="retentions">
+        <h3 class="mb-0.5 text-sm font-bold text-foreground">3. Qué le retienes</h3>
+        <p class="mb-2 text-[11px] text-muted-foreground">
+          Renta: el código del concepto y su porcentaje (te los indica tu contador, p. ej. 312). IVA: el porcentaje sobre el IVA de la factura.
+        </p>
+
+        <div *ngFor="let row of retentions.controls; let i = index; trackBy: trackByIndex" [formGroupName]="i"
+          class="mb-2 rounded-lg border border-border bg-muted/30 p-2">
+          <div class="mb-1.5 flex items-center justify-between gap-2">
+            <span class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
+              [ngClass]="row.get('tax_type')?.value === 'IVA' ? 'bg-info-100 text-info-800' : 'bg-primary/10 text-primary'">
+              {{ row.get('tax_type')?.value === 'IVA' ? 'Retención de IVA' : 'Retención de renta' }}
+            </span>
+            <button type="button" class="btn btn-ghost !px-2 !py-1 !text-[11px]" (click)="removeRetention(i)"
+              [attr.aria-label]="'Quitar retención ' + (i + 1)">Quitar</button>
+          </div>
+          <div class="grid grid-cols-2 items-start gap-2 sm:grid-cols-4">
+            <div *ngIf="row.get('tax_type')?.value === 'Renta'" class="min-w-0">
+              <label class="mb-1 block text-[11px] text-foreground/70" [attr.for]="'wh-ret-code-' + i">Código del concepto</label>
+              <input class="input !w-full font-mono uppercase" formControlName="codigo_retencion" maxlength="5" placeholder="312" autocomplete="off"
+                [id]="'wh-ret-code-' + i" [attr.list]="'wh-income-concepts'" />
+              <p *ngIf="incomeConcept(row.get('codigo_retencion')?.value) as concept" class="mt-1 text-[11px] leading-snug text-muted-foreground">
+                {{ concept.label }} · {{ concept.percentage }} %
+              </p>
+              <p *ngIf="submitted && row.errors?.['codigoRequerido']" class="field-error">Requerido.</p>
+              <p *ngIf="submitted && row.errors?.['codigoInvalido']" class="field-error">3 a 5 letras o números.</p>
+            </div>
+            <div class="min-w-0">
+              <label class="mb-1 block text-[11px] text-foreground/70" [attr.for]="'wh-ret-pct-' + i">Porcentaje</label>
+              <select *ngIf="row.get('tax_type')?.value === 'IVA'" class="select !w-full" formControlName="porcentaje" [id]="'wh-ret-pct-' + i">
+                <option [ngValue]="null" disabled>Elige %</option>
+                <option *ngFor="let rate of setup.vat_withholding_rates" [ngValue]="rate">{{ rate }} %</option>
+              </select>
+              <input *ngIf="row.get('tax_type')?.value !== 'IVA'" class="input !w-full text-right" type="text" inputmode="decimal" appDecimalInput step="0.01"
+                formControlName="porcentaje" placeholder="2" [id]="'wh-ret-pct-' + i" />
+              <p *ngIf="submitted && row.get('porcentaje')?.invalid" class="field-error">Requerido.</p>
+              <p *ngIf="conceptMismatch(row) as concept" class="mt-1 text-[11px] leading-snug text-warning-700">
+                El SRI pide {{ concept.percentage }} % para el código {{ concept.code }}.
+              </p>
+            </div>
+            <div class="min-w-0">
+              <label class="mb-1 block text-[11px] text-foreground/70" [attr.for]="'wh-ret-base-' + i">
+                {{ row.get('tax_type')?.value === 'IVA' ? 'Sobre el IVA de' : 'Sobre la base de' }}
+              </label>
+              <input class="input !w-full text-right" type="text" inputmode="decimal" appDecimalInput step="0.01" formControlName="base_imponible"
+                [id]="'wh-ret-base-' + i" />
+              <p *ngIf="submitted && row.get('base_imponible')?.invalid" class="field-error">Mayor que 0.</p>
+            </div>
+            <div class="min-w-0" [ngClass]="{ 'col-span-2 sm:col-span-1': row.get('tax_type')?.value === 'IVA' }">
+              <p class="mb-1 text-[11px] text-foreground/70">Valor retenido</p>
+              <p class="py-2 text-right text-sm font-bold text-foreground">{{ retentionValue(row) | number:'1.2-2' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <p *ngIf="!retentions.length" class="mb-2 rounded-lg border border-dashed border-border p-3 text-center text-xs text-muted-foreground">
+          Agrega al menos una retención.
+        </p>
+
+        <div class="flex flex-wrap gap-2">
+          <button type="button" class="btn btn-outline !text-xs" (click)="addRetention('Renta')">+ Retención de renta</button>
+          <button type="button" class="btn btn-outline !text-xs" (click)="addRetention('IVA')" [disabled]="totalIva <= 0"
+            [attr.title]="totalIva <= 0 ? 'La factura no tiene IVA' : null">+ Retención de IVA</button>
+        </div>
+
+        <dl class="ml-auto mt-3 max-w-xs space-y-0.5 text-xs">
+          <div class="flex justify-between gap-4"><dt class="text-muted-foreground">Renta retenida</dt><dd class="font-semibold">{{ totalRenta | number:'1.2-2' }}</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-muted-foreground">IVA retenido</dt><dd class="font-semibold">{{ totalIvaRetenido | number:'1.2-2' }}</dd></div>
+          <div class="flex justify-between gap-4 border-t border-border pt-0.5"><dt class="font-bold text-foreground">Total retenido</dt><dd class="font-bold text-primary">{{ totalRetenido | number:'1.2-2' }}</dd></div>
+        </dl>
+        <p class="mt-1 text-right text-[10px] text-muted-foreground">Le pagas al proveedor {{ (invoiceTotal - totalRetenido) | number:'1.2-2' }}.</p>
+      </section>
+
+      <!-- 4. Desde dónde se emite -->
+      <section class="rounded-xl border border-border bg-card p-3 shadow-sm">
+        <h3 class="mb-2 text-sm font-bold text-foreground">4. Desde dónde se emite</h3>
+        <div class="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label for="wh-establishment" class="mb-1 block text-xs font-semibold text-foreground/80">Establecimiento</label>
+            <select id="wh-establishment" class="select !w-full" formControlName="establishment" (change)="onEstablishmentChange()">
+              <option value="" disabled>Elige un establecimiento</option>
+              <option *ngFor="let item of establishmentOptions" [value]="item.name">{{ item.establishment_name || item.name }}</option>
+            </select>
+            <p *ngIf="submitted && form.get('establishment')?.invalid" class="field-error">Requerido.</p>
+          </div>
+          <div>
+            <label for="wh-point" class="mb-1 block text-xs font-semibold text-foreground/80">Punto de emisión</label>
+            <select id="wh-point" class="select !w-full" formControlName="emission_point">
+              <option value="" disabled>Elige un punto de emisión</option>
+              <option *ngFor="let item of emissionPointOptions" [value]="item.name">{{ item.emission_point_name || item.name }}</option>
+            </select>
+            <p *ngIf="submitted && form.get('emission_point')?.invalid" class="field-error">Requerido.</p>
+          </div>
+          <div>
+            <label for="wh-environment" class="mb-1 block text-xs font-semibold text-foreground/80">Ambiente</label>
+            <select id="wh-environment" class="select !w-full" formControlName="environment">
+              <option value="Pruebas">Pruebas</option>
+              <option value="Produccion">Producción</option>
+            </select>
+          </div>
+        </div>
+        <p *ngIf="form.get('establishment')?.value && form.get('emission_point')?.value && !hasActiveSequence"
+          class="mt-3 rounded-lg bg-warning-50 px-3 py-2 text-[11px] font-semibold text-warning-700">
+          Falta la secuencia de Retención (SRI 07) para este establecimiento, punto de emisión y ambiente. Puedes guardar el borrador,
+          pero para emitir créala en Configuración ▸ Secuencias.
+        </p>
+        <div class="mt-3">
+          <label for="wh-notes" class="mb-1 block text-xs font-semibold text-foreground/80">Nota <span class="font-normal text-muted-foreground">(opcional, solo para ti)</span></label>
+          <textarea id="wh-notes" class="input !w-full" rows="2" maxlength="300" formControlName="notes"></textarea>
+        </div>
+      </section>
+
+      <section *ngIf="validationSummary.length" class="rounded-xl border border-danger-200 bg-danger-50 p-3" role="alert">
+        <p class="mb-1.5 text-xs font-bold text-danger-700">Corrige lo siguiente antes de continuar:</p>
+        <ul class="list-disc space-y-0.5 pl-4 text-[11px] text-danger-700">
+          <li *ngFor="let message of validationSummary">{{ message }}</li>
+        </ul>
+      </section>
+
+      <section class="flex flex-wrap justify-end gap-2 pb-6">
+        <button type="button" class="btn btn-outline" (click)="cancelar()">Cancelar</button>
+        <button type="button" class="btn btn-outline" [disabled]="!canSaveDraft" (click)="guardarBorrador()">Guardar borrador</button>
+        <button type="button" class="btn btn-primary" [disabled]="!canEmit" (click)="emitir()"
+          [attr.title]="blockMessage || null">Emitir</button>
+      </section>
+    </div>
+  </ng-container>
+</div>
+
+<datalist id="wh-income-concepts">
+  <option *ngFor="let concept of setup?.income_concepts || []" [value]="concept.code">{{ concept.code }} · {{ concept.label }} ({{ concept.percentage }} %)</option>
+</datalist>

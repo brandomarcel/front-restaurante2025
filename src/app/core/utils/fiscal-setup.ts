@@ -4,13 +4,15 @@
  * oficial siempre lo controla el backend.
  */
 
-export type FiscalDocumentType = 'Factura' | 'Nota de Credito' | 'Guia de Remision';
+export type FiscalDocumentType = 'Factura' | 'Nota de Credito' | 'Guia de Remision' | 'Comprobante de Retencion' | 'Liquidacion de Compra';
 export type FiscalEnvironment = 'Pruebas' | 'Produccion';
 
 export const FISCAL_DOCUMENTS: readonly { type: FiscalDocumentType; label: string; sriCode: string }[] = [
   { type: 'Factura', label: 'Factura', sriCode: '01' },
   { type: 'Nota de Credito', label: 'Nota de crédito', sriCode: '04' },
-  { type: 'Guia de Remision', label: 'Guía de remisión', sriCode: '06' }
+  { type: 'Guia de Remision', label: 'Guía de remisión', sriCode: '06' },
+  { type: 'Comprobante de Retencion', label: 'Retención', sriCode: '07' },
+  { type: 'Liquidacion de Compra', label: 'Liquidación de compra', sriCode: '03' }
 ];
 
 export const FISCAL_ENVIRONMENTS: readonly { value: FiscalEnvironment; label: string }[] = [

@@ -125,6 +125,25 @@ Funciones:
   (en el servidor), fecha de emisión (Todas, Hoy, Este mes, Mes pasado, «Elegir fechas…» con Desde/Hasta) y «Limpiar
   filtros». Filtros y página quedan en la dirección
   (`?estado=&q=&desde=&hasta=&pagina=`); un `?estado=` antiguo (p. ej. `Rechazada`) abre su grupo.
+- Comprobante de retención electrónico (SRI 07, v2.0.0): Documentos ▸ «Retenciones» (`/dashboard/withholdings`),
+  solo para agentes de retención (`ui_capabilities.modules.withholdings`) con `billing`; proveedores propios de Lite
+  (`shared/components/supplier-picker`); la clave de 49 dígitos de la factura del proveedor llena sus datos; requiere
+  secuencia «Comprobante de Retencion». Contrato `docs/frontend_withholdings.md`.
+- Liquidación de compra electrónica (SRI 03, v1.1.0), desde 2026-11-11: Documentos ▸ «Liquidaciones»
+  (`/dashboard/purchase-settlements`, `/new`, `/:id`), para comprarle a quien no tiene RUC (cédula, pasaporte o del
+  exterior; con RUC se bloquea: debe dar factura). Visible con `billing` (`ui_capabilities.modules.purchase_settlements`);
+  crear/emitir con `billing.create`. Líneas con descripción, cantidad, unidad, precio sin IVA, descuento $ y tarifa (por
+  defecto IVA 0 %); forma de pago por defecto efectivo, con aviso si pasa de USD 1.000. No mueve inventario. Necesita
+  la secuencia «Liquidacion de Compra». Autorizada y si el negocio es agente de retención: «Crear retención» abre la
+  retención prellenada (documento 03; sustento 01 si tiene IVA o 02 si no, igual que la compra contable; renta 311 e
+  IVA 100 %). Contrato `docs/frontend_purchase_settlements.md`.
+- Anular (desde 2026-11-11), igual que «Ya la anulé en el SRI» de las facturas: en el detalle de una retención o
+  liquidación autorizada, sección «Anular …» (Administrador y Gerente, `billing.void`; `shared/components/sri-annulment-
+  section` + diálogo compartido `shared/components/sri-annulment-dialog`): fecha (entre la emisión y hoy), motivo,
+  referencia opcional y confirmación. No envía nada al SRI; queda «Anulada en el SRI» con quién, cuándo y por qué, y
+  las listas tienen pestaña «Anuladas». Una liquidación con retención vigente no se anula: primero la retención (al
+  anularla, la liquidación vuelve a ofrecer «Crear retención»). Con contabilidad, el barrido cancela la retención
+  contable o la compra; si la compra ya tiene pago registrado, espera a que el contador lo cancele.
 - Punto de venta genérico y notas de venta (`pos-generic`, `pos-sale-notes`)
 - Configuración tributaria: establecimientos, puntos de emisión, secuencias,
   certificado electrónico, terminales POS (`settings/lite/*`)
@@ -428,6 +447,12 @@ Reglas recomendadas de angular-eslint, sin `prefer-inject` ni `prefer-control-fl
 Despliegue: cualquier `push` a `main` dispara `.github/workflows/deploy.yml`, que
 compila y despliega automáticamente por SSH a producción. No hay ambiente de staging
 intermedio: un push a `main` es un despliegue real.
+
+Un solo build para todos los dominios (desde 2026-11-11): `environment.prod.ts` usa direcciones relativas (`/api`), así
+que la app habla con el dominio desde el que se abrió. Hoy solo existe `facturada.bmarc-corp.com/portal` (sitio
+compartido `facturada_main`); cada cliente con contabilidad tendrá su dominio y su sitio, con la misma carpeta `portal`
+servida por nginx. El namespace de Socket.IO sale de `get_user_context.site` (`FrappeSocketService.setSite`,
+recordado por dominio en `localStorage`); `frappeSiteNamespace` queda de respaldo. No volver a escribir un dominio fijo.
 
 ---
 

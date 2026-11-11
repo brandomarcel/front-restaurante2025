@@ -23,7 +23,7 @@ export interface MenuItem {
    * todavía no reciben ese contrato. Ver `UI_VISIBILITY_RESOLVERS` en
    * `menu.service.ts`.
    */
-  uiVisibilityKey?: 'pos' | 'reports' | 'users' | 'restaurantOrders' | 'restaurantTables' | 'restaurantKitchen';
+  uiVisibilityKey?: UiVisibilityKey;
 }
 
 export interface SubMenuItem {
@@ -57,6 +57,8 @@ export interface SubMenuItem {
   /** Etiqueta para negocios sin la función `restaurant` (p. ej. «Catálogo digital» en vez de «Carta digital»). */
   labelOutsideRestaurant?: string;
   /** Ver `MenuItem.uiVisibilityKey`. */
-  uiVisibilityKey?: 'pos' | 'reports' | 'users' | 'restaurantOrders' | 'restaurantTables' | 'restaurantKitchen';
+  uiVisibilityKey?: UiVisibilityKey;
 }
+/** Ver `UI_VISIBILITY_RESOLVERS` en `menu.service.ts`. */
+export type UiVisibilityKey = 'pos' | 'reports' | 'users' | 'restaurantOrders' | 'restaurantTables' | 'restaurantKitchen' | 'withholdings' | 'purchase_settlements';
 export type Role = 'SYSTEM MANAGER' | 'ADMINISTRADOR' | 'GERENTE' | 'CAJERO' | 'FACTURACION' | 'MESERO' | 'COCINA' | 'USUARIO';

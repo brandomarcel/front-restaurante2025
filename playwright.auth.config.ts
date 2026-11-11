@@ -4,7 +4,7 @@ export default defineConfig({
   testMatch: 'auth-current.e2e.spec.ts',
   workers: 1,
   reporter: 'list',
-  outputDir: '/tmp/facturada-auth-2026-11-08',
+  outputDir: '/tmp/facturada-2026-11-11-final-auth',
   use: {
     baseURL: 'http://127.0.0.1:4228',
     browserName: 'chromium',
@@ -19,7 +19,7 @@ export default defineConfig({
   ],
   webServer: {
     command:
-      'python3 tests-e2e/serve-isolated-app.py --directory /tmp/facturada-2026-11-09-production/browser --port 4228',
+      'python3 tests-e2e/serve-isolated-app.py --directory /tmp/facturada-2026-11-11-final-production/browser --port 4228',
     url: 'http://127.0.0.1:4228/portal/auth/sign-in',
     reuseExistingServer: false,
   },

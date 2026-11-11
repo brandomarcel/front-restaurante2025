@@ -13,6 +13,13 @@ describe('Electronic review RPC contract', () => {
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
+  it('reviews withholdings with their own name and without invoice verification fields', () => {
+    service.confirm('WH-TEST', 'Verificado', 'FBU-1', 'withholding', true).subscribe();
+    const request = http.expectOne(req => req.url.endsWith('.confirm_lite_withholding_electronic_review'));
+    expect(request.request.body).toEqual({ business: 'FBU-1', withholding_name: 'WH-TEST', review_reason: 'Verificado' });
+    expect(request.request.method).toBe('POST');
+    request.flush({ message: { data: { name: 'WH-TEST' } } });
+  });
   it('sends verified_no_sri_record only for explicit invoice verification', () => {
     service.confirm('FLINV-1', 'Revisado por clave', 'FBU-1', false, true).subscribe();
     const request = http.expectOne(`${environment.apiUrl}/method/facturada_lite.api.frontend.confirm_lite_invoice_electronic_review`);

@@ -1,0 +1,85 @@
+<div class="space-y-2">
+  <!-- Proveedor elegido -->
+  <div *ngIf="supplier && !creating" class="flex items-start justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+    <div class="min-w-0">
+      <p class="truncate text-sm font-bold text-foreground">{{ supplier.supplier_name || 'Proveedor' }}</p>
+      <p class="truncate text-[11px] text-muted-foreground">
+        {{ identificationLabel(supplier.identification_type) }} {{ supplier.identification || '—' }}
+        <span *ngIf="supplier.related_party"> · Parte relacionada</span>
+      </p>
+      <p *ngIf="supplier.email" class="truncate text-[11px] text-muted-foreground">{{ supplier.email }}</p>
+      <p *ngIf="!supplier.email" class="text-[11px] text-warning-700">Sin correo: {{ documentLabel }} no le llegará por correo.</p>
+    </div>
+    <button type="button" class="btn btn-outline shrink-0 !px-2 !py-1 !text-[11px]" (click)="clear()">Cambiar</button>
+  </div>
+
+  <!-- Búsqueda -->
+  <div *ngIf="!supplier && !creating" class="space-y-1.5">
+    <div class="flex gap-2">
+      <div class="relative min-w-0 flex-1">
+        <input type="search" class="input !w-full" [ngClass]="{ '!border-danger-400': invalid }"
+          [(ngModel)]="searchTerm" (ngModelChange)="onSearchChange($event)" (focus)="openSearch()" (blur)="closeSearchSoon()"
+          (keydown.enter)="$event.preventDefault(); selectFirst()"
+          placeholder="Busca por nombre, RUC o cédula" aria-label="Buscar proveedor" autocomplete="off"
+          [attr.aria-expanded]="searchOpen" aria-autocomplete="list" />
+        <div *ngIf="searchOpen" class="absolute left-0 right-0 top-full z-30 mt-1 max-h-60 overflow-y-auto rounded-lg border border-border bg-card shadow-lg" role="listbox">
+          <div *ngIf="searchLoading" class="px-3 py-2 text-[11px] text-muted-foreground">Buscando proveedores…</div>
+          <button *ngFor="let item of results; trackBy: trackByName" type="button" role="option" (mousedown)="select(item)"
+            class="flex w-full flex-col border-b border-border px-3 py-1.5 text-left text-xs last:border-b-0 hover:bg-primary/5">
+            <span class="truncate font-semibold text-foreground">{{ item.supplier_name }}</span>
+            <span class="truncate text-[11px] text-muted-foreground">{{ identificationLabel(item.identification_type) }} {{ item.identification }}</span>
+          </button>
+          <div *ngIf="!searchLoading && !results.length" class="px-3 py-2 text-[11px] text-muted-foreground">
+            No hay proveedores con ese dato.
+            <button type="button" class="font-semibold text-primary hover:underline" (mousedown)="openNewFromSearch()">Registrar proveedor</button>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn btn-outline shrink-0" (click)="openNewFromSearch()">+ Nuevo proveedor</button>
+    </div>
+    <p class="text-[11px] text-muted-foreground">Escribe al menos 2 letras o números.</p>
+  </div>
+
+  <!-- Nuevo proveedor -->
+  <div *ngIf="creating" class="rounded-lg border border-border bg-muted/40 p-3" [formGroup]="form">
+    <p class="mb-2 text-xs font-bold text-foreground">Nuevo proveedor</p>
+    <div class="grid gap-2 sm:grid-cols-[170px_minmax(0,1fr)]">
+      <div>
+        <label for="supplier-id-type" class="mb-1 block text-[11px] font-semibold text-foreground/80">Tipo de identificación</label>
+        <select id="supplier-id-type" class="select !w-full" formControlName="identification_type">
+          <option *ngFor="let type of identificationTypes" [value]="type.value">{{ type.label }}</option>
+        </select>
+      </div>
+      <div>
+        <label for="supplier-id" class="mb-1 block text-[11px] font-semibold text-foreground/80">Identificación</label>
+        <input id="supplier-id" class="input !w-full font-mono" formControlName="identification" autocomplete="off"
+          [attr.inputmode]="f['identification_type'].value === '04' || f['identification_type'].value === '05' ? 'numeric' : null" />
+        <p *ngIf="submitted && f['identification'].errors?.['required']" class="field-error">Requerido.</p>
+        <p *ngIf="submitted && f['identification'].errors?.['rucInvalido']" class="field-error">El RUC tiene 13 dígitos y termina en 001.</p>
+        <p *ngIf="submitted && f['identification'].errors?.['cedulaInvalida']" class="field-error">La cédula tiene 10 dígitos.</p>
+      </div>
+      <div class="sm:col-span-2">
+        <label for="supplier-name" class="mb-1 block text-[11px] font-semibold text-foreground/80">Nombre o razón social</label>
+        <input id="supplier-name" class="input !w-full" formControlName="supplier_name" autocomplete="off" />
+        <p *ngIf="submitted && f['supplier_name'].invalid" class="field-error">Requerido.</p>
+      </div>
+      <div>
+        <label for="supplier-email" class="mb-1 block text-[11px] font-semibold text-foreground/80">Correo <span class="font-normal text-muted-foreground">(le enviamos {{ documentLabel }})</span></label>
+        <input id="supplier-email" type="email" class="input !w-full" formControlName="email" autocomplete="off" />
+        <p *ngIf="submitted && f['email'].invalid" class="field-error">Correo no válido.</p>
+      </div>
+      <div>
+        <label for="supplier-address" class="mb-1 block text-[11px] font-semibold text-foreground/80">Dirección <span class="font-normal text-muted-foreground">(opcional)</span></label>
+        <input id="supplier-address" class="input !w-full" formControlName="address" autocomplete="off" />
+      </div>
+      <label class="flex items-start gap-2 text-[11px] text-foreground/80 sm:col-span-2">
+        <input type="checkbox" class="mt-0.5" formControlName="related_party" />
+        <span><b class="font-semibold text-foreground">Parte relacionada</b> — marca solo si el proveedor es socio, pariente o empresa del mismo grupo (así lo pide el SRI).</span>
+      </label>
+    </div>
+    <div class="mt-3 flex justify-end gap-2">
+      <button type="button" class="btn btn-outline" (click)="cancelNew()" [disabled]="saving">Cancelar</button>
+      <button type="button" class="btn btn-primary" (click)="saveNew()" [disabled]="saving">{{ saving ? 'Guardando…' : 'Guardar proveedor' }}</button>
+    </div>
+  </div>
+</div>

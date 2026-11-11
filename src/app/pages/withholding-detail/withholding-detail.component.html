@@ -1,0 +1,243 @@
+<ngx-spinner></ngx-spinner>
+
+<div class="app-container" [ngClass]="{ 'pb-20 md:pb-0': documentActions.length }">
+  <header class="mb-3 rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
+    <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+      <div class="flex min-w-0 items-center gap-2">
+        <button type="button" class="btn btn-ghost !px-2 !py-1 !text-[11px]" (click)="goBack()" aria-label="Volver a retenciones">
+          <fa-icon icon="arrow-left"></fa-icon>
+          <span class="hidden sm:inline">Atrás</span>
+        </button>
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <h1 class="truncate text-base font-bold leading-tight text-foreground">Retención {{ documentNumber }}</h1>
+            <app-electronic-status-badge *ngIf="withholding" [document]="withholding" [liteMode]="true" />
+          </div>
+          <div *ngIf="withholding" class="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+            <span>ID: <b class="font-semibold text-foreground/80">{{ withholding?.name }}</b></span>
+            <span *ngIf="withholding?.posting_date">Emisión: <b class="font-semibold text-foreground/80">{{ withholding?.posting_date }}</b></span>
+            <span *ngIf="withholding?.periodo_fiscal">Período fiscal: <b class="font-semibold text-foreground/80">{{ withholding?.periodo_fiscal }}</b></span>
+            <span *ngIf="withholding?.environment">Ambiente: <b class="font-semibold text-foreground/80">{{ withholding?.environment }}</b></span>
+          </div>
+        </div>
+      </div>
+
+      <app-document-actions class="hidden md:block" [actions]="documentActions" />
+    </div>
+  </header>
+
+  <app-sri-annulment-section *ngIf="withholding" kind="withholding" mode="banner" [document]="withholding"
+    [documentNumber]="documentNumber" />
+
+  <section *ngIf="loadFailed" class="rounded-xl border border-border bg-card px-4 py-10 text-center shadow-sm" role="alert">
+    <p class="text-sm font-semibold text-foreground">No se pudo cargar la retención.</p>
+    <p class="mt-1 text-xs text-muted-foreground">Revisa tu conexión e inténtalo de nuevo.</p>
+    <div class="mt-3 flex justify-center gap-2">
+      <button type="button" class="btn btn-outline !text-xs" (click)="goBack()">Volver</button>
+      <button type="button" class="btn btn-primary !text-xs" (click)="retryLoad()">Reintentar</button>
+    </div>
+  </section>
+
+  <ng-container *ngIf="withholding">
+    <nav class="mb-3 flex w-full gap-1 overflow-x-auto rounded-xl border border-border bg-card p-1.5 shadow-sm"
+      role="tablist" aria-label="Secciones de la retención">
+      <button *ngFor="let tab of detailTabs" type="button" role="tab" [id]="'withholding-tab-' + tab.id"
+        [attr.aria-selected]="activeDetailTab === tab.id" aria-controls="withholding-tab-panel"
+        class="inline-flex min-h-[30px] items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[11px] font-bold text-muted-foreground transition hover:bg-muted hover:text-primary"
+        [ngClass]="{ '!bg-primary/10 !text-primary shadow-sm': activeDetailTab === tab.id }"
+        (click)="selectDetailTab(tab.id)">
+        {{ tab.label }}
+        <app-electronic-status-badge *ngIf="tab.id === 'electronic'" [document]="withholding" [liteMode]="true" />
+      </button>
+    </nav>
+
+    <div id="withholding-tab-panel" role="tabpanel" [attr.aria-labelledby]="'withholding-tab-' + activeDetailTab" class="space-y-3">
+
+      <!-- Información general -->
+      <ng-container *ngIf="activeDetailTab === 'general'">
+        <p *ngIf="isLate" class="rounded-xl border border-warning-300 bg-warning-50 px-3 py-2 text-xs text-warning-900" role="alert">
+          <b class="font-bold">Emitida {{ withholding?.days_since_support }} días después de la factura del proveedor.</b>
+          El SRI pide emitir la retención dentro de {{ daysLimit }} días.
+        </p>
+
+        <div class="grid gap-3 lg:grid-cols-2">
+          <section class="rounded-xl border border-border bg-card p-2.5 shadow-sm">
+            <h2 class="mb-2 text-[11px] font-bold uppercase tracking-wide text-primary">Proveedor</h2>
+            <dl class="grid gap-x-3 gap-y-1 rounded-lg bg-muted/40 px-2.5 py-2 text-xs text-foreground/80 sm:grid-cols-2">
+              <div class="sm:col-span-2">
+                <dt class="text-[10px] font-bold uppercase text-muted-foreground">Nombre o razón social</dt>
+                <dd class="truncate font-bold text-foreground">{{ supplier.supplier_name || '—' }}</dd>
+              </div>
+              <div>
+                <dt class="text-[10px] font-bold uppercase text-muted-foreground">Identificación</dt>
+                <dd class="font-semibold">{{ identificationLabel(supplier.identification_type) }} {{ supplier.identification || '' }}</dd>
+              </div>
+              <div>
+                <dt class="text-[10px] font-bold uppercase text-muted-foreground">Parte relacionada</dt>
+                <dd class="font-semibold">{{ supplier.related_party ? 'Sí' : 'No' }}</dd>
+              </div>
+              <div class="sm:col-span-2">
+                <dt class="text-[10px] font-bold uppercase text-muted-foreground">Correo</dt>
+                <dd class="truncate font-semibold">{{ supplier.email || 'Sin correo' }}
+                  <span *ngIf="emailStatus" class="ml-1 font-normal text-muted-foreground">· envío: {{ emailStatus }}</span>
+                </dd>
+                <dd *ngIf="emailError" class="text-[11px] text-danger-700">{{ emailError }}</dd>
+              </div>
+              <div *ngIf="supplier.address" class="sm:col-span-2">
+                <dt class="text-[10px] font-bold uppercase text-muted-foreground">Dirección</dt>
+                <dd class="truncate font-semibold" [title]="supplier.address">{{ supplier.address }}</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section class="rounded-xl border border-border bg-card p-2.5 shadow-sm">
+            <h2 class="mb-2 text-[11px] font-bold uppercase tracking-wide text-primary">Factura del proveedor</h2>
+            <dl class="grid gap-x-3 gap-y-1 rounded-lg bg-muted/40 px-2.5 py-2 text-xs text-foreground/80 sm:grid-cols-2">
+              <div>
+                <dt class="text-[10px] font-bold uppercase text-muted-foreground">Documento</dt>
+                <dd class="font-semibold">{{ support.cod_doc_sustento_label || support.cod_doc_sustento || '—' }}</dd>
+              </div>
+              <div>
+                <dt class="text-[10px] font-bold uppercase text-muted-foreground">Número</dt>
+                <dd class="font-mono font-semibold">{{ support.num_doc_sustento || '—' }}</dd>
+              </div>
+              <div>
+                <dt class="text-[10px] font-bold uppercase text-muted-foreground">Fecha</dt>
+                <dd class="font-semibold">{{ support.fecha_emision_doc_sustento || '—' }}</dd>
+              </div>
+              <div>
+                <dt class="text-[10px] font-bold uppercase text-muted-foreground">Forma de pago</dt>
+                <dd class="font-semibold">{{ support.forma_pago_label || support.forma_pago || '—' }}</dd>
+              </div>
+              <div class="sm:col-span-2">
+                <dt class="text-[10px] font-bold uppercase text-muted-foreground">Sustento tributario</dt>
+                <dd class="font-semibold">{{ support.cod_sustento }}<span *ngIf="support.cod_sustento_label"> · {{ support.cod_sustento_label }}</span></dd>
+              </div>
+              <div *ngIf="support.num_aut_doc_sustento" class="sm:col-span-2">
+                <dt class="text-[10px] font-bold uppercase text-muted-foreground">Clave de acceso / autorización</dt>
+                <dd class="truncate font-mono text-[11px] font-semibold" [title]="support.num_aut_doc_sustento">{{ support.num_aut_doc_sustento }}</dd>
+              </div>
+            </dl>
+
+            <div *ngIf="supportTaxes.length" class="mt-2 overflow-x-auto rounded-lg border border-border">
+              <table class="w-full text-xs">
+                <thead class="bg-muted/50 text-left text-[10px] uppercase text-muted-foreground">
+                  <tr>
+                    <th class="p-2">Tarifa</th>
+                    <th class="p-2 text-right">Base</th>
+                    <th class="p-2 text-right">IVA</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let tax of supportTaxes" class="border-t border-border">
+                    <td class="p-2">{{ tax.label || tax.tax_code }}</td>
+                    <td class="p-2 text-right">{{ tax.base_imponible | number:'1.2-2' }}</td>
+                    <td class="p-2 text-right">{{ tax.valor_impuesto | number:'1.2-2' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <dl class="ml-auto mt-2 max-w-xs space-y-0.5 text-xs">
+              <div class="flex justify-between gap-4"><dt class="text-muted-foreground">Subtotal sin IVA</dt><dd class="font-semibold">{{ support.total_sin_impuestos | number:'1.2-2' }}</dd></div>
+              <div class="flex justify-between gap-4"><dt class="text-muted-foreground">IVA</dt><dd class="font-semibold">{{ support.total_iva | number:'1.2-2' }}</dd></div>
+              <div class="flex justify-between gap-4 border-t border-border pt-0.5"><dt class="font-bold text-foreground">Total</dt><dd class="font-bold">{{ support.importe_total | number:'1.2-2' }}</dd></div>
+            </dl>
+          </section>
+        </div>
+
+        <section class="rounded-xl border border-border bg-card shadow-sm">
+          <div class="border-b border-border px-3 py-2">
+            <h2 class="text-sm font-bold text-foreground">Retenciones</h2>
+            <p class="text-[11px] text-muted-foreground">{{ retentions.length }} {{ retentions.length === 1 ? 'retención' : 'retenciones' }}</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead class="bg-muted/50 text-left text-[10px] uppercase text-muted-foreground">
+                <tr>
+                  <th class="p-2">Impuesto</th>
+                  <th class="p-2">Código</th>
+                  <th class="p-2 text-right">Base</th>
+                  <th class="p-2 text-right">%</th>
+                  <th class="p-2 text-right">Retenido</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of retentions" class="border-t border-border">
+                  <td class="p-2 font-semibold">{{ row.tax_type }}</td>
+                  <td class="p-2 font-mono text-[11px]">{{ row.codigo_retencion || '—' }}</td>
+                  <td class="p-2 text-right">{{ row.base_imponible | number:'1.2-2' }}</td>
+                  <td class="p-2 text-right">{{ row.porcentaje }} %</td>
+                  <td class="p-2 text-right font-bold">{{ row.valor_retenido | number:'1.2-2' }}</td>
+                </tr>
+                <tr *ngIf="!retentions.length">
+                  <td colspan="5" class="p-4 text-center text-muted-foreground">Sin retenciones.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <dl class="ml-auto max-w-xs space-y-0.5 px-3 py-2 text-xs">
+            <div class="flex justify-between gap-4"><dt class="text-muted-foreground">Renta retenida</dt><dd class="font-semibold">{{ withholding?.total_renta | number:'1.2-2' }}</dd></div>
+            <div class="flex justify-between gap-4"><dt class="text-muted-foreground">IVA retenido</dt><dd class="font-semibold">{{ withholding?.total_iva_retenido | number:'1.2-2' }}</dd></div>
+            <div class="flex justify-between gap-4 border-t border-border pt-0.5"><dt class="font-bold text-foreground">Total retenido</dt><dd class="font-bold text-primary">{{ withholding?.total_retenido | number:'1.2-2' }}</dd></div>
+          </dl>
+          <p *ngIf="withholding?.notes" class="border-t border-border px-3 py-2 text-[11px] text-muted-foreground">Nota: {{ withholding?.notes }}</p>
+        </section>
+
+        <app-sri-annulment-section kind="withholding" mode="action" [document]="withholding" [documentNumber]="documentNumber"
+          (annulled)="fetch(withholding.name, true)" />
+      </ng-container>
+
+      <!-- Estado SRI: se oculta sin desmontar para que el panel siga escuchando actualizaciones en tiempo real -->
+      <div [ngClass]="activeDetailTab === 'electronic' ? 'grid' : 'hidden'" class="gap-3 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+        <section class="space-y-2 rounded-xl border border-border bg-card p-2.5 shadow-sm">
+          <h2 class="text-[11px] font-bold uppercase tracking-wide text-primary">Datos del comprobante</h2>
+          <dl class="grid gap-x-3 gap-y-1 rounded-lg bg-muted/40 px-2.5 py-2 text-xs text-foreground/80 sm:grid-cols-2">
+            <div *ngIf="accessKey" class="sm:col-span-2">
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Clave de acceso</dt>
+              <dd class="flex items-center gap-2">
+                <span class="min-w-0 truncate font-mono text-[11px] font-semibold text-primary" [title]="accessKey">{{ accessKey }}</span>
+                <button type="button" class="shrink-0 text-[10px] font-semibold text-muted-foreground hover:text-primary hover:underline"
+                  (click)="copyAccessKey()" aria-label="Copiar clave de acceso">Copiar</button>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Estado FacturADA</dt>
+              <dd class="font-semibold">{{ statusLabel }}</dd>
+            </div>
+            <div>
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Estado proveedor</dt>
+              <dd class="font-semibold">{{ providerStatus }}</dd>
+            </div>
+            <div *ngIf="authorizationNumber" class="sm:col-span-2">
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Número de autorización</dt>
+              <dd class="truncate font-mono text-[11px] font-semibold" [title]="authorizationNumber">{{ authorizationNumber }}</dd>
+            </div>
+            <div *ngIf="authorizationDatetime" class="sm:col-span-2">
+              <dt class="text-[10px] font-bold uppercase text-muted-foreground">Fecha de autorización</dt>
+              <dd class="font-semibold">{{ authorizationDatetime }}</dd>
+            </div>
+          </dl>
+
+          <div *ngIf="emissionError" class="rounded-lg bg-danger-50 px-2 py-1.5 text-[11px] text-danger-700">
+            <span class="font-bold uppercase">Error de envío:</span>
+            <span class="ml-1">{{ emissionError }}</span>
+          </div>
+          <div *ngIf="!emissionError && sriMessage" class="rounded-lg bg-warning-50 px-2 py-1.5 text-[11px] text-warning-800">
+            <span class="font-bold uppercase">Mensaje SRI:</span>
+            <span class="ml-1">{{ sriMessage }}</span>
+          </div>
+          <p *ngIf="!accessKey && !sriMessage && !emissionError" class="text-[11px] text-muted-foreground">
+            Sin información adicional del SRI todavía.
+          </p>
+          <p *ngIf="isAuthorized" class="text-[11px] text-muted-foreground">
+            Una retención autorizada no se anula desde FacturADA: el SRI pide anularla en su portal, con aceptación del proveedor.
+          </p>
+        </section>
+
+        <app-electronic-status-panel [document]="withholding" kind="withholding" (updated)="fetch($event.name, true)" />
+      </div>
+    </div>
+  </ng-container>
+</div>
+
+<app-document-actions [actions]="documentActions" layout="mobile" />

@@ -36,7 +36,7 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
 
   /**
    * Cada tipo documental tiene su propia serie SRI (Factura 01, Nota de
-   * Crédito 04, Guía de Remisión 06): el mismo establecimiento y punto de
+   * Crédito 04, Guía de Remisión 06, Comprobante de Retención 07, Liquidación de Compra 03): el mismo establecimiento y punto de
    * emisión llevan consecutivos independientes, nunca uno compartido.
    */
   readonly documents = FISCAL_DOCUMENTS;
@@ -335,6 +335,8 @@ export class LiteDocumentSequencesComponent implements OnInit, DoCheck {
     if (key === 'FACTURA') return 'Factura';
     if (key === 'NOTA DE CREDITO') return 'Nota de Crédito';
     if (key === 'GUIA DE REMISION') return 'Guía de Remisión';
+    if (key === 'COMPROBANTE DE RETENCION') return 'Comprobante de Retención';
+    if (key === 'LIQUIDACION DE COMPRA') return 'Liquidación de Compra';
     return String(documentType || '—');
   }
 

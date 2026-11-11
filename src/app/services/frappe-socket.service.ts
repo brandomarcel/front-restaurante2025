@@ -17,7 +17,33 @@ export class FrappeSocketService {
   connected$: Observable<boolean> = this.connectedSubject.asObservable();
   lastError$: Observable<any> = this.errorSubject.asObservable();
 
+  /**
+   * Namespace de Socket.IO = nombre del sitio Frappe; el realtime rechaza la
+   * conexión si no coincide con el sitio del dominio. Lo manda el backend en
+   * `get_user_context.site` (un mismo build sirve varios dominios/sitios); se
+   * recuerda por dominio para conectar bien al recargar, y el valor del
+   * environment queda como respaldo.
+   */
+  private site = cleanSite(readStoredSite()) || cleanSite(environment.frappeSiteNamespace);
+
   constructor(private zone: NgZone) { }
+
+  /** Fija el sitio que informa el backend; si cambió, reconecta al namespace correcto. */
+  setSite(name: unknown): void {
+    const site = cleanSite(name);
+    if (!site) return;
+    writeStoredSite(site);
+    if (site === this.site) return;
+    this.site = site;
+    if (!this.socket) return;
+    const wasActive = this.socket.active;
+    this.socket.removeAllListeners();
+    this.socket.disconnect();
+    this.socket = undefined;
+    this.connectedSubject.next(false);
+    // Los listeners, rooms y documentos se conservan y se vuelven a enganchar.
+    if (wasActive) this.connect();
+  }
 
   connect(): void {
     if (this.socket?.connected) return;
@@ -33,7 +59,7 @@ export class FrappeSocketService {
     // el dominio público. En ambos casos el navegador nunca toca :9000:
     // el proxy/Nginx conserva la cookie y enruta /socket.io al realtime.
     const base = environment.production ? window.location.origin : '';
-    const site = String(environment.frappeSiteNamespace || '').replace(/^\/+|\/+$/g, '');
+    const site = this.site;
     const nsUrl = `${base}${site ? `/${site}` : ''}`;
 
     console.log('[frappe-socket] connecting to', nsUrl);
@@ -52,6 +78,11 @@ export class FrappeSocketService {
     (this.socket as any).onAny?.((event: string, ...args: any[]) => {
       //console.log('[ws:any]', event, args?.[0]);
     });
+
+    // Al recrear el socket (cambio de sitio) se re-enganchan los listeners ya registrados.
+    for (const [event, handlers] of this.listeners) {
+      for (const wrapped of handlers.values()) this.socket.on(event, wrapped);
+    }
 
 
     this.socket.on('connect', () => {
@@ -137,4 +168,18 @@ export class FrappeSocketService {
       this.listeners.delete(event);
     }
   }
+}
+
+const SITE_STORAGE_KEY = 'facturada.frappe_site';
+
+function cleanSite(value: unknown): string {
+  return String(value ?? '').trim().replace(/^\/+|\/+$/g, '');
+}
+
+function readStoredSite(): string {
+  try { return localStorage.getItem(SITE_STORAGE_KEY) || ''; } catch { return ''; }
+}
+
+function writeStoredSite(site: string): void {
+  try { localStorage.setItem(SITE_STORAGE_KEY, site); } catch { /* sin almacenamiento: queda en memoria */ }
 }

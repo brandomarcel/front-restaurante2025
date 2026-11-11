@@ -23,9 +23,13 @@ describe('Invoice detail cancellation', () => {
   }
 
   it('blocks collections, email and another full cancellation while preserving the credit-note history', () => {
-    const component = detail({ status: 'Autorizada', credit_note_summary: {
-      state: 'FULL', documents: [{ name: 'NC-1', status: 'Autorizada' }]
-    } });
+    const component = detail({
+      status: 'Autorizada',
+      credit_note_summary: {
+        state: 'FULL',
+        documents: [{ name: 'NC-1', status: 'Autorizada' }],
+      },
+    });
     expect(component.isCancelled).toBeTrue();
     expect(component.canManageCollections).toBeFalse();
     expect(component.canSendEmail).toBeFalse();
@@ -41,13 +45,36 @@ describe('Invoice detail cancellation', () => {
     expect(component.annulBlockReason).toContain('notas de crédito relacionadas');
   });
 
+  it('offers SRI registration from backend eligibility and hides a restricted block reason', () => {
+    const component = detail({
+      status: 'Autorizada',
+      sri_annulment: { available: true, allowed: true, block_reason: null },
+    });
+    expect(component.canRegisterSriAnnulment).toBeTrue();
+    component.invoice.sri_annulment = { available: false, allowed: true, block_reason: 'Tiene abonos' };
+    expect(component.canRegisterSriAnnulment).toBeFalse();
+    expect(component.sriAnnulmentBlockReason).toBe('Tiene abonos');
+    component.invoice.sri_annulment.allowed = false;
+    expect(component.sriAnnulmentBlockReason).toBe('');
+  });
+
+  it('recognizes and formats an annulment already registered in SRI', () => {
+    const component = detail({ status: 'Anulada', annulled_at: '2026-11-10 12:30:00' });
+    expect(component.isSriAnnulled).toBeTrue();
+    expect(component.canRegisterSriAnnulment).toBeFalse();
+    expect(component.canManageCollections).toBeFalse();
+    expect(component.formatAnnulDate('2026-11-10 12:30:00')).toBe('10/11/2026 12:30');
+  });
+
   it('opens a credit note from an old invoice URL in its own detail page', () => {
     const component: any = detail({});
     component.invoicesSvc = { getInvoiceDetail: () => of({ name: 'INV-NC', document_type: 'Nota de Credito' }) };
     component.spinner = { show: jasmine.createSpy(), hide: jasmine.createSpy() };
     component.router = { navigate: jasmine.createSpy() };
     component.fetch('INV-NC');
-    expect(component.router.navigate).toHaveBeenCalledOnceWith(['/dashboard/credit-note', 'INV-NC'], { replaceUrl: true });
+    expect(component.router.navigate).toHaveBeenCalledOnceWith(['/dashboard/credit-note', 'INV-NC'], {
+      replaceUrl: true,
+    });
     expect(component.spinner.hide).toHaveBeenCalled();
   });
 
@@ -55,20 +82,38 @@ describe('Invoice detail cancellation', () => {
     spyOn(InvoiceDetailPageComponent.prototype, 'ngOnInit');
     TestBed.configureTestingModule({
       imports: [InvoiceDetailPageComponent],
-      providers: [provideRouter([]), provideNoopAnimations(), provideHttpClient(), provideHttpClientTesting(),
-        ...[InvoicesService, PrintService, CreditNoteService, PaymentsService, InvoiceCollectionsService]
-          .map(provide => ({ provide, useValue: {} })),
-        { provide: CompanyCapabilitiesService, useValue: {
-          isLiteMode: true, hasPermission: () => true, isEnabled: () => true,
-          validateFeatureUse: () => ({ allowed: true }), liteSetupMissing: []
-        } }
-      ]
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        ...[InvoicesService, PrintService, CreditNoteService, PaymentsService, InvoiceCollectionsService].map(
+          (provide) => ({ provide, useValue: {} }),
+        ),
+        {
+          provide: CompanyCapabilitiesService,
+          useValue: {
+            isLiteMode: true,
+            hasPermission: () => true,
+            isEnabled: () => true,
+            validateFeatureUse: () => ({ allowed: true }),
+            liteSetupMissing: [],
+          },
+        },
+      ],
     });
     TestBed.inject(FaIconLibrary).addIconPacks(fas);
     const fixture = TestBed.createComponent(InvoiceDetailPageComponent);
-    fixture.componentInstance.invoice = { name: 'INV-CANCELLED', status: 'Autorizada',
-      document_type: 'Factura', total: 115, customer: {}, items: [], payments: [],
-      credit_note_summary: { state: 'FULL', documents: [{ name: 'NC-1', status: 'Autorizada', grand_total: 115 }] } };
+    fixture.componentInstance.invoice = {
+      name: 'INV-CANCELLED',
+      status: 'Autorizada',
+      document_type: 'Factura',
+      total: 115,
+      customer: {},
+      items: [],
+      payments: [],
+      credit_note_summary: { state: 'FULL', documents: [{ name: 'NC-1', status: 'Autorizada', grand_total: 115 }] },
+    };
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Factura anulada');
     expect(fixture.nativeElement.querySelector('a[href="/dashboard/credit-note/NC-1"]')).not.toBeNull();

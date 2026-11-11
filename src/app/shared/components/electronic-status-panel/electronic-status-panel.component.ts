@@ -9,6 +9,7 @@ import { ElectronicReviewService } from 'src/app/services/electronic-review.serv
 import { backendFlag, canVerifyMissingSriDocument, canRegenerateElectronicDocument, electronicDocumentLabel, electronicReplacement, isClosedElectronicDocument } from 'src/app/core/utils/electronic-document';
 import { liteEmissionMessages } from 'src/app/core/utils/lite-invoice-emission';
 import { ElectronicDocumentUpdatesService } from 'src/app/services/electronic-document-updates.service';
+import { ELECTRONIC_DOCUMENT_KINDS, ElectronicDocumentKind, ElectronicDocumentKindConfig } from 'src/app/core/utils/electronic-document-kinds';
 
 @Component({
   selector: 'app-electronic-status-panel', standalone: true,
@@ -25,7 +26,7 @@ import { ElectronicDocumentUpdatesService } from 'src/app/services/electronic-do
         <div class="rounded-lg bg-muted/40 p-3"><p class="text-xs text-muted-foreground">Autorización SRI</p><strong>{{ authorization }}</strong></div>
       </div>
       <p *ngFor="let message of messages" class="text-sm break-words">{{ message }}</p>
-      <a *ngIf="replacement" [routerLink]="[kind === 'credit-note' ? '/dashboard/credit-note' : '/dashboard/invoices', replacement]"
+      <a *ngIf="replacement" [routerLink]="[kindConfig.replacementRoute, replacement]"
         class="inline-block rounded-lg border border-border px-3 py-2 text-sm font-semibold">Abrir factura reemplazante</a>
       <p *ngIf="automaticQueryActive" class="rounded-lg bg-muted/40 p-3 text-sm">Consulta automática programada
         <span *ngIf="electronic.next_status_check_at"> · Próxima consulta: {{ electronic.next_status_check_at }}</span></p>
@@ -51,7 +52,7 @@ import { ElectronicDocumentUpdatesService } from 'src/app/services/electronic-do
 })
 export class ElectronicStatusPanelComponent implements OnChanges, OnDestroy {
   @Input() document: any;
-  @Input() kind: 'invoice' | 'credit-note' | 'guide' = 'invoice';
+  @Input() kind: ElectronicDocumentKind = 'invoice';
   @Output() updated = new EventEmitter<any>();
   busy = false;
   reviewOpen = false;
@@ -69,13 +70,14 @@ export class ElectronicStatusPanelComponent implements OnChanges, OnDestroy {
     if (key === this.watchedDocument) return;
     this.updates?.unsubscribe();
     this.watchedDocument = key;
-    if (key) this.updates = this.documentUpdates.watch(this.document.name, business, this.kind === 'guide')
+    if (key) this.updates = this.documentUpdates.watch(this.document.name, business, this.kind)
       .subscribe(document => this.updated.emit(document));
   }
   ngOnDestroy(): void { this.updates?.unsubscribe(); }
+  get kindConfig(): ElectronicDocumentKindConfig { return ELECTRONIC_DOCUMENT_KINDS[this.kind] ?? ELECTRONIC_DOCUMENT_KINDS.invoice; }
   get electronic(): any { return this.document?.electronic ?? {}; }
   get closed(): boolean { return isClosedElectronicDocument(this.document); }
-  get replacement(): string { return this.kind === 'guide' ? '' : electronicReplacement(this.document); }
+  get replacement(): string { return this.kindConfig.invoiceLike ? electronicReplacement(this.document) : ''; }
   get automaticQueryActive(): boolean { return !this.closed && !this.reviewRequired && backendFlag(this.electronic.automatic_query_active); }
   get queryError(): string { return liteEmissionMessages({ message: this.electronic.status_check_error }).join(' · '); }
   get label(): string { return electronicDocumentLabel(this.document); }
@@ -95,7 +97,7 @@ export class ElectronicStatusPanelComponent implements OnChanges, OnDestroy {
       !/(revisi[oó]n manual|verificaci[oó]n manual|regeneraci[oó]n|regenerar)/i.test(message));
   }
   get manualReviewAvailable(): boolean {
-    if (this.kind === 'guide') return true;
+    if (!this.kindConfig.invoiceLike) return true;
     if (this.electronic.manual_review_available !== undefined) {
       return backendFlag(this.electronic.manual_review_available);
     }
@@ -112,8 +114,8 @@ export class ElectronicStatusPanelComponent implements OnChanges, OnDestroy {
     const business = typeof this.document?.business === 'object' ? this.document.business.name : this.document?.business;
     return !!business && business === this.capabilities.activeBusinessId && this.capabilities.hasPermission('billing.manage');
   }
-  get canVerify(): boolean { return this.kind !== 'guide' && this.manualReviewAvailable && canVerifyMissingSriDocument(this.document); }
-  get canRegenerate(): boolean { return this.kind !== 'guide' && this.manualReviewAvailable && canRegenerateElectronicDocument(this.document); }
+  get canVerify(): boolean { return this.kindConfig.invoiceLike && this.manualReviewAvailable && canVerifyMissingSriDocument(this.document); }
+  get canRegenerate(): boolean { return this.kindConfig.invoiceLike && this.manualReviewAvailable && canRegenerateElectronicDocument(this.document); }
   confirmReview(): void {
     if (this.busy || !this.canManage || !this.manualReviewAvailable || !this.reason.trim() || (!this.reviewRequired && !this.canVerify)) return;
     if (!this.reviewRequired && !this.verified) { toast.error('Confirma la verificación manual de inexistencia en SRI.'); return; }
@@ -129,7 +131,7 @@ export class ElectronicStatusPanelComponent implements OnChanges, OnDestroy {
     const name = this.document.name;
     this.busy = true;
     const request = regenerate ? this.service.regenerate(name, business)
-      : this.service.confirm(name, this.reason.trim(), business, this.kind === 'guide', this.verified && this.canVerify);
+      : this.service.confirm(name, this.reason.trim(), business, this.kind, this.verified && this.canVerify);
     request.pipe(finalize(() => this.busy = false)).subscribe({
       next: response => {
         if (business !== this.capabilities.activeBusinessId || name !== this.document?.name) return;

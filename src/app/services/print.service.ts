@@ -129,4 +129,26 @@ export class PrintService {
     return `/api/method/facturada_lite.api.frontend.download_lite_remission_guide_xml?guide_name=${encodeURIComponent(guideName)}${business ? `&business=${encodeURIComponent(business)}` : ''}`;
   }
 
+  /** RIDE del comprobante de retención; solo autorizado (el backend lo valida igualmente). */
+  getWithholdingPdf(withholdingName: string) {
+    const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || '';
+    return `/api/method/facturada_lite.api.frontend.download_lite_withholding_pdf?name=${encodeURIComponent(withholdingName)}${business ? `&business=${encodeURIComponent(business)}` : ''}`;
+  }
+
+  getWithholdingXml(withholdingName: string) {
+    const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || '';
+    return `/api/method/facturada_lite.api.frontend.download_lite_withholding_xml?name=${encodeURIComponent(withholdingName)}${business ? `&business=${encodeURIComponent(business)}` : ''}`;
+  }
+
+  /** RIDE de la liquidación de compra; solo autorizada (el backend lo valida igualmente). */
+  getPurchaseSettlementPdf(settlementName: string) {
+    const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || '';
+    return `/api/method/facturada_lite.api.frontend.download_lite_purchase_settlement_pdf?name=${encodeURIComponent(settlementName)}${business ? `&business=${encodeURIComponent(business)}` : ''}`;
+  }
+
+  getPurchaseSettlementXml(settlementName: string) {
+    const business = this.capabilities.activeBusinessId || this.capabilities.businessId || localStorage.getItem('active_business') || localStorage.getItem('businessId') || '';
+    return `/api/method/facturada_lite.api.frontend.download_lite_purchase_settlement_xml?name=${encodeURIComponent(settlementName)}${business ? `&business=${encodeURIComponent(business)}` : ''}`;
+  }
+
 }

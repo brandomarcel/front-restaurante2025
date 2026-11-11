@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { CompanyCapabilitiesService } from './company-capabilities.service';
 import { UtilsService } from './utils.service';
+import { FrappeSocketService } from 'src/app/services/frappe-socket.service';
 
 describe('CompanyCapabilitiesService: contexto del negocio', () => {
   let service: CompanyCapabilitiesService;
@@ -10,7 +11,8 @@ describe('CompanyCapabilitiesService: contexto del negocio', () => {
     previousStorage = Object.fromEntries(Object.keys(localStorage).map(key => [key, localStorage.getItem(key)!]));
     localStorage.clear();
     TestBed.configureTestingModule({ providers: [
-      { provide: UtilsService, useValue: jasmine.createSpyObj('UtilsService', ['cambiarAmbiente']) }
+      { provide: UtilsService, useValue: jasmine.createSpyObj('UtilsService', ['cambiarAmbiente']) },
+      { provide: FrappeSocketService, useValue: { setSite: jasmine.createSpy('setSite') } }
     ] });
     service = TestBed.inject(CompanyCapabilitiesService);
   });
@@ -25,6 +27,14 @@ describe('CompanyCapabilitiesService: contexto del negocio', () => {
       features: { billing: true, direct_invoice: true }, business_role: 'Facturacion',
       permissions: ['billing.read'], ...overrides };
   }
+
+  it('passes the server site to realtime for direct and legacy-enveloped contexts', () => {
+    const socket = TestBed.inject(FrappeSocketService);
+    service.setFromResponse({ message: context({ site: 'tenant-direct-test' }) });
+    service.setFromResponse({ message: { data: context({ site: 'tenant-nested-test' }) } });
+    expect(socket.setSite).toHaveBeenCalledWith('tenant-direct-test');
+    expect(socket.setSite).toHaveBeenCalledWith('tenant-nested-test');
+  });
 
   it('acepta contexto directo y envoltorios Frappe sin perder permisos', () => {
     for (const response of [context(), { message: context() }, { message: { data: context() } }]) {

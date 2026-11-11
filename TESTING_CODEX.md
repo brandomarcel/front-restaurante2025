@@ -101,17 +101,26 @@ npm run lint
 
 Línea base: 19 avisos heredados (18 errores, 1 advertencia). Un cambio no debe sumar avisos nuevos.
 
-### Línea base conocida (2026-11-09)
+### Línea base conocida (2026-11-11, ronda con agentes)
 
-Última ejecución completa: **543 pruebas, 523 aprobadas y 20 fallidas heredadas**.
-Antes de añadir cobertura en esta sesión: 520 pruebas, 500 OK y las mismas 20
-fallas. Se añadieron **23 pruebas frontend**, todas aprobadas: PrintStationService
-(8), atención del dashboard (7), métricas/caja (4), decimales (2), empresa demo en
-Configuración (2). Las 30 pruebas de login/tema/cocina del 08/11 siguen pasando.
+Última ejecución completa: **634 pruebas, 614 aprobadas y 20 fallidas heredadas**.
+Se añadieron **34 casos**: HTTP de liquidaciones (8), formulario (7), detalle (3),
+retención desde liquidación (3), diálogo/sección de anulación (6), anulación HTTP
+retención (1), Socket/contexto site (5) y mapa electrónico 03 (1).
+Focalizados: **86/86 OK** (incluyen casos existentes).
 
-Lint: **19 avisos heredados (18 errores, 1 advertencia)**, sin avisos nuevos de estos
-cambios. Build optimizado OK: 2,57 MB inicial; 4 advertencias de selectores CSS.
-Reporte: [PRUEBAS_CODEX_2026-11-09.md](PRUEBAS_CODEX_2026-11-09.md).
+Los defectos de 0 % al reabrir y calendario imposible detectados el 10/11 fueron
+corregidos por otro editor durante la sesión. Sus tests originales, sin relajar
+aserciones, ahora pasan. El navegador confirma además la corrección de la barra
+móvil que tapaba «Consultar SRI». No siguen pendientes.
+
+Navegador final: **50/50 OK** (login 16, Desk 10, retenciones 10, liquidaciones/anulaciones 14).
+Build final OK: 2,57 MB inicial / 583,62 kB estimados, 4 avisos CSS heredados.
+Lint final: **19 problemas heredados (18 errores, 1 advertencia)**, sin incremento.
+Reporte vigente: [PRUEBAS_CODEX_2026-11-11_AGENTES.md](PRUEBAS_CODEX_2026-11-11_AGENTES.md).
+Referencia del 10/11: 600, 578 OK/22 fallas (20 heredadas + 2 defectos ya corregidos).
+La ronda previa a retenciones del 10/11 fue 568, 548 OK/20; el 09/11, 543, 523 OK/20.
+
 Referencia del 08/11: 531, 510 OK y 21 fallas. Se retiraron los specs no aplicables
 al rediseño y NavbarMobileComponent; no se relajaron aserciones en esta sesión.
 
@@ -217,24 +226,32 @@ bench --site facturada_core_simple_test run-tests --app facturada_lite
 Si agregas o cambias campos de un DocType, corre antes
 `bench --site facturada_core_simple_test migrate`.
 
-### Línea base backend (2026-11-09)
+### Línea base backend (2026-11-11, ronda con agentes)
 
 | App | Pruebas | Resultado |
 |-----|---------|-----------|
-| facturada_core | 83 | OK, 4 nuevas de demo |
-| facturada_lite | 253 | OK, 2 nuevas de setup demo |
-| facturada_restaurante | 74 | OK, 15 nuevas QZ/ESC-POS/equipos |
-| facturada_api | 32 | OK, 2 nuevas de cliente API demo |
+| facturada_core | 98 | OK, 2 nuevas de capacidades03 |
+| facturada_lite | 312 | OK, 14 nuevas de liquidaciones y 9 de anulaciones03/07 |
+| facturada_restaurante | 77 | OK |
+| facturada_api | 32 | OK |
 
-**442 aprobadas**, con 23 nuevas backend. Suites secuenciales en el único sitio
-facturada_core_simple_test, previamente migrado; Redis disponible y HTTP/SMTP
-reales bloqueados. Las claves QZ son ficticias en memoria y update_site_config
-está simulado: no se generó ni cambió un certificado real. El resumen Desk de
-equipos se comprueba con dos negocios y el filtro por negocio. Se repitió el
-módulo de navegación Desk tras su actualización durante la sesión.
+**519 aprobadas**, con **25 casos nuevos backend**. Un solo agente controló migrate
++ DB y ejecutó las cuatro suites secuencialmente en facturada_core_simple_test.
+Redis disponible, HTTP/SMTP bloqueados, proveedor/certificado/email simulados,
+fixtures/rollback; sin archivos físicos, impresión ni despliegue.
 
-No equivale a cobertura exhaustiva de las funciones que siguen pendientes abajo.
-Reporte vigente: [PRUEBAS_CODEX_2026-11-09.md](PRUEBAS_CODEX_2026-11-09.md).
+Las huellas de runtime antes de Core, antes/después de Lite y al cierre coinciden.
+Los 19 casos previos de retenciones siguen incluidos y pasan; su expectativa de
+conteos incorpora ahora Anulada:0. Fixtures compartidos en withholding_test_helpers
+(no aporta casos propios). get_user_context verifica site = frappe.local.site.
+Focalizadas03 (14) y anulaciones03/07 (9) pasan y ya están incluidas en las 312.
+
+Frappe omite only_for bajo in_test; las pruebas negativas de System Manager
+conservan su patch.dict limitado para reactivar la comprobación real.
+Reporte vigente: [PRUEBAS_CODEX_2026-11-11_AGENTES.md](PRUEBAS_CODEX_2026-11-11_AGENTES.md).
+Referencia del 10/11: 96 + 289 + 77 + 32 = 494 OK.
+Límites: Node/XSD, entrega real de correo/PDF, contabilidad ERPNext y concurrencia
+real entre dos procesos de emisión/anulación no se validan en esta ronda.
 
 Exportador de restaurante_app: excepción solicitada previamente por el usuario;
 pruebas puras desde Lite sin instalar Legacy en el sitio de pruebas.
@@ -292,6 +309,22 @@ los metadatos estén desactualizados, antes de interpretar errores como regresio
    contrato (`facturada_lite/docs/frontend_*.md` y su copia en este repo).
 6. Compila el front si tocaste código Angular: `npx ng build`.
 
+### Ejecución con varios agentes
+
+Cuando el usuario pida repartir las pruebas, separar responsabilidades:
+
+- Frontend: unitarias Angular y specs de `src/app`.
+- Backend: un único agente controla `migrate` y las cuatro suites Frappe, siempre
+  secuenciales en `facturada_core_simple_test`; no compartir la base entre corridas simultáneas.
+- Navegador: build aislado, lint y Playwright con APIs simuladas. Sus archivos son
+  `tests-e2e` y configuraciones Playwright; coordinar el build usado por sus pruebas.
+- Coordinador: revisar hallazgos, consolidar el reporte y actualizar esta guía y
+  los estados de las apps. Evitar que varios agentes editen esos documentos a la vez.
+
+Conservar cambios existentes del workspace y usar logs con prefijos distintos por
+agente. Las fallas nuevas quedan registradas; no relajar aserciones ni cambiar la
+lógica de negocio para ocultarlas. Se mantienen las reglas de aislamiento de la sección 2.
+
 ### Formato del reporte final
 
 ```
@@ -320,104 +353,67 @@ Core `api/plans.py` y `effective_features`: cada plan del catálogo (roles y fea
 restaurante con `tables` y/o `kitchen` apagados. Probar en navegador un RESTO_BASICO: POS, Lista de
 órdenes y cobro sin Mesas ni Cocina.
 
-## Pendiente de pruebas: barra de filtros compartida (2026-11-10)
+## Cobertura parcial: filtros compartidos y listas (2026-11-10)
 
-Front:
-- `ListFilterBarComponent`: emite `statusChange` solo si cambia; conteo 0 visible, `null` oculto, `alert` en rojo;
-  atajos de fecha emiten el rango; «Elegir fechas…» sin fechas arranca en el mes; rango invertido muestra aviso y no
-  emite; `showDates=false` oculta la fecha; contenido proyectado (tipo en Órdenes).
-- `list-query.ts`: lectura valida fechas/página/búsqueda; escritura con `replaceUrl`, sin navegar si no cambió; `extra`.
-- Notas de crédito y Guías: `estado` antiguo abre su grupo; Guías sin «Anuladas». Specs actuales de credit-notes
-  (`statusOptions` contiene `Anulada`) y remission-guides (`statusOptions`) esperaban estados técnicos: regla cambiada.
-- Notas de venta: `listPage` con paginación; búsqueda con debounce al backend. Órdenes: búsqueda/tipo al backend,
-  `tipo` en la dirección, Mesero/Cajero con fecha fija de hoy.
+Validado con pruebas nuevas:
+- Front: `ListFilterBarComponent` (6): cambio de estado sin repetición, conteo 0 y ausente,
+  error en rojo, atajos/limpieza, rango personalizado y rechazo de rango invertido,
+  fechas ocultas y contenido proyectado.
+- `list-query.spec.ts` (6): lectura/formato de fecha y página, longitud de búsqueda,
+  extras permitidos, escritura/limpieza con replaceUrl y no navegar sin cambios;
+  rangos locales, enero y febrero bisiesto; estados antiguos y guías sin anuladas.
+- Facturas (+2): restaura dirección con estado antiguo, página, búsqueda y fechas;
+  rango al backend y conteos del servidor. Specs antiguas de Facturas, NC, Guías y
+  dashboard ajustadas a los grupos y al enlace del mes actual con fecha simulada.
+- Lite `test_list_filters` (7): búsqueda antes de paginar/contar, aislamiento por
+  negocio, comodines y comillas literales, fechas/grupos/conteos, anulación total
+  con NC y docstatus=2 fuera de Autorizadas, búsqueda de NC por factura original,
+  guías por transportista/placa/destinatario y notas POS con paginación real.
+- Restaurante `test_order_list_filters` (3): búsqueda de cliente/alias/ID, comodines
+  literales, negocio, tipo, día completo y rango inválido, paginación, conteos y mine.
 
-Backend:
-- Lite `list_remission_guides`: búsqueda por número, clave, transportista, placa y destinatario (razón social o
-  identificación); `EN_PROCESO`/`CON_ERROR`; fechas; `status_counts` (ALL, Autorizada, EN_PROCESO, CON_ERROR).
-- Lite `list_pos_sale_notes`: búsqueda (ID, cliente, identificación, factura, terminal), `total`, `has_next`,
-  `status_counts` (ALL + 4 estados), fechas, paginación.
-- Lite NC: `status_counts`; búsqueda por `related_document_number`.
-- Restaurante `get_all_orders`: búsqueda por ID, alias, nombre o identificación del cliente (solo del negocio);
-  `fiscal_status`; `created_from`/`created_to` por día completo (rango invertido = error); `mine`; `status_counts`.
+Pendiente: specs propias de listas de Órdenes/Notas de venta (debounce, cancelación
+respuesta tardía, tipo en URL y Mesero/Cajero hoy); E2E autenticado de cada lista.
+La utilidad de URL comprueba el formato ISO, sin prueba de calendario inválido
+(por ejemplo febrero 30); no afirmar validación completa de fechas de la URL.
 
-## Pendiente de pruebas: filtros de la lista de Facturas (2026-11-10)
+## Cobertura parcial: anulación registrada en el SRI (2026-11-10)
 
-Backend Lite (`list_invoices`, `get_all_invoices`, `get_all_credit_notes`):
-- `search` encuentra por número, cliente, cédula/RUC, clave de acceso e ID en cualquier página; `total` y paginación
-  cuentan solo lo encontrado; `%` y `_` se buscan literales; combinado con estado y fechas.
-- `from_date`/`to_date` por `posting_date` (inclusive); `from_date > to_date` lanza error.
-- `status=Autorizada` (Factura) excluye `status=Anulada`, `docstatus=2` y NC total; cada factura cae en un solo
-  estado; en NC el filtro no cambia.
+Lite `test_invoice_annulment`: **9 OK** con documentos y movimientos reales de
+prueba y rollback. Confirmación, motivo y fecha; rol y falta de asignación;
+auditoría, identidad fiscal conservada y segundo intento sin devolver dos veces;
+ciclo de vida/migrado, NC vigente, abono Confirmado, origen protegido; cadena de
+reemplazo, producto inactivo y stock de orden/nota POS sin tocar.
+Core verifica `billing.void` en Administrador/Gerente y ausente en otros roles.
 
-Front:
-- `InvoicesComponent`: lee `estado`, `q`, `desde`, `hasta`, `pagina` de la dirección (descarta estado o fecha
-  inválidos); los escribe con `replaceUrl`; atajos Hoy/Este mes/Mes pasado (fechas locales, `datePresetRange`),
-  «Todas las fechas», aviso de rango invertido sin consultar; `getAllInvoices` recibe el rango solo si hay fechas.
-- Estados agrupados: opciones `autorizadas`, `en-proceso`, `con-error`, `anuladas` que envían `Autorizada`,
-  `EN_PROCESO`, `CON_ERROR`, `Anulada`; `?estado=` antiguo (Rechazada, Emitida…) abre su grupo; desconocido = todos.
-  `invoices.component.spec.ts` «offers every backend status…» esperaba los 9 estados técnicos: regla cambiada.
-- Pestañas de estado: `setStatus` no recarga si ya está elegida; conteos desde `status_counts` (0 se muestra, sin
-  dato no); «Con error» con conteo en rojo. Backend: `status_counts` solo en Facturas, respeta búsqueda y fechas,
-  `Autorizada` sin anuladas y suma de grupos ≤ ALL (Reemplazada solo en ALL).
-- Selector de fecha: atajos ponen Desde/Hasta; «Elegir fechas…» muestra los dos campos (sin fechas arranca en el mes);
-  al abrir con `desde`/`hasta` de un atajo se selecciona ese atajo, si no «Elegir fechas…».
-- `dashboard-attention.spec.ts` (línea 61): ahora `queryParams` = `{ estado: 'con-error', desde: <1 del mes>, hasta:
-  <hoy> }` (regla nueva; actualizar la aserción con fecha simulada).
-- Backend: `status=EN_PROCESO` solo Pendiente Emision/Emitida/En Revision; `status=CON_ERROR` solo Rechazada/Error de
-  Envio; ambos con búsqueda y fechas.
+Front: diálogo **4 OK** (validación, payload/motivo, bloqueo de doble envío y Escape
+mientras guarda, stock y explicación del origen, error recuperable); detalle
+**2 nuevas OK** de elegibilidad/aviso restringido/fecha; servicio **1 nueva OK** de
+POST y contexto de autenticación. No hubo llamadas al SRI.
 
-## Pendiente de pruebas: anulación registrada en el SRI (2026-11-10)
+Pendiente: devolución neta con entradas previas, varias bodegas y fallback a principal;
+reportes comerciales tras anulación; prueba de la plantilla completa del detalle SRI
+(tarjeta lateral y auditoría visibles) y sesión real de Gerente/Administrador.
 
-Backend Lite (`facturada_lite.api.invoice_annulment`, módulo nuevo `test_invoice_annulment`; fixtures con rollback):
-- `register_sri_annulment` rechaza sin `confirmed_in_sri`, motivo < 5 caracteres, sin fecha, fecha futura o anterior a
-  la emisión; exige `billing.void` (Cajero y Facturación no; Gerente y Administrador sí).
-- Bloqueos (`annulment_block_reason`): NC no rechazada/anulada/reemplazada, abono Confirmado, no autorizada, ya
-  Anulada, Reemplazada/`regenerated_invoice`, migrada (`legacy_import`), origen protegido (GYM), Nota de Crédito.
-- Éxito: estado Anulada, `next_status_check_at` vacío, campos `sri_annulment_*`/`annulled_*`/`annulment_*`,
-  comentario en la línea de tiempo; un segundo intento falla («ya está anulada»).
-- Stock: Entrada por lo neto que salió con la factura y con las que reemplazó (`replacement_of`), a la bodega de la
-  salida; salida sin bodega en negocio por bodega vuelve a la principal; producto inactivo o sin stock se omite e
-  informa en `stock_skipped`; factura de orden/nota POS no crea movimientos.
-- `get_lite_invoice_detail` trae `sri_annulment` solo en facturas; el filtro `status=Anulada` la lista; reportes
-  comerciales la excluyen.
+## Cobertura parcial: renovación, cambio de plan e historial (2026-11-10)
 
-Core: `billing.void` en Gerente; Cajero, Facturación, Contador y Usuario sin él.
+Core `test_subscriptions`: **11 OK**: renovar ahora con cupo nuevo y pago/historial;
+programar/reprogramar y anular al renovar ahora; cambiar plan conservando fechas y uso,
+cupo menor rechazado; validaciones y System Manager real; vencida/suspendida/sin fin
+no programables; tarea diaria aplica una sola vez y vence; cambios manuales/historial
+inmutable salvo notas; resumen sin referencia/nota interna y sin acceso de Cajero;
+uso mensual/anual desde renovación; catálogo editado/inactivo y condiciones del plan;
+matriz `billing.void`.
 
-Front (specs nuevos de `SriAnnulmentDialogComponent` y del detalle con `InvoicesService` simulado):
-- Diálogo: botón deshabilitado sin casilla, sin motivo, con «Otro» sin detalle o con fecha fuera de rango; motivo final
-  «Motivo: detalle»; payload de `registerSriAnnulment`; inventario listado o texto de orden/nota; Escape no cierra
-  mientras guarda.
-- Detalle: sin botón «Anular» en el encabezado; la tarjeta lateral muestra «Anular con nota de crédito» y/o «Ya la
-  anulé en el SRI» según el caso, con su explicación, y el motivo de bloqueo cuando no hay ninguna;
-  bloqueo del SRI visible solo con permiso; aviso «Factura anulada en el SRI» con datos; etiqueta «Anulada en el SRI».
+Front `PlanOverviewComponent`: **4 OK** (vencimiento 0/1/30/31 días, inactivo o
+programado, historial de más de 5, monto positivo, WhatsApp,
+fallo del servicio). Desk: **4 casos de planes OK** (hoy/al terminar, cambio y
+anulación programada), dentro de **10 OK** con migración y limpieza. Catálogo GET y
+acciones POST mediante arnés Frappe/HTTP simulado; no es una sesión real del Desk.
 
-## Pendiente de pruebas: renovación, cambio de plan e historial (2026-11-10)
-
-Backend Core (`facturada_core.api.subscriptions`, módulo nuevo `test_subscriptions`; fixtures con negocio temporal):
-- `get_plan` / `list_plans` leen `FacturADA Plan`; respaldo a `PLAN_CATALOG` sin DocType; plan inactivo fuera del
-  catálogo; `seed_plan_catalog` no pisa un plan editado; validaciones del plan (por tiempo sin meses, negativos).
-- `renew_subscription` hoy: cupo a 0, `subscription_start` = hoy, fin = hoy + meses − 1 día, estado Activo,
-  movimiento «Renovación» (o «Cambio de plan» con otro código) con `used_before`, monto y referencia.
-- `renew_subscription` `start=end`: movimiento Programado con fechas del período siguiente; un segundo programado
-  anula el primero; rechazo si no hay fin, está vencida o no está Activa; renovar hoy anula lo programado.
-- `change_plan`: conserva fechas y usados; rechaza cupo menor que lo usado; sin suscripción la crea («Alta»).
-- `run_daily`: aplica programados con fecha ≤ hoy (y los marca Aplicado), marca Vencido lo Activo con fin pasado
-  («Vencimiento», origen Automático); un error en uno no detiene los demás (savepoint + Error Log).
-- `log_subscription_change`: edición manual = «Ajuste» con detalle; estado a Suspendido/Activo = Suspensión/
-  Reactivación; `apply_license_snapshot` = «Sincronización» (Plataforma) o «Alta» con origen Registro; guardar sin
-  cambios no crea movimiento; `consume_authorized_document` no crea movimientos.
-- Historial: solo `notes` editable; `get_subscription_overview` exige `business.settings.manage` (Cajero no), no
-  devuelve notas ni referencia de pago, excluye Anulados.
-- `get_business_usage_count` mensual/anual cuenta desde `subscription_start` si es posterior al inicio del período.
-- `test_desk_setup`: nuevos accesos «Suscripciones por vencer (30 días)», «Planes, módulos y precios», «Historial de
-  suscripciones»; etiquetas únicas también con Platform instalada.
-
-Front (spec nuevo de `PlanOverviewComponent` con `SubscriptionService` simulado): aviso de vencimiento (0, 1, 30 y
-31 días; no con programado ni inactivo), insignia de programado, «Ver todo» con más de 5, monto solo si > 0, URL de
-WhatsApp con negocio, RUC y plan (y «Solicitar un plan» sin plan), error del servicio sin romper la tarjeta.
-
-Desk (navegador): Renovar (hoy y al terminar), Cambiar plan, Anular programado, línea de tiempo, colores de la lista.
+Pendiente: alta sin suscripción, respaldo sin DocType, error de un programado que
+no interrumpe los demás, sincronización Plataforma/Registro, consumo sin movimiento
+adicional, accesos nuevos específicos del workspace y colores de lista en sesión real.
 
 ## Pendiente de pruebas: aviso de pedido nuevo a Caja (2026-10-28)
 
@@ -563,7 +559,7 @@ Validados: 7 pruebas de atención y 4 de métricas/caja; las specs existentes de
 
 - `dashboard-attention.ts` (`buildAttentionItems`): vacío para service/kitchen/none; firma falta/vencida/≤ 30 días
   (acción solo con `manageSettings`); plan sin plan/inactivo/agotado/por vencer solo con `showPlan`; rechazadas y en
-  proceso con su enlace (`estado=Rechazada`) solo con `readInvoices`; caja cerrada con «Abrir caja» solo con
+  proceso con su enlace del mes (`estado=con-error`, `desde`, `hasta`) solo con `readInvoices`; caja cerrada con «Abrir caja» solo con
   `openCash`; stock (agotados → danger, solo bajo → warning); singular/plural de los títulos; orden de la lista.
 - `operations-metrics.ts`: `soldCount`/`averageTicket` (restaurante divide entre `Cerrada`, POS entre todas; 0 sin
   ventas), `cashBreakdown` (efectivo = código `01`, otras formas aparte sin montos 0, total cobrado),
@@ -651,15 +647,14 @@ y desk-migration.spec.ts, 6 OK con Frappe/API simulados. No requieren servidor
 real; no equivalen a una sesión completa del Desk conectado a Frappe.
 Reporte: PRUEBAS_LIMPIEZA_DESK_2026-10-29.md.
 
-## Catálogo de planes en Desk (2026-10-30)
+## Planes en Desk (2026-11-10)
 
-playwright.desk-migration.config.ts incluye además desk-plans.spec.ts: consulta
-get_plan_catalog mediante GET y aplicación mediante POST con payload de negocio/plan.
-El mock HTTP rechaza el método incorrecto con 403, reproduciendo la falla reportada.
-Suite Desk actual: 7 OK. Ejecutar con CHROME_BIN/LD_LIBRARY_PATH de esta guía:
+`playwright.desk-migration.config.ts` incluye `desk-plans.spec.ts`: catálogo GET,
+renovación hoy/al terminar por POST, cambio conservando cupo y anulación programada
+con motivo. Reemplaza el spec del antiguo botón «Aplicar plan». Suite Desk actual:
+**10 OK** (4 planes + 3 migración + 3 limpieza). El arnés rechaza métodos HTTP
+incorrectos con 403. Comando con CHROME_BIN/LD_LIBRARY_PATH de esta guía:
 `npx playwright test --config=playwright.desk-migration.config.ts`.
-No se repitieron suites Python/Karma/build Angular: solo cambió JS del Desk Core.
-Evidencia temporal: /tmp/facturada-desk-plans-tests.log. Sin plan real ni despliegue.
 
 ## Ejecutar las comprobaciones actuales de login y Desk
 
@@ -678,12 +673,14 @@ npx ng test --watch=false --karma-config=/tmp/facturada-legacy-karma.cjs --brows
 Build aislado para el navegador (sin despliegue):
 
 ```bash
-npm run build -- --output-path=/tmp/facturada-2026-11-09-production
+npm run build -- --output-path=/tmp/facturada-2026-11-11-final-production
 npx playwright test --config=playwright.auth.config.ts
 npx playwright test --config=playwright.desk-migration.config.ts
+npx playwright test --config=playwright.withholdings.config.ts
+npx playwright test --config=playwright.purchase-settlements.config.ts
 ```
 
-Usar CHROME_BIN/LD_LIBRARY_PATH de esta guía. Login: 16 OK; Desk: 7 OK. El servidor
+Usar CHROME_BIN/LD_LIBRARY_PATH de esta guía. Login: 16 OK; Desk: 10 OK; retenciones: 10 OK; liquidaciones: 14 OK. El servidor
 estático de pruebas escucha solo 127.0.0.1:4228, no hace proxy y devuelve 503 para
 API no interceptada. El arnés del login responde localmente a la URL absoluta de
 API de producción sin permitir que esa petición continúe al servidor real.
@@ -696,8 +693,8 @@ de ejecutar suites, crear el siguiente archivo (el nombre sitecustomize.py es
 necesario para que Python lo cargue al arrancar):
 
 ```bash
-mkdir -p /tmp/facturada-2026-11-09-fence
-cat > /tmp/facturada-2026-11-09-fence/sitecustomize.py <<'PYCODE'
+mkdir -p /tmp/facturada-2026-11-11-fence
+cat > /tmp/facturada-2026-11-11-fence/sitecustomize.py <<'PYCODE'
 import smtplib
 
 def blocked(*args, **kwargs):
@@ -717,10 +714,10 @@ Usarlo solo en el proceso de pruebas; los tests siguen debiendo simular cada
 llamada esperada del proveedor. Desde el Bench, repetir por app, secuencialmente:
 
 ```bash
-PYTHONPATH=/tmp/facturada-2026-11-09-fence bench --site facturada_core_simple_test run-tests --app facturada_core
-PYTHONPATH=/tmp/facturada-2026-11-09-fence bench --site facturada_core_simple_test run-tests --app facturada_lite
-PYTHONPATH=/tmp/facturada-2026-11-09-fence bench --site facturada_core_simple_test run-tests --app facturada_restaurante
-PYTHONPATH=/tmp/facturada-2026-11-09-fence bench --site facturada_core_simple_test run-tests --app facturada_api
+PYTHONPATH=/tmp/facturada-2026-11-11-fence bench --site facturada_core_simple_test run-tests --app facturada_core
+PYTHONPATH=/tmp/facturada-2026-11-11-fence bench --site facturada_core_simple_test run-tests --app facturada_lite
+PYTHONPATH=/tmp/facturada-2026-11-11-fence bench --site facturada_core_simple_test run-tests --app facturada_restaurante
+PYTHONPATH=/tmp/facturada-2026-11-11-fence bench --site facturada_core_simple_test run-tests --app facturada_api
 ```
 
 El build optimizado del 08/11 también pasó al permitir la descarga de las fuentes
@@ -741,7 +738,76 @@ facturada_restaurante.api.test_qz_printing. Todos usan datos ficticios/rollback;
 las pruebas de generación de certificados simulan la escritura de site_config.
 Nunca generar certificados ni lanzar impresiones reales como preparación automática.
 
-Navegador actual: login 16 OK sobre build optimizado del 09/11 y Desk 7 OK, con
+Navegador actual (11/11): login 16, Desk 10, retenciones 10 y liquidaciones 14 OK, con
 APIs interceptadas. No conectan a QZ ni equivalen a imprimir en USB/red.
 Prueba manual pendiente con QZ Tray y la térmica: confianza override.crt, caracteres
 PC850, corte y una sola comanda desde pestañas reales. No se hizo despliegue.
+
+## Cobertura parcial: comprobante de retención electrónico (2026-11-11)
+
+Contrato `docs/frontend_withholdings.md`, idéntico a su copia en Lite al revisarlo.
+
+- Front: los 32 casos añadidos el 10/11 ahora pasan: HTTP retenciones/proveedores,
+  mapas por tipo y compatibilidad, revisión/realtime, formulario con clave conocida/nueva,
+  catálogo y porcentajes, bases, validaciones, retraso, permisos/agente, establecimiento
+  con secuencia 07 y payload. Se conservan activos los tests de fechas imposibles y
+  conservación del 0 % al editar borrador.
+- Core: 2 OK para módulos/permisos/agente; wildcard no evita el requisito de agente.
+- Lite: 19 OK de cálculos/tarifas/catálogos, claves coincidentes y validaciones,
+  proveedores únicos/por negocio, permisos, secuencia/fecha/colisión, consulta sin
+  reemisión con identidad original, 43/70, autorización simulada y cupo exactamente
+  una vez sin stock, filtros y correo optativo/deduplicado. XML con sufijo mediante
+  metadata File temporal; PDF/sendmail y proveedor simulados, no archivos físicos.
+- Limpieza: 1 caso nuevo de preview de retenciones de Pruebas con Producción intacta;
+  no se ejecutó un borrado real. El conteo 03 se comprueba solo como campo aditivo.
+- Navegador: 10 casos (5 escenarios × desktop y móvil oscuro), **10/10 OK** sobre el build final del 11/11.
+  Creación de proveedor desde clave y emisión simulada, bloqueo sin agente, lista
+  con filtros, consulta 70 sin reemitir y reapertura 332 al 0 %. Se verificaron los arreglos
+  de cero válido y clic móvil; no se usó force click ni se ocultó la navegación.
+
+Los **3 defectos del 10/11 están corregidos y revalidados**; ver reporte del 11/11.
+Pendiente de cobertura: pruebas propias de SupplierPicker y listado/detalle como
+componentes, menú/secuencias completas, XML/XSD Node real, PDF/entrega efectiva de correo,
+API externa. La anulación 03/07 ya tiene cobertura abajo. Este equipo no ejecutó pruebas del servicio Node ni el SRI,
+aunque existan verificaciones manuales anteriores registradas por otro editor.
+
+Las liquidaciones de compra 03, inicialmente sin cobertura en la ronda del 10/11,
+ya tienen pruebas unitarias, backend y navegador descritas en la sección siguiente.
+
+## Cobertura parcial: liquidaciones y anulación 03/07 (2026-11-11)
+
+Contratos `docs/frontend_purchase_settlements.md` y `docs/frontend_withholdings.md`,
+con sus copias idénticas en Lite. Se corrigió su nota antigua de listas sin Anuladas:
+ambas listas admiten `Anulada` y `status_counts.Anulada` desde el registro de anulación SRI.
+
+- Front: contrato HTTP de liquidaciones (8), formulario (7), acciones del detalle (3),
+  prellenado de retención con IVA → sustento 01/sin IVA → 02 y origen anulado (3),
+  kinds del diálogo y sección de anulación (6), anulación HTTP de retención (1), mapa03 (1).
+  Son parte de los 34 nuevos y pasan; no duplicarlos en el total.
+- Lite: `test_purchase_settlement` (14) de cálculos/agrupación por tarifa, cédula/proveedor,
+  permisos/negocio/ubicaciones, configuración sin agente y bloqueo sin firma/secuencia,
+  fecha/colisión/identidad, cuota única sin stock, 43/70 solo consulta, reintento,
+  búsqueda/paginación y correo desactivado. Helpers fiscales extraídos de test_withholding
+  a withholding_test_helpers.py sin duplicar sus 19 casos existentes.
+- Lite: `test_document_annulment` (9) para ambos tipos: confirmación/fecha/motivo,
+  autorización, auditoría/identidad y segundo intento, permisos/negocio, bloqueo por
+  retención vigente, estados sin efecto que no bloquean, listados Anulada y rechazo
+  de emitir retención sobre liquidación anulada. Sin cambios de dinero/stock/cupo.
+- Core: 2 casos nuevos de capacidades03 (billing/permisos sin exigir agente).
+- Navegador: 14/14 OK, siete escenarios en desktop y móvil oscuro: descuentos/IVA y
+  emisión simulada, proveedor sin RUC, retención desde03 con/sin IVA, bloqueo por
+  retención vigente y diálogos/POST/bandas de ambos kinds. HTTP y WebSocket interceptados.
+
+Pendiente: servicio Node/XSD y archivos fiscales reales, entrega efectiva de correo,
+API externa03/07, contabilidad ERPNext y escenarios de concurrencia entre emisión y
+anulación. Son límites de esta ronda: no inferir su validación de las pruebas actuales.
+
+## Cobertura parcial: un build para varios sitios y Socket.IO (2026-11-11)
+
+Frontend: 4 casos de setSite y 1 de propagación de message.site desde el contexto;
+limpieza/persistencia, no reconectar el mismo sitio, recreación solicitada del socket
+activo, conservar listeners/rooms/documentos e inactivo sin conexión. Usan socket
+falso y spy de connect: no validan el factory Socket.IO ni el reenganche real.
+Lite: el test existente de get_user_context afirma site = frappe.local.site.
+Producción: APIs relativas en el build final; E2E usa su mismo origen con respuestas
+simuladas. Pendiente sesión real y realtime autenticado en dos dominios/sitios.

@@ -6,7 +6,7 @@ import { RemissionGuidesService } from 'src/app/services/remission-guides.servic
 import { RemissionGuidesComponent } from './remission-guides.component';
 
 describe('RemissionGuidesComponent', () => {
-  it('only filters by the seven statuses guides use and invites to create the first guide', () => {
+  it('offers electronic groups without cancellation and invites to create the first guide', () => {
     const service = jasmine.createSpyObj<RemissionGuidesService>('RemissionGuidesService', ['getAll']);
     service.getAll.and.returnValue(of({ message: { data: [], total: 0 } }) as any);
     TestBed.configureTestingModule({
@@ -14,16 +14,14 @@ describe('RemissionGuidesComponent', () => {
       providers: [
         provideRouter([]),
         { provide: RemissionGuidesService, useValue: service },
-        { provide: CompanyCapabilitiesService, useValue: { isLiteMode: true, hasPermission: () => true } }
-      ]
+        { provide: CompanyCapabilitiesService, useValue: { isLiteMode: true, hasPermission: () => true } },
+      ],
     });
     const fixture = TestBed.createComponent(RemissionGuidesComponent);
     fixture.detectChanges();
 
-    const values = fixture.componentInstance.statusOptions.map(option => option.value);
-    expect(values.length).toBe(7);
-    expect(values).not.toContain('Reemplazada');
-    expect(values).not.toContain('Anulada');
+    const values = fixture.componentInstance.statusOptions.map((option) => option.value);
+    expect(values).toEqual(['autorizadas', 'en-proceso', 'con-error']);
     expect(fixture.nativeElement.textContent).toContain('Crear la primera guía');
   });
 });

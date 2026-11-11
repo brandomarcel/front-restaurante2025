@@ -1,0 +1,101 @@
+<div class="app-container space-y-4">
+  <section class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-4 py-5 text-primary-foreground shadow-lg">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 class="text-xl font-bold">Retenciones</h1>
+        <p class="text-xs opacity-80">Lo que retienes a tus proveedores y su estado en el SRI.</p>
+      </div>
+      <div class="flex items-center gap-2 self-start sm:self-auto">
+        <div class="rounded-full bg-card/20 px-3 py-1 text-xs font-semibold" aria-live="polite">
+          {{ total }} {{ total === 1 ? 'registro' : 'registros' }}
+        </div>
+        <a *ngIf="canCreate" class="btn bg-card !text-xs !text-primary shadow-sm hover:opacity-90"
+          routerLink="/dashboard/withholdings/new">+ Nueva retención</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm" [attr.aria-busy]="loading">
+    <app-list-filter-bar [tabs]="statusTabs" tabsLabel="Filtrar retenciones por estado" [status]="statusFilter"
+      (statusChange)="setStatus($event)" [counts]="statusCounts" [search]="search" (searchChange)="search = $event"
+      searchLabel="Buscar retenciones" searchPlaceholder="Buscar por número, proveedor, RUC, factura del proveedor o clave"
+      dateLabel="Fecha de emisión" [fromDate]="fromDate" [toDate]="toDate" (datesChange)="onDatesChange($event)"
+      [hasActiveFilters]="hasActiveFilters" (clear)="limpiarFiltros()" />
+
+    <app-list-state [loading]="loading" [empty]="!withholdings.length" [hasFilters]="hasActiveFilters"
+      emptyMessage="Todavía no hay retenciones." filteredMessage="Ninguna retención coincide con los filtros."
+      (clear)="limpiarFiltros()">
+      <a *ngIf="!hasActiveFilters && canCreate" class="btn btn-primary mt-3 !text-xs"
+        routerLink="/dashboard/withholdings/new">Crear la primera retención</a>
+    </app-list-state>
+
+    <ng-container *ngIf="withholdings.length">
+      <!-- Escritorio -->
+      <div class="app-table-wrap hidden !rounded-none !border-0 lg:block" [class.opacity-60]="loading">
+        <table class="app-table text-xs">
+          <thead class="app-thead">
+            <tr>
+              <th class="app-th">Número</th>
+              <th class="app-th">Fecha</th>
+              <th class="app-th">Proveedor</th>
+              <th class="app-th">Factura del proveedor</th>
+              <th class="app-th text-right">Total retenido</th>
+              <th class="app-th">Estado</th>
+              <th class="app-th text-right"><span class="sr-only">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of withholdings; trackBy: trackByName" class="app-tr">
+              <td class="app-td">
+                <a class="font-semibold text-primary hover:underline" [routerLink]="['/dashboard/withholdings', row.name]">{{ documentNumber(row) }}</a>
+                <div class="text-[11px] text-muted-foreground">{{ row.environment || '—' }}</div>
+              </td>
+              <td class="app-td whitespace-nowrap">{{ row.posting_date | ecuadorTime }}</td>
+              <td class="app-td">
+                <div class="max-w-[240px] truncate" [title]="supplierName(row)">{{ supplierName(row) }}</div>
+                <div *ngIf="row.supplier?.identification" class="text-[11px] text-muted-foreground">{{ row.supplier.identification }}</div>
+              </td>
+              <td class="app-td whitespace-nowrap font-mono text-[11px]">{{ supportNumber(row) }}</td>
+              <td class="app-td whitespace-nowrap text-right font-semibold">{{ totalWithheld(row) | currency:'USD':'symbol':'1.2-2' }}</td>
+              <td class="app-td"><app-electronic-status-badge [document]="row" [liteMode]="true" /></td>
+              <td class="app-td text-right">
+                <div class="flex items-center justify-end gap-1.5">
+                  <a *ngIf="isDraft(row) && canCreate" class="btn btn-outline !px-3 !py-1 !text-[11px]"
+                    [routerLink]="['/dashboard/withholdings', row.name, 'edit']">Editar</a>
+                  <a class="btn btn-outline !px-3 !py-1 !text-[11px]" [routerLink]="['/dashboard/withholdings', row.name]"
+                    [attr.aria-label]="'Ver detalle de la retención ' + documentNumber(row)">Ver detalle</a>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Móvil y tablet -->
+      <ul class="divide-y divide-border lg:hidden" [class.opacity-60]="loading">
+        <li *ngFor="let row of withholdings; trackBy: trackByName">
+          <a class="block px-3 py-3 transition hover:bg-muted/40 focus:bg-muted/40 focus:outline-none"
+            [routerLink]="['/dashboard/withholdings', row.name]">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="truncate text-sm font-bold text-foreground">{{ documentNumber(row) }}</p>
+                <p class="truncate text-xs text-foreground/80">{{ supplierName(row) }}</p>
+                <p class="truncate text-[11px] text-muted-foreground">Factura {{ supportNumber(row) }} · {{ row.posting_date | ecuadorTime }}</p>
+              </div>
+              <div class="flex shrink-0 flex-col items-end gap-1">
+                <app-electronic-status-badge [document]="row" [liteMode]="true" />
+                <span class="text-sm font-bold text-foreground">{{ totalWithheld(row) | currency:'USD':'symbol':'1.2-2' }}</span>
+              </div>
+            </div>
+          </a>
+        </li>
+      </ul>
+
+      <div class="px-3 pb-3">
+        <app-pagination [page]="page" [totalPages]="totalPages" [totalItems]="total" [pageSize]="pageSize"
+          (pageChange)="onPaginationPage($event)" (pageSizeChange)="onPaginationPageSize($event)">
+        </app-pagination>
+      </div>
+    </ng-container>
+  </section>
+</div>

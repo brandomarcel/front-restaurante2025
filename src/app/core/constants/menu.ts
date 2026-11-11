@@ -170,6 +170,28 @@ export class Menu {
           featureKey: 'billing',
           permissionKey: 'billing.read',
         },
+        {
+          // Solo para agentes de retención: `ui_capabilities.modules.withholdings.visible` ya combina
+          // billing + billing.read + «Agente de retención»; `billing` y el permiso se exigen igual aquí.
+          icon: 'assets/icons/tablericons/file-invoice.svg',
+          label: 'Retenciones',
+          route: '/dashboard/withholdings',
+          featureKey: 'billing',
+          requiredFeatures: ['billing'],
+          uiVisibilityKey: 'withholdings',
+          permissionKey: 'billing.read',
+        },
+        {
+          // Lo que el negocio le compra a quien no tiene RUC (SRI 03). `ui_capabilities.modules.purchase_settlements`
+          // combina billing + billing.read; `billing` y el permiso se exigen igual aquí.
+          icon: 'assets/icons/tablericons/file-invoice.svg',
+          label: 'Liquidaciones',
+          route: '/dashboard/purchase-settlements',
+          featureKey: 'billing',
+          requiredFeatures: ['billing'],
+          uiVisibilityKey: 'purchase_settlements',
+          permissionKey: 'billing.read',
+        },
         // Negocios solo API (sin `billing`): consultan lo emitido por integración.
         {
           icon: 'assets/icons/tablericons/file-invoice.svg',

@@ -5,15 +5,15 @@
     <div class="mb-3 flex items-start justify-between gap-3">
       <div class="min-w-0">
         <h3 id="sri-annul-title" class="text-lg font-black text-foreground">Ya la anulé en el SRI</h3>
-        <p class="text-sm text-muted-foreground">Factura {{ invoiceNumber || invoiceName }}</p>
+        <p class="text-sm text-muted-foreground">{{ config.title }} {{ number }}</p>
       </div>
       <button type="button" class="h-9 w-9 shrink-0 rounded-lg border border-border text-muted-foreground hover:bg-muted"
         (click)="dismissed.emit()" aria-label="Cerrar">✕</button>
     </div>
 
     <p class="tone-warn mb-4 rounded-lg px-3 py-2 text-xs">
-      Úsalo solo si ya anulaste esta factura en <b>SRI en línea</b> y allí aparece anulada. FacturADA no envía nada al
-      SRI: solo la registra aquí, la saca de las ventas y deja constancia de quién lo hizo.
+      Úsalo solo si ya anulaste {{ config.thisDoc }} en <b>SRI en línea</b> y allí aparece anulada. FacturADA no envía
+      nada al SRI: solo la registra aquí{{ isInvoice ? ', la saca de las ventas' : '' }} y deja constancia de quién lo hizo.
     </p>
 
     <div class="space-y-3">
@@ -37,7 +37,7 @@
           Detalle <span *ngIf="reason !== 'Otro'" class="font-normal text-muted-foreground">(opcional)</span>
         </label>
         <textarea id="sri-annul-detail" rows="2" maxlength="300" class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
-          [(ngModel)]="detail" placeholder="Ej. se facturó a otra persona; se emitió una nueva factura"></textarea>
+          [(ngModel)]="detail" [placeholder]="config.detailPlaceholder"></textarea>
       </div>
 
       <div>
@@ -48,7 +48,7 @@
           [(ngModel)]="reference" placeholder="Número de solicitud u otra referencia" />
       </div>
 
-      <div class="rounded-xl border border-border bg-muted/40 px-3 py-2 text-xs text-foreground">
+      <div *ngIf="isInvoice; else otherNote" class="rounded-xl border border-border bg-muted/40 px-3 py-2 text-xs text-foreground">
         <p class="font-semibold">Inventario</p>
         <ng-container *ngIf="stockRows.length; else noStock">
           <p class="mt-0.5 text-muted-foreground">Vuelve al inventario lo que salió con esta factura:</p>
@@ -66,15 +66,16 @@
               : 'Esta factura no movió inventario.' }}
           </p>
         </ng-template>
-        <p class="mt-1.5 text-muted-foreground">
-          El dinero no se mueve solo: si devolviste efectivo, regístralo como retiro de caja.
-        </p>
+        <p class="mt-1.5 text-muted-foreground">{{ config.note }}</p>
       </div>
+      <ng-template #otherNote>
+        <p class="rounded-xl border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">{{ config.note }}</p>
+      </ng-template>
 
       <label class="flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 transition"
         [ngClass]="confirmed ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'">
         <input type="checkbox" class="mt-0.5" [(ngModel)]="confirmed" />
-        <span class="text-sm font-semibold text-foreground">Confirmo que esta factura ya está anulada en el portal del SRI.</span>
+        <span class="text-sm font-semibold text-foreground">Confirmo que {{ config.thisDoc }} ya está anulada en el portal del SRI.</span>
       </label>
     </div>
 

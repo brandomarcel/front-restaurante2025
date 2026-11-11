@@ -3,7 +3,7 @@ import { Injectable, OnDestroy, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Menu } from 'src/app/core/constants/menu';
-import { MenuItem, SubMenuItem, Role } from 'src/app/core/models/menu.model';
+import { MenuItem, SubMenuItem, Role, UiVisibilityKey } from 'src/app/core/models/menu.model';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
 
 /**
@@ -11,13 +11,17 @@ import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabi
  * que ya prioriza `ui_capabilities` (con respaldo al feature legado si el
  * backend no lo envía todavía).
  */
-const UI_VISIBILITY_RESOLVERS: Record<string, (capabilities: CompanyCapabilitiesService) => boolean> = {
+const UI_VISIBILITY_RESOLVERS: Record<UiVisibilityKey, (capabilities: CompanyCapabilitiesService) => boolean> = {
   pos: (capabilities) => capabilities.canUsePos,
   reports: (capabilities) => capabilities.reportsVisible,
   users: (capabilities) => capabilities.usersModuleVisible,
   restaurantOrders: (capabilities) => capabilities.restaurantOrdersVisible,
   restaurantTables: (capabilities) => capabilities.restaurantTablesVisible,
   restaurantKitchen: (capabilities) => capabilities.restaurantKitchenVisible,
+  // Sin respaldo por feature: depende de «Agente de retención», que solo informa `ui_capabilities`.
+  withholdings: (capabilities) => capabilities.withholdingsVisible,
+  // Sin respaldo por feature: solo aparece cuando el backend informa el módulo.
+  purchase_settlements: (capabilities) => capabilities.purchaseSettlementsVisible,
 };
 
 @Injectable({ providedIn: 'root' })

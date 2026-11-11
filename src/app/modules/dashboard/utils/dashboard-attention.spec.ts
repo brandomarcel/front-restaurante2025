@@ -56,11 +56,21 @@ describe('Atención del dashboard', () => {
     expect(buildAttentionItems({ ...base(), plan, showPlan: true })[0].tone).toBe('warning');
   });
   it('rechazadas enlaza su filtro y sin permiso conserva aviso sin enlace', () => {
-    const data = base();
-    data.rejected = 1;
-    expect(buildAttentionItems(data)[0].action?.queryParams).toEqual({ estado: 'Rechazada' });
-    data.can.readInvoices = false;
-    expect(buildAttentionItems(data)[0].action).toBeUndefined();
+    jasmine.clock().install();
+    jasmine.clock().mockDate(new Date(2026, 10, 10, 12));
+    try {
+      const data = base();
+      data.rejected = 1;
+      expect(buildAttentionItems(data)[0].action?.queryParams).toEqual({
+        estado: 'con-error',
+        desde: '2026-11-01',
+        hasta: '2026-11-10',
+      });
+      data.can.readInvoices = false;
+      expect(buildAttentionItems(data)[0].action).toBeUndefined();
+    } finally {
+      jasmine.clock().uninstall();
+    }
   });
   it('respeta permisos para abrir caja e inventario', () => {
     const data = base();

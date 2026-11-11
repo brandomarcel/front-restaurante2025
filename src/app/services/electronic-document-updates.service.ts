@@ -5,6 +5,7 @@ import { environment } from 'src/environments/environment';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
 import { CompanyCapabilitiesService } from '../core/services/company-capabilities.service';
 import { frappeData } from '../core/utils/frappe-response';
+import { ElectronicDocumentKind, electronicDocumentKindConfig } from '../core/utils/electronic-document-kinds';
 import { FrappeSocketService } from './frappe-socket.service';
 
 @Injectable({ providedIn: 'root' })
@@ -12,8 +13,9 @@ export class ElectronicDocumentUpdatesService {
   constructor(private http: HttpClient, private socket: FrappeSocketService,
     private capabilities: CompanyCapabilitiesService) {}
 
-  watch(name: string, business: string, guide: boolean): Observable<any> {
-    const doctype = guide ? 'FacturADA Lite Remission Guide' : 'FacturADA Lite Invoice';
+  /** `kind`: tipo de comprobante (el booleano antiguo sigue valiendo: `true` = guía, `false` = factura). */
+  watch(name: string, business: string, kind: ElectronicDocumentKind | boolean): Observable<any> {
+    const { doctype, detailMethod: method } = electronicDocumentKindConfig(kind);
     const events = ['facturada_electronic_status_updated', 'facturada_electronic_review_required'];
     const notifications = new Observable<void>(subscriber => {
       this.socket.connect();
@@ -32,7 +34,6 @@ export class ElectronicDocumentUpdatesService {
         this.socket.unsubscribeDocument(doctype, name);
       };
     });
-    const method = guide ? 'get_lite_remission_guide_detail' : 'get_lite_invoice_detail';
     return notifications.pipe(
       filter(() => business === this.capabilities.activeBusinessId),
       // Serialize local reads so a second event cannot be lost during a request.

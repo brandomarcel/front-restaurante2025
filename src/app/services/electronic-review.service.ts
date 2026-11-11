@@ -2,15 +2,19 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { REQUIRE_AUTH } from '../core/interceptor/auth-context';
+import { ElectronicDocumentKind, electronicDocumentKindConfig } from '../core/utils/electronic-document-kinds';
 
 @Injectable({ providedIn: 'root' })
 export class ElectronicReviewService {
   constructor(private http: HttpClient) {}
 
-  confirm(name: string, reason: string, business: string, guide: boolean, verified: boolean) {
-    return this.call(guide ? 'confirm_lite_remission_guide_electronic_review' : 'confirm_lite_invoice_electronic_review', {
-      business, [guide ? 'guide_name' : 'invoice_name']: name,
-      review_reason: reason, ...(!guide && verified ? { verified_no_sri_record: 1 } : {})
+  /** `kind`: tipo de comprobante (el booleano antiguo sigue valiendo: `true` = guía, `false` = factura). */
+  confirm(name: string, reason: string, business: string, kind: ElectronicDocumentKind | boolean, verified: boolean) {
+    const config = electronicDocumentKindConfig(kind);
+    // La verificación de inexistencia en el SRI solo existe para facturas y notas de crédito.
+    return this.call(config.reviewMethod, {
+      business, [config.reviewNameParam]: name,
+      review_reason: reason, ...(config.invoiceLike && verified ? { verified_no_sri_record: 1 } : {})
     });
   }
 

@@ -1,6 +1,6 @@
 # Estado del proyecto Facturada
 
-Última actualización: 2026-11-10.
+Última actualización: 2026-11-11.
 
 ## Objetivo Actual
 
@@ -8,6 +8,99 @@ Mantener una memoria breve del progreso y los pendientes sin ampliar `CLAUDE.md`
 El trabajo local observado se concentra en la configuración de desarrollo del frontend Angular y su conexión con Frappe.
 
 ## Últimos Cambios (Hecho)
+
+- 2026-11-11 (Codex, tres agentes de pruebas): **519 backend OK** (Core 98 / Lite 312 / Restaurante 77 / API 32),
+  **Angular: 634, con 614 OK / 20 fallas heredadas**, **navegador 50/50 OK**. 73 casos nuevos (34 front + 25 backend + 14 navegador),
+  todos aprobados: liquidaciones03, retención desde liquidación, anulación03/07, Socket/site y contratos HTTP.
+  Correcciones externas durante la sesión revalidadas con las mismas aserciones: borrador 332 conserva 0 %, calendario
+  rechaza fechas imposibles y toolbar móvil permite clic normal. No quedan esos tres defectos pendientes.
+  Build final OK (2,57 MB / 583,62 kB; 4 avisos CSS); lint conserva 19 problemas heredados (18 errores / 1 aviso).
+  DB exclusiva/secuencial en facturada_core_simple_test, mocks/rollback y HTTP/SMTP bloqueados; navegador con HTTP
+  y WebSocket interceptados. Sin cambios de runtime por este equipo, emisión real, commits ni despliegue.
+  TESTING_CODEX y estados backend actualizados; contratos front/Lite sincronizados con status_counts.Anulada.
+  Reporte vigente: **PRUEBAS_CODEX_2026-11-11_AGENTES.md**. Socket.IO autenticado, Node/ERPNext y hardware reales
+  siguen fuera de la cobertura de esta ronda.
+
+- 2026-11-11 (Claude, defectos del informe de Codex del 10/11): (1) `withholding-form` al reabrir un borrador
+  conserva el 0 % (332 y rendimientos exentos); antes `Number(x) || null` lo volvía vacío. (2) `daysBetween`
+  (`core/utils/withholding.ts`) devuelve null para fechas imposibles (30 de febrero, mes 13). (3) `app-document-actions`
+  en celular se ubica sobre la navegación inferior (`bottom: env(safe-area-inset-bottom) + 3.75rem`, `z-[80]`, como
+  `.mobile-emit-bar`); afecta a los detalles de factura, NC, guía, retención y liquidación. Probado en el navegador
+  contra el piloto (borrador FLRET-00066 332 al 0 % muestra 0.00 en escritorio y celular; en 390 px el toque llega al
+  botón de la barra). `tsc` y lint OK. Karma no corrido por Claude (Codex estaba corriendo la suite): las pruebas de
+  Codex de estos casos deberían pasar sin cambios.
+
+- 2026-11-11 (Claude, anular retenciones y liquidaciones): «Ya la anulé en el SRI» en el detalle de retención y
+  liquidación (`shared/components/sri-annulment-section`, banda de constancia + sección «Anular …»). El diálogo de la
+  factura se movió a `shared/components/sri-annulment-dialog` y acepta `kind` (`invoice` | `withholding` |
+  `purchase-settlement`) con motivos y textos propios; la factura no cambia (`invoiceName` sigue valiendo). Servicios:
+  `registerSriAnnulment` en `withholdings.service` y `purchase-settlements.service`. Pestaña «Anuladas» en ambas
+  listas. Aviso en el formulario si la liquidación de origen está anulada. Probado en el navegador contra el piloto:
+  liquidación con retención bloqueada; FLRET-00057 y FLLIQ-00056 anuladas, sus asientos revertidos solos; pestañas con
+  conteo. `tsc` y lint OK. Codex añadió y aprobó casos de kinds del diálogo, SriAnnulmentSection y navegador para ambos documentos (11/11).
+
+- 2026-11-11 (Claude, retención desde una liquidación): «Crear retención» pone el sustento según el IVA de la
+  liquidación (01 con IVA, 02 sin IVA), el mismo que la compra que crea la contabilidad; antes quedaba 01 siempre y el
+  comprobante y el ATS declaraban sustentos distintos (`patchFromSettlement` en `withholding-form`). Probado en el
+  navegador contra el piloto (FLLIQ-00056, IVA 0 % → 02). `tsc` y lint OK. Codex validó el prellenado con IVA (01), sin IVA (02) y origen anulado en unitarias y navegador. Recorrido completo de retenciones/liquidaciones hacia la contabilidad: ver `ESTADO.md` de
+  `facturada_erpnext`.
+
+- 2026-11-11 (Claude, un solo front para todos los dominios): los clientes con contabilidad tendrán su propio dominio
+  y sitio Frappe, con el mismo build. `environment.prod.ts` pasa a direcciones relativas (`apiUrl: '/api'`, `URL: ''`);
+  para `facturada.bmarc-corp.com/portal` no cambia nada (front y `/api` ya estaban en el mismo dominio). El namespace
+  de Socket.IO lo da el backend (`get_user_context.site`, nuevo en Lite) vía `CompanyCapabilitiesService.setFromResponse`
+  → `FrappeSocketService.setSite` (reconecta si cambió y conserva listeners/rooms; se recuerda en
+  `localStorage['facturada.frappe_site']`); `frappeSiteNamespace` queda de respaldo. Nuevo `src/proxy.conf.pilot.json`
+  (piloto con contabilidad, `:8004`). Comprobado: `get_user_context` devuelve `site`; `tsc`, lint de lo tocado y
+  `npm run build` OK, sin el dominio fijo en el bundle. Sin push. **Para Codex:** `setSite` (mismo sitio no
+  reconecta; sitio distinto recrea el socket, re-engancha listeners y re-suscribe rooms/documentos; sin socket solo
+  guarda) y que `setFromResponse` lo llame con `message.site`. Pendiente: probar el tiempo real en el navegador contra el
+  piloto y, al publicar, ver en producción que el socket conecta a `/facturada_main`.
+
+- 2026-11-11 (Claude + agentes, liquidaciones de compra): lista, formulario y detalle (`pages/purchase-settlements`,
+  `pages/purchase-settlement-form`, `pages/purchase-settlement-detail`), `services/purchase-settlements.service.ts`,
+  clase `'purchase-settlement'` en `electronic-document-kinds.ts`, menú «Liquidaciones» (`uiVisibilityKey:
+  'purchase_settlements'`), secuencia «Liquidación de compra» en Configuración ▸ Secuencias (selector de 3 columnas),
+  `supplier-picker` con tipos permitidos y tipo por defecto, y en la retención `?liquidacion=<name>` que prellena
+  sustento 03, renta 311 e IVA 100 %. Backend Lite/Core y servicio Node (XML 1.1.0 validado contra el XSD; 38 pruebas
+  OK). Probado en el navegador con el usuario de pruebas de CAFETERIA DEMO: FLLIQ-01063 emitida desde el formulario y
+  **autorizada por el SRI de Pruebas**; retención sobre FLLIQ-01061 creada con «Crear retención» y autorizada
+  (FLRET-01064); el detalle muestra «Ya tiene retención». Build OK, lint 19 (sin nuevos).
+
+- 2026-11-10 (Codex, tres agentes de pruebas): **494 backend OK** (Core 96/Lite 289/Restaurante 77/API 32),
+  **Angular 600: 578 OK/22 fallas** (20 heredadas y 2 nuevas), **navegador 33 OK/3 fallas** de 36.
+  Se añadieron 32 casos frontend, 22 backend y 10 de navegador, centrados en retenciones/proveedores.
+  Defectos reales que encontró (corregidos el 2026-11-11, ver arriba): editar borrador 332 al 0 % perdía el porcentaje;
+  daysBetween aceptaba fechas imposibles; acciones móviles de documento quedaban bajo la navegación inferior.
+  Build actual OK (2,57 MB/583,35 kB; 4 avisos CSS), lint conserva 19 problemas heredados.
+  Pruebas aisladas/mocks, un solo agente ejecutó DB secuencialmente; ningún runtime fue editado por este equipo.
+  Ediciones externas de liquidaciones 03 compilan, sin cobertura funcional propia. Lite se repitió con huellas estables.
+  Actualizados TESTING_CODEX.md y estados backend. Reporte vigente: **PRUEBAS_CODEX_2026-11-10_AGENTES.md**.
+  Sin SRI, correo/impresión reales, commits ni despliegue.
+
+- 2026-11-10 (Claude + agentes, retenciones electrónicas): a pedido del usuario (retención primero, pantallas para
+  todos, consume cupo). Front: lista, formulario y detalle de «Retenciones» (`pages/withholdings`,
+  `pages/withholding-form`, `pages/withholding-detail`), `services/withholdings.service.ts`,
+  `services/lite-suppliers.service.ts`, `shared/components/supplier-picker`, mapa por clase de documento
+  `core/utils/electronic-document-kinds.ts` (el panel de estado, la consulta en vivo y la revisión manual ya no
+  dependen de un booleano «guía»), menú con `uiVisibilityKey: 'withholdings'`, secuencia «Comprobante de Retencion»
+  en Configuración ▸ Secuencias (selector de 4 columnas). Backend en Lite/Core y servicio Node (XML 2.0.0 validado
+  contra el XSD oficial). Probado: retención FLRET-01052 **autorizada por el SRI de Pruebas** desde el backend; build OK,
+  lint 19 (sin nuevos). Contrato `docs/frontend_withholdings.md`. Después: catálogo de conceptos de renta en el
+  formulario (lista con descripción y % vigente, aviso si se cambia, 0 % permitido para 332), preselección de
+  establecimiento/punto con secuencia de retención y **prueba en el navegador con sesión** (usuario de pruebas de
+  CAFETERIA DEMO): retención FLRET-01056 emitida desde el formulario y autorizada por el SRI de Pruebas; 390 px OK.
+
+- 2026-11-10 (Codex, pruebas): **472 backend OK** (Core 94, Lite 269, Restaurante 77, API 32),
+  **Angular 568: 548 OK / 20 fallas heredadas**, navegador **26 OK** (login 16 + Desk 10).
+  Se añadieron **55 pruebas unitarias/integración** (25 frontend + 30 backend) y 3 casos netos de navegador;
+  filtros compartidos/listas, anulación registrada en SRI, suscripciones, cupos, historial y permisos.
+  Se actualizaron specs del contrato anterior (estados técnicos, enlace del dashboard y «Aplicar plan»).
+  Build de producción OK (2,57 MB; 4 advertencias CSS); lint conserva 19 problemas heredados (18 errores/1 aviso).
+  Solo sitio `facturada_core_simple_test`, migrado; datos ficticios/rollback, proveedor/HTTP/SMTP bloqueados,
+  navegador con APIs simuladas. Sin cambios de lógica de negocio, impresión física, commits, push ni despliegue.
+  Actualizados TESTING_CODEX.md y los estados backend. Reporte **PRUEBAS_CODEX_2026-11-10.md**;
+  allí figuran la cobertura parcial y las verificaciones manuales pendientes.
 
 - 2026-11-10 (Claude, filtros en todas las listas): a pedido del usuario, la barra de Facturas pasa a componente
   compartido (`shared/components/list-filter-bar/`, utilidades `shared/utils/list-query.ts` y
@@ -22,9 +115,7 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
     completo y `status_counts`.
   - Front: Notas de venta pagina (20) y pierde el botón «Actualizar» (cada filtro recarga); Órdenes pierde los
     contadores de la cabecera (eran de la página) y la vista de Mesero/Cajero usa las mismas pestañas, sin fecha.
-  - Verificado en el piloto (búsquedas, grupos, fechas y conteos de cada lista). Build OK; lint 19 heredados. Specs de
-    Codex que pueden cambiar: credit-notes y remission-guides esperaban `statusOptions` con estados técnicos
-    (`Anulada`…); `invoices.component.spec.ts` y `dashboard-attention.spec.ts` ya anotados. No se tocaron aserciones.
+  - Verificado en el piloto (búsquedas, grupos, fechas y conteos de cada lista). Build OK; lint 19 heredados. Codex actualizó y ejecutó los specs de NC, Guías, Facturas y dashboard conforme al contrato de grupos; ver reporte del 10/11.
 
 - 2026-11-10 (Claude, filtros de Facturas 3, `/frontend-design`): barra de filtros más profesional (opción elegida
   por el usuario). Pestañas de estado con punto de color y conteo pegadas a la tabla (conteo de «Rechazadas o con
@@ -39,8 +130,7 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
   Autorizadas, En proceso, Rechazadas o con error, Anuladas; sin Borrador (no existe) ni Reemplazada (original técnica).
   Fecha como selector (Todas, Hoy, Este mes, Mes pasado, «Elegir fechas…» que muestra Desde/Hasta en la misma fila).
   Backend Lite: `status` acepta `EN_PROCESO` y `CON_ERROR`. «Ver rechazadas» del Dashboard abre `con-error` del mes.
-  Specs de Codex con regla cambiada (no se tocaron): `invoices.component.spec.ts` «offers every backend status…»
-  (esperaba los 9 estados técnicos) y `dashboard-attention.spec.ts` línea 61. Build OK; lint 19 heredados.
+  Codex actualizó y aprobó las expectativas de Facturas y dashboard según esta regla. Build OK; lint 19 heredados.
 
 - 2026-11-10 (Claude, filtros de Facturas): revisión pedida por el usuario.
   - Fallas corregidas: el buscador solo filtraba la página visible (el backend ignoraba `search`), así que una factura
@@ -54,8 +144,7 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
     Dashboard abre las del mes en curso (el panel cuenta ese mes). A pedido del usuario no se agregaron «Por cobrar»
     ni Pruebas/Producción.
   - Verificado en el piloto (búsqueda de una factura de la página 2, cliente, comodines, fechas, estados sin
-    repetidos). Build OK; lint 19 heredados. Specs de Codex que cambian de regla: `dashboard-attention.spec.ts` línea
-    61 espera `{ estado: 'Rechazada' }` y ahora lleva `desde`/`hasta`; no se tocó la aserción.
+    repetidos). Build OK; lint 19 heredados. La expectativa de dashboard se actualizó y pasó con fecha simulada y `con-error` + `desde`/`hasta`.
 
 - 2026-11-10 (Claude, anulación en el SRI): registrar en el sistema una factura autorizada que el negocio ya anuló
   en el portal del SRI (pedido de clientes; decisiones del usuario: solo autorizadas ya anuladas en el SRI,

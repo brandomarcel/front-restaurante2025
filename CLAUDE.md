@@ -137,6 +137,31 @@ Funciones:
   la factura sale de la terminal activa (fija serie, bodega y caja), que se elige o cambia desde el chip del encabezado
   de Facturar o desde la barra superior; varios establecimientos = una terminal por establecimiento. Cambiar recarga la
   página y, con productos en el carrito, pide confirmación.
+- Comprobante de retención electrónico (SRI 07, v2.0.0), desde 2026-11-10: Documentos ▸ «Retenciones»
+  (`/dashboard/withholdings`, `withholdings/new`, `withholdings/:id`). Solo aparece si el negocio es **agente de
+  retención** (`ui_capabilities.modules.withholdings`, del perfil tributario) y tiene `billing`; crear/emitir con
+  `billing.create`. Formulario: proveedor (buscador + «Nuevo proveedor», `shared/components/supplier-picker`),
+  factura del proveedor (pegar la clave de 49 dígitos llena número, fecha, tipo y proveedor por RUC), bases por
+  tarifa, retenciones de renta (código de concepto de una lista con su % vigente desde el 01/03/2026, catálogo
+  editable en el Desk; avisa si se cambia el %) e IVA (10/20/30/50/70/100 %); aviso si pasaron más de 5 días desde la
+  factura. Preselecciona el establecimiento y punto con secuencia «Comprobante de Retencion» activa. El SRI rechaza un
+  código de renta con un % que no sea el vigente (p. ej. 312 = 2 %). Contrato `docs/frontend_withholdings.md`. Tipos de documento por clase en
+  `core/utils/electronic-document-kinds.ts` (panel de estado, consulta en vivo y revisión manual).
+- Liquidación de compra electrónica (SRI 03, v1.1.0), desde 2026-11-11: Documentos ▸ «Liquidaciones»
+  (`/dashboard/purchase-settlements`, `/new`, `/:id`), para comprarle a quien no tiene RUC (cédula, pasaporte o del
+  exterior; con RUC se bloquea: debe dar factura). Visible con `billing` (`ui_capabilities.modules.purchase_settlements`);
+  crear/emitir con `billing.create`. Líneas con descripción, cantidad, unidad, precio sin IVA, descuento $ y tarifa (por
+  defecto IVA 0 %); forma de pago por defecto efectivo, con aviso si pasa de USD 1.000. No mueve inventario. Necesita
+  la secuencia «Liquidacion de Compra». Autorizada y si el negocio es agente de retención: «Crear retención» abre la
+  retención prellenada (documento 03; sustento 01 si tiene IVA o 02 si no, igual que la compra contable; renta 311 e
+  IVA 100 %). Contrato `docs/frontend_purchase_settlements.md`.
+- Anular (desde 2026-11-11), igual que «Ya la anulé en el SRI» de las facturas: en el detalle de una retención o
+  liquidación autorizada, sección «Anular …» (Administrador y Gerente, `billing.void`; `shared/components/sri-annulment-
+  section` + diálogo compartido `shared/components/sri-annulment-dialog`): fecha (entre la emisión y hoy), motivo,
+  referencia opcional y confirmación. No envía nada al SRI; queda «Anulada en el SRI» con quién, cuándo y por qué, y
+  las listas tienen pestaña «Anuladas». Una liquidación con retención vigente no se anula: primero la retención (al
+  anularla, la liquidación vuelve a ofrecer «Crear retención»). Con contabilidad, el barrido cancela la retención
+  contable o la compra; si la compra ya tiene pago registrado, espera a que el contador lo cancele.
 - Punto de venta genérico y notas de venta (`pos-generic`, `pos-sale-notes`)
 - Configuración tributaria: establecimientos, puntos de emisión, secuencias,
   certificado electrónico, terminales POS (`settings/lite/*`)
@@ -164,7 +189,8 @@ Funciones:
 - Selección y cambio de empresa activa (multi-negocio por usuario)
 - Menú lateral (`core/constants/menu.ts`) agrupado por tarea: Dashboard · Vender (POS, Mesas, Órdenes, Pantalla de
   cocina, Facturar, Punto de venta) · Caja y cobros · Documentos · Catálogo · Administración (Reportes, Usuarios,
-  Configuración ▸ con establecimientos, puntos, secuencias, terminales e integración API). Catálogo incluye «Carta digital» («Catálogo digital» fuera de restaurante). Las condiciones de
+  Configuración ▸ con establecimientos, puntos, secuencias, terminales e integración API). Documentos incluye
+  «Retenciones» solo para agentes de retención y «Liquidaciones» (de compra) para quien factura. Catálogo incluye «Carta digital» («Catálogo digital» fuera de restaurante). Las condiciones de
   plan/permiso/rol van en cada opción, no en el grupo; mover una opción de grupo no cambia quién la ve. El menú muestra
   siempre el logo de FacturADA (`src/assets/brand/`); el logo del negocio va en el Dashboard.
 - Pantalla inicial tras el login (`getLandingRoute`): Administrador y Gerente → panel (`/dashboard/main`);
@@ -512,6 +538,12 @@ Despliegue: cualquier `push` a `main` dispara `.github/workflows/deploy.yml`, qu
 compila y despliega automáticamente por SSH a producción. No hay ambiente de staging
 intermedio: un push a `main` es un despliegue real.
 
+Un solo build para todos los dominios (desde 2026-11-11): `environment.prod.ts` usa direcciones relativas (`/api`), así
+que la app habla con el dominio desde el que se abrió. Hoy solo existe `facturada.bmarc-corp.com/portal` (sitio
+compartido `facturada_main`); cada cliente con contabilidad tendrá su dominio y su sitio, con la misma carpeta `portal`
+servida por nginx. El namespace de Socket.IO sale de `get_user_context.site` (`FrappeSocketService.setSite`,
+recordado por dominio en `localStorage`); `frappeSiteNamespace` queda de respaldo. No volver a escribir un dominio fijo.
+
 ---
 
 # 11. Contexto del ecosistema (no repetir al usuario)
@@ -521,8 +553,10 @@ intermedio: un push a `main` es un despliegue real.
 - **Front activo:** este repo (`/home/frappe/front-restaurante2025`, Angular).
 - **Backend activo:** apps `facturada_*` en `/home/frappe/frappe-bench/apps`:
   `facturada_core`, `facturada_lite`, `facturada_restaurante`, `facturada_api`,
-  `facturada_platform` (legacy). `facturada_erpnext` / `facturada_erpnext_lab` son
-  integraciones ERPNext aparte (no leídas aún; leer solo si la tarea las toca).
+  `facturada_platform` (legacy). Contabilidad ERPNext: `facturada_erpnext` es el paquete por cliente
+  (un sitio Frappe por cliente, piloto `facturada_erpnext_pilot.localhost:8004`; empezar por su
+  `docs/ARRANQUE_CONTABILIDAD.md`); `facturada_erpnext_lab` es el laboratorio experimental, solo de
+  referencia y nunca se instala en clientes. Leerlas solo si la tarea las toca.
 - **IGNORAR:** `restaurante_app` (antiguo) y `/home/frappe/front-gym` / `gym_management`
   (otra app distinta; solo interactúa con Lite vía recibos y fuentes protegidas).
 - Cada app backend tiene `AGENTS.md` (reglas), `ESTADO.md` (estado/pendientes) y a veces
@@ -574,6 +608,8 @@ intermedio: un push a `main` es un despliegue real.
 - Sitio piloto: `facturada_core_simple_test`, backend en `127.0.0.1:8002`, Socket.IO en
   `:9000`. Proxy en `src/proxy.conf.json` (alternativa red local: `proxy.conf_local.json`).
 - Arrancar front: `npx ng serve --host 0.0.0.0 --port 4200 --proxy-config src/proxy.conf.json`.
+- Mismo front contra el piloto con contabilidad (`facturada_erpnext_pilot.localhost`, `:8004`): `--proxy-config
+  src/proxy.conf.pilot.json`.
 - Tests backend: `bench --site facturada_core_simple_test run-tests --module <modulo>`;
   Redis no disponible hace fallar varias suites (no afirmar que pasaron).
 - Cambios de DocType/campos requieren `bench --site <sitio> migrate`.
