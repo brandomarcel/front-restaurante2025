@@ -476,7 +476,7 @@
         </div>
         <div>
           <label for="new-customer-id" class="field-label">Identificación</label>
-          <input id="new-customer-id" class="input money !h-10 !w-full !text-sm" [attr.maxlength]="getMaxLength()" type="text" formControlName="num_identificacion" inputmode="numeric" autocomplete="off" />
+          <input id="new-customer-id" class="input money !h-10 !w-full !text-sm" [attr.maxlength]="getMaxLength()" type="text" appUppercase formControlName="num_identificacion" inputmode="numeric" autocomplete="off" />
           <p *ngIf="customerForm.get('num_identificacion')?.invalid && submittedCustomerForm" class="field-error">
             <ng-container *ngIf="customerForm.get('num_identificacion')?.errors?.['required']">Ingresa la identificación.</ng-container>
             <ng-container *ngIf="customerForm.get('num_identificacion')?.errors?.['cedulaInvalida']">La cédula tiene 10 dígitos.</ng-container>
@@ -486,7 +486,7 @@
       </div>
       <div>
         <label for="new-customer-name" class="field-label">Nombre o razón social</label>
-        <input id="new-customer-name" class="input !h-10 !w-full !text-sm" type="text" formControlName="nombre" (input)="toUpper($event)" autocomplete="off" />
+        <input id="new-customer-name" class="input !h-10 !w-full !text-sm" type="text" appUppercase formControlName="nombre" (input)="toUpper($event)" autocomplete="off" />
         <p *ngIf="customerForm.get('nombre')?.invalid && submittedCustomerForm" class="field-error">Ingresa el nombre.</p>
       </div>
       <div>
@@ -502,7 +502,7 @@
         </div>
         <div>
           <label for="new-customer-address" class="field-label">Dirección</label>
-          <input id="new-customer-address" class="input !h-10 !w-full !text-sm" type="text" formControlName="direccion" autocomplete="off" />
+          <input id="new-customer-address" class="input !h-10 !w-full !text-sm" type="text" appUppercase formControlName="direccion" autocomplete="off" />
           <p *ngIf="customerForm.get('direccion')?.invalid && submittedCustomerForm" class="field-error">Ingresa la dirección.</p>
         </div>
       </div>

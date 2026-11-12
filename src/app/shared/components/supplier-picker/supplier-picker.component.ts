@@ -7,6 +7,7 @@ import { FrappeErrorService } from 'src/app/core/services/frappe-error.service';
 import {
   LiteSupplier, LiteSuppliersService, SUPPLIER_IDENTIFICATION_TYPES, SupplierIdentificationType, supplierIdentificationLabel
 } from 'src/app/services/lite-suppliers.service';
+import { UppercaseInputDirective } from 'src/app/shared/directives/uppercase-input.directive';
 
 /** RUC: 13 dígitos terminados en 001. Cédula: 10 dígitos. Pasaporte y exterior: sin formato fijo. */
 function supplierIdentificationValidator(): ValidatorFn {
@@ -31,7 +32,7 @@ function supplierIdentificationValidator(): ValidatorFn {
 @Component({
   selector: 'app-supplier-picker',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [UppercaseInputDirective, CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './supplier-picker.component.html'
 })
 export class SupplierPickerComponent implements OnInit, OnDestroy {

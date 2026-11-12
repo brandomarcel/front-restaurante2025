@@ -9,6 +9,7 @@ import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabi
 import { RemissionGuidesService } from 'src/app/services/remission-guides.service';
 import { liteEmissionMessages } from 'src/app/core/utils/lite-invoice-emission';
 import { DecimalInputDirective } from 'src/app/shared/directives/decimal-input.directive';
+import { UppercaseInputDirective } from 'src/app/shared/directives/uppercase-input.directive';
 
 /** Códigos de identificación SRI usados en transportista/destinatario. */
 const IDENTIFICATION_TYPES = [
@@ -44,11 +45,23 @@ function identificacionDestinatarioValidator(): ValidatorFn {
   };
 }
 
+/**
+ * Largos del SRI para la guía de remisión (ficha técnica de comprobantes electrónicos v2.26, págs. 49–50). Lite los
+ * vuelve a validar (`api/sri_limits.py`). La guía no tiene unidad de medida en el XML: va como detalle adicional.
+ */
+const SRI_MAX = { direccion: 300, razonSocial: 300, transportista: 13, destinatario: 20, codigo: 25, descripcion: 300, unidad: 50 };
+
+/** Placa como la pide el SRI/ANT: mayúsculas, sin espacios ni guiones («abc-1234» → «ABC1234»). */
+export function normalizePlate(value: unknown): string {
+  return String(value ?? '').replace(/[\s-]/g, '').toUpperCase();
+}
+
+/** Formatos de la ANT (tabla 29): ABC1234, moto AB023C, diplomático CD0123, extranjero ABCD0123, maquinaria MAQN99999. */
 function plateValidator(): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
-    const value = String(control.value || '').trim().toUpperCase();
+    const value = normalizePlate(control.value);
     if (!value) return null;
-    return /^[A-Z]{2,3}-?\d{3,4}$/.test(value) ? null : { placaInvalida: true };
+    return /^[A-Z0-9]{3,20}$/.test(value) ? null : { placaInvalida: true };
   };
 }
 
@@ -85,7 +98,7 @@ function docSustentoGroupValidator(): ValidatorFn {
 @Component({
   selector: 'app-remission-guide-form',
   standalone: true,
-  imports: [CommonModule, RouterModule, ReactiveFormsModule, NgxSpinnerComponent, DecimalInputDirective],
+  imports: [UppercaseInputDirective, CommonModule, RouterModule, ReactiveFormsModule, NgxSpinnerComponent, DecimalInputDirective],
   templateUrl: './remission-guide-form.component.html'
 })
 export class RemissionGuideFormComponent implements OnInit {
@@ -109,11 +122,11 @@ export class RemissionGuideFormComponent implements OnInit {
       establishment: ['', Validators.required],
       emission_point: ['', Validators.required],
       environment: [this.defaultEnvironment(), Validators.required],
-      dirEstablecimiento: ['', Validators.required],
-      dirPartida: ['', Validators.required],
-      razonSocialTransportista: ['', Validators.required],
+      dirEstablecimiento: ['', [Validators.required, Validators.maxLength(SRI_MAX.direccion)]],
+      dirPartida: ['', [Validators.required, Validators.maxLength(SRI_MAX.direccion)]],
+      razonSocialTransportista: ['', [Validators.required, Validators.maxLength(SRI_MAX.razonSocial)]],
       tipoIdentificacionTransportista: ['04', Validators.required],
-      rucTransportista: ['', [Validators.required, transportistaIdentificationValidator()]],
+      rucTransportista: ['', [Validators.required, Validators.maxLength(SRI_MAX.transportista), transportistaIdentificationValidator()]],
       fechaIniTransporte: ['', Validators.required],
       fechaFinTransporte: ['', Validators.required],
       placa: ['', [Validators.required, plateValidator()]],
@@ -224,9 +237,9 @@ export class RemissionGuideFormComponent implements OnInit {
 
   createDestinatario(): FormGroup {
     return this.fb.group({
-      identificacionDestinatario: ['', [Validators.required, identificacionDestinatarioValidator()]],
-      razonSocialDestinatario: ['', Validators.required],
-      dirDestinatario: ['', Validators.required],
+      identificacionDestinatario: ['', [Validators.required, Validators.maxLength(SRI_MAX.destinatario), identificacionDestinatarioValidator()]],
+      razonSocialDestinatario: ['', [Validators.required, Validators.maxLength(SRI_MAX.razonSocial)]],
+      dirDestinatario: ['', [Validators.required, Validators.maxLength(SRI_MAX.direccion)]],
       motivoTraslado: ['Venta', Validators.required],
       codDocSustento: [''],
       numDocSustento: ['', docSustentoNumberValidator()],
@@ -237,10 +250,11 @@ export class RemissionGuideFormComponent implements OnInit {
 
   createDetalle(): FormGroup {
     return this.fb.group({
-      codigoInterno: ['', Validators.required],
-      descripcion: ['', Validators.required],
+      // El código interno es opcional para el SRI.
+      codigoInterno: ['', Validators.maxLength(SRI_MAX.codigo)],
+      descripcion: ['', [Validators.required, Validators.maxLength(SRI_MAX.descripcion)]],
       cantidad: [1, [Validators.required, Validators.min(0.01)]],
-      unidadMedida: ['Unidad', Validators.required]
+      unidadMedida: ['Unidad', Validators.maxLength(SRI_MAX.unidad)]
     });
   }
 
@@ -300,16 +314,16 @@ export class RemissionGuideFormComponent implements OnInit {
           const array = this.fb.array(destinatarios.map((destinatario: any) => {
             const detalles = Array.isArray(destinatario?.detalles) && destinatario.detalles.length
               ? destinatario.detalles.map((detalle: any) => this.fb.group({
-                codigoInterno: [detalle?.codigo_interno || detalle?.codigoInterno || '', Validators.required],
-                descripcion: [detalle?.descripcion || '', Validators.required],
+                codigoInterno: [detalle?.codigo_interno || detalle?.codigoInterno || '', Validators.maxLength(SRI_MAX.codigo)],
+                descripcion: [detalle?.descripcion || '', [Validators.required, Validators.maxLength(SRI_MAX.descripcion)]],
                 cantidad: [Number(detalle?.cantidad ?? 1), [Validators.required, Validators.min(0.01)]],
-                unidadMedida: [detalle?.unidad_medida || detalle?.unidadMedida || 'Unidad', Validators.required]
+                unidadMedida: [detalle?.unidad_medida || detalle?.unidadMedida || 'Unidad', Validators.maxLength(SRI_MAX.unidad)]
               }))
               : [this.createDetalle()];
             return this.fb.group({
-              identificacionDestinatario: [destinatario?.identificacion_destinatario || '', [Validators.required, identificacionDestinatarioValidator()]],
-              razonSocialDestinatario: [destinatario?.razon_social_destinatario || '', Validators.required],
-              dirDestinatario: [destinatario?.dir_destinatario || '', Validators.required],
+              identificacionDestinatario: [destinatario?.identificacion_destinatario || '', [Validators.required, Validators.maxLength(SRI_MAX.destinatario), identificacionDestinatarioValidator()]],
+              razonSocialDestinatario: [destinatario?.razon_social_destinatario || '', [Validators.required, Validators.maxLength(SRI_MAX.razonSocial)]],
+              dirDestinatario: [destinatario?.dir_destinatario || '', [Validators.required, Validators.maxLength(SRI_MAX.direccion)]],
               motivoTraslado: [destinatario?.motivo_traslado || 'Venta', Validators.required],
               codDocSustento: [destinatario?.cod_doc_sustento || ''],
               numDocSustento: [destinatario?.num_doc_sustento || '', docSustentoNumberValidator()],
@@ -325,6 +339,21 @@ export class RemissionGuideFormComponent implements OnInit {
         this.router.navigate(['/dashboard/remission-guides']);
       }
     });
+  }
+
+  /** Mensaje del primer error de un campo, con el largo del SRI cuando se pasa. */
+  fieldError(control: AbstractControl | null | undefined): string {
+    const errors = control?.errors;
+    if (!errors) return '';
+    if (errors['required']) return 'Requerido.';
+    if (errors['maxlength']) return `Máximo ${errors['maxlength'].requiredLength} caracteres (el SRI no acepta más).`;
+    if (errors['placaInvalida']) return 'Solo letras y números, de 3 a 20 (ej. ABC1234, moto AB023C).';
+    if (errors['cedulaInvalida']) return 'La cédula debe tener 10 dígitos.';
+    if (errors['rucInvalido']) return 'El RUC debe tener 13 dígitos.';
+    if (errors['identificacionInvalida']) return 'Debe tener 10 (cédula) o 13 (RUC) dígitos.';
+    if (errors['formatoInvalido']) return 'Formato esperado: 001-001-000000123.';
+    if (errors['min']) return 'Debe ser mayor que 0.';
+    return 'Revisa este campo.';
   }
 
   private buildPayload(): any {
@@ -343,7 +372,7 @@ export class RemissionGuideFormComponent implements OnInit {
         rucTransportista: String(value.rucTransportista || '').trim(),
         fechaIniTransporte: value.fechaIniTransporte,
         fechaFinTransporte: value.fechaFinTransporte,
-        placa: String(value.placa || '').trim().toUpperCase()
+        placa: normalizePlate(value.placa)
       },
       destinatarios: value.destinatarios.map((destinatario: any) => ({
         identificacionDestinatario: String(destinatario.identificacionDestinatario || '').trim(),

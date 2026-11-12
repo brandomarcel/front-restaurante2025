@@ -9,6 +9,26 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-11 (Claude, guía de remisión y liquidación según la ficha técnica del SRI v2.26): formulario de guía con
+  los largos del SRI (`SRI_MAX`: direcciones/razón social/descripción 300, transportista 13, destinatario 20, código
+  25, unidad 50), `maxlength` en los campos y un mensaje por campo (`fieldError`). **Placa** con los formatos de la ANT
+  (tabla 29: ABC1234, moto AB023C, CD0123, ABCD0123, MAQN99999), se envía sin espacios ni guiones (`normalizePlate`);
+  antes solo aceptaba ABC-1234. **Código interno opcional** (como el SRI). Unidad opcional: el SRI no la tiene en la
+  guía y Lite la envía como detalle adicional «Unidad». Liquidación ya cumplía los largos. Probado en el navegador
+  (AB 023-C aceptada, código vacío sin error). **Para Codex:** validadores y mensajes del formulario de guía.
+
+- 2026-11-11 (Claude, modal de secuencias, guía de remisión y MAYÚSCULAS):
+  - **Modal «Nueva secuencia»** (`lite-document-sequences`): con los tipos Retención y Liquidación el contenido pasaba
+    de 90vh y `overflow-hidden` cortaba los botones. Ahora encabezado y pie fijos, cuerpo con scroll, `90dvh`.
+    Probado: 1366×680 y 390×740, «Crear secuencia» visible y recibe el clic. Hay ~20 modales más con el mismo
+    `overflow-hidden` (productos, clientes, usuarios, establecimientos…): pendiente medirlos con 680 px.
+  - **Directiva `appUppercase`** (`shared/directives/uppercase-input.directive.ts`, ControlValueAccessor): mayúsculas
+    al escribir, conserva el cursor, respeta la composición de tildes. En 27 campos: cliente (pantalla, POS, Facturar),
+    proveedor (`supplier-picker`), guía de remisión (placa, transportista, direcciones, destinatario y detalle),
+    liquidación (descripción y unidad) y motivo de la NC. Probado en el navegador.
+  - Backend en Lite: ver su `ESTADO.md` (corrección de la guía al reintentar o consultar y mayúsculas al guardar).
+  - **Para Codex:** directiva (cursor, composición, writeValue), modal de secuencias con altura baja.
+
 - 2026-11-11 (Codex, tres agentes de pruebas): **519 backend OK** (Core 98 / Lite 312 / Restaurante 77 / API 32),
   **Angular: 634, con 614 OK / 20 fallas heredadas**, **navegador 50/50 OK**. 73 casos nuevos (34 front + 25 backend + 14 navegador),
   todos aprobados: liquidaciones03, retención desde liquidación, anulación03/07, Socket/site y contratos HTTP.

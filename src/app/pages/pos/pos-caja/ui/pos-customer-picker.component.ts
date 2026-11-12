@@ -10,6 +10,7 @@ import { Subject, catchError, debounceTime, distinctUntilChanged, finalize, of, 
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
 import { CustomersService } from 'src/app/services/customers.service';
 import { FINAL_CONSUMER_IDENTIFICATION, extractApiError } from '../pos-sale.rules';
+import { UppercaseInputDirective } from 'src/app/shared/directives/uppercase-input.directive';
 
 /**
  * Cliente de la venta: búsqueda por nombre/identificación, Consumidor Final y
@@ -20,7 +21,7 @@ import { FINAL_CONSUMER_IDENTIFICATION, extractApiError } from '../pos-sale.rule
 @Component({
   selector: 'app-pos-customer-picker',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule],
+  imports: [UppercaseInputDirective, CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule],
   templateUrl: './pos-customer-picker.component.html'
 })
 export class PosCustomerPickerComponent implements OnInit, OnChanges, OnDestroy {

@@ -201,6 +201,11 @@ Funciones:
 Funciones:
 - Registro y actualización de clientes
 - Historial de compras
+- Texto de clientes, proveedores y comprobantes en MAYÚSCULAS (desde 2026-11-11): nombre o razón social,
+  identificación, dirección, placa, códigos, descripciones, unidades y motivos. Lo convierte el backend al guardar
+  (Lite `api/text_case.py`, también desde la API) y el front lo muestra así mientras se escribe (directiva
+  `appUppercase`, `shared/directives/uppercase-input.directive.ts`). No se tocan correos, teléfonos, notas internas,
+  campos adicionales ni el catálogo de productos; lo que ya tiene clave de acceso no cambia.
 
 ## Productos e inventario
 
@@ -405,6 +410,10 @@ Funciones:
   anulan primero), en migradas, reemplazadas, de origen protegido o no autorizadas. El dinero no se mueve solo (si se
   devolvió efectivo, retiro de caja) y el cupo del plan no vuelve. Backend `facturada_lite.api.invoice_annulment`.
 - Datos tributarios: RUC, régimen, agente de retención, obligado a llevar contabilidad
+- Largos y formatos del SRI (ficha técnica v2.26) en la guía de remisión y la liquidación: el front los limita en
+  cada campo y Lite los vuelve a validar antes de emitir (`api/sri_limits.py`). Placa con los formatos de la ANT
+  (ABC1234, moto AB023C, MAQN99999…), guardada sin espacios ni guiones; código interno de la guía opcional; la unidad
+  de la guía va como detalle adicional «Unidad» (el SRI no tiene unidad en la guía).
 
 ## Dashboard (`/dashboard/main`)
 

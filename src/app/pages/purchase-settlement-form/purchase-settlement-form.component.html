@@ -53,7 +53,7 @@
           <div class="grid grid-cols-2 items-start gap-2 sm:grid-cols-6 lg:grid-cols-[minmax(0,2.4fr)_90px_100px_120px_110px_minmax(0,1.3fr)]">
             <div class="col-span-2 min-w-0 sm:col-span-6 lg:col-span-1">
               <label class="mb-1 block text-[11px] text-foreground/70" [attr.for]="'ps-desc-' + i">Descripción</label>
-              <input class="input !w-full" formControlName="descripcion" maxlength="300" autocomplete="off" [id]="'ps-desc-' + i"
+              <input class="input !w-full" appUppercase formControlName="descripcion" maxlength="300" autocomplete="off" [id]="'ps-desc-' + i"
                 placeholder="Ej.: Café en grano" />
               <p *ngIf="submitted && row.get('descripcion')?.invalid" class="field-error">Requerido.</p>
             </div>
@@ -65,7 +65,7 @@
             </div>
             <div class="min-w-0 sm:col-span-1">
               <label class="mb-1 block text-[11px] text-foreground/70" [attr.for]="'ps-unit-' + i">Unidad <span class="text-muted-foreground">(opc.)</span></label>
-              <input class="input !w-full" formControlName="unidad_medida" maxlength="30" autocomplete="off" [id]="'ps-unit-' + i" placeholder="kg" />
+              <input class="input !w-full" appUppercase formControlName="unidad_medida" maxlength="30" autocomplete="off" [id]="'ps-unit-' + i" placeholder="kg" />
             </div>
             <div class="min-w-0 sm:col-span-1">
               <label class="mb-1 block text-[11px] text-foreground/70" [attr.for]="'ps-price-' + i">Precio sin IVA</label>

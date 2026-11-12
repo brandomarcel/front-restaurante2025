@@ -52,7 +52,7 @@
       </div>
       <div>
         <label for="supplier-id" class="mb-1 block text-[11px] font-semibold text-foreground/80">Identificación</label>
-        <input id="supplier-id" class="input !w-full font-mono" formControlName="identification" autocomplete="off"
+        <input id="supplier-id" class="input !w-full font-mono" appUppercase formControlName="identification" autocomplete="off"
           [attr.inputmode]="f['identification_type'].value === '04' || f['identification_type'].value === '05' ? 'numeric' : null" />
         <p *ngIf="submitted && f['identification'].errors?.['required']" class="field-error">Requerido.</p>
         <p *ngIf="submitted && f['identification'].errors?.['rucInvalido']" class="field-error">El RUC tiene 13 dígitos y termina en 001.</p>
@@ -60,7 +60,7 @@
       </div>
       <div class="sm:col-span-2">
         <label for="supplier-name" class="mb-1 block text-[11px] font-semibold text-foreground/80">Nombre o razón social</label>
-        <input id="supplier-name" class="input !w-full" formControlName="supplier_name" autocomplete="off" />
+        <input id="supplier-name" class="input !w-full" appUppercase formControlName="supplier_name" autocomplete="off" />
         <p *ngIf="submitted && f['supplier_name'].invalid" class="field-error">Requerido.</p>
       </div>
       <div>
@@ -70,7 +70,7 @@
       </div>
       <div>
         <label for="supplier-address" class="mb-1 block text-[11px] font-semibold text-foreground/80">Dirección <span class="font-normal text-muted-foreground">(opcional)</span></label>
-        <input id="supplier-address" class="input !w-full" formControlName="address" autocomplete="off" />
+        <input id="supplier-address" class="input !w-full" appUppercase formControlName="address" autocomplete="off" />
       </div>
       <label class="flex items-start gap-2 text-[11px] text-foreground/80 sm:col-span-2">
         <input type="checkbox" class="mt-0.5" formControlName="related_party" />

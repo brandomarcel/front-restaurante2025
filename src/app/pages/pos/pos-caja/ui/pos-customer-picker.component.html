@@ -57,7 +57,7 @@
         </div>
         <div>
           <label for="pos-customer-id" class="mb-1 block font-semibold text-foreground/80">Identificación</label>
-          <input id="pos-customer-id" [attr.maxlength]="getMaxLength()" type="text" inputmode="numeric" formControlName="num_identificacion" class="input font-mono text-xs" />
+          <input id="pos-customer-id" [attr.maxlength]="getMaxLength()" type="text" inputmode="numeric" appUppercase formControlName="num_identificacion" class="input font-mono text-xs" />
           <div *ngIf="f['num_identificacion'].errors?.['required'] && submitted" class="field-error">Campo requerido.</div>
           <div *ngIf="f['num_identificacion'].errors?.['cedulaInvalida'] && submitted" class="field-error">La cédula debe tener 10 dígitos.</div>
           <div *ngIf="f['num_identificacion'].errors?.['rucInvalido'] && submitted" class="field-error">El RUC debe tener 13 dígitos.</div>
@@ -65,7 +65,7 @@
       </div>
       <div>
         <label for="pos-customer-name" class="mb-1 block font-semibold text-foreground/80">Nombre o razón social</label>
-        <input id="pos-customer-name" type="text" formControlName="nombre" class="input text-xs uppercase" oninput="this.value = this.value.toUpperCase()" />
+        <input id="pos-customer-name" type="text" appUppercase formControlName="nombre" class="input text-xs uppercase" oninput="this.value = this.value.toUpperCase()" />
         <div *ngIf="f['nombre'].invalid && submitted" class="field-error">Campo requerido.</div>
       </div>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -82,7 +82,7 @@
       </div>
       <div>
         <label for="pos-customer-address" class="mb-1 block font-semibold text-foreground/80">Dirección</label>
-        <input id="pos-customer-address" type="text" formControlName="direccion" class="input text-xs" />
+        <input id="pos-customer-address" type="text" appUppercase formControlName="direccion" class="input text-xs" />
         <div *ngIf="f['direccion'].invalid && submitted" class="field-error">Dirección inválida.</div>
       </div>
       <div class="flex justify-end gap-2 pt-2">

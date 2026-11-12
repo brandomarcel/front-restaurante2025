@@ -11,10 +11,11 @@ import { IconActionButtonComponent } from 'src/app/shared/components/icon-action
 import { VARIABLE_CONSTANTS } from 'src/app/core/constants/variable.constants';
 import { AppPaginationComponent } from 'src/app/shared/components/pagination/app-pagination.component';
 import { CompanyCapabilitiesService } from 'src/app/core/services/company-capabilities.service';
+import { UppercaseInputDirective } from 'src/app/shared/directives/uppercase-input.directive';
 
 @Component({
   selector: 'app-customers',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonComponent, AppPaginationComponent, IconActionButtonComponent],
+  imports: [UppercaseInputDirective, CommonModule, FormsModule, ReactiveFormsModule, ButtonComponent, AppPaginationComponent, IconActionButtonComponent],
   templateUrl: './customers.component.html',
   styleUrl: './customers.component.css'
 })

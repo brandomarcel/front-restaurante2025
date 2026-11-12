@@ -15,6 +15,7 @@ import { LiteSupplier, SupplierIdentificationType } from 'src/app/services/lite-
 import {
   PurchaseSettlementInput, PurchaseSettlementSetup, PurchaseSettlementsService
 } from 'src/app/services/purchase-settlements.service';
+import { UppercaseInputDirective } from 'src/app/shared/directives/uppercase-input.directive';
 
 /** Tipos de identificación válidos para una liquidación: cédula, pasaporte y exterior (con RUC se pide factura). */
 const SETTLEMENT_IDENTIFICATION_TYPES: readonly SupplierIdentificationType[] = ['05', '06', '08'];
@@ -39,7 +40,7 @@ function itemDiscountValidator(): ValidatorFn {
 @Component({
   selector: 'app-purchase-settlement-form',
   standalone: true,
-  imports: [CommonModule, RouterModule, ReactiveFormsModule, NgxSpinnerComponent, DecimalInputDirective, SupplierPickerComponent],
+  imports: [UppercaseInputDirective, CommonModule, RouterModule, ReactiveFormsModule, NgxSpinnerComponent, DecimalInputDirective, SupplierPickerComponent],
   templateUrl: './purchase-settlement-form.component.html'
 })
 export class PurchaseSettlementFormComponent implements OnInit {

@@ -24,13 +24,14 @@ import { ElectronicStatusBadgeComponent } from 'src/app/shared/components/electr
 import { DocumentAction, DocumentActionsComponent } from 'src/app/shared/components/document-actions/document-actions.component';
 import { SriAnnulmentOverview } from 'src/app/services/invoices.service';
 import { SriAnnulmentDialogComponent } from 'src/app/shared/components/sri-annulment-dialog/sri-annulment-dialog.component';
+import { UppercaseInputDirective } from 'src/app/shared/directives/uppercase-input.directive';
 
 type DetailTab = 'general' | 'electronic' | 'collections';
 
 @Component({
   selector: 'app-invoice-detail-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, FontAwesomeModule, ReactiveFormsModule, NgxSpinnerComponent, DecimalInputDirective, ElectronicStatusPanelComponent, ElectronicStatusBadgeComponent, DocumentActionsComponent, SriAnnulmentDialogComponent],
+  imports: [UppercaseInputDirective, CommonModule, RouterModule, FontAwesomeModule, ReactiveFormsModule, NgxSpinnerComponent, DecimalInputDirective, ElectronicStatusPanelComponent, ElectronicStatusBadgeComponent, DocumentActionsComponent, SriAnnulmentDialogComponent],
   templateUrl: './invoice-detail-page.component.html'
 })
 export class InvoiceDetailPageComponent implements OnInit {

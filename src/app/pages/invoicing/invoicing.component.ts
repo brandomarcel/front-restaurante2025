@@ -30,6 +30,7 @@ import { ProductVariantPickerComponent } from 'src/app/shared/components/product
 import { PosTerminalSwitcherComponent } from 'src/app/shared/components/pos-terminal-switcher/pos-terminal-switcher.component';
 import { fiscalSeries } from 'src/app/core/utils/fiscal-setup';
 import { clampDiscountAmount, clampDiscountPercentage, computeLineTotals } from 'src/app/shared/utils/line-discount.utils';
+import { UppercaseInputDirective } from 'src/app/shared/directives/uppercase-input.directive';
 
 type Payment = { name: string; codigo: string; nombre: string; description?: string; };
 
@@ -47,7 +48,7 @@ type CartItem = {
 @Component({
   selector: 'app-invoicing',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, RouterModule, ProductVariantPickerComponent, PosTerminalSwitcherComponent, DecimalInputDirective],
+  imports: [UppercaseInputDirective, CommonModule, FormsModule, ReactiveFormsModule, FontAwesomeModule, NgSelectModule, RouterModule, ProductVariantPickerComponent, PosTerminalSwitcherComponent, DecimalInputDirective],
   templateUrl: './invoicing.component.html',
   styleUrls: ['./invoicing.component.css']
 })

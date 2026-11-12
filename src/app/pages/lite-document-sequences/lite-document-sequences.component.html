@@ -163,8 +163,9 @@
   </section>
 
   <div *ngIf="modalOpen" class="app-modal-backdrop">
-    <section class="app-modal !max-w-xl overflow-hidden !rounded-2xl !border-border !bg-card !shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="sequence-modal-title">
-      <header class="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
+    <!-- Encabezado y pie fijos; el cuerpo se desplaza: los botones siempre se ven aunque la pantalla sea baja. -->
+    <section class="app-modal flex !max-h-[90dvh] !max-w-xl flex-col overflow-hidden !rounded-2xl !border-border !bg-card !shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="sequence-modal-title">
+      <header class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
         <div>
           <h2 id="sequence-modal-title" class="text-base font-bold text-foreground">{{ editing ? 'Editar secuencia' : 'Nueva secuencia' }}</h2>
           <p class="mt-0.5 text-xs text-muted-foreground">
@@ -174,7 +175,8 @@
         <button type="button" class="btn btn-ghost !px-2" (click)="closeModal()" aria-label="Cerrar">×</button>
       </header>
 
-      <form [formGroup]="form" (ngSubmit)="save()" class="space-y-5 p-5">
+      <form [formGroup]="form" (ngSubmit)="save()" class="flex min-h-0 flex-1 flex-col">
+        <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
         <fieldset *ngIf="!editing; else fixedCombination" class="space-y-3">
           <legend class="text-[11px] font-bold uppercase tracking-wide text-primary">¿Qué vas a numerar?</legend>
           <div>
@@ -228,8 +230,9 @@
             <option value="Inactivo">Inactiva · no se usa</option>
           </select>
         </div>
+        </div>
 
-        <footer class="flex justify-end gap-2 border-t border-border pt-4">
+        <footer class="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-5 py-3">
           <button type="button" class="btn btn-outline" (click)="closeModal()" [disabled]="saving">Cancelar</button>
           <button type="submit" class="btn btn-primary" [disabled]="saving">{{ saving ? 'Guardando…' : (editing ? 'Guardar cambios' : 'Crear secuencia') }}</button>
         </footer>

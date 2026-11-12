@@ -454,7 +454,7 @@
 
       <div *ngIf="motivoForm.value.motivo === 'Otro'">
         <label for="annul-other" class="mb-1 block text-[11px] font-semibold uppercase text-muted-foreground">Especifica el motivo</label>
-        <input id="annul-other" type="text" formControlName="otroTexto"
+        <input id="annul-other" type="text" appUppercase formControlName="otroTexto"
           class="w-full rounded-lg border bg-card px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           placeholder="Escribe aquí..." />
         <div *ngIf="motivoForm.get('otroTexto')?.invalid && motivoForm.get('otroTexto')?.touched"
