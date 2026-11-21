@@ -319,6 +319,13 @@ Funciones:
   a facturar; si hace falta otra factura se emite desde «Facturar»). Bloqueada con nota de crédito o abonos (se
   anulan primero), en migradas, reemplazadas, de origen protegido o no autorizadas. El dinero no se mueve solo (si se
   devolvió efectivo, retiro de caja) y el cupo del plan no vuelve. Backend `facturada_lite.api.invoice_annulment`.
+- Formas de pago (`get_payments` de Lite, misma lista en Facturar, POS, órdenes, abonos y reportes), desde 2026-11-20:
+  Efectivo (SRI 01), Tarjeta de débito (16), Tarjeta de crédito (19), Transferencia o depósito (20) y Cheque (20). El 01
+  es solo efectivo: cheque y transferencia pasan por un banco. «Otros» se quitó (enviaba 01); su alias `OTHER` sigue
+  aceptándose para datos antiguos. El front lee el código en `codigo_sri`; dos opciones con el mismo código se
+  distinguen por su identificador (`paymentMethodKey`). En reportes, «Cheque» se filtra por nombre y «Transferencia o
+  depósito» por el código 20 sin los cheques. El RIDE muestra el nombre y el código SRI de cada pago; el cierre de caja
+  cuenta por código (Efectivo, Débito, Crédito y «Transferencia, depósito o cheque»).
 - Datos tributarios: RUC, régimen, agente de retención, obligado a llevar contabilidad
 - Largos y formatos del SRI (ficha técnica v2.26) en la guía de remisión y la liquidación: el front los limita en
   cada campo y Lite los vuelve a validar antes de emitir (`api/sri_limits.py`). Placa con los formatos de la ANT

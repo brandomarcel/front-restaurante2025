@@ -131,17 +131,19 @@ export function buildSinglePaymentPayload(
 
 /**
  * Identificador estable para evitar que la misma forma de pago aparezca dos
- * veces. Se prioriza el código SRI porque puede variar la descripción.
+ * veces. Se prioriza el identificador de la opción (CASH, CHECK…) porque dos
+ * opciones pueden compartir código SRI (transferencia y cheque usan el 20);
+ * el código solo se usa si la opción no tiene identificador.
  */
 export function paymentMethodKey(
   paymentMethods: PaymentMethodLike[] | null | undefined,
   value: string | null | undefined
 ): string {
   const selected = findPaymentMethod(paymentMethods, value);
+  const id = String(selected?.name || selected?.payment_method || '').trim().toLocaleLowerCase();
+  if (id) return `method:${id}`;
   const code = String(selected?.codigo || selected?.payment_code || selected?.forma_pago || '').trim();
-  const method = String(
-    selected?.name || selected?.payment_method || selected?.description || selected?.nombre || value || ''
-  ).trim().toLocaleLowerCase();
+  const method = String(selected?.description || selected?.nombre || value || '').trim().toLocaleLowerCase();
   return code ? `code:${code}` : (method ? `method:${method}` : '');
 }
 

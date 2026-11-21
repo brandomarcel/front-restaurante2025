@@ -265,10 +265,10 @@ describe('POS caja — reglas de venta', () => {
     it('mapea cada forma de pago al par canónico del contrato', () => {
       expect(map({ name: 'Efectivo', codigo: '01' })).toEqual({ payment_method: 'CASH', payment_code: '01' });
       expect(map({ name: 'Otros', codigo: '01' })).toEqual({ payment_method: 'OTHER', payment_code: '01' });
-      expect(map({ description: 'Tarjeta de débito' })).toEqual({ payment_method: 'CARD', payment_code: '19' });
+      expect(map({ description: 'Tarjeta de débito' })).toEqual({ payment_method: 'DEBIT_CARD', payment_code: '16' });
       expect(map({ codigo: '20' })).toEqual({ payment_method: 'TRANSFER', payment_code: '20' });
       expect(map({ name: 'Depósito bancario' })).toEqual({ payment_method: 'TRANSFER', payment_code: '20' });
-      expect(map({ name: 'Cheque' })).toBeNull();
+      expect(map({ name: 'Cheque' })).toEqual({ payment_method: 'CHECK', payment_code: '20' });
     });
   });
 });

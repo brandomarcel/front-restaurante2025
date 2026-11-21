@@ -1,6 +1,6 @@
 # Estado del proyecto Facturada
 
-Última actualización: 2026-11-11.
+Última actualización: 2026-11-20.
 
 ## Objetivo Actual
 
@@ -8,6 +8,22 @@ Mantener una memoria breve del progreso y los pendientes sin ampliar `CLAUDE.md`
 El trabajo local observado se concentra en la configuración de desarrollo del frontend Angular y su conexión con Frappe.
 
 ## Últimos Cambios (Hecho)
+
+- 2026-11-20 (Claude, formas de pago según el SRI): la lista de Facturar, POS, órdenes, abonos y reportes pasa a
+  Efectivo 01, Tarjeta de débito 16, Tarjeta de crédito 19, Transferencia o depósito 20 y Cheque 20; se quitó «Otros»
+  (enviaba 01 a pagos bancarios) y débito ya no sale como 19. `PaymentsService` toma `codigo_sri` (antes el código
+  quedaba con el identificador CASH/CARD…); `paymentMethodKey` compara por identificador para que transferencia y cheque
+  convivan en pagos combinados; `normalizeLitePayment` y `mapLitePayment` reconocen DEBIT_CARD (16) y CHECK (20). La
+  casilla de número dice «N.º de transferencia o cheque». `tsc` y `eslint` sin errores; no probado en el navegador.
+  Backend en Lite y Restaurante (ver `ESTADO.md` de Lite). **Para Codex:** `pos-caja.behavior.spec.ts` espera que
+  «Tarjeta de débito» dé CARD 19: ahora es DEBIT_CARD 16 (cambio de regla); probar cheque, débito y el nombre antiguo
+  «Tarjeta de credito/debito» (sigue 19) y `paymentMethodKey` con dos opciones de código 20. Hecho por subagentes, ver
+  `TESTING_CODEX.md` (2026-11-20): 15 pruebas nuevas OK y 3 aserciones viejas actualizadas con permiso del usuario.
+  Front: 649 pruebas, 629 aprobadas, solo las 20 fallas heredadas. El cierre de caja ordena los renglones por código.
+  - Mismo día, **cierre de caja** (`close-caja`): renglones por código con Efectivo 01, Tarjeta de débito 16, Tarjeta de
+    crédito 19 y «Transferencia, depósito o cheque» 20 (antes tres, con «Tarjeta de credito/debito»); reconoce los
+    nombres guardados nuevos y viejos sin importar tildes. `tsc` y `eslint` sin errores. **Para Codex:** cierre con
+    transferencia y cheque en el mismo turno (un renglón 20 con la suma) y con débito.
 
 - 2026-11-11 (Claude, guía de remisión y liquidación según la ficha técnica del SRI v2.26): formulario de guía con
   los largos del SRI (`SRI_MAX`: direcciones/razón social/descripción 300, transportista 13, destinatario 20, código

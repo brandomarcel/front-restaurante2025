@@ -314,20 +314,23 @@ export class CloseCajaComponent implements OnInit {
   }
 
   private buildPaymentMethodsForCount(): Array<{ payment_method: string; payment_code: string; amount: number }> {
-    const defaults = [
-      { payment_method: 'Efectivo', payment_code: '01', amount: 0 },
-      { payment_method: 'Tarjeta de credito/debito', payment_code: '19', amount: 0 },
-      { payment_method: 'Transferencia', payment_code: '20', amount: 0 }
-    ];
+    const defaults = ['01', '16', '19', '20'].map((code) => ({ payment_method: this.paymentLabel(code), payment_code: code, amount: 0 }));
     // Los reales del backend van primero: solo se completan con los valores
-    // fijos en 0 los métodos (Efectivo/Tarjeta/Transferencia) que el backend
-    // no haya devuelto para este turno, nunca al revés.
+    // fijos en 0 los métodos que el backend no haya devuelto para este turno,
+    // nunca al revés. Se cuenta por código SRI: si dos formas comparten código
+    // (transferencia y cheque usan el 20) quedan en un renglón con su nombre común.
     const values = [...this.paymentTotals, ...defaults];
     const byCode = new Map<string, { payment_method: string; payment_code: string; amount: number }>();
     values.forEach((payment) => {
-      if (!byCode.has(payment.payment_code)) byCode.set(payment.payment_code, payment);
+      const current = byCode.get(payment.payment_code);
+      if (!current) {
+        byCode.set(payment.payment_code, { ...payment });
+      } else if (payment.amount > 0 && current.payment_method !== payment.payment_method) {
+        current.payment_method = this.paymentLabel(payment.payment_code);
+      }
     });
-    return Array.from(byCode.values());
+    // Siempre en el orden del código SRI (01, 16, 19, 20…), sin importar qué devolvió el backend.
+    return Array.from(byCode.values()).sort((a, b) => a.payment_code.localeCompare(b.payment_code));
   }
 
   paymentCount(code: string): number {
@@ -377,17 +380,22 @@ export class CloseCajaComponent implements OnInit {
       : Array.isArray(response?.payments)
         ? response.payments
         : Object.entries(response?.payments || response?.detalle || {}).map(([payment_method, amount]) => ({ payment_method, amount }));
+    // Nombres guardados (sin tildes) e identificadores de `get_payments`.
     const codes: Record<string, string> = {
       efectivo: '01', cash: '01',
-      'tarjeta de credito/debito': '19', tarjeta: '19', card: '19',
-      transferencia: '20', transfer: '20'
+      'tarjeta de debito': '16', debit_card: '16',
+      'tarjeta de credito/debito': '19', 'tarjeta de credito': '19', tarjeta: '19', card: '19',
+      transferencia: '20', 'transferencia bancaria': '20', 'transferencia o deposito': '20', transfer: '20',
+      cheque: '20', check: '20'
     };
     return rows.map((row: any) => {
       const rawMethod = String(row?.payment_method ?? row?.metodo_pago ?? row?.method ?? row?.name ?? 'Otros');
       const explicitCode = String(row?.payment_code ?? row?.codigo ?? '').trim();
       const paymentCode = /^\d{1,2}$/.test(explicitCode)
         ? explicitCode.padStart(2, '0')
-        : (/^\d{1,2}$/.test(rawMethod) ? rawMethod.padStart(2, '0') : (codes[rawMethod.toLowerCase()] ?? '21'));
+        : (/^\d{1,2}$/.test(rawMethod)
+          ? rawMethod.padStart(2, '0')
+          : (codes[rawMethod.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()] ?? '21'));
       return {
         payment_method: /^\d{1,2}$/.test(rawMethod) ? this.paymentLabel(paymentCode) : rawMethod,
         payment_code: paymentCode,
@@ -397,7 +405,10 @@ export class CloseCajaComponent implements OnInit {
   }
 
   private paymentLabel(code: string): string {
-    return ({ '01': 'Efectivo', '19': 'Tarjeta de credito/debito', '20': 'Transferencia' } as Record<string, string>)[code] || 'Otros';
+    return ({
+      '01': 'Efectivo', '15': 'Compensación de deudas', '16': 'Tarjeta de débito', '17': 'Dinero electrónico',
+      '18': 'Tarjeta prepago', '19': 'Tarjeta de crédito', '20': 'Transferencia, depósito o cheque', '21': 'Endoso de títulos'
+    } as Record<string, string>)[code] || 'Otros';
   }
 
   private errorMessage(error: any): string {

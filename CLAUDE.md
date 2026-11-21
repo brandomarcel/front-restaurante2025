@@ -409,6 +409,13 @@ Funciones:
   a facturar; si hace falta otra factura se emite desde «Facturar»). Bloqueada con nota de crédito o abonos (se
   anulan primero), en migradas, reemplazadas, de origen protegido o no autorizadas. El dinero no se mueve solo (si se
   devolvió efectivo, retiro de caja) y el cupo del plan no vuelve. Backend `facturada_lite.api.invoice_annulment`.
+- Formas de pago (`get_payments` de Lite, misma lista en Facturar, POS, órdenes, abonos y reportes), desde 2026-11-20:
+  Efectivo (SRI 01), Tarjeta de débito (16), Tarjeta de crédito (19), Transferencia o depósito (20) y Cheque (20). El 01
+  es solo efectivo: cheque y transferencia pasan por un banco. «Otros» se quitó (enviaba 01); su alias `OTHER` sigue
+  aceptándose para datos antiguos. El front lee el código en `codigo_sri`; dos opciones con el mismo código se
+  distinguen por su identificador (`paymentMethodKey`). En reportes, «Cheque» se filtra por nombre y «Transferencia o
+  depósito» por el código 20 sin los cheques. El RIDE muestra el nombre y el código SRI de cada pago; el cierre de caja
+  cuenta por código (Efectivo, Débito, Crédito y «Transferencia, depósito o cheque»).
 - Datos tributarios: RUC, régimen, agente de retención, obligado a llevar contabilidad
 - Largos y formatos del SRI (ficha técnica v2.26) en la guía de remisión y la liquidación: el front los limita en
   cada campo y Lite los vuelve a validar antes de emitir (`api/sri_limits.py`). Placa con los formatos de la ANT
@@ -651,15 +658,13 @@ recordado por dominio en `localStorage`); `frappeSiteNamespace` queda de respald
    o anulaciones.
 No leer `restaurante_app` ni `front-gym` salvo que el usuario lo pida.
 
-## Pruebas: las hace Codex
+## Pruebas: Claude las delega a subagentes
 
-Por decisión del usuario, **Codex crea y ejecuta las pruebas** (front y backend) siguiendo
-`TESTING_CODEX.md`. Por defecto Claude no escribe ni corre pruebas; si un cambio necesita
-pruebas, indícalo en el resumen final para que Codex las haga, y mantén `TESTING_CODEX.md` al
-día cuando cambien comandos, rutas o reglas. **Excepción:** si el usuario pide expresamente
-que Claude haga las pruebas (ocurrió en la sesión de recetas, 2026-10-27/28), las escribe y
-corre con los comandos de `TESTING_CODEX.md`, sin tocar las aserciones de Codex: solo ajusta
-fixtures cuando cambia una regla, y lo dice.
+Desde 2026-11-20, por decisión del usuario, **Claude coordina las pruebas y las delega** a subagentes con modelos
+menores (Sonnet o Haiku), siguiendo `TESTING_CODEX.md`: un agente para el front (Karma, lint) y uno solo para el
+backend (las suites Frappe en serie en `facturada_core_simple_test`). Claude escribe el encargo con los casos, revisa
+lo que entregan y actualiza `TESTING_CODEX.md` y los `ESTADO.md`. Antes las hacía Codex: sus aserciones no se tocan;
+si una regla cambia y una aserción suya queda vieja, se informa al usuario en vez de editarla.
 
 ## Migración desde Restaurante (2026-10-29)
 

@@ -363,7 +363,12 @@ export class InvoicesService {
       .toUpperCase();
     const paymentCode = String(code ?? '').trim();
 
+    // El cheque pasa por un banco: código 20, como la transferencia, con nombre propio.
+    if (/(^|\s)(CHECK|CHEQUE)(\s|$)/.test(text)) return { payment_method: 'CHECK', payment_code: '20' };
     if (/(^|\s)(CASH|EFECTIVO)(\s|$)/.test(text)) return { payment_method: 'CASH', payment_code: '01' };
+    if ((/DEBIT/.test(text) && !/CREDIT/.test(text)) || paymentCode === '16') {
+      return { payment_method: 'DEBIT_CARD', payment_code: '16' };
+    }
     if (/(^|\s)(CARD|TARJETA|CREDITO|CREDIT|DEBITO|DEBIT)(\s|$)/.test(text) || paymentCode === '19') {
       return { payment_method: 'CARD', payment_code: '19' };
     }

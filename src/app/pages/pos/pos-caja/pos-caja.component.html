@@ -282,7 +282,7 @@
 
           <!-- Número de transferencia (opcional) -->
           <label *ngIf="!splitPaymentsOpen && paymentRows.length === 1 && isTransferRow(paymentRows[0])" class="mt-2 block">
-            <span class="mb-1 block text-xs font-bold text-foreground">N.º de transferencia <span class="font-normal text-muted-foreground">(opcional)</span></span>
+            <span class="mb-1 block text-xs font-bold text-foreground">N.º de transferencia o cheque <span class="font-normal text-muted-foreground">(opcional)</span></span>
             <input type="text" [(ngModel)]="paymentRows[0].reference" [maxlength]="paymentReferenceMaxLength"
               placeholder="Ej. 0012345678" autocomplete="off"
               class="h-10 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20" />
@@ -303,7 +303,7 @@
               <button type="button" (click)="removePaymentRow(index)" [disabled]="paymentRows.length === 1"
                 class="rounded-lg text-lg text-destructive hover:bg-destructive/10 disabled:opacity-30" aria-label="Quitar forma de pago">✕</button>
               <input *ngIf="isTransferRow(payment)" type="text" [(ngModel)]="payment.reference" [maxlength]="paymentReferenceMaxLength"
-                [attr.aria-label]="'Número de transferencia de la forma de pago ' + (index + 1)" placeholder="N.º de transferencia (opcional)" autocomplete="off"
+                [attr.aria-label]="'Número de transferencia o cheque de la forma de pago ' + (index + 1)" placeholder="N.º de transferencia o cheque (opcional)" autocomplete="off"
                 class="col-span-3 h-9 w-full rounded-lg border border-border bg-card px-3 text-xs text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20" />
             </div>
             <button type="button" (click)="addPaymentRow()" class="text-[11px] font-semibold text-primary hover:underline">+ Agregar otra forma</button>

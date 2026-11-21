@@ -72,8 +72,9 @@ describe('Caja — cierre', () => {
   it('el efectivo empieza en 0 para contarlo y los demás métodos con lo del sistema', () => {
     setup(datosTurno);
     expect(component.paymentCount('01')).toBe(0);
+    expect(component.paymentCount('16')).toBe(0);
     expect(component.paymentCount('19')).toBe(30);
-    expect(component.paymentMethodsForCount.map((p) => p.payment_code)).toEqual(['01', '19', '20']);
+    expect(component.paymentMethodsForCount.map((p) => p.payment_code)).toEqual(['01', '16', '19', '20']);
   });
 
   it('la diferencia se recalcula al contar el efectivo', () => {
@@ -96,8 +97,9 @@ describe('Caja — cierre', () => {
       cash_counted: 120,
       payments: [
         { payment_method: 'Efectivo', payment_code: '01', counted_amount: 120 },
+        { payment_method: 'Tarjeta de débito', payment_code: '16', counted_amount: 0 },
         { payment_method: 'Tarjeta de credito/debito', payment_code: '19', counted_amount: 30 },
-        { payment_method: 'Transferencia', payment_code: '20', counted_amount: 0 }
+        { payment_method: 'Transferencia, depósito o cheque', payment_code: '20', counted_amount: 0 }
       ],
       notes: 'ok'
     });

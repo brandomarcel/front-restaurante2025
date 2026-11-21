@@ -236,7 +236,7 @@
                 </div>
                 <div *ngIf="isTransferRow(pay)" class="col-span-12">
                   <input type="text" [(ngModel)]="pay.reference" [maxlength]="paymentReferenceMaxLength" [disabled]="submitting"
-                    placeholder="N.º de transferencia (opcional)" aria-label="Número de transferencia" autocomplete="off"
+                    placeholder="N.º de transferencia o cheque (opcional)" aria-label="Número de transferencia o cheque" autocomplete="off"
                     class="h-10 w-full rounded-md border border-border bg-card px-2 text-sm text-foreground" />
                 </div>
               </div>

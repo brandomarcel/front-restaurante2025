@@ -36,7 +36,8 @@ export class PaymentsService {
     return {
       ...payment,
       name: id,
-      codigo: payment.codigo ?? payment.forma_pago ?? payment.sri_code ?? id,
+      // Código de forma de pago del SRI (01, 16, 19, 20…); el backend lo manda en `codigo_sri`.
+      codigo: payment.codigo_sri ?? payment.codigo ?? payment.forma_pago ?? payment.sri_code ?? id,
       nombre: payment.nombre ?? payment.description ?? payment.label ?? id,
       description: payment.description ?? payment.nombre ?? payment.label ?? id
     };

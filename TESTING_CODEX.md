@@ -103,7 +103,8 @@ Línea base: 19 avisos heredados (18 errores, 1 advertencia). Un cambio no debe 
 
 ### Línea base conocida (2026-11-11, ronda con agentes)
 
-Última ejecución completa: **634 pruebas, 614 aprobadas y 20 fallidas heredadas**.
+Última ejecución completa (2026-11-20): **649 pruebas, 629 aprobadas y 20 fallidas heredadas**.
+Antes, el 2026-11-11: 634 pruebas, 614 aprobadas y 20 fallidas heredadas.
 Se añadieron **34 casos**: HTTP de liquidaciones (8), formulario (7), detalle (3),
 retención desde liquidación (3), diálogo/sección de anulación (6), anulación HTTP
 retención (1), Socket/contexto site (5) y mapa electrónico 03 (1).
@@ -226,7 +227,11 @@ bench --site facturada_core_simple_test run-tests --app facturada_lite
 Si agregas o cambias campos de un DocType, corre antes
 `bench --site facturada_core_simple_test migrate`.
 
-### Línea base backend (2026-11-11, ronda con agentes)
+### Línea base backend
+
+2026-11-20: Core 98, Lite 326, Restaurante 78 y API 32, todas OK (534).
+
+Ronda con agentes del 2026-11-11:
 
 | App | Pruebas | Resultado |
 |-----|---------|-----------|
@@ -344,6 +349,21 @@ Pendientes / riesgos:
 ```
 
 Reporta los resultados tal como salieron: si algo no se ejecutó o falló, dilo.
+
+## Cubierto: formas de pago según el SRI (2026-11-20, subagentes)
+
+Desde 2026-11-20 Claude delega las pruebas a subagentes (Sonnet): uno para el front y uno solo para el backend.
+- **Front, 5 specs nuevos (15 casos):** `pos-sale.payment-forms.spec.ts`, `invoices.payment-forms.spec.ts`,
+  `shared/utils/payment.methods.spec.ts`, `payments.service.spec.ts` y `close-caja.payment-forms.spec.ts`.
+- **Backend:** `facturada_lite.api.test_payment_methods` (13 casos), más bloques nuevos en `test_lite_reports` y
+  `test_restaurant_reports`.
+- **Pruebas antiguas actualizadas con permiso del usuario (7):**
+  - `pos-caja.behavior.spec.ts`: débito pasa a DEBIT_CARD 16 y cheque a CHECK 20.
+  - `close-caja.behavior.spec.ts` (2 casos): cuatro renglones ordenados por código: 01, 16, 19 y 20.
+  - Nombres en MAYÚSCULAS: Lite `test_frontend.py:195`, `test_withholding.py:105` y
+    `test_facturada_lite_invoice.py:124`, y Restaurante `test_frontend.py:226`.
+- **Redis:** no respondía. El agente lo levantó con `redis-server config/redis_cache.conf` y `config/redis_queue.conf`
+  desde el bench.
 
 ## Pendiente de pruebas: planes por módulos (2026-10-28)
 

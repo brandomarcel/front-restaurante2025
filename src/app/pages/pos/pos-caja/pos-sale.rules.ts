@@ -9,8 +9,9 @@ export const FINAL_CONSUMER_INVOICE_LIMIT = 50;
 export const FINAL_CONSUMER_IDENTIFICATION = '9999999999999';
 const FINAL_CONSUMER_TYPE = '07 - Consumidor Final';
 
-export type LitePaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'OTHER';
-export type LitePaymentCode = '01' | '19' | '20';
+/** OTHER ya no se ofrece (enviaba 01 a pagos bancarios); se mantiene para datos antiguos. */
+export type LitePaymentMethod = 'CASH' | 'DEBIT_CARD' | 'CARD' | 'TRANSFER' | 'CHECK' | 'OTHER';
+export type LitePaymentCode = '01' | '16' | '19' | '20';
 export interface LitePayment {
   payment_method: LitePaymentMethod;
   payment_code: LitePaymentCode;
@@ -38,11 +39,17 @@ export function mapLitePayment(payment: any, fallback = ''): LitePayment | null 
     .filter(Boolean).join(' ').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
   const code = String(raw.payment_code || raw.codigo || raw.forma_pago || '').trim();
 
+  // El cheque pasa por un banco: código 20, como la transferencia, con nombre propio.
+  if (/(^|\s)(CHECK|CHEQUE)(\s|$)/.test(value)) return { payment_method: 'CHECK', payment_code: '20' };
   if (/(^|\s)(CASH|EFECTIVO)(\s|$)/.test(value) || code === '01') {
     // OTHER también utiliza el código 01, por eso se comprueba explícitamente
     // antes de aplicar el fallback por código.
     if (/(^|\s)(OTHER|OTRO|OTROS)(\s|$)/.test(value)) return { payment_method: 'OTHER', payment_code: '01' };
     return { payment_method: 'CASH', payment_code: '01' };
+  }
+  // «Tarjeta de crédito/débito» (nombre antiguo) sigue como crédito.
+  if ((/DEBIT/.test(value) && !/CREDIT/.test(value)) || code === '16') {
+    return { payment_method: 'DEBIT_CARD', payment_code: '16' };
   }
   if (/(CARD|TARJETA|CREDITO|CREDIT|DEBITO|DEBIT)/.test(value) || code === '19') {
     return { payment_method: 'CARD', payment_code: '19' };

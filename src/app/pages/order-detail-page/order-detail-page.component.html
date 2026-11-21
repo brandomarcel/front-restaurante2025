@@ -236,7 +236,7 @@
                 </div>
                 <input *ngIf="orderPayments[0] && isTransferMethod(orderPayments[0].payment_method)" type="text" class="field mt-2"
                   [(ngModel)]="orderPayments[0].reference" [ngModelOptions]="{standalone: true}" [maxlength]="paymentReferenceMaxLength"
-                  placeholder="N.º de transferencia (opcional)" aria-label="Número de transferencia" autocomplete="off" />
+                  placeholder="N.º de transferencia o cheque (opcional)" aria-label="Número de transferencia o cheque" autocomplete="off" />
               </fieldset>
 
               <!-- Varias formas de pago: cada una con su monto -->
@@ -257,7 +257,7 @@
                   <button *ngIf="canEditOrder" type="button" class="icon-btn !h-10 !w-10 shrink-0 text-destructive" (click)="removeOrderPayment(i)" [attr.aria-label]="'Quitar forma de pago ' + (i + 1)" title="Quitar">✕</button>
                   <input *ngIf="isTransferMethod(payment.payment_method)" type="text" class="field basis-full" [(ngModel)]="payment.reference"
                     [ngModelOptions]="{standalone: true}" [maxlength]="paymentReferenceMaxLength" [disabled]="!canEditOrder"
-                    placeholder="N.º de transferencia (opcional)" [attr.aria-label]="'Número de transferencia del pago ' + (i + 1)" autocomplete="off" />
+                    placeholder="N.º de transferencia o cheque (opcional)" [attr.aria-label]="'Número de transferencia o cheque del pago ' + (i + 1)" autocomplete="off" />
                 </div>
                 <p *ngIf="paymentsDifference !== 0" class="notice notice-warn">{{ paymentsDifferenceLabel }}</p>
               </div>
