@@ -399,6 +399,11 @@ Funciones:
   PROVIDER_ERROR, ERROR (`lite-invoice-emission.ts`)
 - Regla crítica: ante códigos SRI 43/70 solo se permite *consultar*, nunca reemitir
   el mismo comprobante (`lite-invoice-actions.ts`)
+- «Reenviar al SRI (misma clave)» (desde 2026-11-27): factura cuya recepción en el SRI nunca se confirmó, **solo el
+  mismo día**; en el panel de seguimiento (`electronic.resend_same_key`: `available`, `reason`, `attempts`,
+  `max_attempts`), con motivo obligatorio y confirmación. Solo Administrador y Gerente (`billing.resend`). Si el SRI ya
+  la tenía no se duplica. Desde el día siguiente solo queda revisión manual + regenerar. Sin disponibilidad, muestra la
+  razón como nota.
 - Anular una factura autorizada que el negocio **ya anuló en el portal del SRI** (desde 2026-11-10): detalle de la
   factura ▸ tarjeta lateral «Anular factura» (único lugar para anular: «Anular con nota de crédito» y «Ya la anulé en el
   SRI», con su explicación y el motivo si está bloqueado; el encabezado no tiene botón «Anular»). Fecha de la anulación en el

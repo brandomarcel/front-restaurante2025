@@ -34,4 +34,11 @@ describe('Electronic review RPC contract', () => {
     expect(request.request.body).toEqual({ business: 'FBU-1', guide_name: 'FLRG-1', review_reason: 'Revisado' });
     request.flush({ message: { data: { name: 'FLRG-1' } } });
   });
+  it('resends the same key with reason and expected_modified', () => {
+    service.resendSameKey('FLINV-1', 'Sin recepción', 'FBU-1', '2026-11-27 10:00:00').subscribe();
+    const request = http.expectOne(`${environment.apiUrl}/method/facturada_lite.api.frontend.resend_lite_invoice_same_key`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ invoice_name: 'FLINV-1', reason: 'Sin recepción', business: 'FBU-1', expected_modified: '2026-11-27 10:00:00' });
+    request.flush({ message: { resent: true, data: { name: 'FLINV-1' } } });
+  });
 });

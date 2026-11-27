@@ -22,6 +22,13 @@ export class ElectronicReviewService {
     return this.call('regenerate_lite_invoice_same_sequence', { invoice_name: name, business });
   }
 
+  /** Reenvía al SRI la misma clave de acceso (solo mismo día, recepción nunca confirmada). */
+  resendSameKey(name: string, reason: string, business: string, expectedModified?: string) {
+    return this.call('resend_lite_invoice_same_key', {
+      invoice_name: name, reason, business, ...(expectedModified ? { expected_modified: expectedModified } : {})
+    });
+  }
+
   private call(method: string, payload: any) {
     return this.http.post<any>(`${environment.apiUrl}/method/facturada_lite.api.frontend.${method}`, payload,
       { withCredentials: true, context: new HttpContext().set(REQUIRE_AUTH, true) });

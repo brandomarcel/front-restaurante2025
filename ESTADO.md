@@ -1,6 +1,6 @@
 # Estado del proyecto Facturada
 
-Última actualización: 2026-11-20.
+Última actualización: 2026-11-27.
 
 ## Objetivo Actual
 
@@ -9,6 +9,16 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-27 (Claude, «Reenviar al SRI (misma clave)»): el panel de seguimiento electrónico de una factura muestra el
+  bloque cuando `electronic.resend_same_key.available` y el usuario tiene `billing.resend` (Administrador y Gerente):
+  explicación, «Reenvíos: X de Y», motivo obligatorio y confirmación; llama a `resend_lite_invoice_same_key`
+  (`ElectronicReviewService.resendSameKey`, con `expected_modified`). Si no está disponible, muestra el motivo como nota.
+  Sin el dato (respuestas antiguas) no muestra nada. Pruebas focalizadas 17/17. Pendiente: probar contra el backend real.
+- 2026-11-27 (Claude, recepción SRI no confirmada): incidente de una factura en Producción cuya recepción falló con
+  `SRI_CONNECTION_RESET` y quedó `PENDIENTE` sin datos más de una hora. El servicio SRI (`/home/frappe/services/sri-service`)
+  ahora marca ese caso como `SRI_RECEPTION_UNCONFIRMED` en vez de `SRI_RECEIVED` (41/41 pruebas) y Lite lo trata como
+  pendiente: solo consultar, no recuperar ni reemitir (45/45). El front no cambia: decide por `status=PROCESSING`.
+  Falta reiniciar `sri-service` en PM2 (build hecho). El «Reenviar con la misma clave» ya está hecho (entrada de arriba).
 - 2026-11-20 (Claude, formas de pago según el SRI): la lista de Facturar, POS, órdenes, abonos y reportes pasa a
   Efectivo 01, Tarjeta de débito 16, Tarjeta de crédito 19, Transferencia o depósito 20 y Cheque 20; se quitó «Otros»
   (enviaba 01 a pagos bancarios) y débito ya no sale como 19. `PaymentsService` toma `codigo_sri` (antes el código

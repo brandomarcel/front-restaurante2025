@@ -350,6 +350,26 @@ Pendientes / riesgos:
 
 Reporta los resultados tal como salieron: si algo no se ejecutó o falló, dilo.
 
+## Cubierto: reenviar al SRI con la misma clave y Desk de factura (2026-11-27, subagentes)
+
+- sri-service `npm test` 47/47: `test/resend-same-key.test.js` (caché PROCESSING sin confirmar + marca → vuelve a
+  llamar al SRI; sin marca o con estado final → caché sin llamar; clave distinta → error antes del SRI; DEVUELTA 43).
+  El archivo tarda ~30 s (espera el polling de fondo).
+- Lite, en serie: `test_resend_same_key` 15, `test_invoice_sri_guidance` 23, `test_submission_recovery` 12,
+  `test_frontend` 10, `test_electronic_response` 14, `test_electronic_status` 16, `test_unconfirmed_reception` 3; Core
+  `test_subscriptions` 11. Todo OK. Migrate del sitio OK (layout del DocType).
+- Front: `electronic-status-panel.component.spec.ts` y `electronic-review.service.spec.ts` 17/17; lint 19 (línea base).
+- Sin probar: Desk y botón del front en el navegador; reenvío real contra el SRI.
+
+## Cubierto: recepción SRI no confirmada (2026-11-27, subagentes)
+
+- sri-service (`npm test`, 41/41; antes 38/38): `test/processing-code.test.js` simula el SRI con `https.request`
+  (ECONNRESET en recepción + PENDIENTE → `SRI_RECEPTION_UNCONFIRMED`; RECIBIDA + PENDIENTE → `SRI_RECEIVED`;
+  RECIBIDA + AUTORIZADO → `SRI_AUTHORIZED`). Pone `NODE_ENV=test` porque `.env` fija producción y sin Redis el lock
+  falla. No cubre las rutas de factura/nota de crédito ni el `catch` del polling (misma función `processingCode`).
+- Lite (en serie, `facturada_core_simple_test`): `test_unconfirmed_reception` 3, `test_electronic_response` 14,
+  `test_electronic_status` 16, `test_submission_recovery` 12; todo OK. No se corrió `test_invoice_api`.
+
 ## Cubierto: formas de pago según el SRI (2026-11-20, subagentes)
 
 Desde 2026-11-20 Claude delega las pruebas a subagentes (Sonnet): uno para el front y uno solo para el backend.

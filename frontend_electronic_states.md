@@ -40,6 +40,11 @@ En el detalle, leer `documento.electronic`:
   `value === true || value === 1 || value === '1'`.
 - Nunca inferir RECIBIDA solamente por `code=SRI_RECEIVED`, por HTTP exitoso
   o por `ok=true`. Los contratos anteriores podian devolver pendientes inciertos.
+- Desde 2026-11-27 el servicio SRI usa `code=SRI_RECEIVED` solo con recepcion
+  confirmada; una recepcion incierta (corte o timeout al enviar) llega como
+  `code=SRI_RECEPTION_UNCONFIRMED` y la redireccion temporal como
+  `SRI_AUTHORIZATION_PENDING`, siempre con `status=PROCESSING`. Los tres son
+  pendientes: solo consultar, nunca reemitir ni recuperar como no enviado.
 - Para registros historicos con fases vacias, mostrar No informado. No inventar
   una confirmacion de recepcion o autorizacion.
 
@@ -173,3 +178,21 @@ Los envelopes REST y RPC son distintos: REST factura devuelve `data.invoice` y
 `data.emission`; no envolver ni interpretar REST como `message`. El ambiente del
 API Client limita consulta y emision. El endpoint Node `/api/v1/documents/...`
 es interno del proveedor; el frontend usa las rutas FacturADA anteriores.
+
+## Reenviar al SRI con la misma clave (2026-11-27)
+
+`documento.electronic.resend_same_key` (solo Factura; `null` en otros tipos):
+`{available: bool, reason: string (español, vacío si available), available_at: datetime|null,
+attempts: number, max_attempts: 3}`. `available` exige: mismo día de emisión (America/Guayaquil), estado Emitida /
+En Revision / Error de Envio, que el SRI no haya confirmado ni respondido la recepción (sin RECIBIDA, DEVUELTA, 43/70
+ni autorización), al menos 10 minutos desde el último envío (`available_at` indica cuándo) y menos de 3 reenvíos. Si
+`reason` es «Ya pasó el día de emisión…», usar la revisión manual y regenerar con el mismo secuencial.
+
+`POST resend_lite_invoice_same_key` — `{invoice_name, reason (obligatorio, ≤ 1000), expected_modified?, business?}`
+(`business` se ignora). Permiso `billing.resend` (Administrador, Gerente). Primero consulta el SRI por la misma clave:
+
+- El SRI ya la tiene: `{resent: false, message: "El SRI ya tiene la factura: ...", data, emission}`.
+- Reenviada: `{resent: true, data, emission}` (misma clave, `resend_same_key: true` al servicio SRI); reanuda la consulta
+  automática. No mueve stock ni consume cupo.
+- Error (`frappe.throw`, mensaje en español): motivo faltante, no disponible (`reason`), factura cambiada, proveedor o
+  ambiente no listos, consulta previa fallida.

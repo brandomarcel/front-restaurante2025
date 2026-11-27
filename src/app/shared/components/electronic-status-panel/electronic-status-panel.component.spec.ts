@@ -1,4 +1,4 @@
-import { Subject } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ElectronicStatusPanelComponent } from './electronic-status-panel.component';
@@ -125,4 +125,88 @@ describe('Electronic status panel', () => {
     fixture.destroy();
   });
 
+  describe('reenvío con la misma clave', () => {
+    let perms: Record<string, boolean>;
+    const resendMock = (response: any) => {
+      const resendSameKey = jasmine.createSpy('resendSameKey').and.returnValue(response);
+      TestBed.configureTestingModule({ imports: [ElectronicStatusPanelComponent], providers: [provideRouter([]),
+        { provide: CompanyCapabilitiesService, useValue: { activeBusinessId: 'FBU-1', hasPermission: (p: string) => !!perms[p] } },
+        { provide: ElectronicReviewService, useValue: { resendSameKey } },
+        { provide: ElectronicDocumentUpdatesService, useValue: updates }] });
+      return resendSameKey;
+    };
+    const render = (resend: any) => {
+      const fixture = TestBed.createComponent(ElectronicStatusPanelComponent);
+      fixture.componentRef.setInput('document', { ...panel.document, modified: '2026-10-09 10:00:00',
+        electronic: { ...panel.document.electronic, resend_same_key: resend } });
+      fixture.detectChanges();
+      return fixture;
+    };
+    const available = { available: true, reason: '', available_at: null, attempts: 1, max_attempts: 3 };
+    beforeEach(() => { perms = { 'billing.resend': true }; });
+    it('shows the button only when available and permitted', () => {
+      resendMock(of({}));
+      let fixture = render(available);
+      expect(fixture.nativeElement.textContent).toContain('Reenviar al SRI (misma clave)');
+      expect(fixture.nativeElement.textContent).toContain('Reenvíos: 1 de 3');
+      fixture.destroy();
+      fixture = render(undefined);
+      expect(fixture.nativeElement.textContent).not.toContain('Reenviar al SRI');
+      fixture.destroy();
+      perms['billing.resend'] = false;
+      fixture = render({ ...available, reason: 'x' });
+      expect(fixture.nativeElement.textContent).not.toContain('Reenviar al SRI');
+      expect(fixture.nativeElement.textContent).not.toContain('Reenvío con la misma clave');
+      fixture.destroy();
+    });
+    it('shows the reason as a note when unavailable', () => {
+      resendMock(of({}));
+      const fixture = render({ available: false, reason: 'Disponible desde las 17:40', attempts: 0, max_attempts: 3 });
+      expect(fixture.nativeElement.textContent).toContain('Reenvío con la misma clave: Disponible desde las 17:40');
+      expect(fixture.nativeElement.textContent).not.toContain('Reenviar al SRI (misma clave)');
+      fixture.destroy();
+    });
+    it('sends the payload and emits the updated invoice', () => {
+      const spy = resendMock(of({ message: { resent: true, data: { name: 'FLINV-1' } } }));
+      spyOn(window, 'confirm').and.returnValue(true);
+      const fixture = render(available);
+      const component = fixture.componentInstance;
+      const updated = jasmine.createSpy('updated');
+      component.updated.subscribe(updated);
+      component.resendReason = ' Sin recepción ';
+      component.resendSameKey();
+      expect(spy).toHaveBeenCalledWith('FLINV-1', 'Sin recepción', 'FBU-1', '2026-10-09 10:00:00');
+      expect(updated).toHaveBeenCalledWith({ name: 'FLINV-1' });
+      fixture.destroy();
+    });
+    it('does not send without reason and handles resent false', () => {
+      const spy = resendMock(of({ message: { resent: false, message: 'Ya autorizada', data: { name: 'FLINV-1' } } }));
+      spyOn(window, 'confirm').and.returnValue(true);
+      const fixture = render(available);
+      const component = fixture.componentInstance;
+      component.resendSameKey();
+      expect(spy).not.toHaveBeenCalled();
+      const updated = jasmine.createSpy('updated');
+      component.updated.subscribe(updated);
+      component.resendReason = 'Motivo';
+      component.resendSameKey();
+      expect(spy).toHaveBeenCalled();
+      expect(updated).toHaveBeenCalledWith({ name: 'FLINV-1' });
+      expect(component.busy).toBeFalse();
+      fixture.destroy();
+    });
+    it('handles 403 without emitting', () => {
+      resendMock(throwError(() => ({ status: 403 })));
+      spyOn(window, 'confirm').and.returnValue(true);
+      const fixture = render(available);
+      const component = fixture.componentInstance;
+      const updated = jasmine.createSpy('updated');
+      component.updated.subscribe(updated);
+      component.resendReason = 'Motivo';
+      component.resendSameKey();
+      expect(updated).not.toHaveBeenCalled();
+      expect(component.busy).toBeFalse();
+      fixture.destroy();
+    });
+  });
 });

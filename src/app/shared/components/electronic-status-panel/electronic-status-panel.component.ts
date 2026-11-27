@@ -44,6 +44,17 @@ import { ELECTRONIC_DOCUMENT_KINDS, ElectronicDocumentKind, ElectronicDocumentKi
           <button type="button" class="rounded-lg bg-primary px-4 py-2 text-white disabled:opacity-50" (click)="confirmReview()" [disabled]="busy || !reason.trim()">{{ busy ? 'Guardando…' : 'Guardar revisión' }}</button>
         </div>
       </div>
+      <div *ngIf="canResend" class="space-y-2 border-t border-border pt-3">
+        <p class="rounded-lg bg-warning-50 p-3 text-sm text-warning-900">El SRI no confirmó que recibió esta factura. Puedes reenviarla con la misma clave de acceso: si el SRI ya la tenía, no se duplica.</p>
+        <p class="text-xs text-muted-foreground">Reenvíos: {{ resend.attempts ?? 0 }} de {{ resend.max_attempts ?? 0 }}</p>
+        <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold" (click)="resendOpen = !resendOpen" [disabled]="busy">Reenviar al SRI (misma clave)</button>
+        <div *ngIf="resendOpen" class="space-y-3">
+          <label class="block text-sm">Motivo del reenvío (obligatorio)
+            <textarea [(ngModel)]="resendReason" [disabled]="busy" rows="2" class="mt-1 w-full rounded-lg border border-border p-2" maxlength="1000"></textarea></label>
+          <button type="button" class="rounded-lg bg-primary px-4 py-2 text-white disabled:opacity-50" (click)="resendSameKey()" [disabled]="busy || !resendReason.trim()">{{ busy ? 'Reenviando…' : 'Confirmar reenvío' }}</button>
+        </div>
+      </div>
+      <p *ngIf="resendNote" class="text-xs text-muted-foreground">Reenvío con la misma clave: {{ resendNote }}</p>
       <div *ngIf="canManage && canRegenerate" class="border-t border-border pt-3 space-y-2">
         <p class="text-sm text-muted-foreground">{{ electronic.regeneration_reason || document.regeneration_reason }}</p>
         <button type="button" class="rounded-lg border border-warning-300 px-3 py-2 text-sm font-semibold" [disabled]="busy" (click)="regenerate()">Regenerar mismo secuencial</button>
@@ -57,13 +68,15 @@ export class ElectronicStatusPanelComponent implements OnChanges, OnDestroy {
   busy = false;
   reviewOpen = false;
   reason = '';
+  resendOpen = false;
+  resendReason = '';
   verified = false;
   private updates?: Subscription;
   private watchedDocument = '';
   constructor(public capabilities: CompanyCapabilitiesService, private service: ElectronicReviewService,
     private documentUpdates: ElectronicDocumentUpdatesService) {}
   ngOnChanges(): void {
-    this.reviewOpen = false; this.reason = ''; this.verified = false;
+    this.reviewOpen = false; this.reason = ''; this.verified = false; this.resendOpen = false; this.resendReason = '';
     const business = typeof this.document?.business === 'object' ? this.document.business.name : this.document?.business;
     const key = this.document?.name && business === this.capabilities.activeBusinessId && !this.closed
       ? `${business}/${this.kind}/${this.document.name}` : '';
@@ -116,6 +129,40 @@ export class ElectronicStatusPanelComponent implements OnChanges, OnDestroy {
   }
   get canVerify(): boolean { return this.kindConfig.invoiceLike && this.manualReviewAvailable && canVerifyMissingSriDocument(this.document); }
   get canRegenerate(): boolean { return this.kindConfig.invoiceLike && this.manualReviewAvailable && canRegenerateElectronicDocument(this.document); }
+  get resend(): any { return this.kind === 'invoice' && !this.closed ? this.electronic.resend_same_key ?? null : null; }
+  get canResendPermission(): boolean {
+    const business = typeof this.document?.business === 'object' ? this.document.business.name : this.document?.business;
+    return !!business && business === this.capabilities.activeBusinessId && this.capabilities.hasPermission('billing.resend');
+  }
+  get canResend(): boolean { return !!this.resend && backendFlag(this.resend.available) && this.canResendPermission; }
+  get resendNote(): string {
+    const resend = this.resend;
+    return resend && !backendFlag(resend.available) && this.canResendPermission && String(resend.reason || '').trim()
+      ? String(resend.reason).trim() : '';
+  }
+  resendSameKey(): void {
+    if (this.busy || !this.canResend || !this.resendReason.trim()) return;
+    if (!window.confirm('Se reenviará esta factura al SRI con la misma clave de acceso. ¿Continuar?')) return;
+    const business = this.capabilities.activeBusinessId!;
+    const name = this.document.name;
+    this.busy = true;
+    this.service.resendSameKey(name, this.resendReason.trim(), business, this.document.modified || undefined)
+      .pipe(finalize(() => this.busy = false)).subscribe({
+        next: response => {
+          if (business !== this.capabilities.activeBusinessId || name !== this.document?.name) return;
+          const body = response?.message ?? response;
+          if (body?.ok === false || body?.emission?.ok === false || body?.emission?.status === 'ERROR') {
+            toast.error(liteEmissionMessages(body).join(' · ') || 'No se pudo completar la operación.'); return;
+          }
+          if (body?.resent === false) toast.info(body.message || 'No se reenvió la factura.');
+          else toast.success('Factura reenviada al SRI. La consulta automática sigue.');
+          this.resendOpen = false; this.resendReason = '';
+          if (body?.data?.name) this.updated.emit(body.data);
+        },
+        error: error => toast.error(error.status === 403 ? 'No tienes permiso para realizar esta operación.'
+          : liteEmissionMessages(error?.error?.message ?? error?.error).join(' · ') || 'No se pudo completar la operación.')
+      });
+  }
   confirmReview(): void {
     if (this.busy || !this.canManage || !this.manualReviewAvailable || !this.reason.trim() || (!this.reviewRequired && !this.canVerify)) return;
     if (!this.reviewRequired && !this.verified) { toast.error('Confirma la verificación manual de inexistencia en SRI.'); return; }
