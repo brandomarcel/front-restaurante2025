@@ -9,6 +9,10 @@ El trabajo local observado se concentra en la configuración de desarrollo del f
 
 ## Últimos Cambios (Hecho)
 
+- 2026-11-27 (Claude, incidente SRI JBAS014559): sin cambios de código en el front. Contrato
+  `frontend_electronic_states.md` suma `resend_skipped` (reenvío saltado → `resent: false` con mensaje, ya lo muestra
+  el panel como «no reenviada») y `sri_lookup` (informativo). Servicio SRI y Lite corregidos (ver sus `ESTADO.md`);
+  monitoreo en el Desk «Facturas SRI sin confirmar» y correos (solo System Manager / `facturada_sri_alert_emails`).
 - 2026-11-27 (Claude, «Reenviar al SRI (misma clave)»): el panel de seguimiento electrónico de una factura muestra el
   bloque cuando `electronic.resend_same_key.available` y el usuario tiene `billing.resend` (Administrador y Gerente):
   explicación, «Reenvíos: X de Y», motivo obligatorio y confirmación; llama a `resend_lite_invoice_same_key`

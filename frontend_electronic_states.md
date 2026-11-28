@@ -194,5 +194,11 @@ ni autorización), al menos 10 minutos desde el último envío (`available_at` i
 - El SRI ya la tiene: `{resent: false, message: "El SRI ya tiene la factura: ...", data, emission}`.
 - Reenviada: `{resent: true, data, emission}` (misma clave, `resend_same_key: true` al servicio SRI); reanuda la consulta
   automática. No mueve stock ni consume cupo.
+- El servicio SRI no la reenvió (respondió desde su caché, `resend_skipped: true`): `{resent: false, message: "El
+  servicio de facturacion no reenvio la factura al SRI. No cuenta como reenvio; ...", data, emission}`. El intento
+  queda en el historial con `skipped: true` y no cuenta para `attempts` ni para la espera de 10 minutos (2026-11-27).
+- Consulta de estado: una respuesta `PROCESSING` del servicio SRI puede traer `sri_lookup` (`NOT_FOUND` = el SRI no
+  tiene registro de la clave; `NO_AUTHORIZATION_YET`). Es informativo: no cambia `status` ni las acciones; la guía
+  del Desk lo usa para decir «El SRI no tiene esta factura».
 - Error (`frappe.throw`, mensaje en español): motivo faltante, no disponible (`reason`), factura cambiada, proveedor o
   ambiente no listos, consulta previa fallida.
